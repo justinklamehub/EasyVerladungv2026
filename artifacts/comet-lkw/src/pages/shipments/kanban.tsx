@@ -86,6 +86,7 @@ export default function KanbanPage() {
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+        toast({ title: "Status aktualisiert" });
       },
       onError: () => {
         toast({ title: "Fehler beim Verschieben", variant: "destructive" });
