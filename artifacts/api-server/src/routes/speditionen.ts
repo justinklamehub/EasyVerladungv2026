@@ -87,6 +87,36 @@ router.patch("/speditionen/:id", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/speditionen/:id/received-permissions", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const id = Number(req.params.id);
+    const isOwnSped = role === "speditions_admin" && req.session.speditionId === id;
+    if (!["comet_admin", "comet_leitstand"].includes(role) && !isOwnSped) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    const perms = await db
+      .select()
+      .from(speditionPermissionsTable)
+      .where(eq(speditionPermissionsTable.receivingSpeditionId, id));
+
+    const speds = await db.select().from(speditionenTable);
+    const spedMap: Record<number, string> = {};
+    for (const s of speds) spedMap[s.id] = s.name;
+
+    return res.json(
+      perms.map((p) => ({
+        grantingSpeditionId: p.grantingSpeditionId,
+        grantingSpeditionName: spedMap[p.grantingSpeditionId] ?? null,
+        receivingSpeditionId: p.receivingSpeditionId,
+        permissionLevel: p.permissionLevel,
+      })),
+    );
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/speditionen/:id/permissions", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;

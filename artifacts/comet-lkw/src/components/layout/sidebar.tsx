@@ -10,6 +10,7 @@ import {
   FileCheck2, 
   History,
   LogOut,
+  Share2,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -43,6 +44,7 @@ export function AppSidebar() {
     { name: "Palettenkonto", href: "/paletten", icon: PackageSearch, show: true },
     { name: "Abstimmungen", href: "/abstimmungen", icon: FileCheck2, show: true },
     { name: "Änderungslog", href: "/auditlog", icon: History, show: isCometUser },
+    { name: "Speditionsfreigabe", href: "/speditionsfreigabe", icon: Share2, show: user.role === "speditions_admin" },
   ];
 
   return (

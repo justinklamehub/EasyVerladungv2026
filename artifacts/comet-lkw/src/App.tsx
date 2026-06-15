@@ -16,6 +16,7 @@ import UsersPage from "@/pages/users";
 import PalettenPage from "@/pages/paletten";
 import AbstimmungenPage from "@/pages/abstimmungen";
 import AuditlogPage from "@/pages/auditlog";
+import SpeditionsfreigebePage from "@/pages/speditionsfreigabe";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -62,6 +63,7 @@ function Router() {
             <Route path="/paletten"><ProtectedRoute component={PalettenPage} /></Route>
             <Route path="/abstimmungen"><ProtectedRoute component={AbstimmungenPage} /></Route>
             <Route path="/auditlog"><ProtectedRoute component={AuditlogPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
+            <Route path="/speditionsfreigabe"><ProtectedRoute component={SpeditionsfreigebePage} roles={["speditions_admin"]} /></Route>
             <Route component={NotFound} />
           </Switch>
         </AppLayout>
