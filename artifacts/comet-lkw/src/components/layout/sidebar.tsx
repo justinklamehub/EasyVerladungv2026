@@ -14,6 +14,8 @@ import {
   Share2,
   Settings,
   ShieldCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -29,9 +31,10 @@ const ROLES_WITH_SPEDITION_ACCESS = ["comet_admin", "comet_leitstand"];
 
 interface AppSidebarProps {
   collapsed: boolean;
+  onToggle: () => void;
 }
 
-export function AppSidebar({ collapsed }: AppSidebarProps) {
+export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { user, refetch } = useAuth();
   const [location, setLocation] = useLocation();
   const logoutMutation = useLogout({
@@ -74,21 +77,29 @@ export function AppSidebar({ collapsed }: AppSidebarProps) {
         )}
       >
         {/* Header */}
-        <div className="h-16 flex items-center border-b border-slate-800 bg-slate-950/50 shrink-0 px-3">
-          {collapsed ? (
-            <div className="w-full flex justify-center">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold tracking-tighter shrink-0">
-                CO
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 flex-1 min-w-0 px-3">
-              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold tracking-tighter shrink-0">
-                CO
-              </div>
-              <span className="font-semibold text-slate-100 tracking-tight truncate">Easy-Verladung</span>
-            </div>
+        <div className="h-16 flex items-center border-b border-slate-800 bg-slate-950/50 shrink-0 px-3 gap-2">
+          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold tracking-tighter shrink-0">
+            CO
+          </div>
+          {!collapsed && (
+            <span className="font-semibold text-slate-100 tracking-tight truncate flex-1 min-w-0">
+              Easy-Verladung
+            </span>
           )}
+          <button
+            onClick={onToggle}
+            className={cn(
+              "p-1.5 rounded-md text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors shrink-0",
+              collapsed && "mx-auto"
+            )}
+            title={collapsed ? "Menü ausklappen" : "Menü einklappen"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
+          </button>
         </div>
 
         {/* Navigation */}
