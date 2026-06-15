@@ -5,7 +5,9 @@ import {
   useDeleteUser,
   useListSpeditionen,
   getListUsersQueryKey,
+  customFetch,
 } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,17 +33,14 @@ interface UserDialogProps {
   editUser?: User | null;
 }
 
-const COMET_ROLES = [
-  { value: "comet_admin", label: "COMET Admin" },
-  { value: "comet_leitstand", label: "COMET Leitstand" },
-  { value: "comet_lager", label: "COMET Lager" },
-  { value: "comet_viewer", label: "COMET Viewer" },
-];
-const SPED_ROLES = [
-  { value: "speditions_admin", label: "Speditions-Admin" },
-  { value: "speditions_bearbeiter", label: "Speditions-Bearbeiter" },
-  { value: "speditions_viewer", label: "Speditions-Viewer" },
-];
+interface RoleInfo {
+  roleKey: string;
+  label: string;
+  roleGroup: string;
+  isSystem: boolean;
+}
+
+const SPED_GROUP = "Speditionen";
 
 export function UserDialog({ open, onOpenChange, editUser }: UserDialogProps) {
   const queryClient = useQueryClient();
@@ -51,6 +50,14 @@ export function UserDialog({ open, onOpenChange, editUser }: UserDialogProps) {
   const isEditing = !!editUser;
   const isCometAdmin = currentUser?.role === "comet_admin";
   const isSpedAdmin = currentUser?.role === "speditions_admin";
+
+  // Load roles dynamically for comet_admin
+  const { data: allRoles = [] } = useQuery<RoleInfo[]>({
+    queryKey: ["admin-roles"],
+    queryFn: () => customFetch("/api/admin/roles"),
+    enabled: isCometAdmin,
+    staleTime: 60_000,
+  });
 
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -108,34 +115,57 @@ export function UserDialog({ open, onOpenChange, editUser }: UserDialogProps) {
   });
 
   const handleSave = () => {
-    if (!username.trim()) {
-      toast({ title: "Benutzername erforderlich", variant: "destructive" });
-      return;
-    }
-    const resolvedSpeditionId = speditionId === "__none__" ? null : parseInt(speditionId);
+    if (!username.trim()) { toast({ title: "Benutzername erforderlich", variant: "destructive" }); return; }
+    if (!isEditing && !password) { toast({ title: "Passwort erforderlich", variant: "destructive" }); return; }
+
+    const sid = speditionId !== "__none__" ? parseInt(speditionId) : undefined;
     const data: any = { username, email: email || undefined, role: role as any };
     if (password) data.password = password;
-    if (isCometAdmin) data.speditionId = resolvedSpeditionId;
+    if (sid) data.speditionId = sid;
 
     if (isEditing && editUser) {
       updateMutation.mutate({ id: editUser.id, data });
     } else {
-      if (!password) {
-        toast({ title: "Passwort erforderlich", variant: "destructive" });
-        return;
-      }
-      createMutation.mutate({ data: { ...data, password, isActive: true } });
+      createMutation.mutate({ data });
     }
   };
 
   const handleDeactivate = () => {
-    if (editUser) {
-      deleteMutation.mutate({ id: editUser.id });
-    }
+    if (editUser) deleteMutation.mutate({ id: editUser.id });
   };
 
-  const availableRoles = isSpedAdmin ? SPED_ROLES : [...COMET_ROLES, ...SPED_ROLES];
   const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  // Build available roles list
+  let availableRoles: { value: string; label: string; group: string }[];
+  if (isCometAdmin && allRoles.length > 0) {
+    availableRoles = allRoles.map((r) => ({ value: r.roleKey, label: r.label, group: r.roleGroup }));
+  } else if (isSpedAdmin) {
+    availableRoles = [
+      { value: "speditions_admin", label: "Spedition Admin", group: SPED_GROUP },
+      { value: "speditions_bearbeiter", label: "Spedition Bearbeiter", group: SPED_GROUP },
+      { value: "speditions_viewer", label: "Spedition Viewer", group: SPED_GROUP },
+    ];
+  } else {
+    availableRoles = [
+      { value: "comet_admin", label: "COMET Admin", group: "COMET intern" },
+      { value: "comet_leitstand", label: "COMET Leitstand", group: "COMET intern" },
+      { value: "comet_lager", label: "COMET Lager", group: "COMET intern" },
+      { value: "comet_viewer", label: "COMET Viewer", group: "COMET intern" },
+      { value: "speditions_admin", label: "Spedition Admin", group: SPED_GROUP },
+      { value: "speditions_bearbeiter", label: "Spedition Bearbeiter", group: SPED_GROUP },
+      { value: "speditions_viewer", label: "Spedition Viewer", group: SPED_GROUP },
+    ];
+  }
+
+  // Group roles for the select
+  const groups = Array.from(new Set(availableRoles.map((r) => r.group)));
+
+  // Determine if selected role needs spedition picker
+  const selectedRoleInfo = allRoles.find((r) => r.roleKey === role);
+  const needsSpedition = isCometAdmin
+    ? selectedRoleInfo?.roleGroup === SPED_GROUP
+    : role.startsWith("speditions_");
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -165,11 +195,18 @@ export function UserDialog({ open, onOpenChange, editUser }: UserDialogProps) {
             <Select value={role} onValueChange={setRole}>
               <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {availableRoles.map(r => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+                {groups.map((group) => (
+                  <div key={group}>
+                    <div className="px-2 py-1 text-xs font-semibold text-slate-400 uppercase tracking-wide">{group}</div>
+                    {availableRoles.filter((r) => r.group === group).map((r) => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </div>
+                ))}
               </SelectContent>
             </Select>
           </div>
-          {role.startsWith("speditions_") && isCometAdmin && (
+          {needsSpedition && isCometAdmin && (
             <div className="space-y-1">
               <Label>Spedition</Label>
               <Select value={speditionId} onValueChange={setSpeditionId}>
