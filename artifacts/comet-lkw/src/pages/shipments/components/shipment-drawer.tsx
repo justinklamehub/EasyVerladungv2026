@@ -97,8 +97,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   }, [shipmentId, open, shipment?.speditionId, user?.id]);
 
   const isLocked = !!shipment?.gesperrtFuerSpedition;
+  const hasAta = !!(shipment?.ataDate);
   const canEdit = !isViewer && (!isLocked || isCometUser);
-  const spedCanEdit = isSpedUser && !isLocked;
+  const spedCanEdit = isSpedUser && !isLocked && !hasAta;
 
   const today = new Date().toISOString().slice(0, 10);
   const emptyAustrag = (): LkwAustragInput => ({

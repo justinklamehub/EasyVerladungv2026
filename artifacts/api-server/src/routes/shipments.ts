@@ -264,6 +264,9 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
       if (existing.gesperrtFuerSpedition) {
         return res.status(403).json({ error: "Shipment is locked for editing by Spedition" });
       }
+      if (existing.ataDate) {
+        return res.status(403).json({ error: "Sendung kann nicht mehr bearbeitet werden, da ATA bereits eingetragen ist" });
+      }
     }
 
     const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(role);
