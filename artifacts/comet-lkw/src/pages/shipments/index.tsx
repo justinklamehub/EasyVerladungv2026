@@ -57,6 +57,7 @@ export default function ShipmentsPage() {
   const [sortField, setSortField] = useState<SortField>("etaDate");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showAbgefertigt, setShowAbgefertigt] = useState(false);
+  const [showStorniert, setShowStorniert] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("__none__");
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
@@ -89,8 +90,12 @@ export default function ShipmentsPage() {
 
   const sorted = useMemo(() => {
     if (!shipments) return [];
-    const visible = (!showAbgefertigt && filterStatus === "__all__")
-      ? shipments.filter((s) => s.status !== "Abgefertigt")
+    const visible = filterStatus === "__all__"
+      ? shipments.filter((s) => {
+          if (!showAbgefertigt && s.status === "Abgefertigt") return false;
+          if (!showStorniert && s.status === "Storniert") return false;
+          return true;
+        })
       : shipments;
     return [...visible].sort((a, b) => {
       let av: string = "";
@@ -259,15 +264,27 @@ export default function ShipmentsPage() {
             />
           </div>
 
-          <div className="flex items-center gap-2 ml-auto">
-            <Checkbox
-              id="show-abgefertigt"
-              checked={showAbgefertigt}
-              onCheckedChange={(v) => setShowAbgefertigt(!!v)}
-            />
-            <label htmlFor="show-abgefertigt" className="text-sm text-slate-600 cursor-pointer select-none">
-              Abgefertigte anzeigen
-            </label>
+          <div className="flex items-center gap-4 ml-auto">
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-abgefertigt"
+                checked={showAbgefertigt}
+                onCheckedChange={(v) => setShowAbgefertigt(!!v)}
+              />
+              <label htmlFor="show-abgefertigt" className="text-sm text-slate-600 cursor-pointer select-none">
+                Abgefertigte anzeigen
+              </label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="show-storniert"
+                checked={showStorniert}
+                onCheckedChange={(v) => setShowStorniert(!!v)}
+              />
+              <label htmlFor="show-storniert" className="text-sm text-slate-600 cursor-pointer select-none">
+                Stornierte anzeigen
+              </label>
+            </div>
           </div>
 
           {hasActiveFilters && (
