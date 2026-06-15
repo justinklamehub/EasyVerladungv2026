@@ -1,27 +1,40 @@
 import { useAuth } from "@/contexts/auth-context";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
-import { 
-  LayoutDashboard, 
-  Truck, 
+import {
+  LayoutDashboard,
+  Truck,
   CalendarDays,
-  Building2, 
-  Users, 
-  PackageSearch, 
-  FileCheck2, 
+  Building2,
+  Users,
+  PackageSearch,
+  FileCheck2,
   History,
   LogOut,
   Share2,
   Settings,
   ShieldCheck,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 const ROLES_WITH_FULL_ACCESS = ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"];
 const ROLES_WITH_SPEDITION_ACCESS = ["comet_admin", "comet_leitstand"];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
   const { user, refetch } = useAuth();
   const [location, setLocation] = useLocation();
   const logoutMutation = useLogout({
@@ -29,8 +42,8 @@ export function AppSidebar() {
       onSuccess: () => {
         refetch();
         setLocation("/login");
-      }
-    }
+      },
+    },
   });
 
   if (!user) return null;
@@ -53,60 +66,139 @@ export function AppSidebar() {
     { name: "Berechtigungen", href: "/berechtigungen", icon: ShieldCheck, show: user.role === "comet_admin" },
   ];
 
-  return (
-    <div className="w-64 bg-slate-950 text-slate-300 flex flex-col h-full border-r border-slate-900">
-      <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950/50">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold tracking-tighter">
-            CO
-          </div>
-          <span className="font-semibold text-slate-100 tracking-tight">Easy-Verladung</span>
-        </div>
-      </div>
-      
-      <div className="flex-1 overflow-y-auto py-4">
-        <nav className="px-3 space-y-0.5">
-          {navigation.filter(item => item.show).map((item) => {
-            const isActive = location === item.href || (item.href !== "/dashboard" && item.href !== "/shipments" && location.startsWith(item.href + "/")) || (item.href === "/shipments" && (location === "/shipments" || location.startsWith("/shipments/")));
-            return (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  "flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-all duration-150",
-                  isActive
-                    ? "bg-primary text-white shadow-sm"
-                    : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
-                )}
-              >
-                <item.icon className={cn("w-4 h-4 shrink-0", isActive ? "text-white" : "text-slate-500")} />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
+  const initials = user.username.substring(0, 2).toUpperCase();
 
-      <div className="p-4 border-t border-slate-800 bg-slate-900/30">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-medium text-slate-300 uppercase">
-            {user.username.substring(0, 2)}
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="text-sm font-medium text-slate-200 truncate">{user.username}</div>
-            <div className="text-xs text-slate-500 truncate">{user.speditionName || "COMET"}</div>
-          </div>
+  return (
+    <TooltipProvider delayDuration={0}>
+      <div
+        className={cn(
+          "bg-slate-950 text-slate-300 flex flex-col h-full border-r border-slate-900 transition-[width] duration-200 ease-in-out overflow-hidden",
+          collapsed ? "w-[60px]" : "w-64"
+        )}
+      >
+        {/* Header */}
+        <div className="h-16 flex items-center border-b border-slate-800 bg-slate-950/50 shrink-0 px-3">
+          {collapsed ? (
+            <div className="w-full flex justify-center">
+              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold tracking-tighter shrink-0">
+                CO
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 flex-1 min-w-0 px-3">
+              <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold tracking-tighter shrink-0">
+                CO
+              </div>
+              <span className="font-semibold text-slate-100 tracking-tight truncate">Easy-Verladung</span>
+            </div>
+          )}
         </div>
-        <Button 
-          variant="ghost" 
-          size="sm" 
-          className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-          onClick={() => logoutMutation.mutate()}
-        >
-          <LogOut className="w-4 h-4 mr-2" />
-          Abmelden
-        </Button>
+
+        {/* Toggle button */}
+        <div className={cn("flex shrink-0 pt-2 pb-1", collapsed ? "justify-center px-0" : "px-3 justify-end")}>
+          <button
+            onClick={onToggle}
+            className="p-1.5 rounded-md text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            title={collapsed ? "Menü ausklappen" : "Menü einklappen"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="w-4 h-4" />
+            ) : (
+              <PanelLeftClose className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <div className="flex-1 overflow-y-auto py-2">
+          <nav className={cn("space-y-0.5", collapsed ? "px-1.5" : "px-3")}>
+            {navigation.filter((item) => item.show).map((item) => {
+              const isActive =
+                location === item.href ||
+                (item.href !== "/dashboard" &&
+                  item.href !== "/shipments" &&
+                  location.startsWith(item.href + "/")) ||
+                (item.href === "/shipments" &&
+                  (location === "/shipments" || location.startsWith("/shipments/")));
+
+              const linkEl = (
+                <Link
+                  key={item.name}
+                  href={item.href}
+                  className={cn(
+                    "flex items-center rounded-md text-sm font-medium transition-all duration-150",
+                    collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2.5",
+                    isActive
+                      ? "bg-primary text-white shadow-sm"
+                      : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                  )}
+                >
+                  <item.icon
+                    className={cn(
+                      "shrink-0",
+                      collapsed ? "w-5 h-5" : "w-4 h-4",
+                      isActive ? "text-white" : "text-slate-500"
+                    )}
+                  />
+                  {!collapsed && item.name}
+                </Link>
+              );
+
+              return collapsed ? (
+                <Tooltip key={item.name}>
+                  <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
+                  <TooltipContent side="right" className="text-xs">
+                    {item.name}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                linkEl
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* User footer */}
+        <div className={cn("border-t border-slate-800 bg-slate-900/30 shrink-0", collapsed ? "p-2" : "p-4")}>
+          {!collapsed && (
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-medium text-slate-300 uppercase shrink-0">
+                {initials}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-slate-200 truncate">{user.username}</div>
+                <div className="text-xs text-slate-500 truncate">{user.speditionName || "COMET"}</div>
+              </div>
+            </div>
+          )}
+
+          {collapsed ? (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => logoutMutation.mutate()}
+                  className="w-9 h-9 mx-auto flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="text-xs">
+                Abmelden ({user.username})
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+              onClick={() => logoutMutation.mutate()}
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Abmelden
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 }
