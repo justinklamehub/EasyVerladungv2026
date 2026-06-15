@@ -55,6 +55,7 @@ export default function ShipmentsPage() {
   const [filterDateTo, setFilterDateTo] = useState(today);
   const [sortField, setSortField] = useState<SortField>("etaDate");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [showAbgefertigt, setShowAbgefertigt] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("__none__");
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
@@ -86,7 +87,10 @@ export default function ShipmentsPage() {
 
   const sorted = useMemo(() => {
     if (!shipments) return [];
-    return [...shipments].sort((a, b) => {
+    const visible = (!showAbgefertigt && filterStatus === "__all__")
+      ? shipments.filter((s) => s.status !== "Abgefertigt")
+      : shipments;
+    return [...visible].sort((a, b) => {
       let av: string = "";
       let bv: string = "";
       if (sortField === "kennzeichen") { av = a.kennzeichen ?? ""; bv = b.kennzeichen ?? ""; }
@@ -245,6 +249,17 @@ export default function ShipmentsPage() {
               value={filterDateTo}
               onChange={(e) => setFilterDateTo(e.target.value)}
             />
+          </div>
+
+          <div className="flex items-center gap-2 ml-auto">
+            <Checkbox
+              id="show-abgefertigt"
+              checked={showAbgefertigt}
+              onCheckedChange={(v) => setShowAbgefertigt(!!v)}
+            />
+            <label htmlFor="show-abgefertigt" className="text-sm text-slate-600 cursor-pointer select-none">
+              Abgefertigte anzeigen
+            </label>
           </div>
 
           {hasActiveFilters && (

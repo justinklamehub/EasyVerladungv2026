@@ -12,6 +12,7 @@ export interface LkwAustrag {
   beauftragteSpeditionId: number | null;
   beauftragteSpeditionName: string | null;
   subSpedition: string | null;
+  tor: string | null;
   vonCometEuropaletten: number;
   vonCometLadungssicherung: number;
   vonDefektePaletten: number;
@@ -30,6 +31,7 @@ export interface LkwAustragInput {
   kennzeichen?: string | null;
   beauftragteSpeditionId?: number | null;
   subSpedition?: string | null;
+  tor?: string | null;
   vonCometEuropaletten?: number;
   vonCometLadungssicherung?: number;
   vonDefektePaletten?: number;
