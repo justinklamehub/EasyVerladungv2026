@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, LockOpen, AlertCircle, Pencil, Trash2, ClipboardCheck, Plus } from "lucide-react";
+import { Loader2, Lock, LockOpen, AlertCircle, Pencil, Trash2, ClipboardCheck, Plus, Clock } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
@@ -367,13 +367,27 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               </div>
 
               {(isCometUser || (isEditing && (shipment?.ataDate || shipment?.ataTime))) && (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-slate-500">ATA Datum <span className="text-slate-400">(COMET)</span></Label>
-                    <Input type="date" value={form.ataDate} onChange={e => setForm(f => ({ ...f, ataDate: e.target.value }))} disabled={!isCometUser} />
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs text-slate-500">ATA <span className="text-slate-400">(COMET)</span></Label>
+                    {isCometUser && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const now = new Date();
+                          const date = now.toISOString().slice(0, 10);
+                          const time = now.toTimeString().slice(0, 5);
+                          setForm(f => ({ ...f, ataDate: date, ataTime: time }));
+                        }}
+                        className="flex items-center gap-1 text-xs text-primary hover:text-primary/80 font-medium transition-colors"
+                      >
+                        <Clock className="w-3 h-3" />
+                        Jetzt eintragen
+                      </button>
+                    )}
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-slate-500">ATA Zeit</Label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input type="date" value={form.ataDate} onChange={e => setForm(f => ({ ...f, ataDate: e.target.value }))} disabled={!isCometUser} />
                     <Input type="time" value={form.ataTime} onChange={e => setForm(f => ({ ...f, ataTime: e.target.value }))} disabled={!isCometUser} />
                   </div>
                 </div>
