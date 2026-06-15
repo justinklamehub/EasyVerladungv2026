@@ -563,6 +563,13 @@ export const ListPalletMovementsResponseItem = zod.object({
   "movementDate": zod.string(),
   "amount": zod.number(),
   "bemerkungen": zod.string().nullish(),
+  "palettenscheinnummer": zod.string().nullish(),
+  "vonCometEuropaletten": zod.number().nullish(),
+  "vonCometLadungssicherung": zod.number().nullish(),
+  "vonDefektePaletten": zod.number().nullish(),
+  "anCometEuropaletten": zod.number().nullish(),
+  "anCometLadungssicherung": zod.number().nullish(),
+  "anDefektePaletten": zod.number().nullish(),
   "createdBy": zod.number().nullish(),
   "createdByName": zod.string().nullish(),
   "createdAt": zod.string()
@@ -579,7 +586,14 @@ export const CreatePalletMovementBody = zod.object({
   "movementType": zod.enum(['eingang', 'ausgang', 'korrektur', 'abstimmung']),
   "movementDate": zod.string(),
   "amount": zod.number(),
-  "bemerkungen": zod.string().nullish()
+  "bemerkungen": zod.string().nullish(),
+  "palettenscheinnummer": zod.string().nullish(),
+  "vonCometEuropaletten": zod.number().optional(),
+  "vonCometLadungssicherung": zod.number().optional(),
+  "vonDefektePaletten": zod.number().optional(),
+  "anCometEuropaletten": zod.number().optional(),
+  "anCometLadungssicherung": zod.number().optional(),
+  "anDefektePaletten": zod.number().optional()
 })
 
 
@@ -607,6 +621,13 @@ export const UpdatePalletMovementResponse = zod.object({
   "movementDate": zod.string(),
   "amount": zod.number(),
   "bemerkungen": zod.string().nullish(),
+  "palettenscheinnummer": zod.string().nullish(),
+  "vonCometEuropaletten": zod.number().nullish(),
+  "vonCometLadungssicherung": zod.number().nullish(),
+  "vonDefektePaletten": zod.number().nullish(),
+  "anCometEuropaletten": zod.number().nullish(),
+  "anCometLadungssicherung": zod.number().nullish(),
+  "anDefektePaletten": zod.number().nullish(),
   "createdBy": zod.number().nullish(),
   "createdByName": zod.string().nullish(),
   "createdAt": zod.string()
