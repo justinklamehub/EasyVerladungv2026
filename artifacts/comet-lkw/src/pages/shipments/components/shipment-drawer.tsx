@@ -40,7 +40,7 @@ interface ShipmentDrawerProps {
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "Verladen", "Abgefertigt", "Storniert"];
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
-const TOR_OPTIONS = ["A1", "A2", "A3", "B1", "B2", "B3", "C1", "C2"];
+const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 
 export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawerProps) {
   const queryClient = useQueryClient();
