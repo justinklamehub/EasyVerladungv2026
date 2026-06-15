@@ -9,6 +9,7 @@ import reconciliationsRouter from "./reconciliations";
 import dashboardRouter from "./dashboard";
 import auditRouter from "./audit";
 import austraegeRouter from "./austraege";
+import settingsRouter from "./settings";
 
 const router: IRouter = Router();
 
@@ -22,5 +23,6 @@ router.use(reconciliationsRouter);
 router.use(dashboardRouter);
 router.use(auditRouter);
 router.use(austraegeRouter);
+router.use(settingsRouter);
 
 export default router;

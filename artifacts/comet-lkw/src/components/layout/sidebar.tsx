@@ -11,6 +11,7 @@ import {
   History,
   LogOut,
   Share2,
+  Settings,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +46,7 @@ export function AppSidebar() {
     { name: "Abstimmungen", href: "/abstimmungen", icon: FileCheck2, show: true },
     { name: "Änderungslog", href: "/auditlog", icon: History, show: isCometUser },
     { name: "Speditionsfreigabe", href: "/speditionsfreigabe", icon: Share2, show: user.role === "speditions_admin" },
+    { name: "Einstellungen", href: "/settings", icon: Settings, show: user.role === "comet_admin" },
   ];
 
   return (
@@ -54,7 +56,7 @@ export function AppSidebar() {
           <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center text-primary-foreground font-bold tracking-tighter">
             CO
           </div>
-          <span className="font-semibold text-slate-100 tracking-tight">COMET Leitstand</span>
+          <span className="font-semibold text-slate-100 tracking-tight">Easy-Verladung</span>
         </div>
       </div>
       

@@ -48,7 +48,7 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
-            COMET Leitstand
+            Easy-Verladung
           </CardTitle>
           <CardDescription className="text-slate-500">
             LKW-Verladungsverwaltung
