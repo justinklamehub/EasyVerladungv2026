@@ -109,7 +109,6 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     kennzeichen: "",
     beauftragteSpeditionId: null,
     subSpedition: "",
-    tor: null,
     vonCometEuropaletten: 0,
     vonCometLadungssicherung: 0,
     vonDefektePaletten: 0,
@@ -495,7 +494,6 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-slate-600">
                           {a.kennzeichen && <div><span className="text-slate-400">Kennzeichen:</span> {a.kennzeichen}</div>}
-                          {a.tor && <div><span className="text-slate-400">Tor:</span> {a.tor}</div>}
                           {a.beauftragteSpeditionName && <div><span className="text-slate-400">Sped.:</span> {a.beauftragteSpeditionName}</div>}
                           {a.subSpedition && <div className="col-span-2"><span className="text-slate-400">Sub-Sped.:</span> {a.subSpedition}</div>}
                         </div>
@@ -542,23 +540,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                       <Input type="date" className="h-8 text-sm" value={austragForm.datum} onChange={e => setAustragForm(f => ({ ...f, datum: e.target.value }))} />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label className="text-xs text-slate-500">KFZ Kennzeichen</Label>
-                        <Input className="h-8 text-sm" value={austragForm.kennzeichen ?? ""} onChange={e => setAustragForm(f => ({ ...f, kennzeichen: e.target.value }))} />
-                      </div>
-                      <div className="space-y-1">
-                        <Label className="text-xs text-slate-500">Tor</Label>
-                        <Select value={austragForm.tor ? String(austragForm.tor) : "__none__"} onValueChange={v => setAustragForm(f => ({ ...f, tor: v === "__none__" ? null : v }))}>
-                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Tor wählen…" /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="__none__">—</SelectItem>
-                            {Array.from({ length: 18 }, (_, i) => i + 1).map(n => (
-                              <SelectItem key={n} value={String(n)}>Tor {n}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+                    <div className="space-y-1">
+                      <Label className="text-xs text-slate-500">KFZ Kennzeichen</Label>
+                      <Input className="h-8 text-sm" value={austragForm.kennzeichen ?? ""} onChange={e => setAustragForm(f => ({ ...f, kennzeichen: e.target.value }))} />
                     </div>
 
                     <div className="space-y-1">
