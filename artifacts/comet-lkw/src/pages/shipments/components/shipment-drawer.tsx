@@ -646,6 +646,29 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                       </div>
                     </div>
 
+                    {/* Auto-calculated net amount */}
+                    {(() => {
+                      const vonNet = (austragForm.vonCometEuropaletten ?? 0) + (austragForm.vonCometLadungssicherung ?? 0) - (austragForm.vonDefektePaletten ?? 0);
+                      const anNet = (austragForm.anCometEuropaletten ?? 0) + (austragForm.anCometLadungssicherung ?? 0) - (austragForm.anDefektePaletten ?? 0);
+                      const net = vonNet - anNet;
+                      const isPositive = net > 0;
+                      const isNegative = net < 0;
+                      return (
+                        <div className={`rounded-md border p-3 flex items-center justify-between ${isPositive ? "border-green-200 bg-green-50" : isNegative ? "border-red-200 bg-red-50" : "border-slate-200 bg-slate-50"}`}>
+                          <div className="text-xs text-slate-500 space-y-0.5">
+                            <div className="font-semibold text-slate-700 uppercase tracking-wide text-xs">Netto-Palettenbuchung</div>
+                            <div className="text-slate-400">({(austragForm.vonCometEuropaletten ?? 0)} + {(austragForm.vonCometLadungssicherung ?? 0)} − {(austragForm.vonDefektePaletten ?? 0)}) − ({(austragForm.anCometEuropaletten ?? 0)} + {(austragForm.anCometLadungssicherung ?? 0)} − {(austragForm.anDefektePaletten ?? 0)})</div>
+                          </div>
+                          <div className={`text-2xl font-bold ${isPositive ? "text-green-700" : isNegative ? "text-red-700" : "text-slate-400"}`}>
+                            {isPositive ? "+" : ""}{net}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                    {(austragForm.vonDefektePaletten ?? 0) + (austragForm.anDefektePaletten ?? 0) > 0 && (
+                      <p className="text-xs text-amber-600">Defekte Paletten werden vom Nettobetrag abgezogen.</p>
+                    )}
+
                     <div className="flex justify-end gap-2 pt-1">
                       <Button variant="outline" size="sm" onClick={() => { setShowAustragForm(false); setAustragForm(emptyAustrag()); }}>Abbrechen</Button>
                       <Button size="sm" onClick={() => createAustragMutation.mutate(austragForm)} disabled={createAustragMutation.isPending}>
