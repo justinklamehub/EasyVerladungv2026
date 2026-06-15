@@ -15,8 +15,9 @@ import { customFetch } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, CalendarDays, GripVertical, Clock } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, CalendarDays, GripVertical, Clock, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 function toDateStr(d: Date): string {
@@ -77,17 +78,38 @@ interface Shipment {
   speditionName?: string | null;
   lkwArt?: string | null;
   tor?: string | null;
+  gesperrtFuerSpedition?: boolean;
 }
 
-function ShipmentCard({ shipment, compact = false }: { shipment: Shipment; compact?: boolean }) {
+function ShipmentCard({
+  shipment,
+  compact = false,
+  onClick,
+}: {
+  shipment: Shipment;
+  compact?: boolean;
+  onClick?: () => void;
+}) {
   const statusClass = STATUS_COLORS[shipment.status] ?? "bg-slate-100 text-slate-600 border-slate-200";
   const time = shipment.ataTime || shipment.etaTime;
+  const isLocked = shipment.gesperrtFuerSpedition;
   return (
-    <div className={cn("bg-white rounded-lg border border-slate-200 shadow-sm p-2.5 space-y-1.5 select-none", compact && "shadow-md ring-1 ring-primary/20")}>
+    <div
+      onClick={onClick}
+      className={cn(
+        "bg-white rounded-lg border shadow-sm p-2.5 space-y-1.5 select-none transition-colors",
+        onClick && "cursor-pointer hover:border-primary/40 hover:shadow-md",
+        isLocked ? "border-amber-200 bg-amber-50/40" : "border-slate-200",
+        compact && "shadow-md ring-1 ring-primary/20",
+      )}
+    >
       <div className="flex items-start justify-between gap-1">
-        <span className="text-xs font-bold text-slate-800 leading-tight truncate">
-          {shipment.kennzeichen || "—"}
-        </span>
+        <div className="flex items-center gap-1 min-w-0">
+          {isLocked && <Lock className="w-2.5 h-2.5 text-amber-500 shrink-0" />}
+          <span className="text-xs font-bold text-slate-800 leading-tight truncate">
+            {shipment.kennzeichen || "—"}
+          </span>
+        </div>
         <Badge variant="outline" className={cn("text-[9px] px-1 py-0 shrink-0 border", statusClass)}>
           {shipment.status}
         </Badge>
@@ -116,28 +138,51 @@ function ShipmentCard({ shipment, compact = false }: { shipment: Shipment; compa
 }
 
 // ── Draggable shipment wrapper ────────────────────────────────────────────────
-function DraggableShipment({ shipment, canDrag }: { shipment: Shipment; canDrag: boolean }) {
+function DraggableShipment({
+  shipment,
+  canDrag,
+  onSelect,
+}: {
+  shipment: Shipment;
+  canDrag: boolean;
+  onSelect: (id: number) => void;
+}) {
+  const isLocked = !!shipment.gesperrtFuerSpedition;
+  const dragEnabled = canDrag && !isLocked;
+
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: shipment.id,
-    disabled: !canDrag,
+    disabled: !dragEnabled,
   });
 
   return (
     <div
       ref={setNodeRef}
       className={cn("relative group", isDragging && "opacity-30")}
-      {...(canDrag ? attributes : {})}
+      {...(dragEnabled ? attributes : {})}
     >
-      {canDrag && (
+      {dragEnabled && (
         <div
           {...listeners}
           className="absolute left-0 top-0 bottom-0 w-5 flex items-center justify-center cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Verschieben"
         >
           <GripVertical className="w-3 h-3" />
         </div>
       )}
+      {isLocked && canDrag && (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-5 flex items-center justify-center z-10 opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Gesperrt – kann nicht verschoben werden"
+        >
+          <Lock className="w-2.5 h-2.5 text-amber-400" />
+        </div>
+      )}
       <div className={canDrag ? "pl-4" : ""}>
-        <ShipmentCard shipment={shipment} />
+        <ShipmentCard
+          shipment={shipment}
+          onClick={() => onSelect(shipment.id)}
+        />
       </div>
     </div>
   );
@@ -151,6 +196,7 @@ function DroppableDay({
   shipments,
   canDrag,
   isToday,
+  onSelect,
 }: {
   dateStr: string;
   date: Date;
@@ -158,6 +204,7 @@ function DroppableDay({
   shipments: Shipment[];
   canDrag: boolean;
   isToday: boolean;
+  onSelect: (id: number) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
 
@@ -210,7 +257,7 @@ function DroppableDay({
           </div>
         )}
         {shipments.map((s) => (
-          <DraggableShipment key={s.id} shipment={s} canDrag={canDrag} />
+          <DraggableShipment key={s.id} shipment={s} canDrag={canDrag} onSelect={onSelect} />
         ))}
         {shipments.length > 0 && isOver && (
           <div className="h-10 rounded-md border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center">
@@ -229,6 +276,13 @@ export default function WochenansichtPage() {
 
   const [monday, setMonday] = useState<Date>(() => getMonday(new Date()));
   const [activeShipment, setActiveShipment] = useState<Shipment | null>(null);
+  const [drawerShipmentId, setDrawerShipmentId] = useState<number | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+
+  const openDrawer = (id: number) => {
+    setDrawerShipmentId(id);
+    setDrawerOpen(true);
+  };
 
   const days = weekDays(monday);
   const from = toDateStr(days[0]);
@@ -393,6 +447,7 @@ export default function WochenansichtPage() {
                     shipments={dayShipments}
                     canDrag={canDrag}
                     isToday={dateStr === today}
+                    onSelect={openDrawer}
                   />
                 );
               })}
@@ -407,7 +462,7 @@ export default function WochenansichtPage() {
                 <div className="flex flex-wrap gap-2">
                   {undated.map((s) => (
                     <div key={s.id} className="w-48">
-                      <ShipmentCard shipment={s} />
+                      <ShipmentCard shipment={s} onClick={() => openDrawer(s.id)} />
                     </div>
                   ))}
                 </div>
@@ -425,6 +480,17 @@ export default function WochenansichtPage() {
           </DragOverlay>
         </DndContext>
       )}
+
+      <ShipmentDrawer
+        shipmentId={drawerShipmentId}
+        open={drawerOpen}
+        onOpenChange={(o) => {
+          setDrawerOpen(o);
+          if (!o) {
+            qc.invalidateQueries({ queryKey: ["shipments-week", from, to] });
+          }
+        }}
+      />
     </div>
   );
 }
