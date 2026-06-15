@@ -136,6 +136,7 @@ router.patch("/pallet-movements/:id", requireAuth, async (req, res) => {
       .returning();
     if (!movement) return res.status(404).json({ error: "Not found" });
 
+    await logAudit(req.session.userId!, "pallet_movement", id, "updated", JSON.stringify({ movementType: existing.movementType, amount: existing.amount }), JSON.stringify(updates));
     emit(req, "pallet_balance.updated", { speditionId: movement.speditionId }, movement.speditionId);
     return res.json({ ...movement, speditionName: null, shipmentBezeichnung: null, createdByName: null });
   } catch (err) {

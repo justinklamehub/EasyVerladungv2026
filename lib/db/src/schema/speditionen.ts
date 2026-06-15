@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, serial, integer, text, timestamp, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod/v4";
 
@@ -17,11 +17,11 @@ export const speditionenTable = pgTable("speditionen", {
 
 export const speditionPermissionsTable = pgTable("spedition_permissions", {
   id: serial("id").primaryKey(),
-  grantingSpeditionId: serial("granting_spedition_id").notNull(),
-  receivingSpeditionId: serial("receiving_spedition_id").notNull(),
+  grantingSpeditionId: integer("granting_spedition_id").notNull().references(() => speditionenTable.id, { onDelete: "cascade" }),
+  receivingSpeditionId: integer("receiving_spedition_id").notNull().references(() => speditionenTable.id, { onDelete: "cascade" }),
   permissionLevel: text("permission_level").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (t) => [unique("uq_sped_permissions").on(t.grantingSpeditionId, t.receivingSpeditionId)]);
 
 export const insertSpeditionSchema = createInsertSchema(speditionenTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSpedition = z.infer<typeof insertSpeditionSchema>;

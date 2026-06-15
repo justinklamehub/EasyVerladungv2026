@@ -154,6 +154,18 @@ async function seed() {
     })
     .returning();
 
+  const [slkBearbeiter] = await db
+    .insert(usersTable)
+    .values({
+      username: "schneider.fahrer",
+      email: "fahrer@schneider-logistik.de",
+      passwordHash: await hash("schneider123"),
+      role: "speditions_bearbeiter",
+      speditionId: sped2.id,
+      isActive: true,
+    })
+    .returning();
+
   const [bfaAdmin] = await db
     .insert(usersTable)
     .values({
@@ -166,7 +178,19 @@ async function seed() {
     })
     .returning();
 
-  console.log("Created 8 users");
+  const [bfaBearbeiter] = await db
+    .insert(usersTable)
+    .values({
+      username: "bauer.fahrer",
+      email: "fahrer@bauer-fracht.de",
+      passwordHash: await hash("bauer123"),
+      role: "speditions_bearbeiter",
+      speditionId: sped3.id,
+      isActive: true,
+    })
+    .returning();
+
+  console.log("Created 10 users");
 
   // ---- Date helpers ----
   const today = new Date();
