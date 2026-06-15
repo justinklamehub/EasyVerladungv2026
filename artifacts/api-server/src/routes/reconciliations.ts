@@ -165,6 +165,9 @@ router.patch("/reconciliations/:id", requireAuth, async (req, res) => {
       updates.status = status;
     }
     if (speditionBalance !== undefined && role === "speditions_admin") {
+      if (existing.speditionBalance !== null && existing.speditionBalance !== undefined) {
+        return res.status(403).json({ error: "Speditionssaldo wurde bereits eingetragen und kann nicht mehr geaendert werden" });
+      }
       updates.speditionBalance = speditionBalance;
     }
     if (cometBalance !== undefined && ["comet_admin", "comet_leitstand"].includes(role)) {

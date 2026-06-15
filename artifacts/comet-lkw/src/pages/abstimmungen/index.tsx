@@ -217,15 +217,20 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Spedition Saldo</Label>
-                  {isSpedAdmin ? (
+                  {isSpedAdmin && rec.speditionBalance === null || isSpedAdmin && rec.speditionBalance === undefined ? (
                     <Input
                       type="number"
-                      placeholder={rec.speditionBalance !== null && rec.speditionBalance !== undefined ? String(rec.speditionBalance) : "—"}
+                      placeholder="Saldo eingeben"
                       value={spedBalance}
                       onChange={e => setSpedBalance(e.target.value)}
                     />
                   ) : (
-                    <div className="text-lg font-bold text-slate-800">{rec.speditionBalance ?? "—"}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-lg font-bold text-slate-800">{rec.speditionBalance ?? "—"}</div>
+                      {isSpedAdmin && rec.speditionBalance !== null && rec.speditionBalance !== undefined && (
+                        <span className="text-xs text-slate-400 italic">bereits eingetragen</span>
+                      )}
+                    </div>
                   )}
                 </div>
               </div>
@@ -242,7 +247,7 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
                 </div>
               )}
 
-              {(isCometAdmin || isSpedAdmin) && (
+              {(isCometAdmin || (isSpedAdmin && (rec.speditionBalance === null || rec.speditionBalance === undefined))) && (
                 <Button size="sm" onClick={handleSaveBalances} disabled={updateMutation.isPending} className="w-full">
                   {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Speichern
