@@ -8,7 +8,11 @@ interface AuthContextType {
   refetch: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isLoading: true,
+  refetch: () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
@@ -33,9 +37,5 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function useAuth() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuth must be used within an AuthProvider");
-  }
-  return context;
+  return useContext(AuthContext);
 }
