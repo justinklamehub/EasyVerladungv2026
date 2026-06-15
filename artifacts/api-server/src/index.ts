@@ -42,10 +42,36 @@ io.use((socket, next) => {
   return next();
 });
 
+interface EditorInfo {
+  userId: number;
+  username: string;
+  socketId: string;
+}
+
+const editingPresence = new Map<number, Set<EditorInfo>>();
+
+function removeEditorFromPresence(socketId: string): Array<{ shipmentId: number; editors: Array<{ userId: number; username: string }> }> {
+  const changed: Array<{ shipmentId: number; editors: Array<{ userId: number; username: string }> }> = [];
+  for (const [shipmentId, set] of editingPresence.entries()) {
+    for (const entry of set) {
+      if (entry.socketId === socketId) {
+        set.delete(entry);
+        const editors = Array.from(set).map((e) => ({ userId: e.userId, username: e.username }));
+        changed.push({ shipmentId, editors });
+        break;
+      }
+    }
+    if (set.size === 0) editingPresence.delete(shipmentId);
+  }
+  return changed;
+}
+
 io.on("connection", (socket) => {
   const sess = (socket.request as any).session;
   const role: string | undefined = sess?.role;
   const speditionId: number | undefined = sess?.speditionId;
+  const userId: number | undefined = sess?.userId;
+  const username: string | undefined = sess?.username;
 
   const isCometRole =
     role !== undefined &&
@@ -59,8 +85,60 @@ io.on("connection", (socket) => {
 
   logger.info({ socketId: socket.id, role, speditionId }, "Socket.IO client connected");
 
+  socket.on("shipment.editing.start", (data: { shipmentId: number; speditionId?: number | null }) => {
+    const { shipmentId, speditionId: shipSpedId } = data;
+    if (!userId || !username) return;
+
+    if (!editingPresence.has(shipmentId)) {
+      editingPresence.set(shipmentId, new Set());
+    }
+    const set = editingPresence.get(shipmentId)!;
+    for (const entry of set) {
+      if (entry.socketId === socket.id) {
+        set.delete(entry);
+        break;
+      }
+    }
+    set.add({ userId, username, socketId: socket.id });
+
+    const editors = Array.from(set).map((e) => ({ userId: e.userId, username: e.username }));
+    const payload = { shipmentId, editors };
+
+    io.to("comet").emit("shipment.editing", payload);
+    if (shipSpedId) {
+      io.to(`spedition:${shipSpedId}`).emit("shipment.editing", payload);
+    }
+  });
+
+  socket.on("shipment.editing.stop", (data: { shipmentId: number; speditionId?: number | null }) => {
+    const { shipmentId, speditionId: shipSpedId } = data;
+    const set = editingPresence.get(shipmentId);
+    if (set) {
+      for (const entry of set) {
+        if (entry.socketId === socket.id) {
+          set.delete(entry);
+          break;
+        }
+      }
+      if (set.size === 0) editingPresence.delete(shipmentId);
+    }
+    const editors = Array.from(set ?? []).map((e) => ({ userId: e.userId, username: e.username }));
+    const payload = { shipmentId, editors };
+    io.to("comet").emit("shipment.editing", payload);
+    if (shipSpedId) {
+      io.to(`spedition:${shipSpedId}`).emit("shipment.editing", payload);
+    }
+  });
+
   socket.on("disconnect", () => {
     logger.info({ socketId: socket.id }, "Socket.IO client disconnected");
+    const changed = removeEditorFromPresence(socket.id);
+    for (const { shipmentId, editors } of changed) {
+      io.to("comet").emit("shipment.editing", { shipmentId, editors });
+      if (speditionId) {
+        io.to(`spedition:${speditionId}`).emit("shipment.editing", { shipmentId, editors });
+      }
+    }
   });
 });
 

@@ -4,6 +4,17 @@ import { speditionenTable, speditionPermissionsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
+import { emitToRooms } from "../lib/socket-emit";
+import type { Server as IOServer } from "socket.io";
+
+function getIO(req: any): IOServer | null {
+  return req.app.get("io") || null;
+}
+
+function emit(req: any, event: string, data: any, speditionId?: number | null, additionalIds?: number[]) {
+  const io = getIO(req);
+  if (io) emitToRooms(io, event, data, speditionId, additionalIds);
+}
 
 const router = Router();
 
@@ -152,6 +163,8 @@ router.post("/speditionen/:id/permissions", requireAuth, async (req, res) => {
       .where(eq(speditionenTable.id, receivingSpeditionId))
       .limit(1);
 
+    emit(req, "permission.updated", { grantingSpeditionId: grantingId, receivingSpeditionId, permissionLevel }, grantingId, [receivingSpeditionId]);
+
     return res.json({
       grantingSpeditionId: perm.grantingSpeditionId,
       receivingSpeditionId: perm.receivingSpeditionId,
@@ -183,6 +196,7 @@ router.delete("/speditionen/:id/permissions/:receivingId", requireAuth, async (r
       );
 
     await logAudit(req.session.userId!, "spedition", grantingId, "permission_removed", null, String(receivingId));
+    emit(req, "permission.updated", { grantingSpeditionId: grantingId, receivingSpeditionId: receivingId, permissionLevel: null }, grantingId, [receivingId]);
     return res.json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });

@@ -19,9 +19,18 @@ function getIO(req: any): IOServer | null {
   return req.app.get("io") || null;
 }
 
-function emit(req: any, event: string, data: any, speditionId?: number | null) {
+async function emit(req: any, event: string, data: any, speditionId?: number | null) {
   const io = getIO(req);
-  if (io) emitToRooms(io, event, data, speditionId);
+  if (!io) return;
+  let additionalSpeditionIds: number[] = [];
+  if (speditionId) {
+    const receivers = await db
+      .select({ receivingSpeditionId: speditionPermissionsTable.receivingSpeditionId })
+      .from(speditionPermissionsTable)
+      .where(eq(speditionPermissionsTable.grantingSpeditionId, speditionId));
+    additionalSpeditionIds = receivers.map((r) => r.receivingSpeditionId);
+  }
+  emitToRooms(io, event, data, speditionId, additionalSpeditionIds);
 }
 
 const COMET_OPERATIVE_FIELDS = ["status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet"];

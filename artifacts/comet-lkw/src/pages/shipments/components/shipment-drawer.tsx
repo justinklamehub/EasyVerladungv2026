@@ -19,11 +19,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, LockOpen, AlertCircle } from "lucide-react";
+import { Loader2, Lock, LockOpen, AlertCircle, Pencil } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { format } from "date-fns";
+import { getSocket } from "@/lib/socket";
+import { onShipmentEditing, type ShipmentEditor } from "@/hooks/use-socket";
 
 interface ShipmentDrawerProps {
   shipmentId: number | null;
@@ -47,6 +49,8 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   const isViewer = role === "comet_viewer" || role === "speditions_viewer";
   const isEditing = !!shipmentId;
 
+  const [otherEditors, setOtherEditors] = useState<ShipmentEditor[]>([]);
+
   const { data: shipment, isLoading } = useGetShipment(shipmentId || 0, {
     query: { enabled: !!shipmentId && open, queryKey: getGetShipmentQueryKey(shipmentId || 0) },
   });
@@ -61,6 +65,28 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   );
 
   const { data: speditionen } = useListSpeditionen();
+
+  useEffect(() => {
+    if (!shipmentId || !open) {
+      setOtherEditors([]);
+      return;
+    }
+    const socket = getSocket();
+    const speditionId = shipment?.speditionId ?? null;
+
+    socket.emit("shipment.editing.start", { shipmentId, speditionId });
+
+    const unsub = onShipmentEditing((evtShipmentId, editors) => {
+      if (evtShipmentId !== shipmentId) return;
+      setOtherEditors(editors.filter((e) => e.userId !== user?.id));
+    });
+
+    return () => {
+      unsub();
+      socket.emit("shipment.editing.stop", { shipmentId, speditionId });
+      setOtherEditors([]);
+    };
+  }, [shipmentId, open, shipment?.speditionId, user?.id]);
 
   const isLocked = !!shipment?.gesperrtFuerSpedition;
   const canEdit = !isViewer && (!isLocked || isCometUser);
@@ -203,6 +229,12 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mt-1">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
               Diese Verladung ist durch COMET gesperrt und kann nicht bearbeitet werden.
+            </div>
+          )}
+          {otherEditors.length > 0 && (
+            <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-2 mt-1">
+              <Pencil className="w-4 h-4 flex-shrink-0" />
+              Wird gerade bearbeitet von: {otherEditors.map((e) => e.username).join(", ")}
             </div>
           )}
         </SheetHeader>
