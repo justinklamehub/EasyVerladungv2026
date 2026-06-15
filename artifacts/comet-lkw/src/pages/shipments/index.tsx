@@ -338,19 +338,20 @@ export default function ShipmentsPage() {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("tor")}>
                 Tor <SortIcon field="tor" sortField={sortField} sortDir={sortDir} />
               </TableHead>
+              <TableHead>Ware</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={!isViewer && isCometUser ? 8 : 7} className="text-center py-8">
+                <TableCell colSpan={!isViewer && isCometUser ? 9 : 8} className="text-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                 </TableCell>
               </TableRow>
             ) : sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={!isViewer && isCometUser ? 8 : 7} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={!isViewer && isCometUser ? 9 : 8} className="text-center py-8 text-slate-500">
                   Keine Verladungen gefunden.
                 </TableCell>
               </TableRow>
@@ -400,6 +401,21 @@ export default function ShipmentsPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="font-medium">{shipment.tor || "-"}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const ws = (shipment as any).wareStatus || "nicht bereit";
+                      const cls = ws === "vorbereitet" ? "bg-green-100 text-green-700 border-green-200"
+                        : ws === "in bearbeitung" ? "bg-amber-100 text-amber-700 border-amber-200"
+                        : ws === "ausgedruckt" ? "bg-blue-100 text-blue-700 border-blue-200"
+                        : "bg-red-100 text-red-700 border-red-200";
+                      const label = ws === "nicht bereit" ? "Nicht bereit"
+                        : ws === "ausgedruckt" ? "Ausgedruckt"
+                        : ws === "in bearbeitung" ? "In Bearbeitung"
+                        : ws === "vorbereitet" ? "Vorbereitet"
+                        : ws;
+                      return <Badge variant="outline" className={`text-xs ${cls}`}>{label}</Badge>;
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {shipment.gesperrtFuerSpedition ? (
                       <Lock className="w-4 h-4 text-red-500" />

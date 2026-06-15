@@ -166,7 +166,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     ataTime: "",
     tor: "",
     status: "Angemeldet",
-    wareStatus: "",
+    wareStatus: "nicht bereit",
     speditionId: "",
     bemerkungen: "",
     telefon: "",
@@ -191,7 +191,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
         telefon: shipment.telefon || "",
       });
     } else if (!shipmentId && open) {
-      setForm({ bezeichnung: "", kennzeichen: "", relation: "", lkwArt: "", etaDate: "", etaTime: "", ataDate: "", ataTime: "", tor: "", status: "Angemeldet", wareStatus: "", speditionId: user?.speditionId ? String(user.speditionId) : "", bemerkungen: "", telefon: "" });
+      setForm({ bezeichnung: "", kennzeichen: "", relation: "", lkwArt: "", etaDate: "", etaTime: "", ataDate: "", ataTime: "", tor: "", status: "Angemeldet", wareStatus: "nicht bereit", speditionId: user?.speditionId ? String(user.speditionId) : "", bemerkungen: "", telefon: "" });
     }
   }, [shipment, open, shipmentId, user]);
 
