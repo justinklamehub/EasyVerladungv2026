@@ -89,7 +89,7 @@ router.post("/users", requireAuth, async (req, res) => {
       .insert(usersTable)
       .values({
         username,
-        email,
+        email: email || null,
         passwordHash,
         role: newRole,
         speditionId: resolvedSpeditionId,

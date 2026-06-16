@@ -1,0 +1,54 @@
+/root/.pm2/logs/comet-api-error.log last 30 lines:
+0|comet-ap |     'speditions_viewer',
+0|comet-ap |     13,
+0|comet-ap |     true
+0|comet-ap |   ],
+0|comet-ap |   cause: error: null value in column "email" of relation "users" violates not-null constraint
+0|comet-ap |       at <anonymous> (/opt/comet/app/node_modules/.pnpm/pg-pool@3.13.0_pg@8.20.0/node_modules/pg-pool/index.js:45:11)
+0|comet-ap |       at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+0|comet-ap |       at async <anonymous> (/opt/comet/app/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:161:13)
+0|comet-ap |       at async NodePgPreparedQuery.queryWithCache (/opt/comet/app/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.20.0/node_modules/src/pg-core/session.ts:71:12)
+0|comet-ap |       at async <anonymous> (/opt/comet/app/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:154:19)
+0|comet-ap |       at async <anonymous> (/opt/comet/app/artifacts/api-server/src/routes/users.ts:88:20) {
+0|comet-ap |     length: 358,
+0|comet-ap |     severity: 'ERROR',
+0|comet-ap |     code: '23502',
+0|comet-ap |     detail: 'Failing row contains (15, spedviewer, null, $2b$12$XevUqf0ICr4nr4lUiNkwc.XOk2snFL7MIha2AfmkK1YoGecaAsFC., speditions_viewer, 13, t, 2026-06-16 12:14:00.832126+02, 2026-06-16 12:14:00.832126+02).',
+0|comet-ap |     hint: undefined,
+0|comet-ap |     position: undefined,
+0|comet-ap |     internalPosition: undefined,
+0|comet-ap |     internalQuery: undefined,
+0|comet-ap |     where: undefined,
+0|comet-ap |     schema: 'public',
+0|comet-ap |     table: 'users',
+0|comet-ap |     column: 'email',
+0|comet-ap |     dataType: undefined,
+0|comet-ap |     constraint: undefined,
+0|comet-ap |     file: 'execMain.c',
+0|comet-ap |     line: '2023',
+0|comet-ap |     routine: 'ExecConstraints'
+0|comet-ap |   }
+0|comet-ap | }
+
+root@crimson-snake-71460:/opt/comet/app/artifacts/api-server# psql postgresql://comet_app:I6n0o9L0FGne48kMes5k@127.0.0.1:5432/comet_lkw \
+  -c "\d users"
+                                        Table "public.users"
+    Column     |           Type           | Collation | Nullable |              Default
+---------------+--------------------------+-----------+----------+-----------------------------------
+ id            | integer                  |           | not null | nextval('users_id_seq'::regclass)
+ username      | text                     |           | not null |
+ email         | text                     |           | not null |
+ password_hash | text                     |           | not null |
+ role          | text                     |           | not null |
+ spedition_id  | integer                  |           |          |
+ is_active     | boolean                  |           | not null | true
+ created_at    | timestamp with time zone |           | not null | now()
+ updated_at    | timestamp with time zone |           | not null | now()
+Indexes:
+    "users_pkey" PRIMARY KEY, btree (id)
+    "users_email_unique" UNIQUE CONSTRAINT, btree (email)
+    "users_username_unique" UNIQUE CONSTRAINT, btree (username)
+Referenced by:
+    TABLE "settings" CONSTRAINT "settings_updated_by_fkey" FOREIGN KEY (updated_by) REFERENCES users(id) ON DELETE SET NULL
+
+root@crimson-snake-71460:/opt/comet/app/artifacts/api-server#
