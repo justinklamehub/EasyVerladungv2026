@@ -24,7 +24,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, LockOpen, AlertCircle, Pencil, Trash2, ClipboardCheck, Plus, Clock } from "lucide-react";
+import { Loader2, Lock, LockOpen, AlertCircle, Pencil, Trash2, ClipboardCheck, Plus, Clock, Printer } from "lucide-react";
+import { printDeckblatt } from "@/lib/print-deckblatt";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
@@ -271,6 +272,32 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
   const isSaving = updateMutation.isPending || createMutation.isPending;
 
+  const palletBalance = palletMovements
+    ? palletMovements.reduce((sum, m) => {
+        return m.movementType === "ausgang" ? sum - (m.amount ?? 0) : sum + (m.amount ?? 0);
+      }, 0)
+    : null;
+
+  function handlePrintDeckblatt() {
+    if (!shipment) return;
+    const sped = speditionen?.find((s) => s.id === shipment.speditionId);
+    printDeckblatt({
+      shipmentId: shipment.id,
+      bezeichnung: shipment.bezeichnung,
+      kennzeichen: shipment.kennzeichen,
+      relation: shipment.relation,
+      lkwArt: shipment.lkwArt,
+      etaDate: shipment.etaDate,
+      etaTime: (shipment as any).etaTime,
+      tor: shipment.tor,
+      status: shipment.status,
+      bemerkungen: shipment.bemerkungen,
+      speditionName: (shipment as any).speditionName ?? sped?.name ?? null,
+      palletBalance,
+      username: user?.username ?? user?.email ?? "—",
+    });
+  }
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg overflow-y-auto">
@@ -284,6 +311,17 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                 <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 flex items-center gap-1">
                   <Lock className="w-3 h-3" />Gesperrt
                 </Badge>
+              )}
+              {isCometUser && isEditing && shipment && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 text-xs"
+                  onClick={handlePrintDeckblatt}
+                  title="Deckblatt drucken"
+                >
+                  <Printer className="w-3 h-3 mr-1" />Deckblatt
+                </Button>
               )}
               {isCometAdmin && isEditing && (
                 isLocked ? (
