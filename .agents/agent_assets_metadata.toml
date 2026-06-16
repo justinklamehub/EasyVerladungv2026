@@ -6,3 +6,9 @@ id = "JvGWM5Ub9Xx4qDyunqeZy"
 uri = "file://DEPLOYMENT.md"
 type = "text"
 title = "Deployment-Anleitung (VPS / Nginx / PM2)"
+
+[[outputs]]
+id = "BSnQT5c7gHRCetz1DHWUP"
+uri = "file://DEPLOYMENT_RHEL.md"
+type = "text"
+title = "Deployment-Anleitung (RHEL 7.9)"
