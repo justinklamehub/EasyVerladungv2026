@@ -230,7 +230,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
     <TooltipProvider delayDuration={0}>
       <div className="relative flex h-full">
         {/* Notification panel — fixed so it isn't clipped by overflow-hidden ancestors */}
-        {isCometUser && showNotifications && (
+        {showNotifications && (
           <>
             <div
               className="fixed inset-0 z-40"
@@ -355,16 +355,14 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
 
             {collapsed ? (
               <div className="flex flex-col items-center gap-1">
-                {isCometUser && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      {bellButton}
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="text-xs">
-                      Benachrichtigungen{unreadCount > 0 ? ` (${unreadCount})` : ""}
-                    </TooltipContent>
-                  </Tooltip>
-                )}
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {bellButton}
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="text-xs">
+                    Benachrichtigungen{unreadCount > 0 ? ` (${unreadCount})` : ""}
+                  </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <Link
@@ -392,7 +390,7 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
               </div>
             ) : (
               <div className="flex flex-col gap-1">
-                {isCometUser && bellButton}
+                {bellButton}
                 <Button
                   variant="ghost"
                   size="sm"

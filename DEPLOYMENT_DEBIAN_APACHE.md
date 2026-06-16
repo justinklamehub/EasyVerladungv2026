@@ -536,6 +536,144 @@ apache2ctl -M | grep proxy
 
 ---
 
+## 18. Update auf bestehender Installation (ohne Datenverlust)
+
+> **Voraussetzung:** Das System läuft bereits gemäß dieser Anleitung unter `/opt/comet/app/` mit PM2 und Apache2.  
+> Alle Schritte als Benutzer **root** oder mit `sudo` ausführen, sofern nicht anders angegeben.
+
+### Schritt 1 — Datenbank sichern (Pflicht vor jedem Update)
+
+```bash
+# Backup erstellen (als postgres-Benutzer)
+sudo -u postgres pg_dump cometdb > /opt/comet/backups/cometdb_$(date +%Y%m%d_%H%M%S).sql
+
+# Verzeichnis anlegen falls noch nicht vorhanden
+mkdir -p /opt/comet/backups
+sudo -u postgres pg_dump cometdb > /opt/comet/backups/cometdb_$(date +%Y%m%d_%H%M%S).sql
+
+# Backup prüfen (Größe > 0 = OK)
+ls -lh /opt/comet/backups/
+```
+
+### Schritt 2 — Neuen Code holen
+
+```bash
+cd /opt/comet/app
+
+# Als comet-Benutzer
+sudo -u comet git pull origin main
+```
+
+### Schritt 3 — Abhängigkeiten aktualisieren
+
+```bash
+sudo -u comet pnpm install --frozen-lockfile
+```
+
+### Schritt 4 — Datenbank-Migration: Benachrichtigungen-Tabelle anlegen
+
+Dieser Schritt ist **idempotent** (`IF NOT EXISTS`) — er schadet nicht, wenn die Tabelle bereits existiert, und legt sie an wenn sie fehlt. **Bestehende Daten bleiben vollständig erhalten.**
+
+```bash
+sudo -u postgres psql cometdb <<'SQL'
+CREATE TABLE IF NOT EXISTS notifications (
+  id          SERIAL PRIMARY KEY,
+  user_id     INTEGER NOT NULL,
+  title       TEXT NOT NULL,
+  message     TEXT,
+  type        TEXT NOT NULL DEFAULT 'info',
+  link_to     TEXT,
+  read        BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS notifications_user_id_idx  ON notifications(user_id);
+CREATE INDEX IF NOT EXISTS notifications_created_at_idx ON notifications(created_at DESC);
+
+SELECT 'notifications-Tabelle OK' AS status;
+SQL
+```
+
+Erwartete Ausgabe: `notifications-Tabelle OK`
+
+### Schritt 5 — Frontend neu bauen
+
+```bash
+cd /opt/comet/app
+sudo -u comet env PORT=3000 BASE_PATH="/" NODE_ENV=production \
+  pnpm --filter @workspace/comet-lkw run build
+
+# Apache Lesezugriff sicherstellen
+chmod -R o+rX /opt/comet/app/artifacts/comet-lkw/dist/public
+```
+
+### Schritt 6 — Backend neu bauen
+
+```bash
+sudo -u comet pnpm --filter @workspace/api-server run build
+```
+
+### Schritt 7 — Dienst neu starten
+
+```bash
+# Mit PM2
+sudo -u comet pm2 restart comet-api
+sudo -u comet pm2 save
+
+# ODER mit Systemd
+sudo systemctl restart comet-api
+```
+
+### Schritt 8 — Prüfen ob alles läuft
+
+```bash
+# Backend-Status
+sudo -u comet pm2 status
+# ODER
+sudo systemctl status comet-api
+
+# Backend direkt testen
+curl -s http://127.0.0.1:8080/api/auth/me
+# Erwartete Antwort: {"error":"Nicht angemeldet"} (kein 502!)
+
+# Apache-Log auf Fehler prüfen
+tail -20 /var/log/apache2/comet-error.log
+```
+
+### Was passiert mit den Daten?
+
+| Datenbankinhalt | Verhalten beim Update |
+|---|---|
+| Benutzer, Rollen, Speditionen | ✅ Unverändert |
+| Verladungen / Shipments | ✅ Unverändert |
+| Palettenbewegungen & Abstimmungen | ✅ Unverändert |
+| Audit-Log | ✅ Unverändert |
+| Neue `notifications`-Tabelle | ✅ Wird neu angelegt (leer) — kein Konflikt |
+
+### Rollback (falls etwas schiefgeht)
+
+```bash
+# Code zurücksetzen
+cd /opt/comet/app
+sudo -u comet git log --oneline -5   # gewünschten Commit-Hash notieren
+sudo -u comet git checkout <COMMIT-HASH>
+
+# Datenbank wiederherstellen (nur falls nötig)
+sudo -u postgres psql -c "DROP DATABASE cometdb;"
+sudo -u postgres psql -c "CREATE DATABASE cometdb OWNER comet;"
+sudo -u postgres psql cometdb < /opt/comet/backups/cometdb_DATUM_UHRZEIT.sql
+
+# Neu bauen und starten
+sudo -u comet pnpm install --frozen-lockfile
+sudo -u comet pnpm --filter @workspace/api-server run build
+sudo -u comet env PORT=3000 BASE_PATH="/" NODE_ENV=production \
+  pnpm --filter @workspace/comet-lkw run build
+chmod -R o+rX /opt/comet/app/artifacts/comet-lkw/dist/public
+sudo -u comet pm2 restart comet-api
+```
+
+---
+
 ## Schnellreferenz: Wichtige Pfade & Befehle
 
 | Ressource | Pfad / Befehl |
