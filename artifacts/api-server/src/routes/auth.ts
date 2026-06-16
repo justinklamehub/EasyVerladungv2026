@@ -102,6 +102,61 @@ router.get("/auth/me", requireAuth, async (req, res) => {
   }
 });
 
+router.patch("/auth/profile", requireAuth, async (req, res) => {
+  try {
+    const { username, email } = req.body as { username?: string; email?: string };
+
+    const updates: Record<string, any> = { updatedAt: new Date() };
+    if (username !== undefined) {
+      if (!username.trim()) return res.status(400).json({ error: "Benutzername darf nicht leer sein" });
+      updates.username = username.trim();
+    }
+    if (email !== undefined) {
+      updates.email = email.trim() || null;
+    }
+
+    const [updated] = await db
+      .update(usersTable)
+      .set(updates)
+      .where(eq(usersTable.id, req.session.userId!))
+      .returning();
+
+    if (updates.username) req.session.username = updated.username;
+
+    return res.json({ id: updated.id, username: updated.username, email: updated.email });
+  } catch (err: any) {
+    if (err?.code === "23505") return res.status(409).json({ error: "Benutzername oder E-Mail bereits vergeben" });
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/auth/change-password", requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body as { currentPassword?: string; newPassword?: string };
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Aktuelles und neues Passwort erforderlich" });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "Neues Passwort muss mindestens 6 Zeichen lang sein" });
+    }
+
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)).limit(1);
+    if (!user) return res.status(401).json({ error: "Benutzer nicht gefunden" });
+
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) return res.status(400).json({ error: "Aktuelles Passwort ist falsch" });
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await db.update(usersTable).set({ passwordHash, updatedAt: new Date() }).where(eq(usersTable.id, user.id));
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/auth/permissions", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;

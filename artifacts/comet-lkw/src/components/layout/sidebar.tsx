@@ -16,6 +16,7 @@ import {
   ShieldCheck,
   PanelLeftClose,
   PanelLeftOpen,
+  UserCog,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -169,29 +170,55 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
           )}
 
           {collapsed ? (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  onClick={() => logoutMutation.mutate()}
-                  className="w-9 h-9 mx-auto flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                >
-                  <LogOut className="w-5 h-5" />
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="text-xs">
-                Abmelden ({user.username})
-              </TooltipContent>
-            </Tooltip>
+            <div className="flex flex-col items-center gap-1">
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link
+                    href="/profil"
+                    className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                  >
+                    <UserCog className="w-5 h-5" />
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">Mein Profil</TooltipContent>
+              </Tooltip>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => logoutMutation.mutate()}
+                    className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                  >
+                    <LogOut className="w-5 h-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="text-xs">
+                  Abmelden ({user.username})
+                </TooltipContent>
+              </Tooltip>
+            </div>
           ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-              onClick={() => logoutMutation.mutate()}
-            >
-              <LogOut className="w-4 h-4 mr-2" />
-              Abmelden
-            </Button>
+            <div className="flex flex-col gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                asChild
+              >
+                <Link href="/profil">
+                  <UserCog className="w-4 h-4 mr-2" />
+                  Mein Profil
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                onClick={() => logoutMutation.mutate()}
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Abmelden
+              </Button>
+            </div>
           )}
         </div>
       </div>
