@@ -273,7 +273,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   const isSaving = updateMutation.isPending || createMutation.isPending;
 
   async function handlePrintDeckblatt() {
-    if (!shipment) return;
+    if (!shipment || !shipmentId) return;
     const sped = speditionen?.find((s) => s.id === shipment.speditionId);
     await printDeckblatt({
       shipmentId: shipment.id,
@@ -289,6 +289,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
       speditionName: (shipment as any).speditionName ?? sped?.name ?? null,
       username: user?.username ?? user?.email ?? "—",
     });
+    updateMutation.mutate({ id: shipmentId, data: { wareStatus: "ausgedruckt" } });
   }
 
   return (
