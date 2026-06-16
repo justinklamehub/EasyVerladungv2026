@@ -1,0 +1,36 @@
+root@crimson-snake-71460:/opt/comet/app# sudo -u comet pm2 logs comet-api --lines 30 --nostream
+[TAILING] Tailing last 30 lines for [comet-api] process (change the value with --lines option)
+/opt/comet/.pm2/logs/comet-api-out.log last 30 lines:
+/var/log/comet/api-error.log last 30 lines:
+0|comet-ap | 2026-06-16 12:08:32:     'speditions_viewer',
+0|comet-ap | 2026-06-16 12:08:32:     13,
+0|comet-ap | 2026-06-16 12:08:32:     true
+0|comet-ap | 2026-06-16 12:08:32:   ],
+0|comet-ap | 2026-06-16 12:08:32:   cause: error: null value in column "email" of relation "users" violates not-null constraint
+0|comet-ap | 2026-06-16 12:08:32:       at <anonymous> (/opt/comet/app/node_modules/.pnpm/pg-pool@3.13.0_pg@8.20.0/node_modules/pg-pool/index.js:45:11)
+0|comet-ap | 2026-06-16 12:08:32:       at process.processTicksAndRejections (node:internal/process/task_queues:103:5)
+0|comet-ap | 2026-06-16 12:08:32:       at async <anonymous> (/opt/comet/app/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:161:13)
+0|comet-ap | 2026-06-16 12:08:32:       at async NodePgPreparedQuery.queryWithCache (/opt/comet/app/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.20.0/node_modules/src/pg-core/session.ts:71:12)
+0|comet-ap | 2026-06-16 12:08:32:       at async <anonymous> (/opt/comet/app/node_modules/.pnpm/drizzle-orm@0.45.2_@types+pg@8.20.0_pg@8.20.0/node_modules/src/node-postgres/session.ts:154:19)
+0|comet-ap | 2026-06-16 12:08:32:       at async <anonymous> (/opt/comet/app/artifacts/api-server/src/routes/users.ts:88:20) {
+0|comet-ap | 2026-06-16 12:08:32:     length: 358,
+0|comet-ap | 2026-06-16 12:08:32:     severity: 'ERROR',
+0|comet-ap | 2026-06-16 12:08:32:     code: '23502',
+0|comet-ap | 2026-06-16 12:08:32:     detail: 'Failing row contains (13, spedviewer, null, $2b$12$oEY0C3AeRqZKwmFNR2w28uxmE.T/4ilSjRf83M1J8kvfbaiwXPwlu, speditions_viewer, 13, t, 2026-06-16 12:08:32.495364+02, 2026-06-16 12:08:32.495364+02).',
+0|comet-ap | 2026-06-16 12:08:32:     hint: undefined,
+0|comet-ap | 2026-06-16 12:08:32:     position: undefined,
+0|comet-ap | 2026-06-16 12:08:32:     internalPosition: undefined,
+0|comet-ap | 2026-06-16 12:08:32:     internalQuery: undefined,
+0|comet-ap | 2026-06-16 12:08:32:     where: undefined,
+0|comet-ap | 2026-06-16 12:08:32:     schema: 'public',
+0|comet-ap | 2026-06-16 12:08:32:     table: 'users',
+0|comet-ap | 2026-06-16 12:08:32:     column: 'email',
+0|comet-ap | 2026-06-16 12:08:32:     dataType: undefined,
+0|comet-ap | 2026-06-16 12:08:32:     constraint: undefined,
+0|comet-ap | 2026-06-16 12:08:32:     file: 'execMain.c',
+0|comet-ap | 2026-06-16 12:08:32:     line: '2023',
+0|comet-ap | 2026-06-16 12:08:32:     routine: 'ExecConstraints'
+0|comet-ap | 2026-06-16 12:08:32:   }
+0|comet-ap | 2026-06-16 12:08:32: }
+
+root@crimson-snake-71460:/opt/comet/app#
