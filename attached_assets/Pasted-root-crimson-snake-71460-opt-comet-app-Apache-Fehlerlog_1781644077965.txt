@@ -1,0 +1,26 @@
+root@crimson-snake-71460:/opt/comet/app# # Apache-Fehlerlog prüfen
+tail -20 /var/log/apache2/comet-error.log
+
+# Apache neu laden
+systemctl reload apache2
+[Tue Jun 16 23:06:46.789582 2026] [proxy:error] [pid 53069:tid 53069] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:46.789881 2026] [proxy_http:error] [pid 53069:tid 53069] [client 77.20.71.196:65376] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:06:52.332410 2026] [proxy:error] [pid 52799:tid 52799] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:52.332673 2026] [proxy_http:error] [pid 52799:tid 52799] [client 77.20.71.196:64103] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:06:52.334377 2026] [proxy:error] [pid 52968:tid 52968] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:52.334605 2026] [proxy_http:error] [pid 52968:tid 52968] [client 77.20.71.196:49734] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:06:52.932737 2026] [proxy:error] [pid 52291:tid 52291] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:52.933001 2026] [proxy_http:error] [pid 52291:tid 52291] [client 77.20.71.196:51026] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:06:55.248229 2026] [proxy:error] [pid 52962:tid 52962] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:55.248601 2026] [proxy_http:error] [pid 52962:tid 52962] [client 77.20.71.196:52115] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:06:55.269185 2026] [proxy:error] [pid 52801:tid 52801] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:55.269430 2026] [proxy_http:error] [pid 52801:tid 52801] [client 77.20.71.196:50624] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:06:56.049714 2026] [proxy:error] [pid 52140:tid 52140] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:56.049967 2026] [proxy_http:error] [pid 52140:tid 52140] [client 77.20.71.196:50363] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:06:58.270048 2026] [proxy:error] [pid 52966:tid 52966] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:06:58.270389 2026] [proxy_http:error] [pid 52966:tid 52966] [client 77.20.71.196:61067] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:07:00.269230 2026] [proxy:error] [pid 52143:tid 52143] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:07:00.269580 2026] [proxy_http:error] [pid 52143:tid 52143] [client 77.20.71.196:57428] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+[Tue Jun 16 23:07:04.784579 2026] [proxy:error] [pid 52956:tid 52956] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:3333 (localhost:3333) failed
+[Tue Jun 16 23:07:04.784942 2026] [proxy_http:error] [pid 52956:tid 52956] [client 77.20.71.196:63727] AH01114: HTTP: failed to make connection to backend: localhost, referer: http://87.237.54.218/login
+root@crimson-snake-71460:/opt/comet/app#
