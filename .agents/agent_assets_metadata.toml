@@ -12,3 +12,9 @@ id = "BSnQT5c7gHRCetz1DHWUP"
 uri = "file://DEPLOYMENT_RHEL.md"
 type = "text"
 title = "Deployment-Anleitung (RHEL 7.9)"
+
+[[outputs]]
+id = "YDiPd8AVAmMDAm9CvN0RC"
+uri = "file://comet_lkw_export.sql.gz"
+type = "unspecified"
+title = "comet_lkw_export.sql.gz — Datenbankexport"
