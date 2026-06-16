@@ -385,6 +385,10 @@ export async function printDeckblatt(data: DeckblattData) {
       <div class="doc-title">Verladungs&shy;deckblatt</div>
       <div class="doc-subtitle">${data.bezeichnung ? escHtml(data.bezeichnung) : "&nbsp;"}</div>
     </div>
+    <div class="lkw-id-badge">
+      <div class="lkw-id-label">LKW-ID</div>
+      <div class="lkw-id-value">${escHtml(codeValue)}</div>
+    </div>
   </div>
 
   <!-- STATUS BANNER -->
