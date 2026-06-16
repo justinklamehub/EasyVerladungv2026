@@ -1,0 +1,24 @@
+root@crimson-snake-71460:/opt/comet/app# ss -tlnp | grep node
+LISTEN 0      511                *:8080             *:*    users:(("node /opt/comet",pid=71881,fd=23))
+root@crimson-snake-71460:/opt/comet/app# grep PORT /opt/comet/app/artifacts/api-server/.env
+PORT=3333
+root@crimson-snake-71460:/opt/comet/app# sudo -u comet pm2 delete comet-api
+[PM2] Applying action deleteProcessId on app [comet-api](ids: [ 0 ])
+[PM2] [comet-api](0) ✓
+┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@crimson-snake-71460:/opt/comet/app# sudo -u comet bash -c 'PORT=3333 pm2 start /opt/comet/app/artifacts/api-server/dist/index.mjs --name comet-api'
+[PM2] Starting /opt/comet/app/artifacts/api-server/dist/index.mjs in fork_mode (1 instance)
+[PM2] Done.
+┌────┬──────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name         │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ comet-api    │ default     │ 0.0.0   │ fork    │ 71994    │ 0s     │ 0    │ online    │ 0%       │ 12.0mb   │ comet    │ disabled │
+└────┴──────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@crimson-snake-71460:/opt/comet/app# sudo -u comet pm2 save
+[PM2] Saving current process list...
+[PM2] Successfully saved in /opt/comet/.pm2/dump.pm2
+root@crimson-snake-71460:/opt/comet/app# sleep 3 && ss -tlnp | grep node
+curl -s http://127.0.0.1:3333/api/auth/me
+root@crimson-snake-71460:/opt/comet/app#
