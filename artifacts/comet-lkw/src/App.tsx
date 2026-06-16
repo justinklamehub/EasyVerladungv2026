@@ -1,6 +1,8 @@
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
+import { useEffect } from "react";
+import { toast as sonnerToast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
@@ -81,6 +83,16 @@ function Router() {
 }
 
 function App() {
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if ((e.target as HTMLElement).closest('[data-sonner-toast]')) {
+        sonnerToast.dismiss();
+      }
+    };
+    document.addEventListener('click', handler, true);
+    return () => document.removeEventListener('click', handler, true);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -89,7 +101,7 @@ function App() {
             <Router />
           </AuthProvider>
         </WouterRouter>
-        <Toaster richColors position="top-right" duration={10000} />
+        <Toaster richColors position="top-right" duration={10000} closeButton />
       </TooltipProvider>
     </QueryClientProvider>
   );
