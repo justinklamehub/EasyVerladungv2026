@@ -259,7 +259,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     }
     if (form.wareStatus) data.wareStatus = form.wareStatus;
 
-    if (isCometAdmin && !isEditing) {
+    if (isCometAdmin) {
       data.speditionId = form.speditionId ? parseInt(form.speditionId) : undefined;
     }
 
