@@ -8,10 +8,15 @@ type ToastParams = {
 
 export function useToast() {
   const toast = ({ title, description, variant }: ToastParams) => {
+    let id: string | number;
+    const options = {
+      description,
+      onClick: () => sonnerToast.dismiss(id),
+    };
     if (variant === "destructive") {
-      sonnerToast.error(title, { description });
+      id = sonnerToast.error(title, options);
     } else {
-      sonnerToast.success(title, { description });
+      id = sonnerToast.success(title, options);
     }
   };
   return { toast };

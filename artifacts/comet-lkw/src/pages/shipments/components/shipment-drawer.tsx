@@ -356,7 +356,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             </TabsList>
 
             <TabsContent value="details" className="space-y-4">
-              {isCometAdmin && !isEditing && (
+              {isCometAdmin && (
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Spedition</Label>
                   <Select value={form.speditionId} onValueChange={v => setForm(f => ({ ...f, speditionId: v }))}>

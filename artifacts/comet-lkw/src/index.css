@@ -231,6 +231,7 @@
 
 [data-sonner-toast] {
   overflow: hidden;
+  cursor: pointer;
 }
 
 [data-sonner-toast]::after {
