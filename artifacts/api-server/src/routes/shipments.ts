@@ -12,6 +12,7 @@ import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
 import { can } from "../lib/permissions";
+import { notify } from "../lib/notify";
 import type { Server as IOServer } from "socket.io";
 
 const router = Router();
@@ -160,6 +161,23 @@ router.post("/shipments", requireAuth, async (req, res) => {
 
     await logAudit(req.session.userId!, "shipment", shipment.id, "created", null, shipment.bezeichnung);
     emit(req, "shipment.created", { id: shipment.id }, shipment.speditionId);
+
+    if (SPED_ROLES.includes(role)) {
+      const io = getIO(req);
+      if (io) {
+        const label = shipment.bezeichnung || shipment.kennzeichen || `#${shipment.id}`;
+        const spedName = shipment.speditionId
+          ? (await db.select({ name: speditionenTable.name }).from(speditionenTable).where(eq(speditionenTable.id, shipment.speditionId)).limit(1))[0]?.name
+          : null;
+        await notify(io, {
+          targetRoles: ["comet_admin", "comet_leitstand"],
+          title: "Neue Verladung angemeldet",
+          message: `${spedName ? spedName + ": " : ""}${label}`,
+          type: "info",
+          linkTo: "/shipments",
+        });
+      }
+    }
 
     return res.status(201).json(await buildShipmentResponse(shipment));
   } catch (err) {
@@ -310,6 +328,30 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
 
     const isStatusChange = updates.status && updates.status !== existing.status;
     emit(req, isStatusChange ? "shipment.status_changed" : "shipment.updated", { id }, existing.speditionId);
+
+    if (isStatusChange) {
+      const io = getIO(req);
+      if (io) {
+        const label = shipment.bezeichnung || shipment.kennzeichen || `#${id}`;
+        if (updates.status === "Angekommen") {
+          await notify(io, {
+            targetRoles: ["comet_lager", "comet_leitstand"],
+            title: "LKW angekommen",
+            message: `${label} ist eingetroffen${shipment.tor ? " – " + shipment.tor : ""}.`,
+            type: "info",
+            linkTo: "/shipments",
+          });
+        } else if (updates.status === "Abgefertigt") {
+          await notify(io, {
+            targetRoles: ["comet_admin", "comet_leitstand"],
+            title: "Verladung abgefertigt",
+            message: `${label} wurde abgefertigt.`,
+            type: "success",
+            linkTo: "/shipments",
+          });
+        }
+      }
+    }
 
     return res.json(await buildShipmentResponse(shipment));
   } catch (err) {

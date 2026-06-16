@@ -5,3 +5,4 @@ export * from "./pallets";
 export * from "./audit";
 export * from "./austraege";
 export * from "./settings";
+export * from "./notifications";

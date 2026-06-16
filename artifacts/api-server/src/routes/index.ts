@@ -11,6 +11,7 @@ import auditRouter from "./audit";
 import austraegeRouter from "./austraege";
 import settingsRouter from "./settings";
 import permissionsRouter from "./permissions";
+import notificationsRouter from "./notifications";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(auditRouter);
 router.use(austraegeRouter);
 router.use(settingsRouter);
 router.use(permissionsRouter);
+router.use(notificationsRouter);
 
 export default router;

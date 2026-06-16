@@ -11,6 +11,7 @@ import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
 import { can } from "../lib/permissions";
+import { notify } from "../lib/notify";
 import type { Server as IOServer } from "socket.io";
 
 const router = Router();
@@ -102,6 +103,17 @@ router.post("/reconciliations", requireAuth, async (req, res) => {
     emit(req, "reconciliation.created", { id: rec.id }, speditionId);
 
     const [sped] = await db.select().from(speditionenTable).where(eq(speditionenTable.id, speditionId)).limit(1);
+
+    const io = req.app.get("io") as IOServer | undefined;
+    if (io && sped) {
+      await notify(io, {
+        targetRoles: ["speditions_admin"],
+        title: "Neue Abstimmung gestartet",
+        message: `COMET hat eine Abstimmung für ${sped.name} (${dateFrom} – ${dateTo}) eröffnet.`,
+        type: "warning",
+        linkTo: "/abstimmungen",
+      });
+    }
     const [creator] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)).limit(1);
 
     return res.status(201).json({

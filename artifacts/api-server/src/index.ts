@@ -3,6 +3,7 @@ import { Server as SocketIOServer } from "socket.io";
 import app, { sessionMiddleware } from "./app";
 import { logger } from "./lib/logger";
 import { seedMissingPermissions } from "./lib/permissions";
+import { startScheduler } from "./lib/scheduler";
 
 const rawPort = process.env["PORT"];
 
@@ -91,6 +92,10 @@ io.on("connection", (socket) => {
     socket.join(`spedition:${speditionId}`);
   }
 
+  if (userId) {
+    socket.join(`user:${userId}`);
+  }
+
   logger.info({ socketId: socket.id, role, speditionId }, "Socket.IO client connected");
 
   socket.on("shipment.editing.start", (data: { shipmentId: number; speditionId?: number | null }) => {
@@ -162,4 +167,5 @@ httpServer.listen(port, async (err?: Error) => {
   } catch (e) {
     logger.warn({ err: e }, "seedMissingPermissions failed — non-fatal");
   }
+  startScheduler(io);
 });
