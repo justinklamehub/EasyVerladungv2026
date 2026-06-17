@@ -5,6 +5,12 @@ import { eq, desc, isNotNull, count } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { isCometRole } from "../lib/auth";
 import { can } from "../lib/permissions";
+import { emitToRooms } from "../lib/socket-emit";
+
+function emitShipment(req: any, event: string, id: number, speditionId?: number | null) {
+  const io = req.app.get("io");
+  if (io) emitToRooms(io, event, { id }, speditionId ?? null, []);
+}
 
 const router = Router();
 
@@ -91,10 +97,14 @@ router.patch("/scanner/shipment/:id", async (req, res) => {
 
     if (Object.keys(update).length === 0) return res.status(400).json({ error: "Keine Änderungen" });
 
-    const existing = await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.id, id)).limit(1);
+    const existing = await db.select({ id: shipmentsTable.id, speditionId: shipmentsTable.speditionId, status: shipmentsTable.status }).from(shipmentsTable).where(eq(shipmentsTable.id, id)).limit(1);
     if (existing.length === 0) return res.status(404).json({ error: "Verladung nicht gefunden" });
 
     await db.update(shipmentsTable).set(update).where(eq(shipmentsTable.id, id));
+
+    const isStatusChange = update.status !== undefined && update.status !== existing[0].status;
+    emitShipment(req, isStatusChange ? "shipment.status_changed" : "shipment.updated", id, existing[0].speditionId);
+
     return res.json({ success: true });
   } catch (err) {
     console.error(err);
