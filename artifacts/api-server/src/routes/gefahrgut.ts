@@ -26,6 +26,8 @@ router.get("/scanner/find-shipment", async (req, res) => {
         relation: shipmentsTable.relation,
         speditionId: shipmentsTable.speditionId,
         status: shipmentsTable.status,
+        tor: shipmentsTable.tor,
+        wareStatus: shipmentsTable.wareStatus,
       })
       .from(shipmentsTable)
       .where(eq(shipmentsTable.id, numId))
@@ -52,6 +54,42 @@ router.get("/scanner/find-shipment", async (req, res) => {
       .where(eq(gefahrgutChecklistenTable.shipmentId, shipment.id));
 
     return res.json({ found: true, shipment, spedition: speditionName, checklistCount });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Serverfehler" });
+  }
+});
+
+const VALID_STATUSES = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
+const VALID_WARE_STATUSES = ["nicht bereit", "vorbereitet", "ausgedruckt"];
+
+router.patch("/scanner/shipment/:id", async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Ungültige ID" });
+
+    const { status, tor, wareStatus } = req.body as {
+      status?: string; tor?: string; wareStatus?: string;
+    };
+
+    const update: Record<string, unknown> = {};
+    if (status !== undefined) {
+      if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: "Ungültiger Status" });
+      update.status = status;
+    }
+    if (tor !== undefined) update.tor = tor || null;
+    if (wareStatus !== undefined) {
+      if (wareStatus && !VALID_WARE_STATUSES.includes(wareStatus)) return res.status(400).json({ error: "Ungültiger Ware-Status" });
+      update.wareStatus = wareStatus || null;
+    }
+
+    if (Object.keys(update).length === 0) return res.status(400).json({ error: "Keine Änderungen" });
+
+    const existing = await db.select({ id: shipmentsTable.id }).from(shipmentsTable).where(eq(shipmentsTable.id, id)).limit(1);
+    if (existing.length === 0) return res.status(404).json({ error: "Verladung nicht gefunden" });
+
+    await db.update(shipmentsTable).set(update).where(eq(shipmentsTable.id, id));
+    return res.json({ success: true });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Serverfehler" });

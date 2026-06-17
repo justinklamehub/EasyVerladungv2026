@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, Hash, ClipboardCheck } from "lucide-react";
+import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, Hash, ClipboardCheck, ChevronDown, ChevronUp, Save } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -121,12 +121,17 @@ const S = {
   }),
 };
 
+const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
+const WARE_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
+
 type ShipmentInfo = {
   id: number;
   kennzeichen: string | null;
   bezeichnung: string | null;
   relation: string | null;
   status: string;
+  tor: string | null;
+  wareStatus: string | null;
 } | null;
 
 export default function ScannerLandingPage() {
@@ -137,6 +142,13 @@ export default function ScannerLandingPage() {
   const [spedition, setSpedition] = useState<string | null>(null);
   const [checklistCount, setChecklistCount] = useState(0);
   const [confirmedDuplicate, setConfirmedDuplicate] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editStatus, setEditStatus] = useState("");
+  const [editTor, setEditTor] = useState("");
+  const [editWareStatus, setEditWareStatus] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const [saveOk, setSaveOk] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
 
@@ -147,12 +159,21 @@ export default function ScannerLandingPage() {
     setIsSearching(true);
     setSearched(false);
     setConfirmedDuplicate(false);
+    setEditOpen(false);
+    setSaveOk(false);
+    setSaveError("");
     try {
       const res = await fetch(`${API}/scanner/find-shipment?id=${encodeURIComponent(val)}`);
       const data = await res.json();
-      setShipment(data.found ? data.shipment : null);
+      const s = data.found ? data.shipment : null;
+      setShipment(s);
       setSpedition(data.spedition ?? null);
       setChecklistCount(data.checklistCount ?? 0);
+      if (s) {
+        setEditStatus(s.status ?? "");
+        setEditTor(s.tor ?? "");
+        setEditWareStatus(s.wareStatus ?? "");
+      }
       setSearched(true);
     } catch {
       setShipment(null);
@@ -160,6 +181,28 @@ export default function ScannerLandingPage() {
       setSearched(true);
     } finally {
       setIsSearching(false);
+    }
+  }
+
+  async function handleSave() {
+    if (!shipment) return;
+    setIsSaving(true);
+    setSaveError("");
+    setSaveOk(false);
+    try {
+      const res = await fetch(`${API}/scanner/shipment/${shipment.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: editStatus, tor: editTor, wareStatus: editWareStatus }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error ?? "Fehler");
+      setShipment((prev) => prev ? { ...prev, status: editStatus, tor: editTor || null, wareStatus: editWareStatus || null } : prev);
+      setSaveOk(true);
+      setEditOpen(false);
+    } catch (err: any) {
+      setSaveError(err.message ?? "Unbekannter Fehler");
+    } finally {
+      setIsSaving(false);
     }
   }
 
@@ -254,6 +297,101 @@ export default function ScannerLandingPage() {
                 <span style={S.infoLabel}>Status</span>
                 <span style={S.infoValue}>{shipment.status}</span>
               </div>
+              {shipment.tor && (
+                <div style={{ ...S.infoRow, borderBottom: "none", marginTop: -8 }}>
+                  <span style={S.infoLabel}>Tor</span>
+                  <span style={S.infoValue}>{shipment.tor}</span>
+                </div>
+              )}
+              {shipment.wareStatus && (
+                <div style={{ ...S.infoRow, borderBottom: "none", marginTop: -8 }}>
+                  <span style={S.infoLabel}>Ware</span>
+                  <span style={S.infoValue}>{shipment.wareStatus}</span>
+                </div>
+              )}
+
+              {/* Save-Feedback */}
+              {saveOk && (
+                <div style={{ background: "rgba(180,255,0,0.1)", border: "1px solid #b4ff00", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#b4ff00", marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                  <CheckCircle2 size={15} /> Änderungen gespeichert
+                </div>
+              )}
+
+              {/* Angaben ändern */}
+              <button
+                style={{ ...S.btnGray, marginTop: 12, justifyContent: "space-between" }}
+                onClick={() => { setEditOpen(o => !o); setSaveOk(false); setSaveError(""); }}
+              >
+                <span>ANGABEN ÄNDERN</span>
+                {editOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+
+              {editOpen && (
+                <div style={{ marginTop: 12, background: "rgba(30,58,95,0.4)", border: "1px solid #2d4a6b", borderRadius: 8, padding: "14px 14px 10px" }}>
+                  {/* Status */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ ...S.label, marginBottom: 6 }}>Status</label>
+                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                      {STATUS_OPTIONS.map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => setEditStatus(opt)}
+                          style={{
+                            padding: "7px 13px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                            background: editStatus === opt ? "#b4ff00" : "transparent",
+                            color: editStatus === opt ? "#0d1b2a" : "#94a3b8",
+                            border: editStatus === opt ? "1.5px solid #b4ff00" : "1.5px solid #2d4a6b",
+                          }}
+                        >{opt}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Ware-Status */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ ...S.label, marginBottom: 6 }}>Ware-Status</label>
+                    <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
+                      {WARE_OPTIONS.map(opt => (
+                        <button
+                          key={opt}
+                          onClick={() => setEditWareStatus(prev => prev === opt ? "" : opt)}
+                          style={{
+                            padding: "7px 13px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer",
+                            background: editWareStatus === opt ? "#b4ff00" : "transparent",
+                            color: editWareStatus === opt ? "#0d1b2a" : "#94a3b8",
+                            border: editWareStatus === opt ? "1.5px solid #b4ff00" : "1.5px solid #2d4a6b",
+                          }}
+                        >{opt}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tor */}
+                  <div style={{ marginBottom: 12 }}>
+                    <label style={{ ...S.label, marginBottom: 6 }}>Tor</label>
+                    <input
+                      style={{ ...S.input, fontSize: 16, padding: "10px 14px", border: "1.5px solid #2d4a6b" }}
+                      type="text"
+                      value={editTor}
+                      onChange={e => setEditTor(e.target.value)}
+                      placeholder="z.B. Tor 3"
+                    />
+                  </div>
+
+                  {saveError && (
+                    <div style={{ color: "#f87171", fontSize: 12, marginBottom: 8 }}>{saveError}</div>
+                  )}
+
+                  <button
+                    style={{ ...S.btnGreen, marginTop: 4 }}
+                    onClick={handleSave}
+                    disabled={isSaving}
+                  >
+                    {isSaving ? <Loader2 size={17} style={{ animation: "spin 1s linear infinite" }} /> : <Save size={17} />}
+                    {isSaving ? "WIRD GESPEICHERT..." : "SPEICHERN"}
+                  </button>
+                </div>
+              )}
 
               {checklistCount > 0 && !confirmedDuplicate ? (
                 <div style={{ marginTop: 14 }}>
