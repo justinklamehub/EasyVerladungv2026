@@ -70,28 +70,31 @@ export async function printDeckblatt(data: DeckblattData) {
     body {
       font-family: 'Arial', 'Helvetica Neue', sans-serif;
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
       background: #fff;
       color: #1e293b;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
+      overflow: hidden;
     }
 
     .page {
       width: 210mm;
-      min-height: 297mm;
+      height: 297mm;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
 
     /* ── HEADER ─────────────────────────────────────── */
     .header {
       background: #f1f5f9;
-      padding: 10mm 14mm 8mm 14mm;
+      padding: 7mm 14mm 6mm 14mm;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 6mm;
+      flex-shrink: 0;
     }
 
     .lkw-id-badge {
@@ -145,10 +148,11 @@ export async function printDeckblatt(data: DeckblattData) {
     /* ── CONTENT ────────────────────────────────────── */
     .content {
       flex: 1;
-      padding: 6mm 14mm 5mm 14mm;
+      min-height: 0;
+      padding: 4mm 14mm 4mm 14mm;
       display: flex;
       flex-direction: column;
-      gap: 5mm;
+      gap: 3mm;
     }
 
     /* ── FIELD ──────────────────────────────────────── */
@@ -169,9 +173,9 @@ export async function printDeckblatt(data: DeckblattData) {
       word-break: break-word;
     }
 
-    .field-value.xl    { font-size: 32pt; line-height: 1.05; }
-    .field-value.large { font-size: 18pt; }
-    .field-value.std   { font-size: 14pt; }
+    .field-value.xl    { font-size: 26pt; line-height: 1.05; }
+    .field-value.large { font-size: 16pt; }
+    .field-value.std   { font-size: 13pt; }
 
     .field-value.empty {
       color: #cbd5e1;
@@ -196,14 +200,14 @@ export async function printDeckblatt(data: DeckblattData) {
       background: #f8fafc;
       border: 0.3mm solid #e2e8f0;
       border-radius: 2mm;
-      padding: 4mm 5mm;
-      min-height: 12mm;
+      padding: 3mm 5mm;
+      min-height: 9mm;
     }
 
     .bemerkungen-text {
-      font-size: 10pt;
+      font-size: 9.5pt;
       color: #1e293b;
-      line-height: 1.5;
+      line-height: 1.4;
       word-break: break-word;
       white-space: pre-wrap;
     }
@@ -214,20 +218,21 @@ export async function printDeckblatt(data: DeckblattData) {
       align-items: stretch;
       border: 0.6mm solid #0f172a;
       border-radius: 2mm;
-      min-height: 18mm;
+      min-height: 14mm;
+      flex-shrink: 0;
     }
 
     .paletten-label-cell {
-      padding: 4mm 5mm;
+      padding: 3mm 5mm;
       border-right: 0.6mm solid #0f172a;
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      min-width: 52mm;
+      min-width: 50mm;
     }
 
     .paletten-label-text {
-      font-size: 11pt;
+      font-size: 10pt;
       font-weight: 700;
       letter-spacing: 0.04em;
       text-transform: uppercase;
@@ -241,7 +246,7 @@ export async function printDeckblatt(data: DeckblattData) {
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      gap: 5mm;
+      gap: 4mm;
     }
 
     .writein-line {
@@ -255,9 +260,9 @@ export async function printDeckblatt(data: DeckblattData) {
       border: 0.6mm solid #0f172a;
       border-radius: 2mm;
       flex: 1;
+      min-height: 0;
       display: flex;
       flex-direction: column;
-      min-height: 70mm;
       overflow: hidden;
     }
 
@@ -317,12 +322,13 @@ export async function printDeckblatt(data: DeckblattData) {
     /* ── FOOTER ─────────────────────────────────────── */
     .footer {
       border-top: 0.25mm solid #e2e8f0;
-      padding: 3mm 14mm;
+      padding: 2mm 14mm;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 7pt;
       color: #94a3b8;
+      flex-shrink: 0;
     }
 
     @media print {
