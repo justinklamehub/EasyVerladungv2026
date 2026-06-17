@@ -395,7 +395,7 @@ export default function PalettenPage() {
               <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">{reportError}</div>
             )}
 
-            {reportData.length > 0 && (
+            {(reportData.length > 0 || plantCounts.length > 0) && (
               <div className="overflow-x-auto rounded-lg border border-slate-200">
                 <Table>
                   <TableHeader className="bg-slate-50">
