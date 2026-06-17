@@ -2,37 +2,23 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
 import { format, subDays } from "date-fns";
-import { de } from "date-fns/locale";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
-import {
-  Loader2,
-  Download,
-  FileSpreadsheet,
-  TrendingUp,
-  TrendingDown,
-  Clock,
-  Truck,
-  CheckCircle2,
-  AlertCircle,
-  Timer,
-} from "lucide-react";
-import * as XLSX from "xlsx";
+import { Loader2, TrendingUp, TrendingDown, Clock, AlertCircle, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 
 const ALL = "__all__";
 
 const STATUS_COLORS: Record<string, string> = {
-  Angemeldet:    "#64748b",
-  Angekommen:    "#3b82f6",
-  "in Verladung":"#f97316",
-  Verladen:      "#8b5cf6",
-  Abgefertigt:   "#22c55e",
-  Storniert:     "#ef4444",
+  Angemeldet:    "hsl(215.4 16.3% 46.9%)",
+  Angekommen:    "hsl(160 60% 45%)",
+  "in Verladung":"hsl(25 90% 55%)",
+  Verladen:      "hsl(45 80% 50%)",
+  Abgefertigt:   "hsl(173 58% 39%)",
+  Storniert:     "hsl(0 84.2% 60.2%)",
 };
 
 interface ShipmentRow {
@@ -92,71 +78,27 @@ function fmtMin(min: number | null): string {
 
 function delayBadge(min: number | null) {
   if (min === null) return <span className="text-slate-400">–</span>;
-  if (Math.abs(min) <= 15) return <Badge className="bg-green-500/20 text-green-400 border-green-500/30">Pünktlich {fmtMin(min)}</Badge>;
-  if (min > 15) return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Verspätet {fmtMin(min)}</Badge>;
-  return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Zu früh {fmtMin(min)}</Badge>;
+  if (Math.abs(min) <= 15) return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Pünktlich {fmtMin(min)}</Badge>;
+  if (min > 15) return <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">Verspätet {fmtMin(min)}</Badge>;
+  return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Zu früh {fmtMin(min)}</Badge>;
 }
 
-function exportCsv(rows: ShipmentRow[]) {
-  const headers = [
-    "ID","Bezeichnung","Kennzeichen","Relation","LKW-Art","Spedition","Tor","Status",
-    "ETA-Datum","ETA-Zeit","ATA-Datum","ATA-Zeit","Verspätung (min)","Verarbeitungszeit (min)",
-    "Angekommen um","Verladen um",
-  ];
-  const lines = [
-    headers.join(";"),
-    ...rows.map((r) =>
-      [
-        r.id, r.bezeichnung ?? "", r.kennzeichen ?? "", r.relation ?? "",
-        r.lkwArt ?? "", r.speditionName, r.tor ?? "", r.status,
-        r.etaDate ?? "", r.etaTime ?? "", r.ataDate ?? "", r.ataTime ?? "",
-        r.verzoegerungMin ?? "", r.verarbeitungszeitMin ?? "",
-        r.angekommenAt ? format(new Date(r.angekommenAt), "dd.MM.yy HH:mm") : "",
-        r.verladenAt   ? format(new Date(r.verladenAt),   "dd.MM.yy HH:mm") : "",
-      ].join(";"),
-    ),
-  ];
-  const blob = new Blob(["\uFEFF" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `auswertung_${format(new Date(), "yyyyMMdd")}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+type SortCol = keyof ShipmentRow;
 
-function exportXlsx(rows: ShipmentRow[]) {
-  const data = rows.map((r) => ({
-    ID: r.id,
-    Bezeichnung: r.bezeichnung ?? "",
-    Kennzeichen: r.kennzeichen ?? "",
-    Relation: r.relation ?? "",
-    "LKW-Art": r.lkwArt ?? "",
-    Spedition: r.speditionName,
-    Tor: r.tor ?? "",
-    Status: r.status,
-    "ETA-Datum": r.etaDate ?? "",
-    "ETA-Zeit": r.etaTime ?? "",
-    "ATA-Datum": r.ataDate ?? "",
-    "ATA-Zeit": r.ataTime ?? "",
-    "Verspätung (min)": r.verzoegerungMin ?? "",
-    "Verarbeitungszeit (min)": r.verarbeitungszeitMin ?? "",
-    "Angekommen um": r.angekommenAt ? format(new Date(r.angekommenAt), "dd.MM.yy HH:mm") : "",
-    "Verladen um":   r.verladenAt   ? format(new Date(r.verladenAt),   "dd.MM.yy HH:mm") : "",
-  }));
-  const ws = XLSX.utils.json_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Auswertung");
-  XLSX.writeFile(wb, `auswertung_${format(new Date(), "yyyyMMdd")}.xlsx`);
+function SortIcon({ col, sortCol, sortDir }: { col: SortCol; sortCol: SortCol; sortDir: "asc" | "desc" }) {
+  if (sortCol !== col) return <ChevronsUpDown className="w-3 h-3 ml-1 text-slate-400 inline" />;
+  return sortDir === "asc"
+    ? <ArrowUp className="w-3 h-3 ml-1 text-primary inline" />
+    : <ArrowDown className="w-3 h-3 ml-1 text-primary inline" />;
 }
 
 export default function AuswertungPage() {
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
   const [dateTo,   setDateTo]   = useState(format(new Date(), "yyyy-MM-dd"));
-  const [relation,    setRelation]    = useState(ALL);
-  const [speditionId, setSpeditionId] = useState(ALL);
+  const [relation,     setRelation]     = useState(ALL);
+  const [speditionId,  setSpeditionId]  = useState(ALL);
   const [statusFilter, setStatusFilter] = useState(ALL);
-  const [sortCol, setSortCol] = useState<keyof ShipmentRow>("etaDate");
+  const [sortCol, setSortCol] = useState<SortCol>("etaDate");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const params = new URLSearchParams({ dateFrom, dateTo });
@@ -164,7 +106,7 @@ export default function AuswertungPage() {
   if (speditionId !== ALL) params.set("speditionId", speditionId);
   if (statusFilter !== ALL) params.set("status",     statusFilter);
 
-  const { data, isLoading, isError } = useQuery<AuswertungResponse>({
+  const { data, isLoading } = useQuery<AuswertungResponse>({
     queryKey: ["auswertung", dateFrom, dateTo, relation, speditionId, statusFilter],
     queryFn: () => customFetch(`/api/auswertung?${params.toString()}`),
   });
@@ -179,7 +121,7 @@ export default function AuswertungPage() {
     });
   }, [data, sortCol, sortDir]);
 
-  function toggleSort(col: keyof ShipmentRow) {
+  function toggleSort(col: SortCol) {
     if (sortCol === col) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     else { setSortCol(col); setSortDir("asc"); }
   }
@@ -187,253 +129,201 @@ export default function AuswertungPage() {
   const s = data?.stats;
   const puenktlichRate = s && s.mitAta > 0 ? Math.round((s.puenktlich / s.mitAta) * 100) : null;
 
+  if (isLoading) {
+    return (
+      <div className="flex h-[50vh] items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-6 max-w-[1600px] mx-auto">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-100">Auswertung</h1>
-          <p className="text-sm text-slate-400 mt-0.5">Statistiken & Analyse aller Verladungen</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Auswertung</h1>
+          <p className="text-sm text-slate-500 mt-1">Statistiken & Analyse aller Verladungen</p>
         </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!data || sorted.length === 0}
-            onClick={() => exportCsv(sorted)}
-            className="border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            <Download className="w-4 h-4 mr-1.5" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={!data || sorted.length === 0}
-            onClick={() => exportXlsx(sorted)}
-            className="border-slate-700 text-slate-300 hover:bg-slate-800"
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-1.5" />
-            Excel
-          </Button>
+
+        {/* ── Filter bar ── */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+            <span className="shrink-0">Von</span>
+            <Input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="w-[138px] h-9 bg-white"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 text-sm text-slate-600">
+            <span className="shrink-0">bis</span>
+            <Input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="w-[138px] h-9 bg-white"
+            />
+          </div>
+          <Select value={relation} onValueChange={setRelation}>
+            <SelectTrigger className="w-[150px] bg-white">
+              <SelectValue placeholder="Relation" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Alle Relationen</SelectItem>
+              {data?.meta.relations.map((r) => (
+                <SelectItem key={r} value={r!}>{r}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={speditionId} onValueChange={setSpeditionId}>
+            <SelectTrigger className="w-[160px] bg-white">
+              <SelectValue placeholder="Spedition" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Alle Speditionen</SelectItem>
+              {data?.meta.speditionen.map((sp) => (
+                <SelectItem key={sp.id} value={String(sp.id)}>{sp.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[145px] bg-white">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={ALL}>Alle Status</SelectItem>
+              {["Angemeldet","Angekommen","in Verladung","Verladen","Abgefertigt","Storniert"].map((st) => (
+                <SelectItem key={st} value={st}>{st}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
-      {/* ── Filter bar ── */}
-      <Card className="bg-slate-900 border-slate-800">
-        <CardContent className="pt-4 pb-4">
-          <div className="flex flex-wrap gap-3 items-end">
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-slate-400">Von</span>
-              <Input
-                type="date"
-                value={dateFrom}
-                onChange={(e) => setDateFrom(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-slate-200 w-36 h-8 text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-slate-400">Bis</span>
-              <Input
-                type="date"
-                value={dateTo}
-                onChange={(e) => setDateTo(e.target.value)}
-                className="bg-slate-800 border-slate-700 text-slate-200 w-36 h-8 text-sm"
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-slate-400">Relation</span>
-              <Select value={relation} onValueChange={setRelation}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200 w-44 h-8 text-sm">
-                  <SelectValue placeholder="Alle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>Alle Relationen</SelectItem>
-                  {data?.meta.relations.map((r) => (
-                    <SelectItem key={r} value={r!}>{r}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-slate-400">Spedition</span>
-              <Select value={speditionId} onValueChange={setSpeditionId}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200 w-44 h-8 text-sm">
-                  <SelectValue placeholder="Alle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>Alle Speditionen</SelectItem>
-                  {data?.meta.speditionen.map((sp) => (
-                    <SelectItem key={sp.id} value={String(sp.id)}>{sp.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className="text-xs text-slate-400">Status</span>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="bg-slate-800 border-slate-700 text-slate-200 w-40 h-8 text-sm">
-                  <SelectValue placeholder="Alle" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value={ALL}>Alle Status</SelectItem>
-                  {["Angemeldet","Angekommen","in Verladung","Verladen","Abgefertigt","Storniert"].map((st) => (
-                    <SelectItem key={st} value={st}>{st}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {isLoading && (
-        <div className="flex items-center justify-center h-40 text-slate-400">
-          <Loader2 className="w-6 h-6 animate-spin mr-2" /> Lade Daten…
+      {!data && (
+        <div className="flex h-[30vh] flex-col items-center justify-center text-slate-500">
+          <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
+          <p>Keine Daten verfügbar.</p>
         </div>
       )}
 
-      {isError && (
-        <div className="flex items-center gap-2 text-red-400 p-4">
-          <AlertCircle className="w-5 h-5" /> Fehler beim Laden der Daten.
-        </div>
-      )}
-
-      {data && (
+      {data && s && (
         <>
           {/* ── KPI Cards ── */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
-                    <Truck className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-slate-100">{s!.gesamt}</div>
-                    <div className="text-xs text-slate-400">Verladungen gesamt</div>
-                  </div>
-                </div>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <Card className="bg-white shadow-sm border-slate-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Verladungen gesamt</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-slate-900">{s.gesamt}</div>
+                <p className="text-xs text-slate-400 mt-1">{s.mitAta} mit tatsächlicher Ankunft</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
-                    <CheckCircle2 className="w-5 h-5 text-green-400" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-slate-100">
-                      {puenktlichRate !== null ? `${puenktlichRate}%` : "–"}
-                    </div>
-                    <div className="text-xs text-slate-400">Pünktlichkeitsrate (±15min)</div>
-                    {s!.mitAta > 0 && (
-                      <div className="text-[10px] text-slate-500 mt-0.5">
-                        {s!.puenktlich} pünktl. / {s!.verspaetet} verspät. / {s!.zuFrueh} zu früh
-                      </div>
-                    )}
-                  </div>
+            <Card className="bg-white shadow-sm border-slate-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Pünktlichkeitsrate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-green-600">
+                  {puenktlichRate !== null ? `${puenktlichRate}%` : "–"}
                 </div>
+                <p className="text-xs text-slate-400 mt-1">
+                  {s.puenktlich} pünktl. · {s.verspaetet} verspät. · {s.zuFrueh} zu früh
+                </p>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                    s!.avgVerzoegerungMin !== null && s!.avgVerzoegerungMin > 0 ? "bg-red-500/20" : "bg-blue-500/20"
-                  }`}>
-                    {s!.avgVerzoegerungMin !== null && s!.avgVerzoegerungMin > 0
-                      ? <TrendingUp className="w-5 h-5 text-red-400" />
-                      : <TrendingDown className="w-5 h-5 text-blue-400" />}
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-slate-100">{fmtMin(s!.avgVerzoegerungMin)}</div>
-                    <div className="text-xs text-slate-400">Ø Abweichung ETA/ATA</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">{s!.mitAta} Ankünfte mit ATA</div>
-                  </div>
+            <Card className="bg-white shadow-sm border-slate-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Ø Abweichung ETA/ATA</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className={`text-3xl font-bold flex items-center gap-2 ${
+                  s.avgVerzoegerungMin !== null && s.avgVerzoegerungMin > 0 ? "text-red-600" : "text-blue-600"
+                }`}>
+                  {s.avgVerzoegerungMin !== null && s.avgVerzoegerungMin > 0
+                    ? <TrendingUp className="w-6 h-6" />
+                    : <TrendingDown className="w-6 h-6" />}
+                  {fmtMin(s.avgVerzoegerungMin)}
                 </div>
+                <p className="text-xs text-slate-400 mt-1">positiv = zu spät, negativ = zu früh</p>
               </CardContent>
             </Card>
 
-            <Card className="bg-slate-900 border-slate-800">
-              <CardContent className="pt-5 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center shrink-0">
-                    <Timer className="w-5 h-5 text-purple-400" />
-                  </div>
-                  <div>
-                    <div className="text-2xl font-bold text-slate-100">{fmtMin(s!.avgVerarbeitungszeitMin)}</div>
-                    <div className="text-xs text-slate-400">Ø Verarbeitungszeit</div>
-                    <div className="text-[10px] text-slate-500 mt-0.5">Angekommen → Verladen</div>
-                  </div>
+            <Card className="bg-white shadow-sm border-slate-200">
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium text-slate-500">Ø Verarbeitungszeit</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-slate-700 flex items-center gap-2">
+                  <Clock className="w-6 h-6 text-slate-400" />
+                  {fmtMin(s.avgVerarbeitungszeitMin)}
                 </div>
+                <p className="text-xs text-slate-400 mt-1">Angekommen → Verladen</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* ── Charts Row ── */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Status distribution */}
-            <Card className="bg-slate-900 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Statusverteilung</CardTitle>
+          {/* ── Charts ── */}
+          <div className="grid gap-6 md:grid-cols-2">
+            <Card className="bg-white shadow-sm border-slate-200">
+              <CardHeader>
+                <CardTitle>Statusverteilung</CardTitle>
+                <CardDescription>Anzahl Verladungen je Status</CardDescription>
               </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={s!.byStatus} layout="vertical" margin={{ left: 10, right: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" horizontal={false} />
-                    <XAxis type="number" tick={{ fill: "#94a3b8", fontSize: 11 }} />
-                    <YAxis type="category" dataKey="status" tick={{ fill: "#94a3b8", fontSize: 11 }} width={90} />
-                    <Tooltip
-                      contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6 }}
-                      labelStyle={{ color: "#e2e8f0" }}
-                      itemStyle={{ color: "#94a3b8" }}
-                    />
-                    <Bar dataKey="count" radius={[0, 4, 4, 0]}>
-                      {s!.byStatus.map((entry) => (
-                        <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? "#64748b"} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <CardContent className="h-[280px]">
+                {s.byStatus.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={s.byStatus} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                      <XAxis dataKey="status" axisLine={false} tickLine={false} tick={{ fontSize: 11 }} />
+                      <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
+                      <Tooltip cursor={{ fill: "#f1f5f9" }} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
+                      <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+                        {s.byStatus.map((entry) => (
+                          <Cell key={entry.status} fill={STATUS_COLORS[entry.status] ?? STATUS_COLORS.Angemeldet} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full flex items-center justify-center text-slate-400">Keine Daten für diesen Zeitraum</div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Pünktlichkeit breakdown */}
-            <Card className="bg-slate-900 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Pünktlichkeit (mit ATA)</CardTitle>
+            <Card className="bg-white shadow-sm border-slate-200">
+              <CardHeader>
+                <CardTitle>Pünktlichkeit</CardTitle>
+                <CardDescription>Nur Verladungen mit tatsächlicher Ankunftszeit (ATA)</CardDescription>
               </CardHeader>
-              <CardContent>
-                {s!.mitAta === 0 ? (
-                  <div className="h-[200px] flex items-center justify-center text-slate-500 text-sm">
-                    Keine Daten mit ATA im Zeitraum
-                  </div>
+              <CardContent className="h-[280px]">
+                {s.mitAta === 0 ? (
+                  <div className="h-full flex items-center justify-center text-slate-400">Keine Daten mit ATA im Zeitraum</div>
                 ) : (
-                  <ResponsiveContainer width="100%" height={200}>
+                  <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
                         data={[
-                          { name: "Pünktlich (±15min)", value: s!.puenktlich,  fill: "#22c55e" },
-                          { name: "Verspätet (>15min)", value: s!.verspaetet,  fill: "#ef4444" },
-                          { name: "Zu früh (>15min)",   value: s!.zuFrueh,    fill: "#3b82f6" },
+                          { name: "Pünktlich (±15min)", value: s.puenktlich, fill: "hsl(160 60% 45%)" },
+                          { name: "Verspätet (>15min)", value: s.verspaetet, fill: "hsl(0 84.2% 60.2%)" },
+                          { name: "Zu früh (>15min)",   value: s.zuFrueh,   fill: "hsl(220 70% 50%)" },
                         ].filter((d) => d.value > 0)}
                         dataKey="value"
                         nameKey="name"
                         cx="50%"
                         cy="50%"
-                        outerRadius={75}
-                        label={({ name, percent }) => `${(percent * 100).toFixed(0)}%`}
+                        outerRadius={90}
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
                         labelLine={false}
                       />
-                      <Tooltip
-                        contentStyle={{ background: "#1e293b", border: "1px solid #334155", borderRadius: 6 }}
-                        itemStyle={{ color: "#94a3b8" }}
-                      />
-                      <Legend
-                        wrapperStyle={{ fontSize: 11, color: "#94a3b8" }}
-                      />
+                      <Tooltip cursor={{ fill: "#f1f5f9" }} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
+                      <Legend />
                     </PieChart>
                   </ResponsiveContainer>
                 )}
@@ -441,127 +331,150 @@ export default function AuswertungPage() {
             </Card>
           </div>
 
-          {/* ── By Relation table ── */}
-          {s!.byRelation.length > 0 && (
-            <Card className="bg-slate-900 border-slate-800">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium text-slate-300">Auswertung nach Relation</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-800 hover:bg-transparent">
-                      <TableHead className="text-slate-400 text-xs">Relation</TableHead>
-                      <TableHead className="text-slate-400 text-xs text-right">Anzahl</TableHead>
-                      <TableHead className="text-slate-400 text-xs text-right">Ø Abweichung</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {s!.byRelation.map((r) => (
-                      <TableRow key={r.relation} className="border-slate-800 hover:bg-slate-800/40">
-                        <TableCell className="text-slate-200 text-sm">{r.relation}</TableCell>
-                        <TableCell className="text-slate-400 text-sm text-right">{r.count}</TableCell>
-                        <TableCell className="text-right">
-                          {r.avgVerzoegerungMin === null ? (
-                            <span className="text-slate-500 text-sm">–</span>
-                          ) : (
-                            <span className={`text-sm font-medium ${
-                              r.avgVerzoegerungMin > 15 ? "text-red-400" :
-                              r.avgVerzoegerungMin < -15 ? "text-blue-400" : "text-green-400"
-                            }`}>
-                              {fmtMin(r.avgVerzoegerungMin)}
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
+          {/* ── By Relation & By Spedition ── */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {s.byRelation.length > 0 && (
+              <Card className="bg-white shadow-sm border-slate-200">
+                <CardHeader>
+                  <CardTitle>Nach Relation</CardTitle>
+                  <CardDescription>Anzahl und Ø Abweichung je Relation</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="rounded-md border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead>Relation</TableHead>
+                          <TableHead className="text-right">Anzahl</TableHead>
+                          <TableHead className="text-right">Ø Abweichung</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {s.byRelation.map((r) => (
+                          <TableRow key={r.relation}>
+                            <TableCell className="font-medium">{r.relation}</TableCell>
+                            <TableCell className="text-right">{r.count}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={`font-medium ${
+                                r.avgVerzoegerungMin === null ? "text-slate-400" :
+                                r.avgVerzoegerungMin > 15 ? "text-red-600" :
+                                r.avgVerzoegerungMin < -15 ? "text-blue-600" : "text-green-600"
+                              }`}>
+                                {fmtMin(r.avgVerzoegerungMin)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {s.bySpedition.length > 0 && (
+              <Card className="bg-white shadow-sm border-slate-200">
+                <CardHeader>
+                  <CardTitle>Nach Spedition</CardTitle>
+                  <CardDescription>Anzahl und Ø Abweichung je Spedition</CardDescription>
+                </CardHeader>
+                <CardContent className="h-[280px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={s.bySpedition} layout="vertical" margin={{ top: 5, right: 40, left: 10, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                      <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
+                      <YAxis dataKey="speditionName" type="category" axisLine={false} tickLine={false} width={110} tick={{ fontSize: 11 }} />
+                      <Tooltip cursor={{ fill: "#f1f5f9" }} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
+                      <Bar dataKey="count" fill="hsl(222 47% 11%)" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+          </div>
 
           {/* ── Shipments table ── */}
-          <Card className="bg-slate-900 border-slate-800">
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-medium text-slate-300">
-                  Einzelne Verladungen ({sorted.length})
-                </CardTitle>
-              </div>
+          <Card className="bg-white shadow-sm border-slate-200">
+            <CardHeader>
+              <CardTitle>Einzelne Verladungen</CardTitle>
+              <CardDescription>{sorted.length} Einträge im gewählten Zeitraum</CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-slate-800 hover:bg-transparent">
-                      {([
-                        ["id",             "ID"],
-                        ["etaDate",        "ETA"],
-                        ["ataDate",        "ATA"],
-                        ["relation",       "Relation"],
-                        ["kennzeichen",    "Kennzeichen"],
-                        ["speditionName",  "Spedition"],
-                        ["tor",            "Tor"],
-                        ["status",         "Status"],
-                        ["verzoegerungMin","Abweichung"],
-                        ["verarbeitungszeitMin","Verarbeitungszeit"],
-                      ] as [keyof ShipmentRow, string][]).map(([col, label]) => (
-                        <TableHead
-                          key={col}
-                          className="text-slate-400 text-xs cursor-pointer select-none hover:text-slate-200"
-                          onClick={() => toggleSort(col)}
-                        >
-                          {label}
-                          {sortCol === col ? (sortDir === "asc" ? " ▲" : " ▼") : ""}
-                        </TableHead>
-                      ))}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sorted.length === 0 ? (
+              <div className="rounded-b-lg overflow-hidden border-t border-slate-200">
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
                       <TableRow>
-                        <TableCell colSpan={10} className="text-center text-slate-500 py-8 text-sm">
-                          Keine Verladungen im gewählten Zeitraum
-                        </TableCell>
-                      </TableRow>
-                    ) : sorted.map((row) => (
-                      <TableRow key={row.id} className="border-slate-800 hover:bg-slate-800/40">
-                        <TableCell className="text-slate-400 text-xs">{row.id}</TableCell>
-                        <TableCell className="text-slate-300 text-sm whitespace-nowrap">
-                          {row.etaDate ? `${row.etaDate.slice(8,10)}.${row.etaDate.slice(5,7)}.${row.etaDate.slice(2,4)}` : "–"}
-                          {row.etaTime ? ` ${row.etaTime}` : ""}
-                        </TableCell>
-                        <TableCell className="text-slate-300 text-sm whitespace-nowrap">
-                          {row.ataDate ? `${row.ataDate.slice(8,10)}.${row.ataDate.slice(5,7)}.${row.ataDate.slice(2,4)}` : "–"}
-                          {row.ataTime ? ` ${row.ataTime}` : ""}
-                        </TableCell>
-                        <TableCell className="text-slate-300 text-sm">{row.relation ?? "–"}</TableCell>
-                        <TableCell className="text-slate-300 text-sm font-mono text-xs">{row.kennzeichen ?? "–"}</TableCell>
-                        <TableCell className="text-slate-300 text-sm">{row.speditionName}</TableCell>
-                        <TableCell className="text-slate-400 text-sm">{row.tor ?? "–"}</TableCell>
-                        <TableCell>
-                          <Badge
-                            style={{
-                              backgroundColor: `${STATUS_COLORS[row.status] ?? "#64748b"}22`,
-                              color: STATUS_COLORS[row.status] ?? "#94a3b8",
-                              borderColor: `${STATUS_COLORS[row.status] ?? "#64748b"}55`,
-                            }}
-                            className="text-xs border"
+                        {([
+                          ["id",                  "ID"],
+                          ["etaDate",             "ETA"],
+                          ["ataDate",             "ATA"],
+                          ["relation",            "Relation"],
+                          ["kennzeichen",         "Kennzeichen"],
+                          ["speditionName",       "Spedition"],
+                          ["tor",                 "Tor"],
+                          ["status",              "Status"],
+                          ["verzoegerungMin",     "Abweichung"],
+                          ["verarbeitungszeitMin","Verarbeitungszeit"],
+                        ] as [SortCol, string][]).map(([col, label]) => (
+                          <TableHead
+                            key={col}
+                            className="cursor-pointer select-none whitespace-nowrap"
+                            onClick={() => toggleSort(col)}
                           >
-                            {row.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{delayBadge(row.verzoegerungMin)}</TableCell>
-                        <TableCell className="text-slate-400 text-sm">
-                          {row.verarbeitungszeitMin !== null
-                            ? <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{fmtMin(row.verarbeitungszeitMin)}</span>
-                            : <span className="text-slate-600">–</span>}
-                        </TableCell>
+                            {label}
+                            <SortIcon col={col} sortCol={sortCol} sortDir={sortDir} />
+                          </TableHead>
+                        ))}
                       </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+                    </TableHeader>
+                    <TableBody>
+                      {sorted.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={10} className="text-center py-8 text-slate-500">
+                            Keine Verladungen im gewählten Zeitraum
+                          </TableCell>
+                        </TableRow>
+                      ) : sorted.map((row) => (
+                        <TableRow key={row.id} className="hover:bg-slate-50">
+                          <TableCell className="text-xs text-slate-400 font-mono">{row.id}</TableCell>
+                          <TableCell className="text-sm whitespace-nowrap">
+                            {row.etaDate
+                              ? <><span className="font-medium">{format(new Date(row.etaDate), "dd.MM.yy")}</span>{row.etaTime ? ` ${row.etaTime}` : ""}</>
+                              : <span className="text-slate-400">–</span>}
+                          </TableCell>
+                          <TableCell className="text-sm whitespace-nowrap text-green-700">
+                            {row.ataDate
+                              ? <><span className="font-medium">{format(new Date(row.ataDate), "dd.MM.yy")}</span>{row.ataTime ? ` ${row.ataTime}` : ""}</>
+                              : <span className="text-slate-400">–</span>}
+                          </TableCell>
+                          <TableCell className="text-slate-600 text-sm">{row.relation ?? "–"}</TableCell>
+                          <TableCell className="font-medium text-sm">{row.kennzeichen ?? "–"}</TableCell>
+                          <TableCell className="text-slate-600 text-sm">{row.speditionName}</TableCell>
+                          <TableCell className="text-slate-600 text-sm">{row.tor ?? "–"}</TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className={
+                              row.status === "Abgefertigt" ? "bg-teal-50 text-teal-700 border-teal-200" :
+                              row.status === "Verladen"    ? "bg-yellow-50 text-yellow-700 border-yellow-200" :
+                              row.status === "in Verladung"? "bg-orange-50 text-orange-700 border-orange-200" :
+                              row.status === "Angekommen"  ? "bg-green-50 text-green-700 border-green-200" :
+                              row.status === "Storniert"   ? "bg-red-50 text-red-700 border-red-200" :
+                              "bg-slate-100 text-slate-700 border-slate-200"
+                            }>
+                              {row.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>{delayBadge(row.verzoegerungMin)}</TableCell>
+                          <TableCell className="text-slate-600 text-sm">
+                            {row.verarbeitungszeitMin !== null
+                              ? <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" />{fmtMin(row.verarbeitungszeitMin)}</span>
+                              : <span className="text-slate-400">–</span>}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
               </div>
             </CardContent>
           </Card>
