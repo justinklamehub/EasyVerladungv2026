@@ -27,6 +27,8 @@ import {
   CheckCircle2,
   AlertCircle,
   BarChart2,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -47,6 +49,8 @@ const ROLES_WITH_SPEDITION_ACCESS = ["comet_admin", "comet_leitstand"];
 interface AppSidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  isDark: boolean;
+  onToggleTheme: () => void;
 }
 
 function NotificationIcon({ type }: { type: string }) {
@@ -168,7 +172,7 @@ function NotificationPanel({
   );
 }
 
-export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
+export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSidebarProps) {
   const { user, refetch } = useAuth();
   const [location, setLocation] = useLocation();
   const [, navigate] = useWouterLocation();
@@ -367,6 +371,19 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
                 </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
+                    <button
+                      onClick={onToggleTheme}
+                      className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                    >
+                      {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="text-xs">
+                    {isDark ? "Hellmodus" : "Dunkelmodus"}
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
                     <Link
                       href="/profil"
                       className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
@@ -393,6 +410,17 @@ export function AppSidebar({ collapsed, onToggle }: AppSidebarProps) {
             ) : (
               <div className="flex flex-col gap-1">
                 {bellButton}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                  onClick={onToggleTheme}
+                >
+                  {isDark
+                    ? <Sun className="w-4 h-4 mr-2" />
+                    : <Moon className="w-4 h-4 mr-2" />}
+                  {isDark ? "Hellmodus" : "Dunkelmodus"}
+                </Button>
                 <Button
                   variant="ghost"
                   size="sm"
