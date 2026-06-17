@@ -39,7 +39,7 @@ interface ShipmentDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "Verladen", "Abgefertigt", "Storniert"];
+const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
 const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 

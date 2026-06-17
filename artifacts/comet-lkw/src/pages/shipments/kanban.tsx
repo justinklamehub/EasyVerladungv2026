@@ -11,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 
-const STATUSES = ["Angemeldet", "Erwartet", "Angekommen", "Verladen", "Abgefertigt", "Storniert"];
+const STATUSES = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 
 function SortableShipmentCard({ shipment }: { shipment: any }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ 

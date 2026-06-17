@@ -55,7 +55,8 @@ export default function DashboardPage() {
     Angemeldet: "hsl(215.4 16.3% 46.9%)", // muted
     Erwartet: "hsl(220 70% 50%)", // blue
     Angekommen: "hsl(160 60% 45%)", // green
-    Verladen: "hsl(30 80% 55%)", // yellow/orange
+    "in Verladung": "hsl(25 90% 55%)", // orange
+    Verladen: "hsl(45 80% 50%)", // yellow
     Abgefertigt: "hsl(173 58% 39%)", // teal
     Storniert: "hsl(0 84.2% 60.2%)", // red
   };

@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
 
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
 const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "Verladen"];
+const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen"];
 
 interface RowData {
   id: number;

@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { getListShipmentsQueryKey } from "@workspace/api-client-react";
 
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "Verladen", "Abgefertigt", "Storniert"];
+const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
 const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 
@@ -33,6 +33,7 @@ const STATUS_COLOR: Record<string, string> = {
   "Angemeldet": "bg-slate-100 text-slate-700 border-slate-200",
   "Erwartet": "bg-blue-50 text-blue-700 border-blue-200",
   "Angekommen": "bg-green-50 text-green-700 border-green-200",
+  "in Verladung": "bg-orange-50 text-orange-700 border-orange-200",
   "Verladen": "bg-yellow-50 text-yellow-700 border-yellow-200",
   "Abgefertigt": "bg-teal-50 text-teal-700 border-teal-200",
   "Storniert": "bg-red-50 text-red-700 border-red-200",

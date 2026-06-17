@@ -57,11 +57,13 @@ const DAY_NAMES_LONG = ["Montag", "Dienstag", "Mittwoch", "Donnerstag", "Freitag
 
 // ── Status badge ──────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
-  Angemeldet:  "bg-blue-50 text-blue-700 border-blue-200",
-  Aktiv:       "bg-green-50 text-green-700 border-green-200",
-  Verladen:    "bg-teal-50 text-teal-700 border-teal-200",
-  Fertig:      "bg-slate-100 text-slate-500 border-slate-200",
-  Storniert:   "bg-red-50 text-red-600 border-red-200",
+  Angemeldet:     "bg-slate-100 text-slate-700 border-slate-200",
+  Erwartet:       "bg-blue-50 text-blue-700 border-blue-200",
+  Angekommen:     "bg-green-50 text-green-700 border-green-200",
+  "in Verladung": "bg-orange-50 text-orange-700 border-orange-200",
+  Verladen:       "bg-yellow-50 text-yellow-700 border-yellow-200",
+  Abgefertigt:    "bg-teal-50 text-teal-700 border-teal-200",
+  Storniert:      "bg-red-50 text-red-600 border-red-200",
 };
 
 // ── Shipment card (shared between draggable and overlay) ──────────────────────
