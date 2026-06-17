@@ -23,6 +23,7 @@ import SettingsPage from "@/pages/settings";
 import BerechtigungenPage from "@/pages/berechtigungen";
 import WochenansichtPage from "@/pages/wochenansicht";
 import ProfilPage from "@/pages/profil";
+import AuswertungPage from "@/pages/auswertung";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -73,6 +74,7 @@ function Router() {
             <Route path="/settings"><ProtectedRoute component={SettingsPage} roles={["comet_admin"]} /></Route>
             <Route path="/berechtigungen"><ProtectedRoute component={BerechtigungenPage} roles={["comet_admin"]} /></Route>
             <Route path="/wochenansicht"><ProtectedRoute component={WochenansichtPage} /></Route>
+            <Route path="/auswertung"><ProtectedRoute component={AuswertungPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
             <Route path="/profil"><ProtectedRoute component={ProfilPage} /></Route>
             <Route component={NotFound} />
           </Switch>

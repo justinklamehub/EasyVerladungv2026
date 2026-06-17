@@ -12,9 +12,11 @@ import austraegeRouter from "./austraege";
 import settingsRouter from "./settings";
 import permissionsRouter from "./permissions";
 import notificationsRouter from "./notifications";
+import auswertungRouter from "./auswertung";
 
 const router: IRouter = Router();
 
+router.use(auswertungRouter);
 router.use(healthRouter);
 router.use(authRouter);
 router.use(usersRouter);
