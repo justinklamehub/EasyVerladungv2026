@@ -351,15 +351,6 @@ export async function printDeckblatt(data: DeckblattData) {
       user-select: none;
     }
 
-    .fahrt-label {
-      font-size: 6.5pt;
-      font-weight: 700;
-      letter-spacing: 0.16em;
-      text-transform: uppercase;
-      color: #94a3b8;
-    }
-
-    .arrow-svg { opacity: 0.15; }
 
     /* ── FOOTER  7mm ────────────────────────────────── */
     .footer {
@@ -485,17 +476,7 @@ export async function printDeckblatt(data: DeckblattData) {
     <div class="sec-zeichenkasten">
       <div class="zeichenkasten">
         <div class="zeichenkasten-header">Palettenstand — Skizze (Draufsicht)</div>
-        <div class="zeichenkasten-body">
-          <div class="zeichenkasten-inner">
-            <div class="fahrt-label">▲ Fahrtrichtung</div>
-            <svg class="arrow-svg" width="56" height="56" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <line x1="30" y1="55" x2="30" y2="5"  stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
-              <polyline points="15,22 30,5 45,22" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-              <line x1="5"  y1="30" x2="55" y2="30" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
-              <polyline points="38,15 55,30 38,45" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-            </svg>
-          </div>
-        </div>
+        <div class="zeichenkasten-body"></div>
       </div>
     </div>
 
