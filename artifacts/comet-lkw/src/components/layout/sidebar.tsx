@@ -316,7 +316,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                       "flex items-center rounded-md text-sm font-medium transition-all duration-150",
                       collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2.5",
                       isActive
-                        ? "bg-primary text-white shadow-sm"
+                        ? "bg-primary text-white shadow-sm dark:bg-white/15 dark:text-white dark:shadow-none"
                         : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
                     )}
                   >
