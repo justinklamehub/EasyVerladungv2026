@@ -1,12 +1,11 @@
 import { useState, useMemo } from "react";
-import { useCreatePalletMovement, useListSpeditionen, getListPalletMovementsQueryKey, getListPalletBalancesQueryKey } from "@workspace/api-client-react";
+import { useCreatePalletMovement, useListSpeditionen } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-context";
@@ -22,7 +21,6 @@ const emptyForm = () => ({
 });
 
 export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
-  const queryClient = useQueryClient();
   const { toast } = useToast();
   const { user } = useAuth();
   const { data: speditionen } = useListSpeditionen();
@@ -56,8 +54,6 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
   const createMutation = useCreatePalletMovement({
     mutation: {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: getListPalletMovementsQueryKey() });
-        queryClient.invalidateQueries({ queryKey: getListPalletBalancesQueryKey() });
         toast({ title: "Buchung erfasst" });
         onOpenChange(false);
         handleReset();
