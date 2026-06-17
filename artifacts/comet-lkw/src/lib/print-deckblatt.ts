@@ -172,9 +172,9 @@ export async function printDeckblatt(data: DeckblattData) {
       display: block;
     }
 
-    /* ── CONTENT  260mm ─────────────────────────────── */
+    /* ── CONTENT  218mm ─────────────────────────────── */
     .content {
-      height: 260mm;
+      height: 218mm;
       flex-shrink: 0;
       padding: 4mm 14mm;
       display: flex;
@@ -217,7 +217,7 @@ export async function printDeckblatt(data: DeckblattData) {
     .sec-relation       { height: 18mm; overflow: hidden; flex-shrink: 0; }
     .sec-bemerkungen    { height: 16mm; overflow: hidden; flex-shrink: 0; }
     .sec-paletten       { height: 14mm; overflow: hidden; flex-shrink: 0; }
-    .sec-zeichenkasten  { height: 162mm; overflow: hidden; flex-shrink: 0; }
+    .sec-zeichenkasten  { height: 120mm; overflow: hidden; flex-shrink: 0; }
 
     /* ── GAP + DIVIDER ──────────────────────────────── */
     .gap-divider {
