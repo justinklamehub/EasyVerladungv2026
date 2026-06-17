@@ -76,6 +76,12 @@ router.patch("/scanner/shipment/:id", async (req, res) => {
     if (status !== undefined) {
       if (!VALID_STATUSES.includes(status)) return res.status(400).json({ error: "Ungültiger Status" });
       update.status = status;
+      if (status === "Angekommen") {
+        const now = new Date();
+        const pad = (n: number) => String(n).padStart(2, "0");
+        update.ataDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+        update.ataTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+      }
     }
     if (tor !== undefined) update.tor = tor || null;
     if (wareStatus !== undefined) {
