@@ -81,8 +81,12 @@ export default function PalettenPage() {
     setReportError("");
     try {
       const res = await fetch(`/api/pallet-report?dateFrom=${reportFrom}&dateTo=${reportTo}`, { credentials: "include" });
+      if (!res.ok) {
+        let msg = "Fehler";
+        try { msg = (await res.json()).error ?? msg; } catch { msg = await res.text().catch(() => msg); }
+        throw new Error(msg);
+      }
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Fehler");
       setReportData(data);
     } catch (e: any) {
       setReportError(e.message ?? "Unbekannter Fehler");

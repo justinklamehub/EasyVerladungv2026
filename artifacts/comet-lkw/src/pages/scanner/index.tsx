@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useLocation } from "wouter";
 import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, Hash, ClipboardCheck, ChevronDown, ChevronUp, Save } from "lucide-react";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
+const API = "/api";
 
 const S = {
   page: {
@@ -196,7 +196,11 @@ export default function ScannerLandingPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: editStatus, tor: editTor, wareStatus: editWareStatus }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Fehler");
+      if (!res.ok) {
+        let msg = "Fehler";
+        try { msg = (await res.json()).error ?? msg; } catch { /* non-JSON error */ }
+        throw new Error(msg);
+      }
       setShipment((prev) => prev ? { ...prev, status: editStatus, tor: editTor || null, wareStatus: editWareStatus || null } : prev);
       setSaveOk(true);
       setEditOpen(false);
