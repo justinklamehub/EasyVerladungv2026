@@ -54,6 +54,28 @@ export async function printDeckblatt(data: DeckblattData) {
     errorCorrectionLevel: "M",
   });
 
+  /*
+   * Seitenaufbau — alle Höhen explizit in mm, Summe = 297mm
+   *   Header  :  30mm
+   *   Content : 260mm  (padding 4+4mm innen, nutzbar 252mm)
+   *   Footer  :   7mm
+   *   Gesamt  : 297mm
+   *
+   * Innerhalb Content (252mm nutzbar):
+   *   Spedition          : 11mm
+   *   gap+divider        :  4mm
+   *   Kennzeichen-Zeile  : 12mm
+   *   gap+divider        :  4mm
+   *   Relation/ETA-Zeile : 18mm
+   *   gap+divider        :  4mm
+   *   Bemerkungen        : 16mm
+   *   gap+divider        :  4mm
+   *   Paletten           : 14mm
+   *   gap                :  3mm
+   *   Zeichenkasten      : 162mm   ← Rest
+   *   Summe              : 252mm ✓
+   */
+
   const html = `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -78,29 +100,34 @@ export async function printDeckblatt(data: DeckblattData) {
       overflow: hidden;
     }
 
+    /* ── PAGE: feste Höhe, drei Reihen ──────────────── */
     .page {
       width: 210mm;
       height: 297mm;
       display: flex;
       flex-direction: column;
       overflow: hidden;
+      page-break-inside: avoid;
+      break-inside: avoid;
     }
 
-    /* ── HEADER ─────────────────────────────────────── */
+    /* ── HEADER  30mm ───────────────────────────────── */
     .header {
+      height: 30mm;
       background: #f1f5f9;
-      padding: 7mm 14mm 6mm 14mm;
+      padding: 4mm 14mm;
       display: flex;
       align-items: center;
       justify-content: space-between;
       gap: 6mm;
       flex-shrink: 0;
+      overflow: hidden;
     }
 
     .lkw-id-badge {
       background: #c0392b;
       border-radius: 3mm;
-      padding: 4mm 8mm;
+      padding: 3mm 7mm;
       text-align: center;
       flex-shrink: 0;
     }
@@ -111,11 +138,11 @@ export async function printDeckblatt(data: DeckblattData) {
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: #fca5a5;
-      margin-bottom: 1.5mm;
+      margin-bottom: 1mm;
     }
 
     .lkw-id-value {
-      font-size: 30pt;
+      font-size: 26pt;
       font-weight: 900;
       color: #fff;
       letter-spacing: 0.04em;
@@ -140,42 +167,43 @@ export async function printDeckblatt(data: DeckblattData) {
     }
 
     .qr-img {
-      width: 22mm;
-      height: 22mm;
+      width: 20mm;
+      height: 20mm;
       display: block;
     }
 
-    /* ── CONTENT ────────────────────────────────────── */
+    /* ── CONTENT  260mm ─────────────────────────────── */
     .content {
-      flex: 1;
-      min-height: 0;
-      padding: 4mm 14mm 4mm 14mm;
+      height: 260mm;
+      flex-shrink: 0;
+      padding: 4mm 14mm;
       display: flex;
       flex-direction: column;
-      gap: 3mm;
+      gap: 0;
+      overflow: hidden;
     }
 
     /* ── FIELD ──────────────────────────────────────── */
     .field-label {
-      font-size: 6.5pt;
+      font-size: 6pt;
       font-weight: 700;
       letter-spacing: 0.14em;
       text-transform: uppercase;
       color: #64748b;
-      margin-bottom: 1mm;
+      margin-bottom: 0.5mm;
     }
 
     .field-value {
-      font-size: 14pt;
+      font-size: 13pt;
       font-weight: 700;
       color: #0f172a;
-      line-height: 1.2;
+      line-height: 1.15;
       word-break: break-word;
+      overflow: hidden;
     }
 
-    .field-value.xl    { font-size: 26pt; line-height: 1.05; }
-    .field-value.large { font-size: 16pt; }
-    .field-value.std   { font-size: 13pt; }
+    .field-value.xl    { font-size: 24pt; line-height: 1.05; }
+    .field-value.large { font-size: 15pt; }
 
     .field-value.empty {
       color: #cbd5e1;
@@ -183,52 +211,69 @@ export async function printDeckblatt(data: DeckblattData) {
       font-style: italic;
     }
 
-    /* ── GRID ───────────────────────────────────────── */
-    .row { display: flex; gap: 6mm; }
-    .col { flex: 1; }
-    .col-2 { flex: 2; }
-    .col-auto { flex: none; min-width: 28mm; }
+    /* ── SEKTIONEN MIT FIXER HÖHE ───────────────────── */
+    .sec-spedition      { height: 11mm; overflow: hidden; flex-shrink: 0; }
+    .sec-kennzeichen    { height: 12mm; overflow: hidden; flex-shrink: 0; }
+    .sec-relation       { height: 18mm; overflow: hidden; flex-shrink: 0; }
+    .sec-bemerkungen    { height: 16mm; overflow: hidden; flex-shrink: 0; }
+    .sec-paletten       { height: 14mm; overflow: hidden; flex-shrink: 0; }
+    .sec-zeichenkasten  { height: 162mm; overflow: hidden; flex-shrink: 0; }
 
-    /* ── DIVIDER ────────────────────────────────────── */
-    .divider {
+    /* ── GAP + DIVIDER ──────────────────────────────── */
+    .gap-divider {
+      height: 4mm;
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .gap-divider-inner {
       height: 0.25mm;
       background: #e2e8f0;
     }
+
+    .gap-only { height: 3mm; flex-shrink: 0; }
+
+    /* ── GRID ───────────────────────────────────────── */
+    .row { display: flex; gap: 6mm; height: 100%; }
+    .col { flex: 1; overflow: hidden; }
+    .col-2 { flex: 2; overflow: hidden; }
+    .col-auto { flex: none; min-width: 26mm; overflow: hidden; }
 
     /* ── BEMERKUNGEN ────────────────────────────────── */
     .bemerkungen-box {
       background: #f8fafc;
       border: 0.3mm solid #e2e8f0;
       border-radius: 2mm;
-      padding: 3mm 5mm;
-      min-height: 9mm;
+      padding: 2mm 4mm;
+      height: 10mm;
+      overflow: hidden;
     }
 
     .bemerkungen-text {
-      font-size: 9.5pt;
+      font-size: 9pt;
       color: #1e293b;
-      line-height: 1.4;
+      line-height: 1.35;
       word-break: break-word;
       white-space: pre-wrap;
     }
 
-    /* ── PALETTEN WRITEIN ───────────────────────────── */
+    /* ── PALETTEN ───────────────────────────────────── */
     .paletten-row {
       display: flex;
       align-items: stretch;
       border: 0.6mm solid #0f172a;
       border-radius: 2mm;
-      min-height: 14mm;
-      flex-shrink: 0;
+      height: 100%;
     }
 
     .paletten-label-cell {
-      padding: 3mm 5mm;
+      padding: 2mm 5mm;
       border-right: 0.6mm solid #0f172a;
       display: flex;
       align-items: center;
       flex-shrink: 0;
-      min-width: 50mm;
+      min-width: 48mm;
     }
 
     .paletten-label-text {
@@ -242,11 +287,11 @@ export async function printDeckblatt(data: DeckblattData) {
 
     .paletten-writein-cell {
       flex: 1;
-      padding: 3mm 5mm;
+      padding: 2mm 5mm;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      gap: 4mm;
+      gap: 3mm;
     }
 
     .writein-line {
@@ -259,8 +304,7 @@ export async function printDeckblatt(data: DeckblattData) {
     .zeichenkasten {
       border: 0.6mm solid #0f172a;
       border-radius: 2mm;
-      flex: 1;
-      min-height: 0;
+      height: 100%;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -269,11 +313,12 @@ export async function printDeckblatt(data: DeckblattData) {
     .zeichenkasten-header {
       background: #0f172a;
       color: #f1f5f9;
-      font-size: 7pt;
+      font-size: 6.5pt;
       font-weight: 700;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      padding: 2mm 5mm;
+      padding: 1.5mm 5mm;
+      flex-shrink: 0;
     }
 
     .zeichenkasten-body {
@@ -282,9 +327,9 @@ export async function printDeckblatt(data: DeckblattData) {
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow: hidden;
     }
 
-    /* Grid-Hintergrund */
     .zeichenkasten-body::before {
       content: "";
       position: absolute;
@@ -295,51 +340,50 @@ export async function printDeckblatt(data: DeckblattData) {
       background-size: 10mm 10mm;
     }
 
-    /* Fahrtrichtungs-Pfeile */
     .zeichenkasten-inner {
       position: relative;
       z-index: 1;
       display: flex;
       flex-direction: column;
       align-items: center;
-      gap: 3mm;
+      gap: 2mm;
       pointer-events: none;
       user-select: none;
     }
 
     .fahrt-label {
-      font-size: 7pt;
+      font-size: 6.5pt;
       font-weight: 700;
       letter-spacing: 0.16em;
       text-transform: uppercase;
       color: #94a3b8;
     }
 
-    .arrow-svg {
-      opacity: 0.18;
-    }
+    .arrow-svg { opacity: 0.15; }
 
-    /* ── FOOTER ─────────────────────────────────────── */
+    /* ── FOOTER  7mm ────────────────────────────────── */
     .footer {
+      height: 7mm;
+      flex-shrink: 0;
       border-top: 0.25mm solid #e2e8f0;
-      padding: 2mm 14mm;
+      padding: 0 14mm;
       display: flex;
       align-items: center;
       justify-content: space-between;
       font-size: 7pt;
       color: #94a3b8;
-      flex-shrink: 0;
+      overflow: hidden;
     }
 
     @media print {
-      html, body { width: 210mm; }
+      html, body { width: 210mm; height: 297mm; }
     }
   </style>
 </head>
 <body>
 <div class="page">
 
-  <!-- HEADER: nur LKW-ID + QR -->
+  <!-- HEADER 30mm -->
   <div class="header">
     <div class="lkw-id-badge">
       <div class="lkw-id-label">LKW-ID</div>
@@ -351,63 +395,67 @@ export async function printDeckblatt(data: DeckblattData) {
     </div>
   </div>
 
-  <!-- CONTENT -->
+  <!-- CONTENT 260mm -->
   <div class="content">
 
-    <!-- Spedition -->
-    <div>
+    <!-- Spedition 11mm -->
+    <div class="sec-spedition">
       <div class="field-label">Spedition</div>
       <div class="field-value large ${!data.speditionName ? "empty" : ""}">
         ${data.speditionName ? escHtml(data.speditionName.toUpperCase()) : "Nicht zugewiesen"}
       </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="gap-divider"><div class="gap-divider-inner"></div></div>
 
-    <!-- Kennzeichen + Bezeichnung -->
-    <div class="row">
-      <div class="col">
-        <div class="field-label">Kennzeichen</div>
-        <div class="field-value large ${!data.kennzeichen ? "empty" : ""}">
-          ${data.kennzeichen ? escHtml(data.kennzeichen) : "—"}
+    <!-- Kennzeichen + Bezeichnung + Tor 12mm -->
+    <div class="sec-kennzeichen">
+      <div class="row">
+        <div class="col">
+          <div class="field-label">Kennzeichen</div>
+          <div class="field-value large ${!data.kennzeichen ? "empty" : ""}">
+            ${data.kennzeichen ? escHtml(data.kennzeichen) : "—"}
+          </div>
         </div>
-      </div>
-      <div class="col">
-        <div class="field-label">Bezeichnung</div>
-        <div class="field-value large ${!data.bezeichnung ? "empty" : ""}">
-          ${data.bezeichnung ? escHtml(data.bezeichnung) : "—"}
+        <div class="col">
+          <div class="field-label">Bezeichnung</div>
+          <div class="field-value large ${!data.bezeichnung ? "empty" : ""}">
+            ${data.bezeichnung ? escHtml(data.bezeichnung) : "—"}
+          </div>
         </div>
-      </div>
-      <div class="col-auto">
-        <div class="field-label">Tor</div>
-        <div class="field-value large ${!data.tor ? "empty" : ""}">
-          ${data.tor ? escHtml(data.tor) : "—"}
-        </div>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Relation GROSS + ETA GROSS -->
-    <div class="row">
-      <div class="col-2">
-        <div class="field-label">Relation / Leitgebiet</div>
-        <div class="field-value xl ${!data.relation ? "empty" : ""}">
-          ${data.relation ? escHtml(data.relation) : "—"}
-        </div>
-      </div>
-      <div class="col">
-        <div class="field-label">Voraussichtl. Ankunft</div>
-        <div class="field-value large ${!data.etaDate ? "empty" : ""}">
-          ${escHtml(eta)}
+        <div class="col-auto">
+          <div class="field-label">Tor</div>
+          <div class="field-value large ${!data.tor ? "empty" : ""}">
+            ${data.tor ? escHtml(data.tor) : "—"}
+          </div>
         </div>
       </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="gap-divider"><div class="gap-divider-inner"></div></div>
 
-    <!-- Bemerkungen -->
-    <div>
+    <!-- Relation + ETA 18mm -->
+    <div class="sec-relation">
+      <div class="row">
+        <div class="col-2">
+          <div class="field-label">Relation / Leitgebiet</div>
+          <div class="field-value xl ${!data.relation ? "empty" : ""}">
+            ${data.relation ? escHtml(data.relation) : "—"}
+          </div>
+        </div>
+        <div class="col">
+          <div class="field-label">Voraussichtl. Ankunft</div>
+          <div class="field-value large ${!data.etaDate ? "empty" : ""}">
+            ${escHtml(eta)}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="gap-divider"><div class="gap-divider-inner"></div></div>
+
+    <!-- Bemerkungen 16mm -->
+    <div class="sec-bemerkungen">
       <div class="field-label">Bemerkungen</div>
       <div class="bemerkungen-box">
         <div class="bemerkungen-text ${!data.bemerkungen ? "empty" : ""}">
@@ -416,38 +464,44 @@ export async function printDeckblatt(data: DeckblattData) {
       </div>
     </div>
 
-    <div class="divider"></div>
+    <div class="gap-divider"><div class="gap-divider-inner"></div></div>
 
-    <!-- Anzahl Paletten: Label links, Schreibfeld rechts -->
-    <div class="paletten-row">
-      <div class="paletten-label-cell">
-        <div class="paletten-label-text">Anzahl<br/>Paletten</div>
-      </div>
-      <div class="paletten-writein-cell">
-        <div class="writein-line"></div>
-        <div class="writein-line"></div>
+    <!-- Anzahl Paletten 14mm -->
+    <div class="sec-paletten">
+      <div class="paletten-row">
+        <div class="paletten-label-cell">
+          <div class="paletten-label-text">Anzahl<br/>Paletten</div>
+        </div>
+        <div class="paletten-writein-cell">
+          <div class="writein-line"></div>
+          <div class="writein-line"></div>
+        </div>
       </div>
     </div>
 
-    <!-- Zeichenkasten: Palettenstand aufzeichnen -->
-    <div class="zeichenkasten">
-      <div class="zeichenkasten-header">Palettenstand — Skizze (Draufsicht)</div>
-      <div class="zeichenkasten-body">
-        <div class="zeichenkasten-inner">
-          <div class="fahrt-label">▲ Fahrtrichtung</div>
-          <svg class="arrow-svg" width="60" height="60" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <line x1="30" y1="55" x2="30" y2="5"  stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
-            <polyline points="15,22 30,5 45,22" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-            <line x1="5"  y1="30" x2="55" y2="30" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
-            <polyline points="38,15 55,30 38,45" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
-          </svg>
+    <div class="gap-only"></div>
+
+    <!-- Zeichenkasten 162mm -->
+    <div class="sec-zeichenkasten">
+      <div class="zeichenkasten">
+        <div class="zeichenkasten-header">Palettenstand — Skizze (Draufsicht)</div>
+        <div class="zeichenkasten-body">
+          <div class="zeichenkasten-inner">
+            <div class="fahrt-label">▲ Fahrtrichtung</div>
+            <svg class="arrow-svg" width="56" height="56" viewBox="0 0 60 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <line x1="30" y1="55" x2="30" y2="5"  stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
+              <polyline points="15,22 30,5 45,22" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+              <line x1="5"  y1="30" x2="55" y2="30" stroke="#0f172a" stroke-width="3" stroke-linecap="round"/>
+              <polyline points="38,15 55,30 38,45" fill="none" stroke="#0f172a" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/>
+            </svg>
+          </div>
         </div>
       </div>
     </div>
 
   </div><!-- /content -->
 
-  <!-- FOOTER -->
+  <!-- FOOTER 7mm -->
   <div class="footer">
     <span>Ausdruck vom ${escHtml(printTs)} Uhr</span>
     <span>${escHtml(data.username)}</span>
@@ -463,7 +517,7 @@ export async function printDeckblatt(data: DeckblattData) {
 </body>
 </html>`;
 
-  const win = window.open("", "_blank", "width=900,height=700");
+  const win = window.open("", "_blank", "width=900,height=1200");
   if (!win) {
     alert("Popup wurde blockiert. Bitte Popup-Blocker für diese Seite deaktivieren.");
     return;
