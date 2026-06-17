@@ -221,6 +221,64 @@ router.get("/pallet-balances", requireAuth, async (req, res) => {
   }
 });
 
+router.get("/pallet-report", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const sessionSpeditionId = req.session.speditionId;
+    const { dateFrom, dateTo } = req.query as Record<string, string>;
+
+    if (!dateFrom || !dateTo) {
+      return res.status(400).json({ error: "dateFrom und dateTo sind erforderlich" });
+    }
+
+    const speds = await db.select().from(speditionenTable).where(eq(speditionenTable.status, "aktiv"));
+    const allMovements = await db.select().from(palletMovementsTable);
+
+    const filteredSpeds = SPED_ROLES.includes(role)
+      ? speds.filter((s) => s.id === sessionSpeditionId)
+      : speds;
+
+    const report = filteredSpeds.map((s) => {
+      const spedMovements = allMovements.filter((m) => m.speditionId === s.id);
+
+      const before = spedMovements.filter((m) => m.movementDate < dateFrom);
+      const anfangsbestand = before.reduce((sum, m) => {
+        if (m.movementType === "eingang") return sum + m.amount;
+        if (m.movementType === "ausgang") return sum - m.amount;
+        if (m.movementType === "korrektur") return sum + m.amount;
+        return sum;
+      }, 0);
+
+      const period = spedMovements.filter((m) => m.movementDate >= dateFrom && m.movementDate <= dateTo);
+      const zugaenge = period.filter((m) => m.movementType === "eingang").reduce((s, m) => s + m.amount, 0);
+      const abgaenge = period.filter((m) => m.movementType === "ausgang").reduce((s, m) => s + m.amount, 0);
+      const korrekturen = period.filter((m) => m.movementType === "korrektur").reduce((s, m) => s + m.amount, 0);
+      const endbestand = anfangsbestand + zugaenge - abgaenge + korrekturen;
+
+      const defekteVonComet = period.reduce((s, m) => s + (m.vonDefektePaletten ?? 0), 0);
+      const defekteAnComet = period.reduce((s, m) => s + (m.anDefektePaletten ?? 0), 0);
+
+      return {
+        speditionId: s.id,
+        speditionName: s.name,
+        anfangsbestand,
+        zugaenge,
+        abgaenge,
+        korrekturen,
+        endbestand,
+        defekteVonComet,
+        defekteAnComet,
+        defekteGesamt: defekteVonComet + defekteAnComet,
+      };
+    });
+
+    return res.json(report);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 router.get("/pallet-export", requireAuth, async (req, res) => {
   try {
     const { speditionId, dateFrom, dateTo } = req.query as Record<string, string>;

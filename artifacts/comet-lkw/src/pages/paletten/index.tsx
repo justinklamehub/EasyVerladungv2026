@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
-import { Loader2, Plus, Download } from "lucide-react";
+import { Loader2, Plus, Download, BarChart2 } from "lucide-react";
 import { MovementDialog } from "./components/movement-dialog";
 import { MovementDetailSheet } from "./components/movement-detail-sheet";
 import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
@@ -26,6 +28,28 @@ export default function PalettenPage() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
   const [isShipmentDrawerOpen, setIsShipmentDrawerOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportFrom, setReportFrom] = useState("");
+  const [reportTo, setReportTo] = useState("");
+  const [reportData, setReportData] = useState<any[]>([]);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState("");
+
+  const handleLoadReport = async () => {
+    if (!reportFrom || !reportTo) return;
+    setReportLoading(true);
+    setReportError("");
+    try {
+      const res = await fetch(`/api/pallet-report?dateFrom=${reportFrom}&dateTo=${reportTo}`, { credentials: "include" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Fehler");
+      setReportData(data);
+    } catch (e: any) {
+      setReportError(e.message ?? "Unbekannter Fehler");
+    } finally {
+      setReportLoading(false);
+    }
+  };
 
   const { data: speditionen } = useListSpeditionen();
   const { data: balances, isLoading: loadingBalances } = useListPalletBalances();
@@ -73,6 +97,12 @@ export default function PalettenPage() {
           <p className="text-sm text-slate-500">Übersicht der Euro-Paletten Salden und Buchungen.</p>
         </div>
         <div className="flex gap-2">
+          {isCometUser && (
+            <Button variant="outline" onClick={() => { setReportOpen(true); setReportData([]); setReportError(""); }}>
+              <BarChart2 className="w-4 h-4 mr-2" />
+              Auswertung
+            </Button>
+          )}
           <Button variant="outline" onClick={handleExport}>
             <Download className="w-4 h-4 mr-2" />
             CSV Export
@@ -230,6 +260,94 @@ export default function PalettenPage() {
           </TableBody>
         </Table>
       </div>
+
+      <Dialog open={reportOpen} onOpenChange={(v) => { setReportOpen(v); if (!v) setReportData([]); }}>
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Paletten-Auswertung</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="flex flex-wrap gap-3 items-end bg-slate-50 border border-slate-200 rounded-lg p-4">
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-slate-500">Von</Label>
+                <Input type="date" value={reportFrom} onChange={e => setReportFrom(e.target.value)} className="h-9 w-36 bg-white" />
+              </div>
+              <div className="flex flex-col gap-1">
+                <Label className="text-xs text-slate-500">Bis</Label>
+                <Input type="date" value={reportTo} onChange={e => setReportTo(e.target.value)} className="h-9 w-36 bg-white" />
+              </div>
+              <Button onClick={handleLoadReport} disabled={!reportFrom || !reportTo || reportLoading} size="sm">
+                {reportLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <BarChart2 className="w-4 h-4 mr-2" />}
+                Anzeigen
+              </Button>
+            </div>
+
+            {reportError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded p-3">{reportError}</div>
+            )}
+
+            {reportData.length > 0 && (
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <Table>
+                  <TableHeader className="bg-slate-50">
+                    <TableRow>
+                      <TableHead>Spedition</TableHead>
+                      <TableHead className="text-right">Anfangsbestand</TableHead>
+                      <TableHead className="text-right text-green-700">Zugänge (+)</TableHead>
+                      <TableHead className="text-right text-red-700">Abgänge (−)</TableHead>
+                      <TableHead className="text-right text-orange-700">Korrekturen</TableHead>
+                      <TableHead className="text-right font-bold">Endbestand</TableHead>
+                      <TableHead className="text-right text-slate-500">Def. (von COMET)</TableHead>
+                      <TableHead className="text-right text-slate-500">Def. (an COMET)</TableHead>
+                      <TableHead className="text-right text-slate-700">Def. Gesamt</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.map((row) => (
+                      <TableRow key={row.speditionId}>
+                        <TableCell className="font-medium">{row.speditionName}</TableCell>
+                        <TableCell className="text-right font-mono">{row.anfangsbestand}</TableCell>
+                        <TableCell className="text-right font-mono text-green-700">+{row.zugaenge}</TableCell>
+                        <TableCell className="text-right font-mono text-red-700">−{row.abgaenge}</TableCell>
+                        <TableCell className={`text-right font-mono ${row.korrekturen !== 0 ? "text-orange-700" : "text-slate-400"}`}>
+                          {row.korrekturen > 0 ? "+" : ""}{row.korrekturen}
+                        </TableCell>
+                        <TableCell className={`text-right font-bold font-mono ${row.endbestand < 0 ? "text-red-600" : row.endbestand > 0 ? "text-green-700" : "text-slate-600"}`}>
+                          {row.endbestand > 0 ? "+" : ""}{row.endbestand}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-slate-500">{row.defekteVonComet || "—"}</TableCell>
+                        <TableCell className="text-right font-mono text-slate-500">{row.defekteAnComet || "—"}</TableCell>
+                        <TableCell className={`text-right font-mono ${row.defekteGesamt > 0 ? "text-amber-700 font-semibold" : "text-slate-400"}`}>
+                          {row.defekteGesamt || "—"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="bg-slate-50 font-semibold border-t-2 border-slate-300">
+                      <TableCell>Gesamt</TableCell>
+                      <TableCell className="text-right font-mono">{reportData.reduce((s, r) => s + r.anfangsbestand, 0)}</TableCell>
+                      <TableCell className="text-right font-mono text-green-700">+{reportData.reduce((s, r) => s + r.zugaenge, 0)}</TableCell>
+                      <TableCell className="text-right font-mono text-red-700">−{reportData.reduce((s, r) => s + r.abgaenge, 0)}</TableCell>
+                      <TableCell className="text-right font-mono text-orange-700">
+                        {(() => { const t = reportData.reduce((s, r) => s + r.korrekturen, 0); return t > 0 ? `+${t}` : t; })()}
+                      </TableCell>
+                      <TableCell className="text-right font-bold font-mono">
+                        {(() => { const t = reportData.reduce((s, r) => s + r.endbestand, 0); return t > 0 ? `+${t}` : t; })()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">{reportData.reduce((s, r) => s + r.defekteVonComet, 0) || "—"}</TableCell>
+                      <TableCell className="text-right font-mono">{reportData.reduce((s, r) => s + r.defekteAnComet, 0) || "—"}</TableCell>
+                      <TableCell className="text-right font-mono">{reportData.reduce((s, r) => s + r.defekteGesamt, 0) || "—"}</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+
+            {!reportLoading && reportData.length === 0 && !reportError && reportFrom && reportTo && (
+              <p className="text-center text-slate-400 py-6">Keine Daten für diesen Zeitraum.</p>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <MovementDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
       <MovementDetailSheet

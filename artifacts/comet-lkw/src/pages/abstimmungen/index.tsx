@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import {
   useListReconciliations,
   useCreateReconciliation,
@@ -142,6 +143,7 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
   const [spedBalance, setSpedBalance] = useState("");
   const [cometBalance, setCometBalance] = useState("");
   const [status, setStatus] = useState("");
+  const [confirmAccept, setConfirmAccept] = useState(false);
 
   const updateMutation = useUpdateReconciliation({
     mutation: {
@@ -152,6 +154,29 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
       },
       onError: (e: any) => toast({ title: e?.response?.data?.error ?? "Fehler", variant: "destructive" }),
     },
+  });
+
+  const acceptMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/reconciliations/${id}/accept`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Fehler");
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: getListReconciliationsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetReconciliationQueryKey(id) });
+      setConfirmAccept(false);
+      const msg = data.correctionAmount === 0
+        ? "Abstimmung abgeschlossen – kein Korrekturbedarf."
+        : `Abstimmung abgeschlossen. Korrekturbuchung: ${data.correctionAmount > 0 ? "+" : ""}${data.correctionAmount} Paletten.`;
+      toast({ title: "Daten übernommen", description: msg });
+    },
+    onError: (e: any) => toast({ title: e.message ?? "Fehler", variant: "destructive" }),
   });
 
   const commentMutation = useAddReconciliationComment({
@@ -252,6 +277,37 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
                   {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Speichern
                 </Button>
+              )}
+
+              {isCometAdmin && rec.cometBalance !== null && rec.cometBalance !== undefined && rec.speditionBalance !== null && rec.speditionBalance !== undefined && rec.status !== "abgeschlossen" && (
+                <div className="border border-emerald-200 bg-emerald-50 rounded-lg p-3 space-y-2">
+                  <div className="text-sm font-medium text-emerald-800">Abstimmung abschließen</div>
+                  <div className="text-xs text-emerald-700">
+                    COMET: <strong>{rec.cometBalance}</strong> · Spedition: <strong>{rec.speditionBalance}</strong>
+                    {rec.cometBalance !== rec.speditionBalance && (
+                      <span className="ml-2 text-amber-700 font-medium">(Abweichung: {rec.cometBalance - rec.speditionBalance})</span>
+                    )}
+                  </div>
+                  <div className="text-xs text-slate-500">Es wird automatisch eine Korrekturbuchung auf COMET-Saldo ({rec.cometBalance}) erstellt.</div>
+                  {!confirmAccept ? (
+                    <Button size="sm" variant="outline" className="w-full border-emerald-400 text-emerald-700 hover:bg-emerald-100" onClick={() => setConfirmAccept(true)}>
+                      Daten übernehmen
+                    </Button>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-xs font-medium text-slate-700">Sicher? Diese Aktion ist nicht rückgängig zu machen.</div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" className="flex-1" onClick={() => setConfirmAccept(false)} disabled={acceptMutation.isPending}>
+                          Abbrechen
+                        </Button>
+                        <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => acceptMutation.mutate()} disabled={acceptMutation.isPending}>
+                          {acceptMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                          Bestätigen
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
 

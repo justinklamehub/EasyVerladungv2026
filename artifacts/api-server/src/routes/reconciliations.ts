@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db } from "@workspace/db";
 import {
   palletReconciliationsTable,
+  palletMovementsTable,
   reconciliationCommentsTable,
   speditionenTable,
   usersTable,
@@ -293,6 +294,82 @@ router.post("/reconciliations/:id/comments", requireAuth, async (req, res) => {
       role: user?.role ?? "unknown",
       comment: c.comment,
       createdAt: c.createdAt,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/reconciliations/:id/accept", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const role = req.session.role!;
+
+    if (!["comet_admin", "comet_leitstand"].includes(role)) {
+      return res.status(403).json({ error: "Keine Berechtigung" });
+    }
+
+    const result = await getRecWithScope(id, role, req.session.speditionId);
+    if (result === null) return res.status(404).json({ error: "Not found" });
+    if (result === "forbidden") return res.status(403).json({ error: "Forbidden" });
+    const rec = result;
+
+    if (rec.cometBalance === null || rec.cometBalance === undefined) {
+      return res.status(400).json({ error: "COMET Saldo fehlt – bitte zuerst eintragen" });
+    }
+    if (rec.speditionBalance === null || rec.speditionBalance === undefined) {
+      return res.status(400).json({ error: "Spedition Saldo fehlt noch" });
+    }
+    if (rec.status === "abgeschlossen") {
+      return res.status(400).json({ error: "Abstimmung ist bereits abgeschlossen" });
+    }
+
+    const movements = await db.select().from(palletMovementsTable).where(eq(palletMovementsTable.speditionId, rec.speditionId));
+    const currentBalance = movements.reduce((sum, m) => {
+      if (m.movementType === "eingang") return sum + m.amount;
+      if (m.movementType === "ausgang") return sum - m.amount;
+      if (m.movementType === "korrektur") return sum + m.amount;
+      return sum;
+    }, 0);
+
+    const correctionAmount = rec.cometBalance - currentBalance;
+
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+    if (correctionAmount !== 0) {
+      await db.insert(palletMovementsTable).values({
+        speditionId: rec.speditionId,
+        movementType: "korrektur",
+        movementDate: todayStr,
+        amount: correctionAmount,
+        bemerkungen: `Automatische Korrekturbuchung aus Abstimmung #${id}`,
+        createdBy: req.session.userId,
+      });
+    }
+
+    const [updated] = await db
+      .update(palletReconciliationsTable)
+      .set({ status: "abgeschlossen", updatedAt: new Date() })
+      .where(eq(palletReconciliationsTable.id, id))
+      .returning();
+
+    await logAudit(req.session.userId!, "reconciliation", id, "accepted", rec.status, `abgeschlossen; Korrekturbuchung: ${correctionAmount}`);
+    emit(req, "reconciliation.updated", { id }, rec.speditionId);
+    if (correctionAmount !== 0) emit(req, "pallet_balance.updated", { speditionId: rec.speditionId }, rec.speditionId);
+
+    const [sped] = await db.select().from(speditionenTable).where(eq(speditionenTable.id, rec.speditionId)).limit(1);
+    const creator = updated.createdBy
+      ? (await db.select().from(usersTable).where(eq(usersTable.id, updated.createdBy)).limit(1))[0]
+      : null;
+
+    return res.json({
+      ...updated,
+      speditionName: sped?.name ?? null,
+      createdByName: creator?.username ?? null,
+      correctionAmount,
     });
   } catch (err) {
     console.error(err);
