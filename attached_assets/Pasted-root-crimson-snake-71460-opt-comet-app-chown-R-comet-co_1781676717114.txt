@@ -1,0 +1,81 @@
+root@crimson-snake-71460:/opt/comet/app# chown -R comet:comet /opt/comet/app && \
+cd /opt/comet/app && \
+sudo -u comet git pull origin main && \
+sudo -u comet pnpm install --frozen-lockfile && \
+sudo -u comet pnpm --filter @workspace/api-server run build && \
+NODE_ENV=production BASE_PATH="/" pnpm --filter @workspace/comet-lkw run build && \
+chmod -R o+rX artifacts/comet-lkw/dist/public && \
+sudo -u comet pm2 restart comet-api && \
+sudo -u comet pm2 save
+remote: Enumerating objects: 107, done.
+remote: Counting objects: 100% (107/107), done.
+remote: Compressing objects: 100% (32/32), done.
+remote: Total 90 (delta 61), reused 86 (delta 57), pack-reused 0 (from 0)
+Unpacking objects: 100% (90/90), 71.69 KiB | 834.00 KiB/s, done.
+From https://github.com/justinklamehub/Realtime-Sync
+ * branch            main       -> FETCH_HEAD
+   48be412..11ed730  main       -> origin/main
+Updating 48be412..11ed730
+Fast-forward
+ artifacts/comet-lkw/src/lib/print-deckblatt.ts                                                   | 470 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++----------------------------------------------
+ artifacts/comet-lkw/src/pages/dashboard.tsx                                                      |   3 +-
+ artifacts/comet-lkw/src/pages/shipments/components/bulk-create-dialog.tsx                        |   2 +-
+ artifacts/comet-lkw/src/pages/shipments/components/shipment-drawer.tsx                           |   2 +-
+ artifacts/comet-lkw/src/pages/shipments/index.tsx                                                |   3 +-
+ artifacts/comet-lkw/src/pages/shipments/kanban.tsx                                               |   2 +-
+ artifacts/comet-lkw/src/pages/wochenansicht/index.tsx                                            |  12 +--
+ attached_assets/Pasted-index-dBJhlO0x-js-9-GET-http-87-237-54-218-api-socket-i_1781644274641.txt | 198 ++++++++++++++++++++++++++++++++++++++++++++
+ attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-Apache-Fehlerlog_1781644043441.txt |  26 ++++++
+ attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-Apache-Fehlerlog_1781644077965.txt |  26 ++++++
+ attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sleep-5-sudo-u-c_1781643969458.txt |  59 +++++++++++++
+ attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-ss-tlnp-grep-nod_1781644378340.txt |  24 ++++++
+ attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sudo-u-comet-env_1781643557876.txt |  27 ++++++
+ attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sudo-u-comet-env_1781643566463.txt |  27 ++++++
+ attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sudo-u-comet-pm2_1781643844806.txt |  36 ++++++++
+ attached_assets/image_1781644159078.png                                                          | Bin 0 -> 35373 bytes
+ attached_assets/image_1781675013932.png                                                          | Bin 0 -> 26108 bytes
+ 17 files changed, 700 insertions(+), 217 deletions(-)
+ create mode 100644 attached_assets/Pasted-index-dBJhlO0x-js-9-GET-http-87-237-54-218-api-socket-i_1781644274641.txt
+ create mode 100644 attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-Apache-Fehlerlog_1781644043441.txt
+ create mode 100644 attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-Apache-Fehlerlog_1781644077965.txt
+ create mode 100644 attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sleep-5-sudo-u-c_1781643969458.txt
+ create mode 100644 attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-ss-tlnp-grep-nod_1781644378340.txt
+ create mode 100644 attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sudo-u-comet-env_1781643557876.txt
+ create mode 100644 attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sudo-u-comet-env_1781643566463.txt
+ create mode 100644 attached_assets/Pasted-root-crimson-snake-71460-opt-comet-app-sudo-u-comet-pm2_1781643844806.txt
+ create mode 100644 attached_assets/image_1781644159078.png
+ create mode 100644 attached_assets/image_1781675013932.png
+Scope: all 9 workspace projects
+Already up to date
+Done in 1.9s using pnpm v11.7.0
+$ node ./build.mjs
+
+  dist/index.mjs                       3.1mb ⚠️
+  dist/pino-worker.mjs               153.4kb
+  dist/pino-file.mjs                 142.0kb
+  dist/pino-pretty.mjs               114.6kb
+  dist/thread-stream-worker.mjs        7.3kb
+  dist/index.mjs.map                   5.2mb
+  dist/pino-worker.mjs.map           256.9kb
+  dist/pino-file.mjs.map             229.0kb
+  dist/pino-pretty.mjs.map           204.0kb
+  dist/thread-stream-worker.mjs.map   12.0kb
+
+⚡ Done in 987ms
+$ vite build --config vite.config.ts
+failed to load config from /opt/comet/app/artifacts/comet-lkw/vite.config.ts
+error during build:
+Error: PORT environment variable is required but was not provided.
+    at file:///opt/comet/app/artifacts/comet-lkw/node_modules/.vite-temp/vite.config.ts.timestamp-1781676682022-3d96cf37520c6.mjs:10:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:329:25)
+    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26)
+    at async loadConfigFromBundledFile (file:///opt/comet/app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:35936:12)
+    at async bundleAndLoadConfigFile (file:///opt/comet/app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:35824:17)
+    at async loadConfigFromFile (file:///opt/comet/app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:35791:42)
+    at async resolveConfig (file:///opt/comet/app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:35440:22)
+    at async createBuilder (file:///opt/comet/app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/chunks/config.js:33895:19)
+    at async CAC.<anonymous> (file:///opt/comet/app/node_modules/.pnpm/vite@7.3.3_@types+node@25.6.2_jiti@2.7.0_lightningcss@1.32.0_tsx@4.21.0_yaml@2.8.4/node_modules/vite/dist/node/cli.js:629:10)
+/opt/comet/app/artifacts/comet-lkw:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/comet-lkw@0.0.0 build: `vite build --config vite.config.ts`
+Exit status 1
+root@crimson-snake-71460:/opt/comet/app#
