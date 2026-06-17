@@ -828,13 +828,23 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                             {cl.unterschriftFahrer && <span className="text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full bg-white">✓ Unterschrift F.</span>}
                             {cl.unterschriftVerlader && <span className="text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full bg-white">✓ Unterschrift V.</span>}
                           </div>
-                          {(cl.palettenAngeliefert != null || cl.palettenVerladen != null) && (
-                            <div className="flex gap-4 text-xs border-t border-slate-200 pt-1.5">
-                              {cl.palettenAngeliefert != null && (
-                                <span><span className="text-slate-400">Angeliefert:</span> {cl.palettenAngeliefert}{cl.davonDefekteAngeliefert ? ` (${cl.davonDefekteAngeliefert} def.)` : ""}</span>
+                          {(cl.vonCometEuropaletten != null || cl.anCometEuropaletten != null) && (
+                            <div className="grid grid-cols-2 gap-2 text-xs border-t border-slate-200 pt-1.5">
+                              {cl.vonCometEuropaletten != null && (
+                                <div className="bg-white border border-slate-200 rounded p-1.5">
+                                  <div className="text-slate-400 font-medium mb-0.5">Von COMET</div>
+                                  <div>Europal.: <b>{cl.vonCometEuropaletten}</b></div>
+                                  {cl.vonCometLadungssicherung != null && <div>Lasich.: <b>{cl.vonCometLadungssicherung}</b></div>}
+                                  {cl.vonDefektePaletten != null && <div className="text-amber-600">Defekt: <b>{cl.vonDefektePaletten}</b></div>}
+                                </div>
                               )}
-                              {cl.palettenVerladen != null && (
-                                <span><span className="text-slate-400">Verladen:</span> {cl.palettenVerladen}{cl.davonDefekteVerladen ? ` (${cl.davonDefekteVerladen} def.)` : ""}</span>
+                              {cl.anCometEuropaletten != null && (
+                                <div className="bg-white border border-slate-200 rounded p-1.5">
+                                  <div className="text-slate-400 font-medium mb-0.5">An COMET</div>
+                                  <div>Europal.: <b>{cl.anCometEuropaletten}</b></div>
+                                  {cl.anCometLadungssicherung != null && <div>Lasich.: <b>{cl.anCometLadungssicherung}</b></div>}
+                                  {cl.anDefektePaletten != null && <div className="text-amber-600">Defekt: <b>{cl.anDefektePaletten}</b></div>}
+                                </div>
                               )}
                             </div>
                           )}

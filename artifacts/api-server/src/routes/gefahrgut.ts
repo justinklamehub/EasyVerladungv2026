@@ -10,9 +10,13 @@ const router = Router();
 
 router.get("/api/scanner/find-shipment", async (req, res) => {
   try {
-    const { kennzeichen } = req.query as { kennzeichen?: string };
-    if (!kennzeichen) {
-      return res.status(400).json({ error: "kennzeichen erforderlich" });
+    const { id } = req.query as { id?: string };
+    if (!id) {
+      return res.status(400).json({ error: "id erforderlich" });
+    }
+    const numId = Number(id);
+    if (isNaN(numId)) {
+      return res.status(400).json({ error: "Ungültige ID" });
     }
     const shipments = await db
       .select({
@@ -23,7 +27,7 @@ router.get("/api/scanner/find-shipment", async (req, res) => {
         status: shipmentsTable.status,
       })
       .from(shipmentsTable)
-      .where(eq(shipmentsTable.kennzeichen, kennzeichen.toUpperCase().trim()))
+      .where(eq(shipmentsTable.id, numId))
       .limit(1);
 
     if (shipments.length === 0) {
@@ -53,19 +57,17 @@ router.post("/api/scanner/gefahrgut", async (req, res) => {
     const {
       shipmentId, kennzeichen, items, anhaenger, spedition,
       nameFahrer, unterschriftFahrer, nameVerlader, datum,
-      unterschriftVerlader, palettenAngeliefert, davonDefekteAngeliefert,
-      palettenVerladen, davonDefekteVerladen, ladungssicherung, bemerkungen,
+      unterschriftVerlader,
+      vonCometEuropaletten, vonCometLadungssicherung, vonDefektePaletten,
+      anCometEuropaletten, anCometLadungssicherung, anDefektePaletten,
+      bemerkungen,
     } = req.body;
-
-    if (!kennzeichen) {
-      return res.status(400).json({ error: "Kennzeichen erforderlich" });
-    }
 
     const [inserted] = await db
       .insert(gefahrgutChecklistenTable)
       .values({
         shipmentId: shipmentId ?? null,
-        kennzeichen: kennzeichen?.toUpperCase().trim(),
+        kennzeichen: kennzeichen ? String(kennzeichen).toUpperCase().trim() : null,
         items: items ?? {},
         anhaenger: anhaenger || null,
         spedition: spedition || null,
@@ -74,11 +76,12 @@ router.post("/api/scanner/gefahrgut", async (req, res) => {
         nameVerlader: nameVerlader || null,
         datum: datum || null,
         unterschriftVerlader: unterschriftVerlader || null,
-        palettenAngeliefert: palettenAngeliefert != null ? Number(palettenAngeliefert) : null,
-        davonDefekteAngeliefert: davonDefekteAngeliefert != null ? Number(davonDefekteAngeliefert) : null,
-        palettenVerladen: palettenVerladen != null ? Number(palettenVerladen) : null,
-        davonDefekteVerladen: davonDefekteVerladen != null ? Number(davonDefekteVerladen) : null,
-        ladungssicherung: ladungssicherung || null,
+        vonCometEuropaletten: vonCometEuropaletten != null ? Number(vonCometEuropaletten) : null,
+        vonCometLadungssicherung: vonCometLadungssicherung != null ? Number(vonCometLadungssicherung) : null,
+        vonDefektePaletten: vonDefektePaletten != null ? Number(vonDefektePaletten) : null,
+        anCometEuropaletten: anCometEuropaletten != null ? Number(anCometEuropaletten) : null,
+        anCometLadungssicherung: anCometLadungssicherung != null ? Number(anCometLadungssicherung) : null,
+        anDefektePaletten: anDefektePaletten != null ? Number(anDefektePaletten) : null,
         bemerkungen: bemerkungen || null,
       })
       .returning();

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Search, Truck, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, Hash } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -53,15 +53,14 @@ const S = {
   input: {
     width: "100%",
     padding: "14px 16px",
-    fontSize: 20,
+    fontSize: 24,
     fontWeight: 700,
-    letterSpacing: "0.1em",
+    letterSpacing: "0.05em",
     background: "#0d1b2a",
     border: "2px solid #b4ff00",
     borderRadius: 8,
     color: "#f8fafc",
     outline: "none",
-    textTransform: "uppercase" as const,
     boxSizing: "border-box" as const,
   },
   btnGreen: {
@@ -93,6 +92,10 @@ const S = {
     borderRadius: 8,
     cursor: "pointer",
     marginTop: 8,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
   },
   infoRow: {
     display: "flex",
@@ -120,13 +123,13 @@ const S = {
 
 type ShipmentInfo = {
   id: number;
-  kennzeichen: string;
+  kennzeichen: string | null;
   bezeichnung: string | null;
   status: string;
 } | null;
 
 export default function ScannerLandingPage() {
-  const [kennzeichen, setKennzeichen] = useState("");
+  const [idInput, setIdInput] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [shipment, setShipment] = useState<ShipmentInfo>(null);
@@ -136,12 +139,12 @@ export default function ScannerLandingPage() {
 
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
-    const kz = kennzeichen.trim().toUpperCase();
-    if (!kz) return;
+    const val = idInput.trim();
+    if (!val || isNaN(Number(val))) return;
     setIsSearching(true);
     setSearched(false);
     try {
-      const res = await fetch(`${API}/scanner/find-shipment?kennzeichen=${encodeURIComponent(kz)}`);
+      const res = await fetch(`${API}/scanner/find-shipment?id=${encodeURIComponent(val)}`);
       const data = await res.json();
       setShipment(data.found ? data.shipment : null);
       setSpedition(data.spedition ?? null);
@@ -154,11 +157,12 @@ export default function ScannerLandingPage() {
     }
   }
 
-  function goToChecklist(kz: string, ship: ShipmentInfo, sped: string | null) {
-    const params = new URLSearchParams({ kennzeichen: kz });
+  function goToChecklist(ship: ShipmentInfo, sped: string | null) {
+    const params = new URLSearchParams();
     if (ship) {
       params.set("shipmentId", String(ship.id));
-      params.set("bezeichnung", ship.bezeichnung ?? "");
+      if (ship.kennzeichen) params.set("kennzeichen", ship.kennzeichen);
+      if (ship.bezeichnung) params.set("bezeichnung", ship.bezeichnung);
     }
     if (sped) params.set("spedition", sped);
     setLocation(`/scanner/gefahrgut?${params.toString()}`);
@@ -174,23 +178,29 @@ export default function ScannerLandingPage() {
 
       <div style={S.card}>
         <form onSubmit={handleSearch}>
-          <label style={S.label}>LKW Kennzeichen</label>
+          <label style={S.label}>Verladungs-ID</label>
           <input
             ref={inputRef}
             style={S.input}
-            value={kennzeichen}
+            type="number"
+            inputMode="numeric"
+            value={idInput}
             onChange={(e) => {
-              setKennzeichen(e.target.value.toUpperCase());
+              setIdInput(e.target.value);
               setSearched(false);
               setShipment(null);
             }}
-            placeholder="z.B. MH-AB 1234"
+            placeholder="z.B. 42"
             autoFocus
-            autoCapitalize="characters"
-            spellCheck={false}
           />
-          <button type="submit" style={S.btnGreen} disabled={isSearching || !kennzeichen.trim()}>
-            {isSearching ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : <Search size={18} />}
+          <button
+            type="submit"
+            style={S.btnGreen}
+            disabled={isSearching || !idInput.trim() || isNaN(Number(idInput.trim()))}
+          >
+            {isSearching
+              ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
+              : <Search size={18} />}
             {isSearching ? "SUCHE..." : "VERLADUNG SUCHEN"}
           </button>
         </form>
@@ -205,9 +215,17 @@ export default function ScannerLandingPage() {
                 Verladung gefunden
               </div>
               <div style={S.infoRow}>
-                <span style={S.infoLabel}>Kennzeichen</span>
-                <span style={S.infoValue}>{shipment.kennzeichen}</span>
+                <span style={S.infoLabel}>ID</span>
+                <span style={{ ...S.infoValue, display: "flex", alignItems: "center", gap: 4 }}>
+                  <Hash size={12} color="#64748b" />{shipment.id}
+                </span>
               </div>
+              {shipment.kennzeichen && (
+                <div style={S.infoRow}>
+                  <span style={S.infoLabel}>Kennzeichen</span>
+                  <span style={S.infoValue}>{shipment.kennzeichen}</span>
+                </div>
+              )}
               {shipment.bezeichnung && (
                 <div style={S.infoRow}>
                   <span style={S.infoLabel}>Bezeichnung</span>
@@ -224,10 +242,7 @@ export default function ScannerLandingPage() {
                 <span style={S.infoLabel}>Status</span>
                 <span style={S.infoValue}>{shipment.status}</span>
               </div>
-              <button
-                style={S.btnGreen}
-                onClick={() => goToChecklist(kennzeichen.trim().toUpperCase(), shipment, spedition)}
-              >
+              <button style={S.btnGreen} onClick={() => goToChecklist(shipment, spedition)}>
                 <Truck size={18} />
                 CHECKLISTE AUSFÜLLEN
               </button>
@@ -239,13 +254,10 @@ export default function ScannerLandingPage() {
                 Keine Verladung gefunden
               </div>
               <p style={{ fontSize: 14, color: "#94a3b8", margin: "0 0 16px 0" }}>
-                Für das Kennzeichen <strong style={{ color: "#f8fafc" }}>{kennzeichen.trim().toUpperCase()}</strong> ist keine
-                aktive Verladung registriert. Sie können die Checkliste trotzdem ausfüllen.
+                Unter der ID <strong style={{ color: "#f8fafc" }}>{idInput.trim()}</strong> ist keine Verladung registriert.
+                Sie können die Checkliste trotzdem manuell ausfüllen.
               </p>
-              <button
-                style={S.btnGreen}
-                onClick={() => goToChecklist(kennzeichen.trim().toUpperCase(), null, null)}
-              >
+              <button style={S.btnGreen} onClick={() => goToChecklist(null, null)}>
                 <Truck size={18} />
                 CHECKLISTE TROTZDEM AUSFÜLLEN
               </button>
@@ -257,6 +269,9 @@ export default function ScannerLandingPage() {
       <style>{`
         @keyframes spin { to { transform: rotate(360deg); } }
         button:disabled { opacity: 0.5; cursor: not-allowed; }
+        input[type="number"]::-webkit-inner-spin-button,
+        input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type="number"] { -moz-appearance: textfield; }
       `}</style>
     </div>
   );

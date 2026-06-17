@@ -473,12 +473,14 @@ export default function ScannerGefahrgutPage() {
   const [datum, setDatum] = useState(todayStr);
   const [unterschriftVerlader, setUnterschriftVerlader] = useState<string | null>(null);
 
-  const [palettenAng, setPalettenAng] = useState("");
-  const [defekteAng, setDefekteAng] = useState("");
-  const [palettenVerl, setPalettenVerl] = useState("");
-  const [defekteVerl, setDefekteVerl] = useState("");
-  const [ladungssicherung, setLadungssicherung] = useState("");
+  const [vonCometEuro, setVonCometEuro] = useState("");
+  const [vonCometLasich, setVonCometLasich] = useState("");
+  const [vonDefekte, setVonDefekte] = useState("");
+  const [anCometEuro, setAnCometEuro] = useState("");
+  const [anCometLasich, setAnCometLasich] = useState("");
+  const [anDefekte, setAnDefekte] = useState("");
   const [bemerkungen, setBemerkungen] = useState("");
+  const [localKennzeichen, setLocalKennzeichen] = useState(kennzeichen);
 
   const [sigTarget, setSigTarget] = useState<SigTarget>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -491,8 +493,9 @@ export default function ScannerGefahrgutPage() {
 
   const markAll = useCallback((col: "b" | "v") => {
     setChecks((prev) => {
+      const allChecked = ITEMS.every((it) => !!prev[`${it.id}_${col}`]);
       const next = { ...prev };
-      ITEMS.forEach((it) => { next[`${it.id}_${col}`] = true; });
+      ITEMS.forEach((it) => { next[`${it.id}_${col}`] = !allChecked; });
       return next;
     });
   }, []);
@@ -511,7 +514,7 @@ export default function ScannerGefahrgutPage() {
 
       const body = {
         shipmentId,
-        kennzeichen,
+        kennzeichen: localKennzeichen || null,
         items: itemsPayload,
         anhaenger: anhaenger || null,
         spedition: spedition || null,
@@ -520,11 +523,12 @@ export default function ScannerGefahrgutPage() {
         nameVerlader: nameVerlader || null,
         datum,
         unterschriftVerlader: unterschriftVerlader || null,
-        palettenAngeliefert: palettenAng !== "" ? Number(palettenAng) : null,
-        davonDefekteAngeliefert: defekteAng !== "" ? Number(defekteAng) : null,
-        palettenVerladen: palettenVerl !== "" ? Number(palettenVerl) : null,
-        davonDefekteVerladen: defekteVerl !== "" ? Number(defekteVerl) : null,
-        ladungssicherung: ladungssicherung || null,
+        vonCometEuropaletten: vonCometEuro !== "" ? Number(vonCometEuro) : null,
+        vonCometLadungssicherung: vonCometLasich !== "" ? Number(vonCometLasich) : null,
+        vonDefektePaletten: vonDefekte !== "" ? Number(vonDefekte) : null,
+        anCometEuropaletten: anCometEuro !== "" ? Number(anCometEuro) : null,
+        anCometLadungssicherung: anCometLasich !== "" ? Number(anCometLasich) : null,
+        anDefektePaletten: anDefekte !== "" ? Number(anDefekte) : null,
         bemerkungen: bemerkungen || null,
       };
 
@@ -551,7 +555,7 @@ export default function ScannerGefahrgutPage() {
           Checkliste eingereicht
         </div>
         <div style={{ fontSize: 14, color: "#94a3b8", textAlign: "center", marginBottom: 32, maxWidth: 320 }}>
-          Die Gefahrgut-Checkliste für <strong style={{ color: "#f8fafc" }}>{kennzeichen}</strong> wurde erfolgreich übermittelt.
+          Die Gefahrgut-Checkliste{localKennzeichen ? <> für <strong style={{ color: "#f8fafc" }}>{localKennzeichen}</strong></> : ""} wurde erfolgreich übermittelt.
         </div>
         <button style={{ ...S.submitBtn, maxWidth: 320 }} onClick={() => setLocation("/scanner")}>
           NEUE CHECKLISTE
@@ -640,11 +644,11 @@ export default function ScannerGefahrgutPage() {
               </div>
               {item.specialInput === "adr" && (
                 <input
-                  type="date"
+                  type="month"
                   value={adrGueltigBis}
                   onChange={(e) => setAdrGueltigBis(e.target.value)}
                   style={{ ...S.input, marginTop: 6, fontSize: 14 }}
-                  placeholder="TT.MM.JJJJ"
+                  placeholder="MM.JJJJ"
                 />
               )}
               {item.specialInput === "plomben" && (
@@ -665,7 +669,17 @@ export default function ScannerGefahrgutPage() {
 
         <div style={S.fieldRow}>
           <label style={S.fieldLabel}>KFZ Kennzeichen</label>
-          <FocusInput value={kennzeichen} readOnly style={{ fontWeight: 700, color: C }} />
+          {kennzeichen ? (
+            <FocusInput value={localKennzeichen} readOnly style={{ fontWeight: 700, color: C }} />
+          ) : (
+            <FocusInput
+              value={localKennzeichen}
+              onChange={(e) => setLocalKennzeichen(e.target.value.toUpperCase())}
+              placeholder="z.B. MH-AB 1234"
+              style={{ fontWeight: 700 }}
+              autoCapitalize="characters"
+            />
+          )}
         </div>
         <div style={S.fieldRow}>
           <label style={S.fieldLabel}>ggf. Anhänger</label>
@@ -747,68 +761,69 @@ export default function ScannerGefahrgutPage() {
       <div style={S.section}>
         <div style={S.sectionTitle}>Paletten</div>
 
-        <div style={{ ...S.twoCol, borderBottom: `1px solid ${BORDER}` }}>
-          <div>
-            <label style={S.numLabel}>Angeliefert</label>
-            <input
-              type="number"
-              min="0"
-              value={palettenAng}
-              onChange={(e) => setPalettenAng(e.target.value)}
-              style={S.numInput}
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label style={S.numLabel}>Davon Defekte</label>
-            <input
-              type="number"
-              min="0"
-              value={defekteAng}
-              onChange={(e) => setDefekteAng(e.target.value)}
-              style={S.numInput}
-              placeholder="0"
-            />
+        {/* Von COMET */}
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>Von COMET</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <div>
+              <label style={S.numLabel}>Europaletten</label>
+              <input type="number" min="0" value={vonCometEuro} onChange={(e) => setVonCometEuro(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
+            <div>
+              <label style={S.numLabel}>Ladungssich.</label>
+              <input type="number" min="0" value={vonCometLasich} onChange={(e) => setVonCometLasich(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
+            <div>
+              <label style={{ ...S.numLabel, color: "#f59e0b" }}>davon Defekt</label>
+              <input type="number" min="0" value={vonDefekte} onChange={(e) => setVonDefekte(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
           </div>
         </div>
 
-        <div style={S.twoCol}>
-          <div>
-            <label style={S.numLabel}>Verladen</label>
-            <input
-              type="number"
-              min="0"
-              value={palettenVerl}
-              onChange={(e) => setPalettenVerl(e.target.value)}
-              style={S.numInput}
-              placeholder="0"
-            />
-          </div>
-          <div>
-            <label style={S.numLabel}>Davon Defekte</label>
-            <input
-              type="number"
-              min="0"
-              value={defekteVerl}
-              onChange={(e) => setDefekteVerl(e.target.value)}
-              style={S.numInput}
-              placeholder="0"
-            />
+        {/* An COMET */}
+        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
+          <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>An COMET</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            <div>
+              <label style={S.numLabel}>Europaletten</label>
+              <input type="number" min="0" value={anCometEuro} onChange={(e) => setAnCometEuro(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
+            <div>
+              <label style={S.numLabel}>Ladungssich.</label>
+              <input type="number" min="0" value={anCometLasich} onChange={(e) => setAnCometLasich(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
+            <div>
+              <label style={{ ...S.numLabel, color: "#f59e0b" }}>davon Defekt</label>
+              <input type="number" min="0" value={anDefekte} onChange={(e) => setAnDefekte(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
           </div>
         </div>
+
+        {/* Netto */}
+        {(() => {
+          const vonNet = (Number(vonCometEuro) || 0) + (Number(vonCometLasich) || 0) - (Number(vonDefekte) || 0);
+          const anNet = (Number(anCometEuro) || 0) + (Number(anCometLasich) || 0) - (Number(anDefekte) || 0);
+          const net = vonNet - anNet;
+          const isPositive = net > 0;
+          const isNegative = net < 0;
+          return (
+            <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div>
+                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>Netto-Palettenbuchung</div>
+                <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>
+                  ({Number(vonCometEuro)||0}+{Number(vonCometLasich)||0}−{Number(vonDefekte)||0}) − ({Number(anCometEuro)||0}+{Number(anCometLasich)||0}−{Number(anDefekte)||0})
+                </div>
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 700, color: isPositive ? C : isNegative ? "#f87171" : "#64748b" }}>
+                {isPositive ? "+" : ""}{net}
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       <div style={S.section}>
-        <div style={S.sectionTitle}>Sonstiges</div>
-        <div style={S.fieldRow}>
-          <label style={S.fieldLabel}>Ladungssicherung</label>
-          <textarea
-            value={ladungssicherung}
-            onChange={(e) => setLadungssicherung(e.target.value)}
-            style={S.textarea}
-            placeholder="Art der Ladungssicherung..."
-          />
-        </div>
+        <div style={S.sectionTitle}>Bemerkungen</div>
         <div style={{ ...S.fieldRow, borderBottom: "none" }}>
           <label style={S.fieldLabel}>Bemerkungen für Lagerleiststand</label>
           <textarea
