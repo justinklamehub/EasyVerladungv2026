@@ -187,7 +187,9 @@ export default function PalettenPage() {
   };
 
   const handleRowClick = (movement: any) => {
-    setSelectedMovement(movement);
+    // Attach the spedition's palletFaktor so the detail sheet can compute the correct display amount
+    const faktor = (balances ?? []).find((b: any) => b.speditionId === movement.speditionId)?.palletFaktor ?? 1;
+    setSelectedMovement({ ...movement, palletFaktor: faktor });
     setIsDetailOpen(true);
   };
 

@@ -61,7 +61,11 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
     : anGross > 0 ? "eingang"
     : "abstimmung";
 
-  const absAmount = Math.abs(calculatedAmount);
+  // For neutral with factor: amount reflects the factor-adjusted balance impact
+  // e.g. VON 300 (all defect) / factor 3 = 100 effective, AN 100 → diff = 0
+  const absAmount = (movementType === "neutral" && selectedFaktor > 1)
+    ? Math.abs(anGross * selectedFaktor - vonGross)
+    : Math.abs(calculatedAmount);
   // Scheinnummer ist immer Pflicht außer bei reiner Abstimmung (beide Seiten 0)
   const requiresSchein = movementType !== "abstimmung";
 

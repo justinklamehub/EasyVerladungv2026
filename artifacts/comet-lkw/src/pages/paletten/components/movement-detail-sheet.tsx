@@ -14,6 +14,7 @@ interface Props {
     anCometEuropaletten?: number;
     anCometLadungssicherung?: number;
     anDefektePaletten?: number;
+    palletFaktor?: number;
   }) | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -81,6 +82,16 @@ function PalletBox({
 export function MovementDetailSheet({ movement, open, onOpenChange }: Props) {
   if (!movement) return null;
 
+  const f = movement.palletFaktor ?? 1;
+  // For neutral movements with factor > 1: compute factor-adjusted balance amount
+  // anGross × f − vonGross (e.g. 100×3 − 300 = 0)
+  const displayAmount = (movement.movementType === "neutral" && f > 1)
+    ? Math.abs(
+        ((movement.anCometEuropaletten ?? 0) + (movement.anCometLadungssicherung ?? 0)) * f
+        - ((movement.vonCometEuropaletten ?? 0) + (movement.vonCometLadungssicherung ?? 0))
+      )
+    : (movement.amount ?? 0);
+
   const sign = movement.movementType === "ausgang" ? "-" : movement.movementType === "eingang" ? "+" : "";
   const amountColor = movement.movementType === "ausgang" ? "text-red-600" : "text-green-600";
 
@@ -93,7 +104,7 @@ export function MovementDetailSheet({ movement, open, onOpenChange }: Props) {
               {TYPE_LABEL[movement.movementType] ?? movement.movementType}
             </Badge>
             <span className={`text-xl font-bold ${amountColor}`}>
-              {sign}{movement.amount}
+              {sign}{displayAmount}
             </span>
           </SheetTitle>
           <p className="text-sm text-slate-500">
