@@ -314,15 +314,18 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
         neutralAnGross: 0, neutralVonGross: 0,
       };
       const f = faktorMap[s.id] ?? 1;
-      // Factor N:1: eingang (an-side) × f; ausgang (von-side) unchanged; defekte excluded when f > 1
-      const anfangsbestand = f > 1
-        ? r.preEingang * f - r.preAusgang + r.preKorrektur + (r.preNeutralAnGross * f - r.preNeutralVonGross)
-        : r.preEingang - r.preAusgang + r.preKorrektur + (r.preNeutralAnNet - r.preNeutralVonNet);
-      const zugaenge   = f > 1 ? r.zugaenge * f : r.zugaenge;
-      const abgaenge   = r.abgaengeRaw;
-      const korrekturen = f > 1
-        ? r.korrekturRaw + (r.neutralAnGross * f - r.neutralVonGross)
-        : r.korrekturRaw + (r.neutralAnNet - r.neutralVonNet);
+      // Factor N:1: what COMET receives (eingang + neutral-an-side) × f; ausgang + neutral-von-side unchanged.
+      // When f > 1: defekte excluded (use gross). When f = 1: use net (defekte subtracted).
+      // Neutral movements are split into zugaenge (an-side) and abgaenge (von-side) for clear reporting.
+      const preNeutralAn  = f > 1 ? r.preNeutralAnGross  : r.preNeutralAnNet;
+      const preNeutralVon = f > 1 ? r.preNeutralVonGross : r.preNeutralVonNet;
+      const neutralAn     = f > 1 ? r.neutralAnGross      : r.neutralAnNet;
+      const neutralVon    = f > 1 ? r.neutralVonGross     : r.neutralVonNet;
+
+      const anfangsbestand = (r.preEingang + preNeutralAn) * f - (r.preAusgang + preNeutralVon) + r.preKorrektur;
+      const zugaenge   = (r.zugaenge + neutralAn) * f;
+      const abgaenge   = r.abgaengeRaw + neutralVon;
+      const korrekturen = r.korrekturRaw;
       const endbestand = anfangsbestand + zugaenge - abgaenge + korrekturen;
       return {
         speditionId: s.id,
