@@ -258,7 +258,7 @@ export default function PalettenPage() {
                 </CardTitle>
                 {faktor > 1 && (
                   <span className="shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 border border-amber-200">
-                    1:{faktor}
+                    {faktor}:1
                   </span>
                 )}
               </div>

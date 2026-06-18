@@ -136,13 +136,13 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
                   </Select>
                   {selectedFaktor > 1 && (
                     <span className="shrink-0 text-xs font-semibold px-2 py-1 rounded bg-amber-100 text-amber-700 border border-amber-200 whitespace-nowrap">
-                      Faktor 1:{selectedFaktor}
+                      Faktor {selectedFaktor}:1
                     </span>
                   )}
                 </div>
                 {selectedFaktor > 1 && (
                   <p className="text-xs text-amber-700">
-                    1 COMET-Palette = {selectedFaktor} Speditions-Paletten — wirkt auf Abgänge und neutrale Buchungen.
+                    {selectedFaktor} Speditions-Paletten = 1 COMET-Palette. Defekte zählen nicht. Eingang wird {selectedFaktor}-fach gewertet.
                   </p>
                 )}
               </div>

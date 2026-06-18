@@ -344,14 +344,14 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
                   <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="1">1 : 1 (Standard)</SelectItem>
-                    <SelectItem value="2">1 : 2</SelectItem>
-                    <SelectItem value="3">1 : 3</SelectItem>
-                    <SelectItem value="4">1 : 4</SelectItem>
-                    <SelectItem value="5">1 : 5</SelectItem>
+                    <SelectItem value="2">2 : 1</SelectItem>
+                    <SelectItem value="3">3 : 1</SelectItem>
+                    <SelectItem value="4">4 : 1</SelectItem>
+                    <SelectItem value="5">5 : 1</SelectItem>
                   </SelectContent>
                 </Select>
                 <p className="text-xs text-slate-400 mt-1">
-                  Anzahl Speditions-Paletten pro COMET-Palette. Beeinflusst Saldo-Berechnung bei Abgängen und neutralen Buchungen.
+                  N:1 = für 1 abgegebene COMET-Palette zählt jede zurückerhaltene Speditions-Palette N-fach. Defekte Paletten werden bei aktivem Faktor nicht mitgerechnet.
                 </p>
               </div>
             </div>
