@@ -125,6 +125,13 @@ const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", 
 const WARE_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
 const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 
+const S_hint = {
+  fontSize: 11,
+  color: "#64748b",
+  marginTop: 6,
+  textAlign: "center" as const,
+};
+
 type ShipmentInfo = {
   id: number;
   kennzeichen: string | null;
@@ -139,6 +146,7 @@ export default function ScannerLandingPage() {
   const [idInput, setIdInput] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searched, setSearched] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [shipment, setShipment] = useState<ShipmentInfo>(null);
   const [spedition, setSpedition] = useState<string | null>(null);
   const [checklistCount, setChecklistCount] = useState(0);
@@ -156,15 +164,26 @@ export default function ScannerLandingPage() {
   async function handleSearch(e: React.FormEvent) {
     e.preventDefault();
     const val = idInput.trim();
-    if (!val || isNaN(Number(val))) return;
+    if (!val) return;
     setIsSearching(true);
     setSearched(false);
+    setSearchError(null);
     setConfirmedDuplicate(false);
     setEditOpen(false);
     setSaveOk(false);
     setSaveError("");
     try {
-      const res = await fetch(`${API}/scanner/find-shipment?id=${encodeURIComponent(val)}`);
+      const res = await fetch(`${API}/scanner/find-shipment?q=${encodeURIComponent(val)}`, {
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        setSearchError(errData.error ?? `Serverfehler (${res.status})`);
+        setShipment(null);
+        setChecklistCount(0);
+        setSearched(true);
+        return;
+      }
       const data = await res.json();
       const s = data.found ? data.shipment : null;
       setShipment(s);
@@ -176,7 +195,8 @@ export default function ScannerLandingPage() {
         setEditWareStatus(s.wareStatus ?? "");
       }
       setSearched(true);
-    } catch {
+    } catch (err: any) {
+      setSearchError("Verbindungsfehler – bitte prüfen Sie die Netzwerkverbindung.");
       setShipment(null);
       setChecklistCount(0);
       setSearched(true);
@@ -232,25 +252,29 @@ export default function ScannerLandingPage() {
 
       <div style={S.card}>
         <form onSubmit={handleSearch}>
-          <label style={S.label}>Verladungs-ID</label>
+          <label style={S.label}>Verladungs-ID oder Kennzeichen</label>
           <input
             ref={inputRef}
             style={S.input}
-            type="number"
-            inputMode="numeric"
+            type="text"
+            inputMode="text"
+            autoCapitalize="characters"
+            autoCorrect="off"
             value={idInput}
             onChange={(e) => {
               setIdInput(e.target.value);
               setSearched(false);
               setShipment(null);
+              setSearchError(null);
             }}
-            placeholder="z.B. 42"
+            placeholder="z.B. 42 oder HB-Y 4003"
             autoFocus
           />
+          <div style={S_hint}>Nummer-ID oder Kennzeichen (Teilsuche möglich)</div>
           <button
             type="submit"
             style={S.btnGreen}
-            disabled={isSearching || !idInput.trim() || isNaN(Number(idInput.trim()))}
+            disabled={isSearching || !idInput.trim()}
           >
             {isSearching
               ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
@@ -440,12 +464,18 @@ export default function ScannerLandingPage() {
             <>
               <div style={S.statusBadge(false)}>
                 <AlertTriangle size={13} />
-                Keine Verladung gefunden
+                {searchError ? "Serverfehler" : "Keine Verladung gefunden"}
               </div>
-              <p style={{ fontSize: 14, color: "#94a3b8", margin: "0 0 16px 0" }}>
-                Unter der ID <strong style={{ color: "#f8fafc" }}>{idInput.trim()}</strong> ist keine Verladung registriert.
-                Sie können die Checkliste trotzdem manuell ausfüllen.
-              </p>
+              {searchError ? (
+                <p style={{ fontSize: 14, color: "#f87171", margin: "0 0 16px 0" }}>
+                  {searchError}
+                </p>
+              ) : (
+                <p style={{ fontSize: 14, color: "#94a3b8", margin: "0 0 16px 0" }}>
+                  Keine Verladung für <strong style={{ color: "#f8fafc" }}>„{idInput.trim()}"</strong> gefunden.
+                  Sie können die Checkliste trotzdem manuell ausfüllen.
+                </p>
+              )}
               <button style={S.btnGreen} onClick={() => goToChecklist(null, null)}>
                 <Truck size={18} />
                 CHECKLISTE TROTZDEM AUSFÜLLEN

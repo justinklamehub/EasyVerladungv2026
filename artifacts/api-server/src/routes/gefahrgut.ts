@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { gefahrgutChecklistenTable, shipmentsTable, speditionenTable } from "@workspace/db";
-import { eq, desc, isNotNull, count } from "drizzle-orm";
+import { eq, desc, isNotNull, count, ilike, or } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { isCometRole } from "../lib/auth";
 import { can } from "../lib/permissions";
@@ -16,14 +16,15 @@ const router = Router();
 
 router.get("/scanner/find-shipment", async (req, res) => {
   try {
-    const { id } = req.query as { id?: string };
-    if (!id) {
-      return res.status(400).json({ error: "id erforderlich" });
+    const { id, q } = req.query as { id?: string; q?: string };
+    const query = (q ?? id ?? "").trim();
+    if (!query) {
+      return res.status(400).json({ error: "Suchbegriff erforderlich" });
     }
-    const numId = Number(id);
-    if (isNaN(numId)) {
-      return res.status(400).json({ error: "Ungültige ID" });
-    }
+
+    const numId = Number(query);
+    const isNumeric = !isNaN(numId) && query !== "";
+
     const shipments = await db
       .select({
         id: shipmentsTable.id,
@@ -36,8 +37,12 @@ router.get("/scanner/find-shipment", async (req, res) => {
         wareStatus: shipmentsTable.wareStatus,
       })
       .from(shipmentsTable)
-      .where(eq(shipmentsTable.id, numId))
-      .limit(1);
+      .where(
+        isNumeric
+          ? or(eq(shipmentsTable.id, numId), ilike(shipmentsTable.kennzeichen, query))
+          : ilike(shipmentsTable.kennzeichen, `%${query}%`)
+      )
+      .limit(5);
 
     if (shipments.length === 0) {
       return res.json({ found: false, shipment: null, spedition: null });
