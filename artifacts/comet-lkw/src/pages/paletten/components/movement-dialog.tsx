@@ -34,23 +34,31 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
   const [bemerkungen, setBemerkungen] = useState("");
   const [palletForm, setPalletForm] = useState(emptyForm());
 
-  // Auto-calculated totals per side
+  // Gross = euro + ladungssicherung (ohne Defekte-Abzug)
+  // Net  = gross - defekte (für Anzeige und amount-Feld)
+  const vonGross = useMemo(() =>
+    palletForm.vonCometEuropaletten + palletForm.vonCometLadungssicherung,
+    [palletForm]);
+  const anGross = useMemo(() =>
+    palletForm.anCometEuropaletten + palletForm.anCometLadungssicherung,
+    [palletForm]);
   const vonTotal = useMemo(() =>
-    palletForm.vonCometEuropaletten + palletForm.vonCometLadungssicherung - palletForm.vonDefektePaletten,
-    [palletForm]);
+    vonGross - palletForm.vonDefektePaletten,
+    [vonGross, palletForm.vonDefektePaletten]);
   const anTotal = useMemo(() =>
-    palletForm.anCometEuropaletten + palletForm.anCometLadungssicherung - palletForm.anDefektePaletten,
-    [palletForm]);
+    anGross - palletForm.anDefektePaletten,
+    [anGross, palletForm.anDefektePaletten]);
 
   const calculatedAmount = vonTotal - anTotal;
 
-  // Art wird automatisch ermittelt:
-  // Beide Seiten haben Werte → Neutral (kein Saldeneffekt)
-  // Nur Von COMET → Abgang, Nur An COMET → Zugang
-  const movementType = (vonTotal > 0 && anTotal > 0)
+  // Art wird automatisch ermittelt — WICHTIG: anhand der Brutto-Mengen,
+  // damit "alle defekt" auf Von-Seite trotzdem als Neutral erkannt wird.
+  // Nur Von COMET (brutto) → Abgang, Nur An COMET (brutto) → Zugang
+  // Beide Seiten (brutto) → Neutral
+  const movementType = (vonGross > 0 && anGross > 0)
     ? "neutral"
-    : calculatedAmount > 0 ? "ausgang"
-    : calculatedAmount < 0 ? "eingang"
+    : vonGross > 0 ? "ausgang"
+    : anGross > 0 ? "eingang"
     : "abstimmung";
 
   const absAmount = Math.abs(calculatedAmount);
@@ -236,16 +244,18 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
                 <div>
                   <div className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Differenz (Menge)</div>
                   <div className="text-xs text-slate-400">
-                    Von: {vonTotal} | An: {anTotal}
+                    Von: {vonGross}{palletForm.vonDefektePaletten > 0 ? ` (${palletForm.vonDefektePaletten} defekt)` : ""} | An: {anGross}{palletForm.anDefektePaletten > 0 ? ` (${palletForm.anDefektePaletten} defekt)` : ""}
                   </div>
-                  {absAmount > 0 && (
+                  {(vonGross > 0 || anGross > 0) && (
                     <div className={`text-xs font-medium mt-1 ${isAbgang ? "text-red-600" : isZugang ? "text-green-600" : "text-blue-600"}`}>
                       {isNeutral
-                        ? calculatedAmount > 0
-                          ? "Von > An → Saldo −" + absAmount + " (Abgang)"
-                          : calculatedAmount < 0
-                            ? "An > Von → Saldo +" + absAmount + " (Zugang)"
-                            : "Von = An → kein Saldeneffekt"
+                        ? selectedFaktor > 1
+                          ? `An COMET × ${selectedFaktor} − Von COMET = ${anGross * selectedFaktor - vonGross} → Saldo`
+                          : calculatedAmount > 0
+                            ? "Von > An → Saldo −" + absAmount + " (Abgang)"
+                            : calculatedAmount < 0
+                              ? "An > Von → Saldo +" + absAmount + " (Zugang)"
+                              : "Von = An → kein Saldeneffekt"
                         : isAbgang
                           ? "Von COMET > An COMET → Abgang"
                           : "An COMET > Von COMET → Zugang"}
@@ -253,7 +263,7 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
                   )}
                 </div>
                 <div className={`text-3xl font-bold tabular-nums ${amountColor}`}>
-                  {absAmount}
+                  {isNeutral && selectedFaktor > 1 ? Math.abs(anGross * selectedFaktor - vonGross) : absAmount}
                 </div>
               </div>
             </div>
