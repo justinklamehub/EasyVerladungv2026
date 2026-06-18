@@ -126,8 +126,8 @@ const S = {
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 4,
-    border: `2px solid ${checked ? C : "#2d4a6b"}`,
-    background: checked ? "rgba(180,255,0,0.12)" : "transparent",
+    border: `2px solid ${checked ? "#facc15" : "#2d4a6b"}`,
+    background: checked ? "rgba(250,204,21,0.15)" : "transparent",
     cursor: "pointer",
     flexShrink: 0,
     transition: "all 0.15s",
@@ -476,9 +476,11 @@ export default function ScannerGefahrgutPage() {
   const [vonCometEuro, setVonCometEuro] = useState("");
   const [vonCometLasich, setVonCometLasich] = useState("");
   const [vonDefekte, setVonDefekte] = useState("");
+  const [vonDuesseldorfer, setVonDuesseldorfer] = useState("");
   const [anCometEuro, setAnCometEuro] = useState("");
   const [anCometLasich, setAnCometLasich] = useState("");
   const [anDefekte, setAnDefekte] = useState("");
+  const [anDuesseldorfer, setAnDuesseldorfer] = useState("");
   const [bemerkungen, setBemerkungen] = useState("");
   const [localKennzeichen, setLocalKennzeichen] = useState(kennzeichen);
 
@@ -623,7 +625,7 @@ export default function ScannerGefahrgutPage() {
                 title="Besatzung"
               >
                 {checks[`${item.id}_b`]
-                  ? <CheckSquare size={16} color={C} />
+                  ? <CheckSquare size={16} color="#3b82f6" />
                   : <Square size={16} color="#2d4a6b" />}
               </button>
               <button
@@ -632,7 +634,7 @@ export default function ScannerGefahrgutPage() {
                 title="Verlader"
               >
                 {checks[`${item.id}_v`]
-                  ? <CheckSquare size={16} color={C} />
+                  ? <CheckSquare size={16} color="#3b82f6" />
                   : <Square size={16} color="#2d4a6b" />}
               </button>
             </div>
@@ -764,7 +766,7 @@ export default function ScannerGefahrgutPage() {
         {/* Von COMET */}
         <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>Von COMET</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
             <div>
               <label style={S.numLabel}>Europaletten</label>
               <input type="number" min="0" value={vonCometEuro} onChange={(e) => setVonCometEuro(e.target.value)} style={S.numInput} placeholder="0" />
@@ -777,13 +779,17 @@ export default function ScannerGefahrgutPage() {
               <label style={{ ...S.numLabel, color: "#f59e0b" }}>davon Defekt</label>
               <input type="number" min="0" value={vonDefekte} onChange={(e) => setVonDefekte(e.target.value)} style={S.numInput} placeholder="0" />
             </div>
+            <div>
+              <label style={{ ...S.numLabel, color: "#a78bfa" }}>Düsseldorfer</label>
+              <input type="number" min="0" value={vonDuesseldorfer} onChange={(e) => setVonDuesseldorfer(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
           </div>
         </div>
 
         {/* An COMET */}
-        <div style={{ padding: "10px 14px", borderBottom: `1px solid ${BORDER}` }}>
+        <div style={{ padding: "10px 14px" }}>
           <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase" as const, marginBottom: 8 }}>An COMET</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: 8 }}>
             <div>
               <label style={S.numLabel}>Europaletten</label>
               <input type="number" min="0" value={anCometEuro} onChange={(e) => setAnCometEuro(e.target.value)} style={S.numInput} placeholder="0" />
@@ -796,30 +802,12 @@ export default function ScannerGefahrgutPage() {
               <label style={{ ...S.numLabel, color: "#f59e0b" }}>davon Defekt</label>
               <input type="number" min="0" value={anDefekte} onChange={(e) => setAnDefekte(e.target.value)} style={S.numInput} placeholder="0" />
             </div>
+            <div>
+              <label style={{ ...S.numLabel, color: "#a78bfa" }}>Düsseldorfer</label>
+              <input type="number" min="0" value={anDuesseldorfer} onChange={(e) => setAnDuesseldorfer(e.target.value)} style={S.numInput} placeholder="0" />
+            </div>
           </div>
         </div>
-
-        {/* Netto */}
-        {(() => {
-          const vonNet = (Number(vonCometEuro) || 0) + (Number(vonCometLasich) || 0) - (Number(vonDefekte) || 0);
-          const anNet = (Number(anCometEuro) || 0) + (Number(anCometLasich) || 0) - (Number(anDefekte) || 0);
-          const net = vonNet - anNet;
-          const isPositive = net > 0;
-          const isNegative = net < 0;
-          return (
-            <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 700, color: "#64748b", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>Netto-Palettenbuchung</div>
-                <div style={{ fontSize: 11, color: "#475569", marginTop: 2 }}>
-                  ({Number(vonCometEuro)||0}+{Number(vonCometLasich)||0}−{Number(vonDefekte)||0}) − ({Number(anCometEuro)||0}+{Number(anCometLasich)||0}−{Number(anDefekte)||0})
-                </div>
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 700, color: isPositive ? C : isNegative ? "#f87171" : "#64748b" }}>
-                {isPositive ? "+" : ""}{net}
-              </div>
-            </div>
-          );
-        })()}
       </div>
 
       <div style={S.section}>
