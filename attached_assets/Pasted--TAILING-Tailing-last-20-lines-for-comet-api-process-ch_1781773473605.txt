@@ -1,0 +1,64 @@
+[TAILING] Tailing last 20 lines for [comet-api] process (change the value with --lines option)
+/opt/comet/.pm2/logs/comet-api-out.log last 20 lines:
+/opt/comet/.pm2/logs/comet-api-error.log last 20 lines:
+0|comet-ap |     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26) {
+0|comet-ap |   code: 'EADDRINUSE',
+0|comet-ap |   errno: -98,
+0|comet-ap |   syscall: 'listen',
+0|comet-ap |   address: '::',
+0|comet-ap |   port: 3333
+0|comet-ap | }
+0|comet-ap | Error: listen EADDRINUSE: address already in use :::3333
+0|comet-ap |     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+0|comet-ap |     at listenInCluster (node:net:1997:12)
+0|comet-ap |     at Server.listen (node:net:2102:7)
+0|comet-ap |     at <anonymous> (/opt/comet/app/artifacts/api-server/src/index.ts:158:12)
+0|comet-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:329:25)
+0|comet-ap |     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26) {
+0|comet-ap |   code: 'EADDRINUSE',
+0|comet-ap |   errno: -98,
+0|comet-ap |   syscall: 'listen',
+0|comet-ap |   address: '::',
+0|comet-ap |   port: 3333
+0|comet-ap | }
+
+root@crimson-snake-71460:~# sudo -u comet pm2 env 0 | grep -E "SESSION|DATABASE|COOKIE|PORT"
+SESSION_SECRET: 08367d40207e36ab231c631c51d361efecc92d64f4f859f73cbc6b82ea75f4ef
+PORT: 3333
+  export PORT=3333
+DATABASE_URL: postgresql://comet_app:I6n0o9L0FGne48kMes5k@127.0.0.1:5432/comet_lkw
+root@crimson-snake-71460:~# # Vollständiger sauberer Neustart mit korrekten Variablen
+fuser -k 3333/tcp 2>/dev/null || true
+sleep 1
+
+sudo -u comet bash -c '
+  set -a
+  source /opt/comet/app/artifacts/api-server/.env
+  set +a
+
+  echo "SESSION_SECRET gesetzt: $([ -n "$SESSION_SECRET" ] && echo JA || echo NEIN)"
+  echo "DATABASE_URL gesetzt:   $([ -n "$DATABASE_URL" ] && echo JA || echo NEIN)"
+
+  export PORT=3333
+  pm2 delete comet-api 2>/dev/null || true
+  sleep 1
+  pm2 start /opt/comet/app/artifacts/api-server/dist/index.mjs --name comet-api
+  pm2 save
+'
+  2962SESSION_SECRET gesetzt: JA
+DATABASE_URL gesetzt:   JA
+[PM2] Applying action deleteProcessId on app [comet-api](ids: [ 0 ])
+[PM2] [comet-api](0) ✓
+┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2] Starting /opt/comet/app/artifacts/api-server/dist/index.mjs in fork_mode (1 instance)
+[PM2] Done.
+┌────┬──────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name         │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ comet-api    │ default     │ 0.0.0   │ fork    │ 3269     │ 0s     │ 0    │ online    │ 0%       │ 17.5mb   │ comet    │ disabled │
+└────┴──────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[PM2] Saving current process list...
+[PM2] Successfully saved in /opt/comet/.pm2/dump.pm2
+root@crimson-snake-71460:~#
