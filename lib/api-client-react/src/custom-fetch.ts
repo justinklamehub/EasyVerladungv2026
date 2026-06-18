@@ -322,12 +322,15 @@ async function parseSuccessBody(
   }
 }
 
+// Default request timeout in milliseconds. Mutations should never hang forever.
+const DEFAULT_TIMEOUT_MS = 15_000;
+
 export async function customFetch<T = unknown>(
   input: RequestInfo | URL,
   options: CustomFetchOptions = {},
 ): Promise<T> {
   input = applyBaseUrl(input);
-  const { responseType = "auto", headers: headersInit, ...init } = options;
+  const { responseType = "auto", headers: headersInit, signal: externalSignal, ...init } = options;
 
   const method = resolveMethod(input, init.method);
 
@@ -360,7 +363,28 @@ export async function customFetch<T = unknown>(
 
   const requestInfo = { method, url: resolveUrl(input) };
 
-  const response = await fetch(input, { credentials: "include", ...init, method, headers });
+  // Abort after timeout so a hung server never freezes the UI indefinitely.
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+
+  // Combine with any caller-supplied signal.
+  const signal = externalSignal
+    ? AbortSignal.any
+      ? AbortSignal.any([controller.signal, externalSignal])
+      : controller.signal
+    : controller.signal;
+
+  let response: Response;
+  try {
+    response = await fetch(input, { credentials: "include", ...init, method, headers, signal });
+  } catch (err: unknown) {
+    clearTimeout(timeoutId);
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new Error("Zeitüberschreitung: Der Server hat nicht rechtzeitig geantwortet. Bitte versuchen Sie es erneut.");
+    }
+    throw err;
+  }
+  clearTimeout(timeoutId);
 
   if (!response.ok) {
     const errorData = await parseErrorBody(response, method);
