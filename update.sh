@@ -12,6 +12,14 @@ sudo -u comet git -C "$APP" pull origin main
 echo "==> Abhaengigkeiten aktualisieren..."
 sudo -u comet pnpm --dir "$APP" install --frozen-lockfile
 
+echo "==> Datenbankschema synchronisieren (neue Tabellen/Spalten hinzufuegen)..."
+sudo -u comet bash -c "
+  set -a
+  source /opt/comet/app/artifacts/api-server/.env
+  set +a
+  pnpm --filter @workspace/db --dir \"$APP\" push-force
+"
+
 echo "==> Backend bauen..."
 sudo -u comet pnpm --filter @workspace/api-server --dir "$APP" run build
 
