@@ -378,16 +378,18 @@ router.post("/pallet-recalculate", requireAuth, async (req, res) => {
     }
     // Recompute `amount` for all neutral movements from their raw pallet fields.
     // Net = an_net - von_net; stored as abs value for display.
-    const result = await db.execute(sql`
-      UPDATE pallet_movements
-      SET amount = ABS(
-        (COALESCE(an_comet_europaletten,0) + COALESCE(an_comet_ladungssicherung,0) - COALESCE(an_defekte_paletten,0))
-        - (COALESCE(von_comet_europaletten,0) + COALESCE(von_comet_ladungssicherung,0) - COALESCE(von_defekte_paletten,0))
-      )
-      WHERE movement_type = 'neutral'
-    `);
-    const updated = (result as any).rowCount ?? 0;
-    return res.json({ updated, message: `${updated} neutrale Buchungen neu berechnet.` });
+    const rows = await db
+      .update(palletMovementsTable)
+      .set({
+        amount: sql<number>`ABS(
+          (COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) - COALESCE(${palletMovementsTable.anDefektePaletten},0))
+          - (COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0))
+        )`,
+      })
+      .where(eq(palletMovementsTable.movementType, "neutral"))
+      .returning({ id: palletMovementsTable.id });
+    const updated = rows.length;
+    return res.json({ updated, message: `${updated} neutrale Buchung${updated !== 1 ? "en" : ""} neu berechnet.` });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });

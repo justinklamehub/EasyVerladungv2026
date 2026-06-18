@@ -44,7 +44,11 @@ export default function PalettenPage() {
     try {
       const res = await fetch("/api/pallet-recalculate", { method: "POST", credentials: "include" });
       const data = await res.json();
-      toast({ title: data.message ?? "Neuberechnung abgeschlossen" });
+      if (!res.ok) {
+        toast({ title: data.error ?? "Fehler bei der Neuberechnung", variant: "destructive" });
+      } else {
+        toast({ title: data.message ?? "Neuberechnung abgeschlossen" });
+      }
     } catch {
       toast({ title: "Fehler bei der Neuberechnung", variant: "destructive" });
     } finally {
