@@ -24,6 +24,7 @@ const TYPE_LABEL: Record<string, string> = {
   ausgang: "Abgang",
   korrektur: "Korrektur",
   abstimmung: "Abstimmung",
+  neutral: "Neutral",
 };
 
 const TYPE_COLOR: Record<string, string> = {
@@ -31,6 +32,7 @@ const TYPE_COLOR: Record<string, string> = {
   ausgang: "bg-red-100 text-red-800 border-transparent",
   korrektur: "bg-orange-100 text-orange-800 border-transparent",
   abstimmung: "bg-blue-100 text-blue-800 border-transparent",
+  neutral: "bg-blue-100 text-blue-800 border-transparent",
 };
 
 function DetailRow({ label, value }: { label: string; value?: string | number | null }) {

@@ -34,16 +34,27 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
   const [bemerkungen, setBemerkungen] = useState("");
   const [palletForm, setPalletForm] = useState(emptyForm());
 
-  // Auto-calculated: (Von Euro + Von Ladung - Von Defekt) - (An Euro + An Ladung - An Defekt)
-  const calculatedAmount = useMemo(() => {
-    const von = palletForm.vonCometEuropaletten + palletForm.vonCometLadungssicherung - palletForm.vonDefektePaletten;
-    const an  = palletForm.anCometEuropaletten  + palletForm.anCometLadungssicherung  - palletForm.anDefektePaletten;
-    return von - an;
-  }, [palletForm]);
+  // Auto-calculated totals per side
+  const vonTotal = useMemo(() =>
+    palletForm.vonCometEuropaletten + palletForm.vonCometLadungssicherung - palletForm.vonDefektePaletten,
+    [palletForm]);
+  const anTotal = useMemo(() =>
+    palletForm.anCometEuropaletten + palletForm.anCometLadungssicherung - palletForm.anDefektePaletten,
+    [palletForm]);
 
-  // Art wird automatisch ermittelt: Von > An = Abgang, An > Von = Zugang
-  const movementType = calculatedAmount > 0 ? "ausgang" : calculatedAmount < 0 ? "eingang" : "abstimmung";
+  const calculatedAmount = vonTotal - anTotal;
+
+  // Art wird automatisch ermittelt:
+  // Beide Seiten haben Werte → Neutral (kein Saldeneffekt)
+  // Nur Von COMET → Abgang, Nur An COMET → Zugang
+  const movementType = (vonTotal > 0 && anTotal > 0)
+    ? "neutral"
+    : calculatedAmount > 0 ? "ausgang"
+    : calculatedAmount < 0 ? "eingang"
+    : "abstimmung";
+
   const absAmount = Math.abs(calculatedAmount);
+  // Scheinnummer ist immer Pflicht außer bei reiner Abstimmung (beide Seiten 0)
   const requiresSchein = movementType !== "abstimmung";
 
   const handleReset = () => {
@@ -95,11 +106,10 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
     ? speditionen
     : speditionen?.filter(s => s.id === user?.speditionId);
 
-  const isAbgang = movementType === "ausgang";
-  const isZugang = movementType === "eingang";
-  const amountColor = absAmount > 0
-    ? isAbgang ? "text-red-600" : "text-green-600"
-    : "text-slate-400";
+  const isAbgang  = movementType === "ausgang";
+  const isZugang  = movementType === "eingang";
+  const isNeutral = movementType === "neutral";
+  const amountColor = isAbgang ? "text-red-600" : isZugang ? "text-green-600" : isNeutral ? "text-blue-600" : "text-slate-400";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -127,11 +137,12 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
               <div className="space-y-2">
                 <Label>Art</Label>
                 <div className={`flex items-center h-9 rounded-md border px-3 text-sm font-medium select-none ${
-                  isAbgang ? "border-red-200 bg-red-50 text-red-700" :
-                  isZugang ? "border-green-200 bg-green-50 text-green-700" :
+                  isAbgang  ? "border-red-200 bg-red-50 text-red-700" :
+                  isZugang  ? "border-green-200 bg-green-50 text-green-700" :
+                  isNeutral ? "border-blue-200 bg-blue-50 text-blue-700" :
                   "border-slate-200 bg-slate-50 text-slate-400"
                 }`}>
-                  {isAbgang ? "Abgang (−)" : isZugang ? "Zugang (+)" : "— wird berechnet —"}
+                  {isAbgang ? "Abgang (−)" : isZugang ? "Zugang (+)" : isNeutral ? "Neutral (±)" : "— wird berechnet —"}
                 </div>
               </div>
               <div className="space-y-2">
@@ -205,16 +216,19 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
             </div>
 
             {/* Auto-calculated amount */}
-            <div className={`rounded-md border-2 border-dashed p-4 bg-white ${isAbgang ? "border-red-200" : isZugang ? "border-green-200" : "border-slate-200"}`}>
+            <div className={`rounded-md border-2 border-dashed p-4 bg-white ${isAbgang ? "border-red-200" : isZugang ? "border-green-200" : isNeutral ? "border-blue-200" : "border-slate-200"}`}>
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Differenz (Menge)</div>
                   <div className="text-xs text-slate-400">
-                    Von: {palletForm.vonCometEuropaletten}+{palletForm.vonCometLadungssicherung}−{palletForm.vonDefektePaletten}
-                    {" | "}
-                    An: {palletForm.anCometEuropaletten}+{palletForm.anCometLadungssicherung}−{palletForm.anDefektePaletten}
+                    Von: {vonTotal} | An: {anTotal}
                   </div>
-                  {absAmount > 0 && (
+                  {isNeutral && (
+                    <div className="text-xs font-medium mt-1 text-blue-600">
+                      Beide Seiten belegt → Neutral (kein Saldeneffekt)
+                    </div>
+                  )}
+                  {!isNeutral && absAmount > 0 && (
                     <div className={`text-xs font-medium mt-1 ${isAbgang ? "text-red-600" : "text-green-600"}`}>
                       {isAbgang ? "Von COMET > An COMET → Abgang" : "An COMET > Von COMET → Zugang"}
                     </div>
