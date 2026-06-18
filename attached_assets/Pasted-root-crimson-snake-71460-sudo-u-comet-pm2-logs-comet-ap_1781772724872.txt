@@ -1,0 +1,56 @@
+root@crimson-snake-71460:~# sudo -u comet pm2 logs comet-api --lines 50 --nostream
+[TAILING] Tailing last 50 lines for [comet-api] process (change the value with --lines option)
+/opt/comet/.pm2/logs/comet-api-out.log last 50 lines:
+/opt/comet/.pm2/logs/comet-api-error.log last 50 lines:
+0|comet-ap |     at listenInCluster (node:net:1997:12)
+0|comet-ap |     at Server.listen (node:net:2102:7)
+0|comet-ap |     at <anonymous> (/opt/comet/app/artifacts/api-server/src/index.ts:158:12)
+0|comet-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:329:25)
+0|comet-ap |     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26) {
+0|comet-ap |   code: 'EADDRINUSE',
+0|comet-ap |   errno: -98,
+0|comet-ap |   syscall: 'listen',
+0|comet-ap |   address: '::',
+0|comet-ap |   port: 3333
+0|comet-ap | }
+0|comet-ap | Error: listen EADDRINUSE: address already in use :::3333
+0|comet-ap |     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+0|comet-ap |     at listenInCluster (node:net:1997:12)
+0|comet-ap |     at Server.listen (node:net:2102:7)
+0|comet-ap |     at <anonymous> (/opt/comet/app/artifacts/api-server/src/index.ts:158:12)
+0|comet-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:329:25)
+0|comet-ap |     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26) {
+0|comet-ap |   code: 'EADDRINUSE',
+0|comet-ap |   errno: -98,
+0|comet-ap |   syscall: 'listen',
+0|comet-ap |   address: '::',
+0|comet-ap |   port: 3333
+0|comet-ap | }
+0|comet-ap | Error: listen EADDRINUSE: address already in use :::3333
+0|comet-ap |     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+0|comet-ap |     at listenInCluster (node:net:1997:12)
+0|comet-ap |     at Server.listen (node:net:2102:7)
+0|comet-ap |     at <anonymous> (/opt/comet/app/artifacts/api-server/src/index.ts:158:12)
+0|comet-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:329:25)
+0|comet-ap |     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26) {
+0|comet-ap |   code: 'EADDRINUSE',
+0|comet-ap |   errno: -98,
+0|comet-ap |   syscall: 'listen',
+0|comet-ap |   address: '::',
+0|comet-ap |   port: 3333
+0|comet-ap | }
+0|comet-ap | Error: listen EADDRINUSE: address already in use :::3333
+0|comet-ap |     at Server.setupListenHandle [as _listen2] (node:net:1940:16)
+0|comet-ap |     at listenInCluster (node:net:1997:12)
+0|comet-ap |     at Server.listen (node:net:2102:7)
+0|comet-ap |     at <anonymous> (/opt/comet/app/artifacts/api-server/src/index.ts:158:12)
+0|comet-ap |     at ModuleJob.run (node:internal/modules/esm/module_job:329:25)
+0|comet-ap |     at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:644:26) {
+0|comet-ap |   code: 'EADDRINUSE',
+0|comet-ap |   errno: -98,
+0|comet-ap |   syscall: 'listen',
+0|comet-ap |   address: '::',
+0|comet-ap |   port: 3333
+0|comet-ap | }
+
+root@crimson-snake-71460:~#

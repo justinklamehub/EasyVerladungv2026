@@ -42,15 +42,18 @@ mkdir -p /opt/comet/.pm2/logs /opt/comet/.pm2/pids
 chown -R comet:comet /opt/comet/.pm2
 
 echo "==> Backend neu starten..."
+# Port freigeben falls ein alter Prozess haengt
+fuser -k 3333/tcp 2>/dev/null || true
+sleep 1
 sudo -u comet bash -c '
   set -a
   source /opt/comet/app/artifacts/api-server/.env
   export PORT=3333
   if pm2 describe comet-api > /dev/null 2>&1; then
-    pm2 restart comet-api --update-env
-  else
-    pm2 start /opt/comet/app/artifacts/api-server/dist/index.mjs --name comet-api
+    pm2 stop comet-api
+    pm2 delete comet-api
   fi
+  pm2 start /opt/comet/app/artifacts/api-server/dist/index.mjs --name comet-api
   pm2 save
 '
 
