@@ -223,14 +223,17 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
                   <div className="text-xs text-slate-400">
                     Von: {vonTotal} | An: {anTotal}
                   </div>
-                  {isNeutral && (
-                    <div className="text-xs font-medium mt-1 text-blue-600">
-                      Beide Seiten belegt → Neutral (kein Saldeneffekt)
-                    </div>
-                  )}
-                  {!isNeutral && absAmount > 0 && (
-                    <div className={`text-xs font-medium mt-1 ${isAbgang ? "text-red-600" : "text-green-600"}`}>
-                      {isAbgang ? "Von COMET > An COMET → Abgang" : "An COMET > Von COMET → Zugang"}
+                  {absAmount > 0 && (
+                    <div className={`text-xs font-medium mt-1 ${isAbgang ? "text-red-600" : isZugang ? "text-green-600" : "text-blue-600"}`}>
+                      {isNeutral
+                        ? calculatedAmount > 0
+                          ? "Von > An → Saldo +" + absAmount + " (Zugang)"
+                          : calculatedAmount < 0
+                            ? "An > Von → Saldo −" + absAmount + " (Abgang)"
+                            : "Von = An → kein Saldeneffekt"
+                        : isAbgang
+                          ? "Von COMET > An COMET → Abgang"
+                          : "An COMET > Von COMET → Zugang"}
                     </div>
                   )}
                 </div>

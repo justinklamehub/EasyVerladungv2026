@@ -212,6 +212,9 @@ router.get("/pallet-balances", requireAuth, async (req, res) => {
             WHEN ${palletMovementsTable.movementType} = 'eingang'   THEN  ${palletMovementsTable.amount}
             WHEN ${palletMovementsTable.movementType} = 'ausgang'   THEN -${palletMovementsTable.amount}
             WHEN ${palletMovementsTable.movementType} = 'korrektur' THEN  ${palletMovementsTable.amount}
+            WHEN ${palletMovementsTable.movementType} = 'neutral'   THEN
+              (COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0))
+              - (COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) - COALESCE(${palletMovementsTable.anDefektePaletten},0))
             ELSE 0
           END
         )`.mapWith(Number),
@@ -267,10 +270,18 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
           WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'eingang'   THEN  ${palletMovementsTable.amount}
           WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'ausgang'   THEN -${palletMovementsTable.amount}
           WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'korrektur' THEN  ${palletMovementsTable.amount}
+          WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'neutral'   THEN
+            (COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0))
+            - (COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) - COALESCE(${palletMovementsTable.anDefektePaletten},0))
           ELSE 0 END)`.mapWith(Number),
         zugaenge: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'eingang' THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         abgaenge: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'ausgang' THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
-        korrekturen: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'korrektur' THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
+        korrekturen: sql<number>`SUM(CASE
+          WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'korrektur' THEN ${palletMovementsTable.amount}
+          WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'neutral' THEN
+            (COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0))
+            - (COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) - COALESCE(${palletMovementsTable.anDefektePaletten},0))
+          ELSE 0 END)`.mapWith(Number),
         defekteVonComet: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} THEN COALESCE(${palletMovementsTable.vonDefektePaletten}, 0) ELSE 0 END)`.mapWith(Number),
         defekteAnComet: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} THEN COALESCE(${palletMovementsTable.anDefektePaletten}, 0) ELSE 0 END)`.mapWith(Number),
       })
