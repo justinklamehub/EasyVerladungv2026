@@ -331,6 +331,7 @@ router.post("/reconciliations/:id/accept", requireAuth, async (req, res) => {
       if (m.movementType === "ausgang") return sum - m.amount;
       if (m.movementType === "korrektur") return sum + m.amount;
       if (m.movementType === "anfangsbestand") return sum + m.amount;
+      if (m.movementType === "abstimmung") return sum + m.amount;
       return sum;
     }, 0);
 

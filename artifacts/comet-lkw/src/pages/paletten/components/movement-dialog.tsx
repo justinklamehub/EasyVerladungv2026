@@ -34,10 +34,14 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
   const [bemerkungen, setBemerkungen] = useState("");
   const [palletForm, setPalletForm] = useState(emptyForm());
 
-  // Anfangsbestand mode
-  const [isAnfangsbestandMode, setIsAnfangsbestandMode] = useState(false);
+  // Special booking modes (mutually exclusive)
+  const [specialMode, setSpecialMode] = useState<"anfangsbestand" | "abstimmung" | null>(null);
+  const isAnfangsbestandMode = specialMode === "anfangsbestand";
+  const isAbstimmungMode = specialMode === "abstimmung";
   const [anfangsbestandYear, setAnfangsbestandYear] = useState(new Date().getFullYear());
   const [anfangsbestandBetrag, setAnfangsbestandBetrag] = useState<number | "">(0);
+  const [abstimmungDate, setAbstimmungDate] = useState(new Date().toISOString().slice(0, 10));
+  const [abstimmungBetrag, setAbstimmungBetrag] = useState<number | "">(0);
 
   // Gross = euro + ladungssicherung (ohne Defekte-Abzug)
   // Net  = gross - defekte (für Anzeige und amount-Feld)
@@ -72,9 +76,11 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
   const handleReset = () => {
     setBemerkungen("");
     setPalletForm(emptyForm());
-    setIsAnfangsbestandMode(false);
+    setSpecialMode(null);
     setAnfangsbestandBetrag(0);
     setAnfangsbestandYear(new Date().getFullYear());
+    setAbstimmungBetrag(0);
+    setAbstimmungDate(new Date().toISOString().slice(0, 10));
   };
 
   const createMutation = useCreatePalletMovement({
@@ -107,6 +113,31 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
           speditionId: parseInt(speditionId),
           movementType: "anfangsbestand" as any,
           movementDate: `${anfangsbestandYear}-01-01`,
+          amount: betrag,
+          bemerkungen: bemerkungen || undefined,
+        }
+      });
+      return;
+    }
+    if (isAbstimmungMode) {
+      if (!speditionId) {
+        toast({ title: "Spedition wählen", variant: "destructive" });
+        return;
+      }
+      if (!abstimmungDate) {
+        toast({ title: "Datum eingeben", variant: "destructive" });
+        return;
+      }
+      const betrag = Number(abstimmungBetrag);
+      if (isNaN(betrag)) {
+        toast({ title: "Ungültiger Betrag", variant: "destructive" });
+        return;
+      }
+      createMutation.mutate({
+        data: {
+          speditionId: parseInt(speditionId),
+          movementType: "abstimmung" as any,
+          movementDate: abstimmungDate,
           amount: betrag,
           bemerkungen: bemerkungen || undefined,
         }
@@ -165,17 +196,31 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-4 py-2">
 
-            {/* Anfangsbestand toggle */}
-            <div
-              className={`flex items-center gap-3 rounded-md border px-3 py-2 cursor-pointer select-none transition-colors ${isAnfangsbestandMode ? "border-violet-300 bg-violet-50" : "border-slate-200 bg-slate-50 hover:bg-slate-100"}`}
-              onClick={() => setIsAnfangsbestandMode(v => !v)}
-            >
-              <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isAnfangsbestandMode ? "border-violet-600 bg-violet-600" : "border-slate-400"}`}>
-                {isAnfangsbestandMode && <div className="w-2 h-2 bg-white rounded-sm" />}
+            {/* Special mode toggles */}
+            <div className="grid grid-cols-2 gap-2">
+              <div
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer select-none transition-colors ${isAnfangsbestandMode ? "border-violet-300 bg-violet-50" : "border-slate-200 bg-slate-50 hover:bg-slate-100"}`}
+                onClick={() => setSpecialMode(v => v === "anfangsbestand" ? null : "anfangsbestand")}
+              >
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isAnfangsbestandMode ? "border-violet-600 bg-violet-600" : "border-slate-400"}`}>
+                  {isAnfangsbestandMode && <div className="w-2 h-2 bg-white rounded-sm" />}
+                </div>
+                <div>
+                  <div className={`text-xs font-medium leading-tight ${isAnfangsbestandMode ? "text-violet-800" : "text-slate-700"}`}>Anfangsbestand</div>
+                  <div className="text-xs text-slate-400 leading-tight">01.01. Startposition</div>
+                </div>
               </div>
-              <div>
-                <div className={`text-sm font-medium ${isAnfangsbestandMode ? "text-violet-800" : "text-slate-700"}`}>Anfangsbestand (01.01.)</div>
-                <div className="text-xs text-slate-400">Startguthaben oder Startschuld zu Jahresbeginn</div>
+              <div
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer select-none transition-colors ${isAbstimmungMode ? "border-slate-400 bg-slate-100" : "border-slate-200 bg-slate-50 hover:bg-slate-100"}`}
+                onClick={() => setSpecialMode(v => v === "abstimmung" ? null : "abstimmung")}
+              >
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isAbstimmungMode ? "border-slate-600 bg-slate-600" : "border-slate-400"}`}>
+                  {isAbstimmungMode && <div className="w-2 h-2 bg-white rounded-sm" />}
+                </div>
+                <div>
+                  <div className={`text-xs font-medium leading-tight ${isAbstimmungMode ? "text-slate-800" : "text-slate-700"}`}>Ext. Abstimmung</div>
+                  <div className="text-xs text-slate-400 leading-tight">E-Mail / Telefonat</div>
+                </div>
               </div>
             </div>
 
@@ -218,6 +263,38 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
               </div>
             )}
 
+            {/* Externe Abstimmung fields */}
+            {isAbstimmungMode && (
+              <div className="rounded-md border border-slate-300 bg-slate-50 p-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-700">Datum der Abstimmung</Label>
+                    <Input
+                      type="date"
+                      className="bg-white"
+                      value={abstimmungDate}
+                      onChange={e => setAbstimmungDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-700">
+                      Korrektur-Betrag
+                    </Label>
+                    <Input
+                      type="number"
+                      className="bg-white"
+                      value={abstimmungBetrag}
+                      onChange={e => setAbstimmungBetrag(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="z.B. +12 oder -5"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-slate-500">
+                  Positiv = Saldo steigt (Spedition schuldet COMET mehr) · Negativ = Saldo sinkt
+                </p>
+              </div>
+            )}
+
             {isCometUser && (
               <div className="space-y-2">
                 <Label>Spedition</Label>
@@ -244,117 +321,120 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label>Art</Label>
-                <div className={`flex items-center h-9 rounded-md border px-3 text-sm font-medium select-none ${
-                  isAbgang  ? "border-red-200 bg-red-50 text-red-700" :
-                  isZugang  ? "border-green-200 bg-green-50 text-green-700" :
-                  isNeutral ? "border-blue-200 bg-blue-50 text-blue-700" :
-                  "border-slate-200 bg-slate-50 text-slate-400"
-                }`}>
-                  {isAbgang ? "Abgang (−)" : isZugang ? "Zugang (+)" : isNeutral ? "Neutral (±)" : "— wird berechnet —"}
-                </div>
-              </div>
-              <div className="space-y-2">
-                <Label>Datum</Label>
-                <Input type="date" value={movementDate} onChange={(e) => setMovementDate(e.target.value)} />
-              </div>
-            </div>
-
-            {/* Palettenscheinnummer */}
-            <div className="space-y-2">
-              <Label>
-                Palettenscheinnummer
-                {requiresSchein && <span className="text-red-500 ml-1">*</span>}
-              </Label>
-              <Input
-                value={palletForm.palettenscheinnummer}
-                onChange={(e) => setPallet("palettenscheinnummer", e.target.value)}
-                placeholder={requiresSchein ? "Pflichtfeld" : "Nicht erforderlich bei Abstimmung"}
-                disabled={!requiresSchein}
-              />
-            </div>
-
-            {/* Von COMET */}
-            <div className="rounded-md border border-slate-200 p-3 bg-slate-50 space-y-2">
-              <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Von COMET</div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">Europaletten</Label>
-                  <Input type="number" min={0} className="h-8 text-sm"
-                    value={palletForm.vonCometEuropaletten}
-                    onChange={e => setPallet("vonCometEuropaletten", Number(e.target.value))} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">Ladungssich.</Label>
-                  <Input type="number" min={0} className="h-8 text-sm"
-                    value={palletForm.vonCometLadungssicherung}
-                    onChange={e => setPallet("vonCometLadungssicherung", Number(e.target.value))} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-amber-600">davon defekt</Label>
-                  <Input type="number" min={0} className="h-8 text-sm"
-                    value={palletForm.vonDefektePaletten}
-                    onChange={e => setPallet("vonDefektePaletten", Number(e.target.value))} />
-                </div>
-              </div>
-            </div>
-
-            {/* An COMET */}
-            <div className="rounded-md border border-slate-200 p-3 bg-slate-50 space-y-2">
-              <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">An COMET</div>
-              <div className="grid grid-cols-3 gap-2">
-                <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">Europaletten</Label>
-                  <Input type="number" min={0} className="h-8 text-sm"
-                    value={palletForm.anCometEuropaletten}
-                    onChange={e => setPallet("anCometEuropaletten", Number(e.target.value))} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">Ladungssich.</Label>
-                  <Input type="number" min={0} className="h-8 text-sm"
-                    value={palletForm.anCometLadungssicherung}
-                    onChange={e => setPallet("anCometLadungssicherung", Number(e.target.value))} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs text-amber-600">davon defekt</Label>
-                  <Input type="number" min={0} className="h-8 text-sm"
-                    value={palletForm.anDefektePaletten}
-                    onChange={e => setPallet("anDefektePaletten", Number(e.target.value))} />
-                </div>
-              </div>
-            </div>
-
-            {/* Auto-calculated amount */}
-            <div className={`rounded-md border-2 border-dashed p-4 bg-white ${isAbgang ? "border-red-200" : isZugang ? "border-green-200" : isNeutral ? "border-blue-200" : "border-slate-200"}`}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Differenz (Menge)</div>
-                  <div className="text-xs text-slate-400">
-                    Von: {vonGross}{palletForm.vonDefektePaletten > 0 ? ` (${palletForm.vonDefektePaletten} defekt)` : ""} | An: {anGross}{palletForm.anDefektePaletten > 0 ? ` (${palletForm.anDefektePaletten} defekt)` : ""}
+            {!specialMode && <>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Art</Label>
+                  <div className={`flex items-center h-9 rounded-md border px-3 text-sm font-medium select-none ${
+                    isAbgang  ? "border-red-200 bg-red-50 text-red-700" :
+                    isZugang  ? "border-green-200 bg-green-50 text-green-700" :
+                    isNeutral ? "border-blue-200 bg-blue-50 text-blue-700" :
+                    "border-slate-200 bg-slate-50 text-slate-400"
+                  }`}>
+                    {isAbgang ? "Abgang (−)" : isZugang ? "Zugang (+)" : isNeutral ? "Neutral (±)" : "— wird berechnet —"}
                   </div>
-                  {(vonGross > 0 || anGross > 0) && (
-                    <div className={`text-xs font-medium mt-1 ${isAbgang ? "text-red-600" : isZugang ? "text-green-600" : "text-blue-600"}`}>
-                      {isNeutral
-                        ? selectedFaktor > 1
-                          ? `An COMET × ${selectedFaktor} − Von COMET = ${anGross * selectedFaktor - vonGross} → Saldo`
-                          : calculatedAmount > 0
-                            ? "Von > An → Saldo −" + absAmount + " (Abgang)"
-                            : calculatedAmount < 0
-                              ? "An > Von → Saldo +" + absAmount + " (Zugang)"
-                              : "Von = An → kein Saldeneffekt"
-                        : isAbgang
-                          ? "Von COMET > An COMET → Abgang"
-                          : "An COMET > Von COMET → Zugang"}
-                    </div>
-                  )}
                 </div>
-                <div className={`text-3xl font-bold tabular-nums ${amountColor}`}>
-                  {isNeutral && selectedFaktor > 1 ? Math.abs(anGross * selectedFaktor - vonGross) : absAmount}
+                <div className="space-y-2">
+                  <Label>Datum</Label>
+                  <Input type="date" value={movementDate} onChange={(e) => setMovementDate(e.target.value)} />
                 </div>
               </div>
-            </div>
+
+              {/* Palettenscheinnummer */}
+              <div className="space-y-2">
+                <Label>
+                  Palettenscheinnummer
+                  {requiresSchein && <span className="text-red-500 ml-1">*</span>}
+                </Label>
+                <Input
+                  value={palletForm.palettenscheinnummer}
+                  onChange={(e) => setPallet("palettenscheinnummer", e.target.value)}
+                  placeholder={requiresSchein ? "Pflichtfeld" : "Nicht erforderlich bei Abstimmung"}
+                  disabled={!requiresSchein}
+                />
+              </div>
+
+              {/* Von COMET */}
+              <div className="rounded-md border border-slate-200 p-3 bg-slate-50 space-y-2">
+                <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">Von COMET</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Europaletten</Label>
+                    <Input type="number" min={0} className="h-8 text-sm"
+                      value={palletForm.vonCometEuropaletten}
+                      onChange={e => setPallet("vonCometEuropaletten", Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Ladungssich.</Label>
+                    <Input type="number" min={0} className="h-8 text-sm"
+                      value={palletForm.vonCometLadungssicherung}
+                      onChange={e => setPallet("vonCometLadungssicherung", Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-amber-600">davon defekt</Label>
+                    <Input type="number" min={0} className="h-8 text-sm"
+                      value={palletForm.vonDefektePaletten}
+                      onChange={e => setPallet("vonDefektePaletten", Number(e.target.value))} />
+                  </div>
+                </div>
+              </div>
+
+              {/* An COMET */}
+              <div className="rounded-md border border-slate-200 p-3 bg-slate-50 space-y-2">
+                <div className="text-xs font-semibold text-slate-600 uppercase tracking-wide">An COMET</div>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Europaletten</Label>
+                    <Input type="number" min={0} className="h-8 text-sm"
+                      value={palletForm.anCometEuropaletten}
+                      onChange={e => setPallet("anCometEuropaletten", Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-slate-500">Ladungssich.</Label>
+                    <Input type="number" min={0} className="h-8 text-sm"
+                      value={palletForm.anCometLadungssicherung}
+                      onChange={e => setPallet("anCometLadungssicherung", Number(e.target.value))} />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-amber-600">davon defekt</Label>
+                    <Input type="number" min={0} className="h-8 text-sm"
+                      value={palletForm.anDefektePaletten}
+                      onChange={e => setPallet("anDefektePaletten", Number(e.target.value))} />
+                  </div>
+                </div>
+              </div>
+
+              {/* Auto-calculated amount */}
+              <div className={`rounded-md border-2 border-dashed p-4 bg-white ${isAbgang ? "border-red-200" : isZugang ? "border-green-200" : isNeutral ? "border-blue-200" : "border-slate-200"}`}>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-xs text-slate-400 uppercase tracking-wide font-medium mb-0.5">Differenz (Menge)</div>
+                    <div className="text-xs text-slate-400">
+                      Von: {vonGross}{palletForm.vonDefektePaletten > 0 ? ` (${palletForm.vonDefektePaletten} defekt)` : ""} | An: {anGross}{palletForm.anDefektePaletten > 0 ? ` (${palletForm.anDefektePaletten} defekt)` : ""}
+                    </div>
+                    {(vonGross > 0 || anGross > 0) && (
+                      <div className={`text-xs font-medium mt-1 ${isAbgang ? "text-red-600" : isZugang ? "text-green-600" : "text-blue-600"}`}>
+                        {isNeutral
+                          ? selectedFaktor > 1
+                            ? `An COMET × ${selectedFaktor} − Von COMET = ${anGross * selectedFaktor - vonGross} → Saldo`
+                            : calculatedAmount > 0
+                              ? "Von > An → Saldo −" + absAmount + " (Abgang)"
+                              : calculatedAmount < 0
+                                ? "An > Von → Saldo +" + absAmount + " (Zugang)"
+                                : "Von = An → kein Saldeneffekt"
+                          : isAbgang
+                            ? "Von COMET > An COMET → Abgang"
+                            : "An COMET > Von COMET → Zugang"}
+                      </div>
+                    )}
+                  </div>
+                  <div className={`text-3xl font-bold tabular-nums ${amountColor}`}>
+                    {isNeutral && selectedFaktor > 1 ? Math.abs(anGross * selectedFaktor - vonGross) : absAmount}
+                  </div>
+                </div>
+              </div>
+            </>}
+
 
             <div className="space-y-2">
               <Label>Bemerkung</Label>
