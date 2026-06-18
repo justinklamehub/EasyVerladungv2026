@@ -281,19 +281,18 @@ export default function ScannerLandingPage() {
 
       <div style={{ width: "100%", maxWidth: 480, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
-        <span style={{ fontSize: 11, color: "#475569", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>oder Verladung suchen</span>
+        <span style={{ fontSize: 11, color: "#475569", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>oder nach LKW-ID suchen</span>
         <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
       </div>
 
       <div style={S.card}>
         <form onSubmit={handleSearch}>
-          <label style={S.label}>Verladungs-ID oder Kennzeichen</label>
+          <label style={S.label}>LKW-ID</label>
           <input
             ref={inputRef}
             style={S.input}
-            type="text"
-            inputMode="text"
-            autoCapitalize="characters"
+            type="number"
+            inputMode="numeric"
             autoCorrect="off"
             value={idInput}
             onChange={(e) => {
@@ -302,10 +301,10 @@ export default function ScannerLandingPage() {
               setShipment(null);
               setSearchError(null);
             }}
-            placeholder="z.B. 42 oder HB-Y 4003"
+            placeholder="z.B. 42"
             autoFocus
           />
-          <div style={S_hint}>Nummer-ID oder Kennzeichen (Teilsuche möglich)</div>
+          <div style={S_hint}>Numerische Verladungs-ID eingeben</div>
           <button
             type="submit"
             style={S.btnGreen}

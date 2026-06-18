@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { gefahrgutChecklistenTable, shipmentsTable, speditionenTable } from "@workspace/db";
-import { eq, desc, isNotNull, isNull, count, ilike, or } from "drizzle-orm";
+import { eq, desc, isNotNull, isNull, count } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { isCometRole } from "../lib/auth";
 import { can } from "../lib/permissions";
@@ -17,13 +17,15 @@ const router = Router();
 router.get("/scanner/find-shipment", async (req, res) => {
   try {
     const { id, q } = req.query as { id?: string; q?: string };
-    const query = (q ?? id ?? "").trim();
-    if (!query) {
-      return res.status(400).json({ error: "Suchbegriff erforderlich" });
+    const raw = (q ?? id ?? "").trim();
+    if (!raw) {
+      return res.status(400).json({ error: "LKW-ID erforderlich" });
     }
 
-    const numId = Number(query);
-    const isNumeric = !isNaN(numId) && query !== "";
+    const numId = Number(raw);
+    if (isNaN(numId) || !Number.isInteger(numId) || numId <= 0) {
+      return res.status(400).json({ error: "Bitte eine gültige LKW-ID (Zahl) eingeben" });
+    }
 
     const shipments = await db
       .select({
@@ -37,15 +39,11 @@ router.get("/scanner/find-shipment", async (req, res) => {
         wareStatus: shipmentsTable.wareStatus,
       })
       .from(shipmentsTable)
-      .where(
-        isNumeric
-          ? or(eq(shipmentsTable.id, numId), ilike(shipmentsTable.kennzeichen, query))
-          : ilike(shipmentsTable.kennzeichen, `%${query}%`)
-      )
-      .limit(5);
+      .where(eq(shipmentsTable.id, numId))
+      .limit(1);
 
     if (shipments.length === 0) {
-      return res.json({ found: false, shipment: null, spedition: null });
+      return res.json({ found: false, shipment: null, spedition: null, checklistCount: 0 });
     }
 
     const shipment = shipments[0];
@@ -59,14 +57,20 @@ router.get("/scanner/find-shipment", async (req, res) => {
       if (speds.length > 0) speditionName = speds[0].name;
     }
 
-    const [{ value: checklistCount }] = await db
-      .select({ value: count() })
-      .from(gefahrgutChecklistenTable)
-      .where(eq(gefahrgutChecklistenTable.shipmentId, shipment.id));
+    let checklistCount = 0;
+    try {
+      const [{ value }] = await db
+        .select({ value: count() })
+        .from(gefahrgutChecklistenTable)
+        .where(eq(gefahrgutChecklistenTable.shipmentId, shipment.id));
+      checklistCount = value;
+    } catch {
+      // gefahrgut_checklisten-Tabelle existiert möglicherweise noch nicht auf älteren Installationen
+    }
 
     return res.json({ found: true, shipment, spedition: speditionName, checklistCount });
   } catch (err) {
-    console.error(err);
+    console.error("find-shipment error:", err);
     return res.status(500).json({ error: "Serverfehler" });
   }
 });
