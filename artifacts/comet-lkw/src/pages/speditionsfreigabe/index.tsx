@@ -40,7 +40,7 @@ export default function SpeditionsfreigebePage() {
   const { data: allSpeditionen } = useListSpeditionen();
 
   const [newReceiverId, setNewReceiverId] = useState("");
-  const [newLevel] = useState<"read">("read");
+  const [newLevel, setNewLevel] = useState<"read" | "edit">("read");
 
   const addMutation = useAddSpeditionPermission(mySpeditionId, {
     mutation: {
@@ -48,6 +48,7 @@ export default function SpeditionsfreigebePage() {
         queryClient.invalidateQueries({ queryKey: getGrantedPermissionsQueryKey(mySpeditionId) });
         toast({ title: "Freigabe erteilt" });
         setNewReceiverId("");
+        setNewLevel("read");
       },
       onError: (e: any) => toast({ title: e?.message ?? "Fehler beim Hinzufügen", variant: "destructive" }),
     },
@@ -92,7 +93,7 @@ export default function SpeditionsfreigebePage() {
             <CardTitle className="text-base">Erteilte Freigaben</CardTitle>
           </div>
           <CardDescription>
-            Diese Speditionen haben Lesezugriff auf Ihre Verladungen. Palettenkonto und Abstimmungen sind davon nicht betroffen.
+            Wählen Sie, welche Partner-Speditionen Ihre Verladungen einsehen oder bearbeiten dürfen. Palettenkonto und Abstimmungen sind davon nicht betroffen.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -111,6 +112,18 @@ export default function SpeditionsfreigebePage() {
                       <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                     ))
                   )}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-44">
+              <label className="text-xs font-medium text-slate-500 mb-1 block">Zugriffslevel</label>
+              <Select value={newLevel} onValueChange={(v) => setNewLevel(v as "read" | "edit")}>
+                <SelectTrigger className="h-9 bg-white">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="read">Nur lesen</SelectItem>
+                  <SelectItem value="edit">Lesen &amp; Schreiben</SelectItem>
                 </SelectContent>
               </Select>
             </div>
