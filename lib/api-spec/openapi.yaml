@@ -1058,7 +1058,7 @@ components:
           type: ["string", "null"]
         lkwArt:
           type: ["string", "null"]
-          enum: [Container, Anlieferung, Abholung, Retoure, Sonstiges, null]
+          enum: [Container, Anlieferung, Abholung, Retoure, Sattelzug, Wechselbrücke, Sonstige, Korrektur, null]
         status:
           type: string
           enum: [Angemeldet, Erwartet, Angekommen, Verladen, Abgefertigt, Storniert]
@@ -1108,7 +1108,7 @@ components:
           type: ["string", "null"]
         lkwArt:
           type: ["string", "null"]
-          enum: [Container, Anlieferung, Abholung, Retoure, Sonstiges, null]
+          enum: [Container, Anlieferung, Abholung, Retoure, Sattelzug, Wechselbrücke, Sonstige, Korrektur, null]
         status:
           type: string
           enum: [Angemeldet, Erwartet, Angekommen, Verladen, Abgefertigt, Storniert]
@@ -1142,7 +1142,7 @@ components:
           type: ["string", "null"]
         lkwArt:
           type: ["string", "null"]
-          enum: [Container, Anlieferung, Abholung, Retoure, Sonstiges, null]
+          enum: [Container, Anlieferung, Abholung, Retoure, Sattelzug, Wechselbrücke, Sonstige, Korrektur, null]
         status:
           type: string
           enum: [Angemeldet, Erwartet, Angekommen, Verladen, Abgefertigt, Storniert]

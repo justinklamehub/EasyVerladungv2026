@@ -16,12 +16,4 @@ export interface PalletMovementInput {
   amount: number;
   /** @nullable */
   bemerkungen?: string | null;
-  /** @nullable */
-  palettenscheinnummer?: string | null;
-  vonCometEuropaletten?: number;
-  vonCometLadungssicherung?: number;
-  vonDefektePaletten?: number;
-  anCometEuropaletten?: number;
-  anCometLadungssicherung?: number;
-  anDefektePaletten?: number;
 }

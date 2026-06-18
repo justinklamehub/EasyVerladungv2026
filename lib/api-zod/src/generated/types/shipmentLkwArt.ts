@@ -17,5 +17,8 @@ export const ShipmentLkwArt = {
   Anlieferung: 'Anlieferung',
   Abholung: 'Abholung',
   Retoure: 'Retoure',
-  Sonstiges: 'Sonstiges',
+  Sattelzug: 'Sattelzug',
+  Wechselbrücke: 'Wechselbrücke',
+  Sonstige: 'Sonstige',
+  Korrektur: 'Korrektur',
 } as const;

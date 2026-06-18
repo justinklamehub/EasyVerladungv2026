@@ -221,7 +221,10 @@ export const ShipmentLkwArt = {
   Anlieferung: 'Anlieferung',
   Abholung: 'Abholung',
   Retoure: 'Retoure',
-  Sonstiges: 'Sonstiges',
+  Sattelzug: 'Sattelzug',
+  Wechselbrücke: 'Wechselbrücke',
+  Sonstige: 'Sonstige',
+  Korrektur: 'Korrektur',
 } as const;
 
 export type ShipmentStatus = typeof ShipmentStatus[keyof typeof ShipmentStatus];
@@ -294,7 +297,10 @@ export const ShipmentInputLkwArt = {
   Anlieferung: 'Anlieferung',
   Abholung: 'Abholung',
   Retoure: 'Retoure',
-  Sonstiges: 'Sonstiges',
+  Sattelzug: 'Sattelzug',
+  Wechselbrücke: 'Wechselbrücke',
+  Sonstige: 'Sonstige',
+  Korrektur: 'Korrektur',
 } as const;
 
 export type ShipmentInputStatus = typeof ShipmentInputStatus[keyof typeof ShipmentInputStatus];
@@ -350,7 +356,10 @@ export const ShipmentUpdateLkwArt = {
   Anlieferung: 'Anlieferung',
   Abholung: 'Abholung',
   Retoure: 'Retoure',
-  Sonstiges: 'Sonstiges',
+  Sattelzug: 'Sattelzug',
+  Wechselbrücke: 'Wechselbrücke',
+  Sonstige: 'Sonstige',
+  Korrektur: 'Korrektur',
 } as const;
 
 export type ShipmentUpdateStatus = typeof ShipmentUpdateStatus[keyof typeof ShipmentUpdateStatus];
