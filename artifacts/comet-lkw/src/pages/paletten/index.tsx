@@ -6,10 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { format } from "date-fns";
-import { Loader2, Plus, Download, BarChart2, FileDown, ClipboardList, RefreshCw } from "lucide-react";
+import { format, addDays } from "date-fns";
+import { Loader2, Plus, Download, BarChart2, FileDown, ClipboardList, RefreshCw, Archive } from "lucide-react";
 import * as XLSX from "xlsx";
 import { MovementDialog } from "./components/movement-dialog";
 import { MovementDetailSheet } from "./components/movement-detail-sheet";
@@ -37,6 +37,51 @@ export default function PalettenPage() {
   const [reportData, setReportData] = useState<any[]>([]);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState("");
+
+  const [closeAccountData, setCloseAccountData] = useState<{ speditionId: number; speditionName: string; balance: number } | null>(null);
+  const [closeAccountDate, setCloseAccountDate] = useState("");
+  const [closeAccountAmount, setCloseAccountAmount] = useState<number | "">(0);
+  const [closeAccountNote, setCloseAccountNote] = useState("");
+  const [closeAccountSaving, setCloseAccountSaving] = useState(false);
+
+  const openCloseAccount = (speditionId: number, speditionName: string, balance: number) => {
+    const tomorrow = addDays(new Date(), 1);
+    setCloseAccountDate(tomorrow.toISOString().slice(0, 10));
+    setCloseAccountAmount(balance);
+    setCloseAccountNote("");
+    setCloseAccountData({ speditionId, speditionName, balance });
+  };
+
+  const handleCloseAccount = async () => {
+    if (!closeAccountData || closeAccountAmount === "") return;
+    setCloseAccountSaving(true);
+    try {
+      const res = await fetch("/api/pallet-movements", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          speditionId: closeAccountData.speditionId,
+          movementType: "anfangsbestand",
+          movementDate: closeAccountDate,
+          amount: Number(closeAccountAmount),
+          bemerkungen: closeAccountNote || `Jahresabschluss – Anfangsbestand ab ${closeAccountDate}`,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error ?? "Fehler beim Abschließen", variant: "destructive" });
+      } else {
+        await Promise.all([refetchBalances(), refetchMovements()]);
+        toast({ title: `Konto abgeschlossen. Anfangsbestand ${Number(closeAccountAmount) >= 0 ? "+" : ""}${closeAccountAmount} ab ${format(new Date(closeAccountDate), "dd.MM.yyyy")} gesetzt.` });
+        setCloseAccountData(null);
+      }
+    } catch {
+      toast({ title: "Fehler beim Abschließen", variant: "destructive" });
+    } finally {
+      setCloseAccountSaving(false);
+    }
+  };
 
   const [recalculating, setRecalculating] = useState(false);
   const handleRecalculate = async () => {
@@ -282,6 +327,15 @@ export default function PalettenPage() {
                   ? `Letzte Buchung: ${format(new Date(balance.lastMovementDate), "dd.MM.yyyy")}`
                   : "Keine Buchungen"}
               </p>
+              {canWrite && (
+                <button
+                  className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-violet-700 hover:bg-violet-50 border border-dashed border-slate-200 hover:border-violet-300 rounded-md py-1.5 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); openCloseAccount(balance.speditionId, balance.speditionName ?? "", balance.balance ?? 0); }}
+                >
+                  <Archive className="w-3.5 h-3.5" />
+                  Konto abschließen
+                </button>
+              )}
             </CardContent>
           </Card>
           );
@@ -586,6 +640,62 @@ export default function PalettenPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!closeAccountData} onOpenChange={(v) => { if (!v) setCloseAccountData(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Archive className="w-4 h-4 text-violet-600" />
+              Konto abschließen — {closeAccountData?.speditionName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md bg-violet-50 border border-violet-200 p-3 text-sm text-violet-800">
+              Aktueller Saldo: <span className="font-bold">{closeAccountData?.balance ?? 0 > 0 ? "+" : ""}{closeAccountData?.balance}</span>
+              <br />
+              <span className="text-xs text-violet-600">Es wird eine Anfangsbestandsbuchung am gewählten Datum angelegt.</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Datum (Anfangsbestand ab)</Label>
+                <Input
+                  type="date"
+                  value={closeAccountDate}
+                  onChange={e => setCloseAccountDate(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Anfangsbestand</Label>
+                <Input
+                  type="number"
+                  value={closeAccountAmount}
+                  onChange={e => setCloseAccountAmount(e.target.value === "" ? "" : Number(e.target.value))}
+                  placeholder="Betrag"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Bemerkung (optional)</Label>
+              <Input
+                value={closeAccountNote}
+                onChange={e => setCloseAccountNote(e.target.value)}
+                placeholder={`Jahresabschluss – Anfangsbestand ab ${closeAccountDate}`}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCloseAccountData(null)}>Abbrechen</Button>
+            <Button
+              className="bg-violet-600 hover:bg-violet-700 text-white"
+              onClick={handleCloseAccount}
+              disabled={closeAccountSaving || closeAccountAmount === "" || !closeAccountDate}
+            >
+              {closeAccountSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Abschließen
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
