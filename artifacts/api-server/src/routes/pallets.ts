@@ -436,8 +436,9 @@ router.post("/pallet-recalculate", requireAuth, async (req, res) => {
     if (!(await can(role, "pallet.create"))) {
       return res.status(403).json({ error: "Keine Berechtigung" });
     }
-    // Recompute `amount` for ALL movements from their raw pallet fields.
-    // Formula: ABS(an_net - von_net), same for every movement type.
+    // Recompute `amount` for standard movements from their raw pallet fields.
+    // Formula: ABS(an_net - von_net).
+    // Excluded: anfangsbestand + abstimmung (signed correction entered directly by user).
     const rows = await db
       .update(palletMovementsTable)
       .set({
@@ -446,6 +447,7 @@ router.post("/pallet-recalculate", requireAuth, async (req, res) => {
           - (COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0))
         )`,
       })
+      .where(sql`${palletMovementsTable.movementType} NOT IN ('anfangsbestand', 'abstimmung')`)
       .returning({ id: palletMovementsTable.id });
     const updated = rows.length;
     return res.json({ updated, message: `${updated} Buchung${updated !== 1 ? "en" : ""} geprüft und neu berechnet.` });
