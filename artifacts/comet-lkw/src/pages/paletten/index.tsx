@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { format, addDays } from "date-fns";
-import { Loader2, Plus, Download, BarChart2, FileDown, ClipboardList, RefreshCw, Archive } from "lucide-react";
+import { Loader2, Plus, Download, BarChart2, FileDown, ClipboardList, RefreshCw, Archive, FileSpreadsheet } from "lucide-react";
 import * as XLSX from "xlsx";
 import { MovementDialog } from "./components/movement-dialog";
 import { MovementDetailSheet } from "./components/movement-detail-sheet";
@@ -80,6 +80,98 @@ export default function PalettenPage() {
       toast({ title: "Fehler beim Abschließen", variant: "destructive" });
     } finally {
       setCloseAccountSaving(false);
+    }
+  };
+
+  const [exportAccountDialog, setExportAccountDialog] = useState<{ speditionId: number; speditionName: string; balance: number; faktor: number } | null>(null);
+  const [exportFrom, setExportFrom] = useState("");
+  const [exportTo, setExportTo] = useState("");
+  const [exportLoading, setExportLoading] = useState(false);
+
+  const openExportDialog = (speditionId: number, speditionName: string, balance: number, faktor: number) => {
+    const today = new Date();
+    setExportFrom(`${today.getFullYear()}-01-01`);
+    setExportTo(today.toISOString().slice(0, 10));
+    setExportAccountDialog({ speditionId, speditionName, balance, faktor });
+  };
+
+  const handleExportAccountExcel = async () => {
+    if (!exportAccountDialog) return;
+    setExportLoading(true);
+    try {
+      const params = new URLSearchParams({ speditionId: String(exportAccountDialog.speditionId) });
+      if (exportFrom) params.set("dateFrom", exportFrom);
+      if (exportTo) params.set("dateTo", exportTo);
+      const res = await fetch(`/api/pallet-movements?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Fehler beim Laden der Buchungen");
+      const movs: any[] = await res.json();
+      const f = exportAccountDialog.faktor;
+      const now = new Date();
+
+      const typeLabel = (t: string) =>
+        t === "eingang" ? "Zugang" : t === "ausgang" ? "Abgang" :
+        t === "korrektur" ? "Korrektur" : t === "neutral" ? "Neutral" :
+        t === "anfangsbestand" ? "Anfangsbestand" : "Abstimmung";
+
+      const signedAmt = (m: any) => {
+        if (m.movementType === "anfangsbestand" || m.movementType === "abstimmung") return m.amount ?? 0;
+        const sign = m.movementType === "ausgang" ? -1 : 1;
+        const amt = m.movementType === "neutral" && f > 1
+          ? Math.abs(((m.anCometEuropaletten ?? 0) + (m.anCometLadungssicherung ?? 0)) * f
+              - ((m.vonCometEuropaletten ?? 0) + (m.vonCometLadungssicherung ?? 0)))
+          : (m.amount ?? 0);
+        return sign * amt;
+      };
+
+      const periodLabel = exportFrom || exportTo
+        ? `${exportFrom ? format(new Date(exportFrom), "dd.MM.yyyy") : "—"} – ${exportTo ? format(new Date(exportTo), "dd.MM.yyyy") : "—"}`
+        : "Alle Buchungen";
+
+      const aoa: any[][] = [
+        ["Spedition:", exportAccountDialog.speditionName],
+        ["Zeitraum:", periodLabel],
+        ["Export-Datum:", format(now, "dd.MM.yyyy 'um' HH:mm 'Uhr'")],
+        ["Saldo zum Zeitpunkt:", exportAccountDialog.balance],
+        [],
+        [
+          "Datum", "Art", "Palettenschein-Nr.", "Verladung",
+          "Von Euro", "Von LS", "Von Defekt",
+          "An Euro", "An LS", "An Defekt",
+          "Betrag", "Bemerkung", "Erstellt von",
+        ],
+        ...movs.map(m => [
+          format(new Date(m.movementDate), "dd.MM.yyyy"),
+          typeLabel(m.movementType),
+          m.palettenscheinnummer || "",
+          m.shipmentBezeichnung || (m.shipmentId ? `#${m.shipmentId}` : ""),
+          m.vonCometEuropaletten ?? "",
+          m.vonCometLadungssicherung ?? "",
+          m.vonDefektePaletten ?? "",
+          m.anCometEuropaletten ?? "",
+          m.anCometLadungssicherung ?? "",
+          m.anDefektePaletten ?? "",
+          signedAmt(m),
+          m.bemerkungen || "",
+          m.createdByName || "",
+        ]),
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      ws["!cols"] = [
+        { wch: 20 }, { wch: 16 }, { wch: 22 }, { wch: 26 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 },
+        { wch: 10 }, { wch: 10 }, { wch: 12 },
+        { wch: 10 }, { wch: 34 }, { wch: 22 },
+      ];
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, exportAccountDialog.speditionName.slice(0, 31));
+      const safeName = exportAccountDialog.speditionName.replace(/[^\w\-]/g, "-");
+      XLSX.writeFile(wb, `paletten-${safeName}-${exportFrom || "alle"}-bis-${exportTo || "alle"}.xlsx`);
+      setExportAccountDialog(null);
+    } catch (e: any) {
+      toast({ title: e.message ?? "Export fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -327,15 +419,24 @@ export default function PalettenPage() {
                   ? `Letzte Buchung: ${format(new Date(balance.lastMovementDate), "dd.MM.yyyy")}`
                   : "Keine Buchungen"}
               </p>
-              {canWrite && (
+              <div className="mt-3 flex flex-col gap-1.5">
                 <button
-                  className="mt-3 w-full flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-violet-700 hover:bg-violet-50 border border-dashed border-slate-200 hover:border-violet-300 rounded-md py-1.5 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); openCloseAccount(balance.speditionId, balance.speditionName ?? "", balance.balance ?? 0); }}
+                  className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-green-700 hover:bg-green-50 border border-dashed border-slate-200 hover:border-green-300 rounded-md py-1.5 transition-colors"
+                  onClick={(e) => { e.stopPropagation(); openExportDialog(balance.speditionId, balance.speditionName ?? "", balance.balance ?? 0, faktor); }}
                 >
-                  <Archive className="w-3.5 h-3.5" />
-                  Konto abschließen
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                  Excel exportieren
                 </button>
-              )}
+                {canWrite && (
+                  <button
+                    className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-400 hover:text-violet-700 hover:bg-violet-50 border border-dashed border-slate-200 hover:border-violet-300 rounded-md py-1.5 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); openCloseAccount(balance.speditionId, balance.speditionName ?? "", balance.balance ?? 0); }}
+                  >
+                    <Archive className="w-3.5 h-3.5" />
+                    Konto abschließen
+                  </button>
+                )}
+              </div>
             </CardContent>
           </Card>
           );
@@ -640,6 +741,44 @@ export default function PalettenPage() {
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!exportAccountDialog} onOpenChange={(v) => { if (!v) setExportAccountDialog(null); }}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-4 h-4 text-green-600" />
+              Excel exportieren — {exportAccountDialog?.speditionName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="rounded-md bg-slate-50 border border-slate-200 p-3 text-sm text-slate-700">
+              Saldo zum Zeitpunkt: <span className="font-bold">{(exportAccountDialog?.balance ?? 0) >= 0 ? "+" : ""}{exportAccountDialog?.balance}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Von</Label>
+                <Input type="date" value={exportFrom} onChange={e => setExportFrom(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Bis</Label>
+                <Input type="date" value={exportTo} onChange={e => setExportTo(e.target.value)} />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportAccountDialog(null)}>Abbrechen</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={handleExportAccountExcel}
+              disabled={exportLoading}
+            >
+              {exportLoading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Exportieren
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
