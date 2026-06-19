@@ -45,8 +45,8 @@ export default function PalettenPage() {
   const [closeAccountSaving, setCloseAccountSaving] = useState(false);
 
   const openCloseAccount = (speditionId: number, speditionName: string, balance: number) => {
-    const tomorrow = addDays(new Date(), 1);
-    setCloseAccountDate(tomorrow.toISOString().slice(0, 10));
+    const today = new Date();
+    setCloseAccountDate(today.toISOString().slice(0, 10));
     setCloseAccountAmount(balance);
     setCloseAccountNote("");
     setCloseAccountData({ speditionId, speditionName, balance });
@@ -56,26 +56,49 @@ export default function PalettenPage() {
     if (!closeAccountData || closeAccountAmount === "") return;
     setCloseAccountSaving(true);
     try {
-      const res = await fetch("/api/pallet-movements", {
-        method: "POST",
-        credentials: "include",
+      const anfangsDatum = addDays(new Date(closeAccountDate), 1).toISOString().slice(0, 10);
+
+      // Step 1: Nullstellung — Abstimmung on closingDate that cancels current balance
+      if (closeAccountData.balance !== 0) {
+        const r1 = await fetch("/api/pallet-movements", {
+          method: "POST", credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            speditionId: closeAccountData.speditionId,
+            movementType: "abstimmung",
+            movementDate: closeAccountDate,
+            amount: -closeAccountData.balance,
+            bemerkungen: `Jahresabschluss Nullstellung – Endbestand ${closeAccountDate}`,
+          }),
+        });
+        if (!r1.ok) {
+          const d = await r1.json();
+          toast({ title: d.error ?? "Fehler bei Nullstellungs-Buchung", variant: "destructive" });
+          return;
+        }
+      }
+
+      // Step 2: Anfangsbestand on closingDate + 1
+      const r2 = await fetch("/api/pallet-movements", {
+        method: "POST", credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           speditionId: closeAccountData.speditionId,
           movementType: "anfangsbestand",
-          movementDate: closeAccountDate,
+          movementDate: anfangsDatum,
           amount: Number(closeAccountAmount),
-          bemerkungen: closeAccountNote || `Jahresabschluss – Anfangsbestand ab ${closeAccountDate}`,
+          bemerkungen: closeAccountNote || `Jahresabschluss – Anfangsbestand ab ${anfangsDatum}`,
         }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.error ?? "Fehler beim Abschließen", variant: "destructive" });
-      } else {
-        await Promise.all([refetchBalances(), refetchMovements()]);
-        toast({ title: `Konto abgeschlossen. Anfangsbestand ${Number(closeAccountAmount) >= 0 ? "+" : ""}${closeAccountAmount} ab ${format(new Date(closeAccountDate), "dd.MM.yyyy")} gesetzt.` });
-        setCloseAccountData(null);
+      if (!r2.ok) {
+        const d = await r2.json();
+        toast({ title: d.error ?? "Fehler bei Anfangsbestand-Buchung", variant: "destructive" });
+        return;
       }
+
+      await Promise.all([refetchBalances(), refetchMovements()]);
+      toast({ title: `Konto abgeschlossen. Neuer Anfangsbestand ${Number(closeAccountAmount) >= 0 ? "+" : ""}${closeAccountAmount} ab ${format(new Date(anfangsDatum), "dd.MM.yyyy")}.` });
+      setCloseAccountData(null);
     } catch {
       toast({ title: "Fehler beim Abschließen", variant: "destructive" });
     } finally {
@@ -904,14 +927,9 @@ export default function PalettenPage() {
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="rounded-md bg-violet-50 border border-violet-200 p-3 text-sm text-violet-800">
-              Aktueller Saldo: <span className="font-bold">{closeAccountData?.balance ?? 0 > 0 ? "+" : ""}{closeAccountData?.balance}</span>
-              <br />
-              <span className="text-xs text-violet-600">Es wird eine Anfangsbestandsbuchung am gewählten Datum angelegt.</span>
-            </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Datum (Anfangsbestand ab)</Label>
+                <Label>Abschlussdatum</Label>
                 <Input
                   type="date"
                   value={closeAccountDate}
@@ -919,7 +937,7 @@ export default function PalettenPage() {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Anfangsbestand</Label>
+                <Label>Neuer Anfangsbestand</Label>
                 <Input
                   type="number"
                   value={closeAccountAmount}
@@ -928,12 +946,40 @@ export default function PalettenPage() {
                 />
               </div>
             </div>
+            {closeAccountDate && (
+              <div className="rounded-md border border-slate-200 bg-slate-50 p-3 space-y-1.5 text-xs text-slate-600">
+                <div className="font-semibold text-slate-700 mb-1">Es werden zwei Buchungen angelegt:</div>
+                {(closeAccountData?.balance ?? 0) !== 0 && (
+                  <div className="flex items-start gap-2">
+                    <span className="mt-0.5 w-4 h-4 rounded-full bg-slate-300 text-white flex items-center justify-center shrink-0 text-[10px] font-bold">1</span>
+                    <span>
+                      <span className="font-medium">Endbestand</span> am {closeAccountDate && format(new Date(closeAccountDate), "dd.MM.yyyy")}:
+                      {" "}<span className={(closeAccountData?.balance ?? 0) > 0 ? "text-red-600 font-bold" : "text-green-600 font-bold"}>
+                        {(closeAccountData?.balance ?? 0) > 0 ? "−" : "+"}{Math.abs(closeAccountData?.balance ?? 0)}
+                      </span>
+                      {" "}(Nullstellung des aktuellen Saldos)
+                    </span>
+                  </div>
+                )}
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 w-4 h-4 rounded-full bg-violet-500 text-white flex items-center justify-center shrink-0 text-[10px] font-bold">
+                    {(closeAccountData?.balance ?? 0) !== 0 ? "2" : "1"}
+                  </span>
+                  <span>
+                    <span className="font-medium">Anfangsbestand</span> ab {closeAccountDate && format(addDays(new Date(closeAccountDate), 1), "dd.MM.yyyy")}:
+                    {" "}<span className={Number(closeAccountAmount) >= 0 ? "text-green-600 font-bold" : "text-red-600 font-bold"}>
+                      {Number(closeAccountAmount) >= 0 ? "+" : ""}{closeAccountAmount}
+                    </span>
+                  </span>
+                </div>
+              </div>
+            )}
             <div className="space-y-2">
-              <Label>Bemerkung (optional)</Label>
+              <Label>Bemerkung Anfangsbestand (optional)</Label>
               <Input
                 value={closeAccountNote}
                 onChange={e => setCloseAccountNote(e.target.value)}
-                placeholder={`Jahresabschluss – Anfangsbestand ab ${closeAccountDate}`}
+                placeholder={closeAccountDate ? `Jahresabschluss – Anfangsbestand ab ${format(addDays(new Date(closeAccountDate), 1), "dd.MM.yyyy")}` : ""}
               />
             </div>
           </div>
