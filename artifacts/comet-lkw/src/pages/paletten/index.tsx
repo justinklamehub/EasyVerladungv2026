@@ -563,34 +563,56 @@ export default function PalettenPage() {
         </div>
       </div>
 
-      {isCometUser && (
-        <Card className="border-indigo-200 shadow-sm bg-gradient-to-br from-indigo-50 to-blue-50">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-indigo-600 flex items-center gap-1.5">
-              <Building2 className="w-4 h-4" />
-              Palettenbestand Werk
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {werkbestandLoading ? (
-              <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
-            ) : werkbestandHasInventur === false ? (
-              <div className="text-sm text-slate-400 italic">Keine Inventur vorhanden</div>
-            ) : werkbestand !== null ? (
-              <div className={`text-3xl font-bold ${werkbestand < 0 ? "text-red-600" : werkbestand > 0 ? "text-indigo-700" : "text-slate-800"}`}>
-                {werkbestand > 0 ? "+" : ""}{werkbestand}
-              </div>
-            ) : (
-              <div className="text-sm text-slate-400 italic">–</div>
-            )}
-            <p className="text-xs text-indigo-400 mt-1">
-              {werkbestandInventurDate
-                ? `Inventur vom ${format(new Date(werkbestandInventurDate), "dd.MM.yyyy")} + Buchungen danach`
-                : "Basierend auf letzter Inventur"}
-            </p>
-          </CardContent>
-        </Card>
-      )}
+      {isCometUser && (() => {
+        const saldoSum = (balances ?? []).reduce((s, b) => s + (b.balance ?? 0), 0);
+        const cometEigentum = werkbestand !== null ? werkbestand + saldoSum : null;
+        return (
+          <Card className="border-indigo-200 shadow-sm bg-gradient-to-br from-indigo-50 to-blue-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-indigo-600 flex items-center gap-1.5">
+                <Building2 className="w-4 h-4" />
+                Palettenbestand Werk
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {werkbestandLoading ? (
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-400" />
+              ) : werkbestandHasInventur === false ? (
+                <div className="text-sm text-slate-400 italic">Keine Inventur vorhanden</div>
+              ) : werkbestand !== null ? (
+                <>
+                  {/* Row 1: physical count */}
+                  <div>
+                    <div className="text-xs text-slate-500 mb-0.5">Physisch im Werk</div>
+                    <div className={`text-2xl font-bold ${werkbestand < 0 ? "text-red-600" : werkbestand > 0 ? "text-indigo-700" : "text-slate-800"}`}>
+                      {werkbestand > 0 ? "+" : ""}{werkbestand}
+                    </div>
+                    <p className="text-xs text-indigo-400">
+                      {werkbestandInventurDate
+                        ? `Inventur ${format(new Date(werkbestandInventurDate), "dd.MM.yyyy")} + Buchungen danach`
+                        : "Basierend auf letzter Inventur"}
+                    </p>
+                  </div>
+                  {/* Divider */}
+                  <div className="border-t border-indigo-100" />
+                  {/* Row 2: COMET ownership */}
+                  <div>
+                    <div className="text-xs text-slate-500 mb-0.5">COMET Eigentum gesamt</div>
+                    <div className={`text-2xl font-bold ${cometEigentum !== null && cometEigentum < 0 ? "text-red-600" : cometEigentum !== null && cometEigentum > 0 ? "text-indigo-700" : "text-slate-800"}`}>
+                      {cometEigentum !== null ? (cometEigentum > 0 ? "+" : "") + cometEigentum : "–"}
+                    </div>
+                    <p className="text-xs text-indigo-400">
+                      Werk {werkbestand > 0 ? "+" : ""}{werkbestand} {saldoSum >= 0 ? "+" : "−"} Salden {Math.abs(saldoSum)}
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <div className="text-sm text-slate-400 italic">–</div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })()}
 
       <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
         {loadingBalances ? (
