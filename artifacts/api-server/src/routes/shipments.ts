@@ -13,7 +13,7 @@ import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
 import { can } from "../lib/permissions";
 import { notify } from "../lib/notify";
-import { sendEventEmail } from "../lib/email";
+import { sendEventEmail, buildShipmentTableHtml, buildShipmentTableText, buildBulkTableHtml, buildBulkTableText } from "../lib/email";
 import type { Server as IOServer } from "socket.io";
 
 const router = Router();
@@ -169,13 +169,34 @@ router.post("/shipments", requireAuth, async (req, res) => {
         const spedName = shipment.speditionId
           ? (await db.select({ name: speditionenTable.name }).from(speditionenTable).where(eq(speditionenTable.id, shipment.speditionId)).limit(1))[0]?.name ?? ""
           : "";
-        await sendEventEmail("shipment", {
-          bezeichnung: shipment.bezeichnung ?? "",
-          kennzeichen: shipment.kennzeichen ?? "",
-          status: shipment.status ?? "",
-          datum: new Date().toLocaleDateString("de-DE"),
-          spedition: spedName,
-        });
+        const creatorEmail = req.session.userId
+          ? (await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1))[0]?.email ?? undefined
+          : undefined;
+        const tableRows = [
+          { label: "Bezeichnung", value: shipment.bezeichnung ?? "" },
+          { label: "Kennzeichen", value: shipment.kennzeichen ?? "" },
+          { label: "Spedition", value: spedName },
+          { label: "Relation", value: shipment.relation ?? "" },
+          { label: "LKW-Art", value: shipment.lkwArt ?? "" },
+          { label: "ETA", value: [shipment.etaDate, shipment.etaTime].filter(Boolean).join(" ") },
+          { label: "Tor", value: shipment.tor ?? "" },
+          { label: "Status", value: shipment.status ?? "" },
+          { label: "Datum", value: new Date().toLocaleDateString("de-DE") },
+          { label: "Bemerkungen", value: shipment.bemerkungen ?? "" },
+        ];
+        await sendEventEmail(
+          "shipment",
+          {
+            bezeichnung: shipment.bezeichnung ?? "",
+            kennzeichen: shipment.kennzeichen ?? "",
+            status: shipment.status ?? "",
+            datum: new Date().toLocaleDateString("de-DE"),
+            spedition: spedName,
+            tabelle: buildShipmentTableText(tableRows),
+            tabelleHtml: buildShipmentTableHtml(tableRows),
+          },
+          creatorEmail || undefined,
+        );
       } catch {}
     })();
 
@@ -251,11 +272,26 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
         const spedName = bulkSpedId
           ? (await db.select({ name: speditionenTable.name }).from(speditionenTable).where(eq(speditionenTable.id, bulkSpedId)).limit(1))[0]?.name ?? ""
           : "";
-        await sendEventEmail("bulk", {
-          anzahl: String(inserted.length),
-          datum: new Date().toLocaleDateString("de-DE"),
+        const creatorEmail = req.session.userId
+          ? (await db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1))[0]?.email ?? undefined
+          : undefined;
+        const bulkRows = inserted.map((s) => ({
+          bezeichnung: s.bezeichnung ?? "",
+          kennzeichen: s.kennzeichen ?? "",
           spedition: spedName,
-        });
+          status: s.status ?? "",
+        }));
+        await sendEventEmail(
+          "bulk",
+          {
+            anzahl: String(inserted.length),
+            datum: new Date().toLocaleDateString("de-DE"),
+            spedition: spedName,
+            tabelle: buildBulkTableText(bulkRows),
+            tabelleHtml: buildBulkTableHtml(bulkRows),
+          },
+          creatorEmail || undefined,
+        );
       } catch {}
     })();
 

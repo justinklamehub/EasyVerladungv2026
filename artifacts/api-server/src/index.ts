@@ -3,6 +3,7 @@ import { Server as SocketIOServer } from "socket.io";
 import app, { sessionMiddleware } from "./app";
 import { logger } from "./lib/logger";
 import { seedMissingPermissions } from "./lib/permissions";
+import { seedEmailTemplates } from "./lib/email";
 import { startScheduler } from "./lib/scheduler";
 
 const rawPort = process.env["PORT"];
@@ -166,6 +167,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("Permissions seeded (missing rows backfilled)");
   } catch (e) {
     logger.warn({ err: e }, "seedMissingPermissions failed — non-fatal");
+  }
+  try {
+    await seedEmailTemplates();
+    logger.info("Email templates seeded");
+  } catch (e) {
+    logger.warn({ err: e }, "seedEmailTemplates failed — non-fatal");
   }
   startScheduler(io);
 });
