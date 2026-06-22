@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { settingsTable, emailLogTable } from "@workspace/db";
 import { eq, notLike, and } from "drizzle-orm";
 
@@ -166,6 +166,24 @@ export async function sendEventEmail(
   } catch (err) {
     console.error(`[email] Unerwarteter Fehler (${event}):`, err);
   }
+}
+
+// ── Startup migration: ensure email_log table exists ─────────────────────────
+
+export async function ensureEmailLogTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_log (
+      id          SERIAL PRIMARY KEY,
+      event       TEXT        NOT NULL,
+      to_addresses TEXT       NOT NULL,
+      subject     TEXT        NOT NULL,
+      body_html   TEXT,
+      body_text   TEXT,
+      status      TEXT        NOT NULL DEFAULT 'sent',
+      error_message TEXT,
+      sent_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
 
 // ── Seed default templates (run once on startup) ─────────────────────────────
