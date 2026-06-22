@@ -564,13 +564,11 @@ export default function PalettenPage() {
       </div>
 
       {isCometUser && (() => {
-        // Positive saldi → abziehen (Paletten bei Kunden, COMET hat Forderung aber nicht die Paletten)
-        // Negative saldi → addieren (als negativer Wert, d.h. ebenfalls Reduktion)
-        const saldoAdjustment = (balances ?? []).reduce((s, b) => {
-          const bal = b.balance ?? 0;
-          return bal > 0 ? s - bal : s + bal;
-        }, 0);
-        const cometEigentum = werkbestand !== null ? werkbestand + saldoAdjustment : null;
+        // Netto-Saldo aller Salden (mit Vorzeichen): positiv = Kunde schuldet COMET, negativ = COMET schuldet Kunde
+        // COMET Eigentum = Werkbestand − Netto-Saldo
+        // Beispiel: WB 22013, Salden 7530 → Eigentum 14483
+        const saldoSum = (balances ?? []).reduce((s, b) => s + (b.balance ?? 0), 0);
+        const cometEigentum = werkbestand !== null ? werkbestand - saldoSum : null;
         return (
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Kachel 1: Palettenbestand Werk */}
@@ -622,7 +620,7 @@ export default function PalettenPage() {
                   <div className="text-sm text-slate-400 italic">–</div>
                 )}
                 <p className="text-xs text-violet-400 mt-1">
-                  Werk {werkbestand !== null ? (werkbestand >= 0 ? "+" : "") + werkbestand : "–"} / Salden {saldoAdjustment >= 0 ? "+" : ""}{saldoAdjustment}
+                  Werk {werkbestand !== null ? (werkbestand >= 0 ? "+" : "") + werkbestand : "–"} − Salden {saldoSum >= 0 ? "+" : ""}{saldoSum}
                 </p>
               </CardContent>
             </Card>
