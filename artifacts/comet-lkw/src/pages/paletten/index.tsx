@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { format, addDays } from "date-fns";
-import { Loader2, Plus, Download, BarChart2, FileDown, ClipboardList, RefreshCw, Archive, FileSpreadsheet, Warehouse } from "lucide-react";
+import { Loader2, Plus, Download, BarChart2, FileDown, ClipboardList, RefreshCw, Archive, FileSpreadsheet, Building2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { MovementDialog } from "./components/movement-dialog";
 import { MovementDetailSheet } from "./components/movement-detail-sheet";
@@ -561,7 +561,7 @@ export default function PalettenPage() {
         <Card className="border-indigo-200 shadow-sm bg-gradient-to-br from-indigo-50 to-blue-50">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-indigo-600 flex items-center gap-1.5">
-              <Warehouse className="w-4 h-4" />
+              <Building2 className="w-4 h-4" />
               Palettenbestand Werk
             </CardTitle>
           </CardHeader>
