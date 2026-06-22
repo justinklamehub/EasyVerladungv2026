@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { db } from "@workspace/db";
-import { settingsTable } from "@workspace/db";
+import { settingsTable, emailLogTable } from "@workspace/db";
 import { eq, notLike, and } from "drizzle-orm";
 
 export type EmailEvent = "shipment" | "bulk" | "user";
@@ -135,15 +135,36 @@ export async function sendEventEmail(
       .replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 
     const transport = createTransport();
-    await transport.sendMail({
-      from,
-      to: configuredTo.join(", "),
-      subject,
-      text: textBody,
-      html: wrapHtml(subject, htmlBody),
-    });
+    let logStatus = "sent";
+    let logError: string | null = null;
+    try {
+      await transport.sendMail({
+        from,
+        to: configuredTo.join(", "),
+        subject,
+        text: textBody,
+        html: wrapHtml(subject, htmlBody),
+      });
+    } catch (sendErr) {
+      logStatus = "error";
+      logError = String(sendErr);
+      console.error(`[email] Fehler beim Senden (${event}):`, sendErr);
+    }
+    try {
+      await db.insert(emailLogTable).values({
+        event,
+        toAddresses: configuredTo.join(", "),
+        subject,
+        bodyHtml: htmlBody || null,
+        bodyText: textBody || null,
+        status: logStatus,
+        errorMessage: logError,
+      });
+    } catch (logErr) {
+      console.error("[email] Fehler beim Log-Eintrag:", logErr);
+    }
   } catch (err) {
-    console.error(`[email] Fehler beim Senden (${event}):`, err);
+    console.error(`[email] Unerwarteter Fehler (${event}):`, err);
   }
 }
 
