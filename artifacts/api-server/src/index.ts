@@ -76,6 +76,35 @@ function removeEditorFromPresence(socketId: string): Array<{ shipmentId: number;
   return changed;
 }
 
+// ── User Presence (who is online + current page) ─────────────────────────────
+
+interface UserPresenceInfo {
+  userId: number;
+  username: string;
+  role: string;
+  speditionId: number | undefined;
+  page: string;
+  connectedAt: string;
+}
+
+const userPresence = new Map<string, UserPresenceInfo>(); // socketId → info
+
+const COMET_ROLES = new Set(["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]);
+
+function broadcastPresence() {
+  const all = Array.from(userPresence.values());
+
+  // COMET users receive the full list
+  io.to("comet").emit("presence.update", all);
+
+  // Each spedition room receives only their own users
+  const spedIds = new Set(all.filter((u) => u.speditionId).map((u) => u.speditionId!));
+  for (const spedId of spedIds) {
+    const filtered = all.filter((u) => u.speditionId === spedId);
+    io.to(`spedition:${spedId}`).emit("presence.update", filtered);
+  }
+}
+
 io.on("connection", (socket) => {
   const sess = (socket.request as any).session;
   const role: string | undefined = sess?.role;
@@ -98,6 +127,34 @@ io.on("connection", (socket) => {
   }
 
   logger.info({ socketId: socket.id, role, speditionId }, "Socket.IO client connected");
+
+  // ── Presence tracking ──
+  if (userId && username && role) {
+    userPresence.set(socket.id, {
+      userId,
+      username,
+      role,
+      speditionId,
+      page: "/",
+      connectedAt: new Date().toISOString(),
+    });
+    broadcastPresence();
+
+    // Send current snapshot directly to the newly connected socket
+    const all = Array.from(userPresence.values());
+    const snapshot = COMET_ROLES.has(role)
+      ? all
+      : all.filter((u) => u.speditionId === speditionId);
+    socket.emit("presence.update", snapshot);
+  }
+
+  socket.on("presence.page", (data: { page: string }) => {
+    const entry = userPresence.get(socket.id);
+    if (entry && data && typeof data.page === "string") {
+      entry.page = data.page.slice(0, 200);
+      broadcastPresence();
+    }
+  });
 
   socket.on("shipment.editing.start", (data: { shipmentId: number; speditionId?: number | null }) => {
     const { shipmentId, speditionId: shipSpedId } = data;
@@ -146,6 +203,11 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     logger.info({ socketId: socket.id }, "Socket.IO client disconnected");
+
+    // Remove from presence and broadcast update
+    userPresence.delete(socket.id);
+    broadcastPresence();
+
     const changed = removeEditorFromPresence(socket.id);
     for (const { shipmentId, editors } of changed) {
       io.to("comet").emit("shipment.editing", { shipmentId, editors });

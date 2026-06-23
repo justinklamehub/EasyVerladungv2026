@@ -30,6 +30,7 @@ import {
   Sun,
   Moon,
   ShieldAlert,
+  Radio,
 } from "lucide-react";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -40,8 +41,9 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useNotifications, type AppNotification } from "@/hooks/use-notifications";
+import { usePresence, getPageName, ROLE_LABELS, type OnlineUser } from "@/hooks/use-presence";
 import { useLocation as useWouterLocation } from "wouter";
-import { format, formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 
 const ROLES_WITH_FULL_ACCESS = ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"];
@@ -52,6 +54,97 @@ interface AppSidebarProps {
   onToggle: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
+}
+
+function UserAvatar({ username, size = "sm" }: { username: string; size?: "sm" | "md" }) {
+  const initials = username.substring(0, 2).toUpperCase();
+  const colors = [
+    "bg-blue-600", "bg-emerald-600", "bg-violet-600", "bg-amber-600",
+    "bg-rose-600", "bg-cyan-600", "bg-orange-600", "bg-teal-600",
+  ];
+  const color = colors[username.charCodeAt(0) % colors.length];
+  const sz = size === "sm" ? "w-6 h-6 text-[10px]" : "w-8 h-8 text-xs";
+  return (
+    <div className={cn("rounded-full flex items-center justify-center font-semibold text-white shrink-0", sz, color)}>
+      {initials}
+    </div>
+  );
+}
+
+function OnlinePanel({ users, currentUserId }: { users: OnlineUser[]; currentUserId: number }) {
+  const others = users.filter((u) => u.userId !== currentUserId);
+  const me = users.find((u) => u.userId === currentUserId);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-semibold text-slate-100">Wer ist online?</span>
+          <span className="text-xs bg-emerald-600 text-white rounded-full px-1.5 py-0.5 font-medium">
+            {users.length}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
+        {users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-slate-500 py-12">
+            <Radio className="w-8 h-8 opacity-30" />
+            <p className="text-xs">Niemand online</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-slate-800/60">
+            {/* Current user first */}
+            {me && (
+              <div className="px-4 py-3 bg-slate-800/20">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative">
+                    <UserAvatar username={me.username} />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-emerald-400 truncate">
+                      {me.username} <span className="text-slate-500 font-normal">(Du)</span>
+                    </p>
+                    <p className="text-[10px] text-slate-500 truncate">{getPageName(me.page)}</p>
+                  </div>
+                  <span className="text-[9px] bg-slate-800 text-slate-400 rounded px-1 py-0.5 shrink-0">
+                    {ROLE_LABELS[me.role] ?? me.role}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Other users grouped by page */}
+            {others.map((u) => (
+              <div key={u.userId + u.connectedAt} className="px-4 py-3 hover:bg-slate-800/30 transition-colors">
+                <div className="flex items-center gap-2.5">
+                  <div className="relative">
+                    <UserAvatar username={u.username} />
+                    <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-medium text-slate-200 truncate">{u.username}</p>
+                    <p className="text-[10px] text-slate-500 truncate">
+                      📍 {getPageName(u.page)}
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-[9px] bg-slate-800 text-slate-400 rounded px-1 py-0.5">
+                      {ROLE_LABELS[u.role] ?? u.role}
+                    </span>
+                    <span className="text-[9px] text-slate-600">
+                      {formatDistanceToNow(new Date(u.connectedAt), { addSuffix: false, locale: de })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
 function NotificationIcon({ type }: { type: string }) {
@@ -178,7 +271,9 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
   const [location, setLocation] = useLocation();
   const [, navigate] = useWouterLocation();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showOnline, setShowOnline] = useState(false);
   const { notifications, unreadCount, markRead, markAllRead, dismiss, dismissAll } = useNotifications();
+  const { onlineUsers, onPage } = usePresence(user?.id);
 
   const logoutMutation = useLogout({
     mutation: {
@@ -213,9 +308,37 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
 
   const initials = user.username.substring(0, 2).toUpperCase();
 
+  const otherOnlineCount = onlineUsers.filter((u) => u.userId !== user?.id).length;
+
+  const onlineButton = (
+    <button
+      onClick={() => { setShowOnline((v) => !v); setShowNotifications(false); }}
+      className={cn(
+        "relative rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors",
+        collapsed ? "w-9 h-9 flex items-center justify-center mx-auto" : "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium",
+        showOnline && "bg-slate-800 text-slate-200"
+      )}
+    >
+      <div className="relative shrink-0">
+        <Radio className={cn(collapsed ? "w-5 h-5" : "w-4 h-4")} />
+        <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950" />
+      </div>
+      {!collapsed && (
+        <span className="flex-1 text-left">
+          Online
+          {otherOnlineCount > 0 && (
+            <span className="ml-2 text-xs bg-emerald-600 text-white rounded-full px-1.5 py-0.5">
+              {otherOnlineCount}
+            </span>
+          )}
+        </span>
+      )}
+    </button>
+  );
+
   const bellButton = (
     <button
-      onClick={() => setShowNotifications((v) => !v)}
+      onClick={() => { setShowNotifications((v) => !v); setShowOnline(false); }}
       className={cn(
         "relative rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors",
         collapsed ? "w-9 h-9 flex items-center justify-center mx-auto" : "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium",
@@ -237,7 +360,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
   return (
     <TooltipProvider delayDuration={0}>
       <div className="relative flex h-full">
-        {/* Notification panel — fixed so it isn't clipped by overflow-hidden ancestors */}
+        {/* Notification panel */}
         {showNotifications && (
           <>
             <div
@@ -259,6 +382,22 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   setShowNotifications(false);
                 }}
               />
+            </div>
+          </>
+        )}
+
+        {/* Online users panel */}
+        {showOnline && (
+          <>
+            <div
+              className="fixed inset-0 z-40"
+              onClick={() => setShowOnline(false)}
+            />
+            <div
+              className="fixed top-0 bottom-0 z-50 w-72 bg-slate-950 border-r border-slate-800 shadow-2xl flex flex-col"
+              style={{ left: collapsed ? 60 : 256 }}
+            >
+              <OnlinePanel users={onlineUsers} currentUserId={user.id} />
             </div>
           </>
         )}
@@ -310,13 +449,15 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   (item.href === "/shipments" &&
                     (location === "/shipments" || location.startsWith("/shipments/")));
 
+                const usersHere = onPage(item.href).length;
+
                 const linkEl = (
                   <Link
                     key={item.name}
                     href={item.href}
                     className={cn(
                       "flex items-center rounded-md text-sm font-medium transition-all duration-150",
-                      collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2.5",
+                      collapsed ? "justify-center w-9 h-9 mx-auto relative" : "gap-3 px-3 py-2.5",
                       isActive
                         ? "bg-primary text-white shadow-sm dark:bg-white/15 dark:text-white dark:shadow-none"
                         : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
@@ -329,7 +470,26 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                         isActive ? "text-white" : "text-slate-500"
                       )}
                     />
-                    {!collapsed && item.name}
+                    {collapsed && usersHere > 0 && (
+                      <span className="absolute -top-1 -right-1 w-4 h-4 bg-emerald-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">
+                        {usersHere > 9 ? "9+" : usersHere}
+                      </span>
+                    )}
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{item.name}</span>
+                        {usersHere > 0 && (
+                          <span className={cn(
+                            "text-[9px] font-semibold rounded-full px-1.5 py-0.5 min-w-[18px] text-center",
+                            isActive
+                              ? "bg-white/20 text-white"
+                              : "bg-emerald-600/30 text-emerald-400"
+                          )}>
+                            {usersHere}
+                          </span>
+                        )}
+                      </>
+                    )}
                   </Link>
                 );
 
@@ -337,7 +497,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   <Tooltip key={item.name}>
                     <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
                     <TooltipContent side="right" className="text-xs">
-                      {item.name}
+                      {item.name}{usersHere > 0 ? ` · ${usersHere} online` : ""}
                     </TooltipContent>
                   </Tooltip>
                 ) : (
@@ -363,6 +523,14 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
 
             {collapsed ? (
               <div className="flex flex-col items-center gap-1">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    {onlineButton}
+                  </TooltipTrigger>
+                  <TooltipContent side="right" className="text-xs">
+                    Online{otherOnlineCount > 0 ? ` (${otherOnlineCount} andere)` : ""}
+                  </TooltipContent>
+                </Tooltip>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     {bellButton}
@@ -411,6 +579,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
               </div>
             ) : (
               <div className="flex flex-col gap-1">
+                {onlineButton}
                 {bellButton}
                 <Button
                   variant="ghost"
