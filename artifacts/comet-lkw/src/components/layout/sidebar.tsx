@@ -310,53 +310,6 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
 
   const otherOnlineCount = onlineUsers.filter((u) => u.userId !== user?.id).length;
 
-  const onlineButton = (
-    <button
-      onClick={() => { setShowOnline((v) => !v); setShowNotifications(false); }}
-      className={cn(
-        "relative rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors",
-        collapsed ? "w-9 h-9 flex items-center justify-center mx-auto" : "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium",
-        showOnline && "bg-slate-800 text-slate-200"
-      )}
-    >
-      <div className="relative shrink-0">
-        <Radio className={cn(collapsed ? "w-5 h-5" : "w-4 h-4")} />
-        <span className="absolute -top-1.5 -right-1.5 w-2.5 h-2.5 bg-emerald-500 rounded-full border-2 border-slate-950" />
-      </div>
-      {!collapsed && (
-        <span className="flex-1 text-left">
-          Online
-          {otherOnlineCount > 0 && (
-            <span className="ml-2 text-xs bg-emerald-600 text-white rounded-full px-1.5 py-0.5">
-              {otherOnlineCount}
-            </span>
-          )}
-        </span>
-      )}
-    </button>
-  );
-
-  const bellButton = (
-    <button
-      onClick={() => { setShowNotifications((v) => !v); setShowOnline(false); }}
-      className={cn(
-        "relative rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors",
-        collapsed ? "w-9 h-9 flex items-center justify-center mx-auto" : "w-full flex items-center gap-3 px-3 py-2.5 text-sm font-medium",
-        showNotifications && "bg-slate-800 text-slate-200"
-      )}
-    >
-      <div className="relative shrink-0">
-        <Bell className={cn(collapsed ? "w-5 h-5" : "w-4 h-4")} />
-        {unreadCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 bg-primary text-white text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 leading-none">
-            {unreadCount > 99 ? "99+" : unreadCount}
-          </span>
-        )}
-      </div>
-      {!collapsed && <span>Benachrichtigungen</span>}
-    </button>
-  );
-
   return (
     <TooltipProvider delayDuration={0}>
       <div className="relative flex h-full">
@@ -487,111 +440,179 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
           </div>
 
           {/* User footer */}
-          <div className={cn("border-t border-slate-800 bg-slate-900/30 shrink-0", collapsed ? "p-2" : "p-4")}>
+          <div className={cn("border-t border-slate-800 bg-slate-900/30 shrink-0", collapsed ? "p-2" : "p-3")}>
+            {/* ── Expanded footer ── */}
             {!collapsed && (
-              <div className="flex items-center gap-3 mb-3">
-                <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-medium text-slate-300 uppercase shrink-0">
-                  {initials}
+              <>
+                {/* User info */}
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-medium text-slate-300 uppercase shrink-0">
+                    {initials}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-slate-200 truncate">{user.username}</div>
+                    <div className="text-xs text-slate-500 truncate">{user.speditionName || "COMET"}</div>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-sm font-medium text-slate-200 truncate">{user.username}</div>
-                  <div className="text-xs text-slate-500 truncate">{user.speditionName || "COMET"}</div>
+
+                {/* 2×2 tile grid */}
+                <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+                  {/* Online tile */}
+                  <button
+                    onClick={() => { setShowOnline((v) => !v); setShowNotifications(false); }}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 rounded-lg p-2.5 transition-colors min-h-[52px]",
+                      showOnline
+                        ? "bg-slate-700 text-slate-100"
+                        : "bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                    )}
+                  >
+                    <div className="relative">
+                      <Radio className="w-4 h-4" />
+                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full" />
+                    </div>
+                    <span className="text-[10px] leading-tight">
+                      Online{otherOnlineCount > 0 ? ` (${otherOnlineCount})` : ""}
+                    </span>
+                  </button>
+
+                  {/* Benachrichtigungen tile */}
+                  <button
+                    onClick={() => { setShowNotifications((v) => !v); setShowOnline(false); }}
+                    className={cn(
+                      "flex flex-col items-center justify-center gap-1 rounded-lg p-2.5 transition-colors min-h-[52px]",
+                      showNotifications
+                        ? "bg-slate-700 text-slate-100"
+                        : "bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                    )}
+                  >
+                    <div className="relative">
+                      <Bell className="w-4 h-4" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 bg-primary text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[10px] leading-tight">Nachrichten</span>
+                  </button>
+
+                  {/* Theme tile */}
+                  <button
+                    onClick={onToggleTheme}
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 p-2.5 transition-colors min-h-[52px]"
+                  >
+                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                    <span className="text-[10px] leading-tight">{isDark ? "Hell" : "Dunkel"}</span>
+                  </button>
+
+                  {/* Profil tile */}
+                  <Link
+                    href="/profil"
+                    className="flex flex-col items-center justify-center gap-1 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 p-2.5 transition-colors min-h-[52px]"
+                  >
+                    <UserCog className="w-4 h-4" />
+                    <span className="text-[10px] leading-tight">Profil</span>
+                  </Link>
                 </div>
-              </div>
+
+                {/* Logout — full width */}
+                <button
+                  onClick={() => logoutMutation.mutate()}
+                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-red-900/40 hover:text-red-300 p-2 text-xs transition-colors"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                  Abmelden
+                </button>
+              </>
             )}
 
-            {collapsed ? (
-              <div className="flex flex-col items-center gap-1">
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {onlineButton}
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">
-                    Online{otherOnlineCount > 0 ? ` (${otherOnlineCount} andere)` : ""}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    {bellButton}
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">
-                    Benachrichtigungen{unreadCount > 0 ? ` (${unreadCount})` : ""}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <button
-                      onClick={onToggleTheme}
-                      className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                    >
-                      {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                    </button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">
-                    {isDark ? "Hellmodus" : "Dunkelmodus"}
-                  </TooltipContent>
-                </Tooltip>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Link
-                      href="/profil"
-                      className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                    >
-                      <UserCog className="w-5 h-5" />
-                    </Link>
-                  </TooltipTrigger>
-                  <TooltipContent side="right" className="text-xs">Mein Profil</TooltipContent>
-                </Tooltip>
+            {/* ── Collapsed footer: 2×2 grid ── */}
+            {collapsed && (
+              <>
+                <div className="grid grid-cols-2 gap-1">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => { setShowOnline((v) => !v); setShowNotifications(false); }}
+                        className={cn(
+                          "w-full h-9 flex items-center justify-center rounded-md transition-colors relative",
+                          showOnline ? "bg-slate-700 text-slate-200" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                        )}
+                      >
+                        <Radio className="w-4.5 h-4.5" />
+                        <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">
+                      Online{otherOnlineCount > 0 ? ` (${otherOnlineCount} andere)` : ""}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => { setShowNotifications((v) => !v); setShowOnline(false); }}
+                        className={cn(
+                          "w-full h-9 flex items-center justify-center rounded-md transition-colors relative",
+                          showNotifications ? "bg-slate-700 text-slate-200" : "text-slate-400 hover:text-slate-200 hover:bg-slate-800"
+                        )}
+                      >
+                        <Bell className="w-4 h-4" />
+                        {unreadCount > 0 && (
+                          <span className="absolute top-0.5 right-0.5 min-w-[14px] h-3.5 bg-primary text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">
+                            {unreadCount > 99 ? "99+" : unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">
+                      Benachrichtigungen{unreadCount > 0 ? ` (${unreadCount})` : ""}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onToggleTheme}
+                        className="w-full h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                      >
+                        {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">
+                      {isDark ? "Hellmodus" : "Dunkelmodus"}
+                    </TooltipContent>
+                  </Tooltip>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href="/profil"
+                        className="w-full h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                      >
+                        <UserCog className="w-4 h-4" />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">Mein Profil</TooltipContent>
+                  </Tooltip>
+                </div>
+
+                {/* Logout */}
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       onClick={() => logoutMutation.mutate()}
-                      className="w-9 h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                      className="mt-1 w-full h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-red-300 hover:bg-red-900/40 transition-colors"
                     >
-                      <LogOut className="w-5 h-5" />
+                      <LogOut className="w-4 h-4" />
                     </button>
                   </TooltipTrigger>
                   <TooltipContent side="right" className="text-xs">
                     Abmelden ({user.username})
                   </TooltipContent>
                 </Tooltip>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-1">
-                {onlineButton}
-                {bellButton}
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                  onClick={onToggleTheme}
-                >
-                  {isDark
-                    ? <Sun className="w-4 h-4 mr-2" />
-                    : <Moon className="w-4 h-4 mr-2" />}
-                  {isDark ? "Hellmodus" : "Dunkelmodus"}
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                  asChild
-                >
-                  <Link href="/profil">
-                    <UserCog className="w-4 h-4 mr-2" />
-                    Mein Profil
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full justify-start text-slate-400 hover:text-slate-200 hover:bg-slate-800"
-                  onClick={() => logoutMutation.mutate()}
-                >
-                  <LogOut className="w-4 h-4 mr-2" />
-                  Abmelden
-                </Button>
-              </div>
+              </>
             )}
           </div>
         </div>
