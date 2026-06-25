@@ -25,35 +25,60 @@ const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 type SortField = "kennzeichen" | "etaDate" | "status" | "tor" | "speditionName";
 type SortDir = "asc" | "desc";
 
-type ColKey = "id" | "kennzeichen" | "spedition" | "art" | "relation" | "bezeichnung" | "eta" | "status" | "ware" | "tor";
+type ColKey =
+  | "id" | "kennzeichen" | "spedition" | "subspedition"
+  | "art" | "relation" | "bezeichnung"
+  | "eta" | "ata" | "status" | "ware" | "tor"
+  | "gesperrt" | "cometBearbeitet" | "telefon" | "bemerkungen"
+  | "createdBy" | "createdAt" | "updatedBy" | "updatedAt";
 
 const COLUMN_DEFS: { key: ColKey; label: string }[] = [
-  { key: "id",          label: "ID" },
-  { key: "kennzeichen", label: "Kennzeichen" },
-  { key: "spedition",   label: "Spedition" },
-  { key: "art",         label: "Art (LKW-Typ)" },
-  { key: "relation",    label: "Relation" },
-  { key: "bezeichnung", label: "Bezeichnung" },
-  { key: "eta",         label: "ETA / ATA" },
-  { key: "status",      label: "Status" },
-  { key: "ware",        label: "Ware" },
-  { key: "tor",         label: "Tor" },
+  { key: "id",              label: "ID" },
+  { key: "kennzeichen",     label: "Kennzeichen" },
+  { key: "spedition",       label: "Spedition" },
+  { key: "subspedition",    label: "Sub-Spedition" },
+  { key: "art",             label: "Art (LKW-Typ)" },
+  { key: "relation",        label: "Relation" },
+  { key: "bezeichnung",     label: "Bezeichnung" },
+  { key: "eta",             label: "ETA" },
+  { key: "ata",             label: "ATA" },
+  { key: "status",          label: "Status" },
+  { key: "ware",            label: "Ware" },
+  { key: "tor",             label: "Tor" },
+  { key: "gesperrt",        label: "Gesperrt" },
+  { key: "cometBearbeitet", label: "COMET bearbeitet" },
+  { key: "telefon",         label: "Telefon" },
+  { key: "bemerkungen",     label: "Bemerkungen" },
+  { key: "createdBy",       label: "Erstellt von" },
+  { key: "createdAt",       label: "Erstellt am" },
+  { key: "updatedBy",       label: "Aktualisiert von" },
+  { key: "updatedAt",       label: "Aktualisiert am" },
 ];
 
 const DEFAULT_COLS: Record<ColKey, boolean> = {
   id: true,
   kennzeichen: true,
   spedition: true,
+  subspedition: false,
   art: true,
   relation: true,
   bezeichnung: true,
   eta: true,
+  ata: false,
   status: true,
   ware: true,
   tor: true,
+  gesperrt: false,
+  cometBearbeitet: false,
+  telefon: false,
+  bemerkungen: false,
+  createdBy: false,
+  createdAt: false,
+  updatedBy: false,
+  updatedAt: false,
 };
 
-const STORAGE_KEY = "shipments_col_vis_v1";
+const STORAGE_KEY = "shipments_col_vis_v2";
 
 function loadColVisibility(): Record<ColKey, boolean> {
   try {
@@ -547,7 +572,7 @@ export default function ShipmentsPage() {
               {!isViewer && isCometUser && (
                 <TableHead className="w-[40px]">
                   <Checkbox
-                    checked={sorted.length > 0 && selectedIds.size === sorted.length}
+                    checked={sorted.length > 0 && selectedIds.size === sorted.length ? true : false}
                     onCheckedChange={toggleAll}
                     aria-label="Alle auswählen"
                   />
@@ -566,14 +591,16 @@ export default function ShipmentsPage() {
                   Spedition <SortIcon field="speditionName" sortField={sortField} sortDir={sortDir} />
                 </TableHead>
               )}
+              {cols.subspedition && <TableHead>Sub-Spedition</TableHead>}
               {cols.art && <TableHead>Art</TableHead>}
               {cols.relation && <TableHead>Relation</TableHead>}
               {cols.bezeichnung && <TableHead>Bezeichnung</TableHead>}
               {cols.eta && (
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("etaDate")}>
-                  ETA / ATA <SortIcon field="etaDate" sortField={sortField} sortDir={sortDir} />
+                  ETA <SortIcon field="etaDate" sortField={sortField} sortDir={sortDir} />
                 </TableHead>
               )}
+              {cols.ata && <TableHead>ATA</TableHead>}
               {cols.status && (
                 <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("status")}>
                   Status <SortIcon field="status" sortField={sortField} sortDir={sortDir} />
@@ -585,6 +612,14 @@ export default function ShipmentsPage() {
                   Tor <SortIcon field="tor" sortField={sortField} sortDir={sortDir} />
                 </TableHead>
               )}
+              {cols.gesperrt && <TableHead>Gesperrt</TableHead>}
+              {cols.cometBearbeitet && <TableHead>COMET bearb.</TableHead>}
+              {cols.telefon && <TableHead>Telefon</TableHead>}
+              {cols.bemerkungen && <TableHead>Bemerkungen</TableHead>}
+              {cols.createdBy && <TableHead>Erstellt von</TableHead>}
+              {cols.createdAt && <TableHead>Erstellt am</TableHead>}
+              {cols.updatedBy && <TableHead>Aktual. von</TableHead>}
+              {cols.updatedAt && <TableHead>Aktual. am</TableHead>}
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -629,7 +664,10 @@ export default function ShipmentsPage() {
                     <TableCell className="font-medium">{shipment.kennzeichen || "-"}</TableCell>
                   )}
                   {cols.spedition && (
-                    <TableCell>{shipment.speditionName || "-"}</TableCell>
+                    <TableCell>{(shipment as any).speditionName || "-"}</TableCell>
+                  )}
+                  {cols.subspedition && (
+                    <TableCell>{(shipment as any).subSpeditionName || "-"}</TableCell>
                   )}
                   {cols.art && (
                     <TableCell>{shipment.lkwArt || "-"}</TableCell>
@@ -641,19 +679,23 @@ export default function ShipmentsPage() {
                     <TableCell className="text-slate-600 text-sm">{shipment.bezeichnung || "-"}</TableCell>
                   )}
                   {cols.eta && (
-                    <TableCell>
-                      <div className="text-xs">
-                        {shipment.etaDate && shipment.etaTime ? (
-                          <div className="text-slate-600">
-                            ETA: <span className="font-medium">{format(new Date(shipment.etaDate), "dd.MM.yy")} {shipment.etaTime}</span>
-                          </div>
-                        ) : null}
-                        {shipment.ataDate && shipment.ataTime ? (
-                          <div className="text-green-700">
-                            ATA: <span className="font-medium">{format(new Date(shipment.ataDate), "dd.MM.yy")} {shipment.ataTime}</span>
-                          </div>
-                        ) : null}
-                      </div>
+                    <TableCell className="text-xs">
+                      {shipment.etaDate ? (
+                        <span className="font-medium text-slate-700">
+                          {format(new Date(shipment.etaDate), "dd.MM.yy")}
+                          {shipment.etaTime ? ` ${shipment.etaTime}` : ""}
+                        </span>
+                      ) : "-"}
+                    </TableCell>
+                  )}
+                  {cols.ata && (
+                    <TableCell className="text-xs">
+                      {(shipment as any).ataDate ? (
+                        <span className="font-medium text-green-700">
+                          {format(new Date((shipment as any).ataDate), "dd.MM.yy")}
+                          {(shipment as any).ataTime ? ` ${(shipment as any).ataTime}` : ""}
+                        </span>
+                      ) : "-"}
                     </TableCell>
                   )}
                   {cols.status && (
@@ -682,6 +724,44 @@ export default function ShipmentsPage() {
                   )}
                   {cols.tor && (
                     <TableCell className="font-medium">{shipment.tor || "-"}</TableCell>
+                  )}
+                  {cols.gesperrt && (
+                    <TableCell>
+                      {shipment.gesperrtFuerSpedition
+                        ? <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">Gesperrt</Badge>
+                        : <span className="text-xs text-slate-400">Nein</span>}
+                    </TableCell>
+                  )}
+                  {cols.cometBearbeitet && (
+                    <TableCell>
+                      {(shipment as any).cometBearbeitet
+                        ? <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">Ja</Badge>
+                        : <span className="text-xs text-slate-400">Nein</span>}
+                    </TableCell>
+                  )}
+                  {cols.telefon && (
+                    <TableCell className="text-sm">{(shipment as any).telefon || "-"}</TableCell>
+                  )}
+                  {cols.bemerkungen && (
+                    <TableCell className="text-xs text-slate-600 max-w-[200px] truncate" title={(shipment as any).bemerkungen || ""}>
+                      {(shipment as any).bemerkungen || "-"}
+                    </TableCell>
+                  )}
+                  {cols.createdBy && (
+                    <TableCell className="text-xs text-slate-500">{(shipment as any).createdByName || "-"}</TableCell>
+                  )}
+                  {cols.createdAt && (
+                    <TableCell className="text-xs text-slate-500">
+                      {(shipment as any).createdAt ? format(new Date((shipment as any).createdAt), "dd.MM.yy HH:mm") : "-"}
+                    </TableCell>
+                  )}
+                  {cols.updatedBy && (
+                    <TableCell className="text-xs text-slate-500">{(shipment as any).updatedByName || "-"}</TableCell>
+                  )}
+                  {cols.updatedAt && (
+                    <TableCell className="text-xs text-slate-500">
+                      {(shipment as any).updatedAt ? format(new Date((shipment as any).updatedAt), "dd.MM.yy HH:mm") : "-"}
+                    </TableCell>
                   )}
                   <TableCell>
                     <div className="flex items-center gap-1.5">
