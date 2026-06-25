@@ -35,6 +35,9 @@ export interface GefahrgutPrintData {
   anCometLadungssicherung?: number | null;
   anDefektePaletten?: number | null;
   bemerkungen?: string | null;
+  shipmentId?: number | null;
+  ladelistennummer?: string | null;
+  logoUrl?: string | null;
 }
 
 function formatAdrDate(value: unknown): string {
@@ -97,6 +100,16 @@ export function printGefahrgutCheckliste(data: GefahrgutPrintData): void {
     ? `<img src="${data.unterschriftVerlader}" style="height:52px;max-width:160px;object-fit:contain;display:block;" />`
     : `<div style="height:52px;border-bottom:1px solid #555;width:140px;margin-top:4px;"></div>`;
 
+  const logoHtml = data.logoUrl
+    ? `<img src="${data.logoUrl}" style="max-width:110px;max-height:60px;object-fit:contain;display:block;" alt="Logo" />`
+    : `<div class="logo-x">&#10005;</div>
+       <div class="logo-name">COMET SEASONAL</div>
+       <div class="logo-sub">COMPANY</div>`;
+
+  const ladelisteVal = data.ladelistennummer
+    ? `<strong>${esc(data.ladelistennummer)}</strong>${data.shipmentId ? `<br><span style="font-size:7.5pt;color:#555;">LKW-ID: ${data.shipmentId}</span>` : ""}`
+    : (data.shipmentId ? `<span style="font-size:8pt;color:#555;">LKW-ID: ${data.shipmentId}</span>` : "—");
+
   const html = `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -110,7 +123,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:9pt;color:#000;background:
 .hdr{display:flex;align-items:flex-start;justify-content:space-between;padding:7px 10px 5px;border-bottom:2px solid #000;gap:10px;}
 .hdr-left h1{font-size:15pt;font-weight:900;line-height:1.1;}
 .hdr-left p{font-size:8.5pt;color:#333;margin-top:2px;}
-.logo{border:2px solid #000;padding:4px 7px;text-align:center;min-width:88px;flex-shrink:0;}
+.logo{border:2px solid #000;padding:4px 7px;text-align:center;min-width:88px;flex-shrink:0;display:flex;align-items:center;justify-content:center;}
 .logo-x{font-size:20pt;font-weight:900;line-height:1;}
 .logo-name{font-size:6.5pt;font-weight:700;letter-spacing:.05em;white-space:nowrap;}
 .logo-sub{font-size:5.5pt;color:#555;}
@@ -150,9 +163,7 @@ table.cl tr:last-child{border-bottom:none;}
     <p>Checkliste Gefahrguttransporte</p>
   </div>
   <div class="logo">
-    <div class="logo-x">&#10005;</div>
-    <div class="logo-name">COMET SEASONAL</div>
-    <div class="logo-sub">COMPANY</div>
+    ${logoHtml}
   </div>
 </div>
 
@@ -163,7 +174,7 @@ table.cl tr:last-child{border-bottom:none;}
   </div>
   <div class="meta-r">
     <div class="meta-lbl">Umlagerungsnr. / Ladelistennr.</div>
-    <div class="meta-val">${esc(data.kennzeichen)}</div>
+    <div class="meta-val">${ladelisteVal}</div>
   </div>
 </div>
 

@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { gefahrgutChecklistenTable, shipmentsTable, speditionenTable } from "@workspace/db";
-import { eq, desc, isNotNull, isNull, count } from "drizzle-orm";
+import { gefahrgutChecklistenTable, shipmentsTable, speditionenTable, lkwAustraegeTable } from "@workspace/db";
+import { eq, desc, isNotNull, isNull, count, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { isCometRole } from "../lib/auth";
 import { can } from "../lib/permissions";
@@ -224,7 +224,33 @@ router.get("/gefahrgut-checklisten", requireAuth, async (req, res) => {
         .orderBy(desc(gefahrgutChecklistenTable.eingereichtAt))
         .limit(200);
     }
-    return res.json(rows);
+
+    // Ladelistennummer aus lkw_austraege je Verladung nachschlagen
+    const sids = [...new Set(rows.map((r) => r.shipmentId).filter((id): id is number => id !== null))];
+    const ladelistenMap: Record<number, string | null> = {};
+    if (sids.length > 0) {
+      try {
+        const austraege = await db
+          .select({ shipmentId: lkwAustraegeTable.shipmentId, ladelistennummer: lkwAustraegeTable.ladelistennummer })
+          .from(lkwAustraegeTable)
+          .where(inArray(lkwAustraegeTable.shipmentId, sids))
+          .orderBy(desc(lkwAustraegeTable.id));
+        for (const a of austraege) {
+          if (a.shipmentId !== null && !(a.shipmentId in ladelistenMap)) {
+            ladelistenMap[a.shipmentId] = a.ladelistennummer ?? null;
+          }
+        }
+      } catch {
+        // lkw_austraege nicht verfügbar
+      }
+    }
+
+    const enriched = rows.map((r) => ({
+      ...r,
+      ladelistennummer: r.shipmentId != null ? (ladelistenMap[r.shipmentId] ?? null) : null,
+    }));
+
+    return res.json(enriched);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Serverfehler" });

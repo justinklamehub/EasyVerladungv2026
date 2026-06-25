@@ -143,7 +143,22 @@ function ChecklistDetail({ cl, onClose }: { cl: any; onClose: () => void }) {
           variant="outline"
           size="sm"
           className="w-full gap-2"
-          onClick={() => printGefahrgutCheckliste(cl)}
+          onClick={async () => {
+            let logoUrl: string | null = null;
+            try {
+              const pubRes = await fetch(`${API_BASE}/settings/public`);
+              if (pubRes.ok) {
+                const pub = await pubRes.json();
+                logoUrl = pub["company_logo"] || null;
+              }
+            } catch { /* kein Logo – kein Problem */ }
+            printGefahrgutCheckliste({
+              ...cl,
+              shipmentId: cl.shipmentId ?? cl.shipment_id ?? null,
+              ladelistennummer: cl.ladelistennummer ?? null,
+              logoUrl,
+            });
+          }}
         >
           <Printer className="w-4 h-4" />
           Checkliste drucken / PDF

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, Image, Upload, Trash2 as TrashIcon } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -111,6 +111,94 @@ function SettingField({ settingKey, value, onSave, isSaving }: {
       ) : (
         <Input value={local} onChange={e => setLocal(e.target.value)} placeholder="—" className="text-sm" />
       )}
+    </div>
+  );
+}
+
+// ── LogoUploadField ───────────────────────────────────────────────────────────
+
+function LogoUploadField({ value, onSave, isSaving }: {
+  value: string;
+  onSave: (key: string, val: string) => void;
+  isSaving: boolean;
+}) {
+  const [preview, setPreview] = useState<string>(value);
+  const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => { setPreview(value); }, [value]);
+  const dirty = preview !== value;
+
+  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      alert("Logo darf maximal 2 MB groß sein.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => setPreview(ev.target?.result as string);
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Label className="text-sm font-medium text-slate-700">Firmenlogo</Label>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Wird auf der Gefahrgut-Checkliste (Druckansicht) angezeigt. PNG, JPG oder SVG, max. 2 MB.
+          </p>
+        </div>
+        {dirty && (
+          <Button
+            size="sm"
+            className="h-7 px-3 text-xs shrink-0"
+            onClick={() => onSave("company_logo", preview)}
+            disabled={isSaving}
+          >
+            {isSaving ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+            Speichern
+          </Button>
+        )}
+      </div>
+      <div className="flex items-center gap-3 flex-wrap">
+        <div
+          className="border rounded p-2 bg-slate-50 flex items-center justify-center shrink-0"
+          style={{ minWidth: 120, minHeight: 70 }}
+        >
+          {preview ? (
+            <img src={preview} alt="Logo Vorschau" style={{ maxWidth: 110, maxHeight: 60, objectFit: "contain" }} />
+          ) : (
+            <div className="flex flex-col items-center text-slate-300 gap-1">
+              <Image className="w-6 h-6" />
+              <span className="text-xs">Kein Logo</span>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-col gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-xs gap-1.5"
+            onClick={() => fileRef.current?.click()}
+          >
+            <Upload className="w-3.5 h-3.5" /> Logo hochladen
+          </Button>
+          {preview && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-xs gap-1.5 text-red-500 hover:text-red-600"
+              onClick={() => setPreview("")}
+            >
+              <TrashIcon className="w-3.5 h-3.5" /> Logo entfernen
+            </Button>
+          )}
+        </div>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
     </div>
   );
 }
@@ -447,6 +535,19 @@ export default function SettingsPage() {
               </Card>
             );
           })}
+
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Image className="w-4 h-4 text-primary" />
+                <CardTitle className="text-base">Logo</CardTitle>
+              </div>
+              <CardDescription className="text-xs">Firmenlogo für Druckdokumente (Gefahrgut-Checkliste)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LogoUploadField value={s["company_logo"] ?? ""} onSave={handleSave} isSaving={isSavingKey("company_logo")} />
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* ── Tab: E-Mail-Vorlagen ── */}
