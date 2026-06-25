@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
@@ -45,6 +46,8 @@ import { usePresence, getPageName, ROLE_LABELS, type OnlineUser } from "@/hooks/
 import { useLocation as useWouterLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
+
+const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
 const ROLES_WITH_FULL_ACCESS = ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"];
 const ROLES_WITH_SPEDITION_ACCESS = ["comet_admin", "comet_leitstand"];
@@ -275,6 +278,18 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
   const { notifications, unreadCount, markRead, markAllRead, dismiss, dismissAll } = useNotifications();
   const { onlineUsers } = usePresence(user?.id);
 
+  const { data: pubSettings } = useQuery<Record<string, string>>({
+    queryKey: ["settings-public"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/settings/public`);
+      if (!res.ok) return {};
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const appName = pubSettings?.app_name || "Easy-Verladung";
+
   const logoutMutation = useLogout({
     mutation: {
       onSuccess: () => {
@@ -377,7 +392,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   CO
                 </div>
                 <span className="font-semibold text-slate-100 tracking-tight truncate flex-1 min-w-0">
-                  Easy-Verladung
+                  {appName}
                 </span>
                 <button
                   onClick={onToggle}

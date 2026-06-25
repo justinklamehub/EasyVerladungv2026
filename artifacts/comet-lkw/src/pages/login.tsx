@@ -9,6 +9,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useLogin } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+
+const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
 export default function LoginPage() {
   const [identifier, setIdentifier] = useState("");
@@ -16,6 +19,19 @@ export default function LoginPage() {
   const { refetch } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const { data: pubSettings } = useQuery<Record<string, string>>({
+    queryKey: ["settings-public"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/settings/public`);
+      if (!res.ok) return {};
+      return res.json();
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const appName = pubSettings?.app_name || "Easy-Verladung";
+  const loginSubtitle = pubSettings?.login_subtitle || "LKW-Verladungsverwaltung";
 
   const loginMutation = useLogin({
     mutation: {
@@ -48,10 +64,10 @@ export default function LoginPage() {
             </div>
           </div>
           <CardTitle className="text-2xl font-bold tracking-tight text-slate-900">
-            Easy-Verladung
+            {appName}
           </CardTitle>
           <CardDescription className="text-slate-500">
-            LKW-Verladungsverwaltung
+            {loginSubtitle}
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">

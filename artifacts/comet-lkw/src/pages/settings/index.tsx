@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -89,6 +89,7 @@ function SettingField({ settingKey, value, onSave, isSaving }: {
 }) {
   const meta = SETTING_LABELS[settingKey];
   const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
   const dirty = local !== value;
 
   return (
@@ -118,6 +119,7 @@ function SettingField({ settingKey, value, onSave, isSaving }: {
 
 function EmailFromField({ value, onSave, isSaving }: { value: string; onSave: (k: string, v: string) => void; isSaving: boolean }) {
   const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
   const dirty = local !== value;
   return (
     <div className="space-y-1.5">
@@ -156,6 +158,10 @@ function EmailEventSection({ eventKey, label, description, placeholders, recipie
   const [to, setTo] = useState(settings[toKey] ?? "");
   const [subject, setSubject] = useState(settings[subjectKey] ?? "");
   const [body, setBody] = useState(settings[bodyKey] ?? "");
+
+  useEffect(() => { setTo(settings[toKey] ?? ""); }, [settings[toKey]]);
+  useEffect(() => { setSubject(settings[subjectKey] ?? ""); }, [settings[subjectKey]]);
+  useEffect(() => { setBody(settings[bodyKey] ?? ""); }, [settings[bodyKey]]);
 
   const toDirty = to !== (settings[toKey] ?? "");
   const subjectDirty = subject !== (settings[subjectKey] ?? "");

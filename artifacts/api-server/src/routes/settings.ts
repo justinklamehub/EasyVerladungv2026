@@ -6,6 +6,23 @@ import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
+const PUBLIC_KEYS = ["app_name", "company_name", "login_subtitle"] as const;
+
+router.get("/settings/public", async (_req, res) => {
+  try {
+    const all = await db.select().from(settingsTable);
+    const map: Record<string, string> = {};
+    for (const row of all) {
+      if ((PUBLIC_KEYS as readonly string[]).includes(row.key)) {
+        map[row.key] = row.value;
+      }
+    }
+    return res.json(map);
+  } catch {
+    return res.status(500).json({ error: "Interner Fehler" });
+  }
+});
+
 router.get("/settings", requireAuth, async (req, res) => {
   try {
     const rows = await db.select().from(settingsTable);
