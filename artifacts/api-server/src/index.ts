@@ -5,6 +5,7 @@ import { logger } from "./lib/logger";
 import { seedMissingPermissions } from "./lib/permissions";
 import { seedEmailTemplates, ensureEmailLogTable } from "./lib/email";
 import { ensureTicketsTables } from "./routes/tickets";
+import { ensureUserPreferencesTable } from "./routes/user-preferences";
 import { startScheduler } from "./lib/scheduler";
 
 const rawPort = process.env["PORT"];
@@ -236,6 +237,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("tickets tables ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureTicketsTables failed — non-fatal");
+  }
+  try {
+    await ensureUserPreferencesTable();
+    logger.info("user_preferences table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureUserPreferencesTable failed — non-fatal");
   }
   try {
     await seedMissingPermissions();

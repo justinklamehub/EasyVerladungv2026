@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useListShipments, useListSpeditionen, useUpdateShipment, Shipment } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -79,6 +79,7 @@ const DEFAULT_COLS: Record<ColKey, boolean> = {
 };
 
 const STORAGE_KEY = "shipments_col_vis_v2";
+const SERVER_PREF_KEY = "shipments_col_visibility";
 
 function loadColVisibility(): Record<ColKey, boolean> {
   try {
@@ -88,7 +89,7 @@ function loadColVisibility(): Record<ColKey, boolean> {
   return { ...DEFAULT_COLS };
 }
 
-function saveColVisibility(v: Record<ColKey, boolean>) {
+function saveColVisibilityLocal(v: Record<ColKey, boolean>) {
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch {}
 }
 
@@ -136,18 +137,51 @@ export default function ShipmentsPage() {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [cols, setCols] = useState<Record<ColKey, boolean>>(loadColVisibility);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const API_BASE_FOR_PREFS = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
+
+  const saveColsToServer = useCallback((v: Record<ColKey, boolean>) => {
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      fetch(`${API_BASE_FOR_PREFS}/user-preferences/${SERVER_PREF_KEY}`, {
+        method: "PUT",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ value: v }),
+      }).catch(() => {});
+    }, 600);
+  }, [API_BASE_FOR_PREFS]);
+
+  useEffect(() => {
+    fetch(`${API_BASE_FOR_PREFS}/user-preferences/${SERVER_PREF_KEY}`, {
+      credentials: "include",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.value && typeof data.value === "object") {
+          const merged = { ...DEFAULT_COLS, ...data.value };
+          setCols(merged);
+          saveColVisibilityLocal(merged);
+        }
+      })
+      .catch(() => {});
+  }, [API_BASE_FOR_PREFS]);
 
   function toggleCol(key: ColKey) {
     setCols((prev) => {
       const next = { ...prev, [key]: !prev[key] };
-      saveColVisibility(next);
+      saveColVisibilityLocal(next);
+      saveColsToServer(next);
       return next;
     });
   }
 
   function resetCols() {
-    setCols({ ...DEFAULT_COLS });
-    saveColVisibility({ ...DEFAULT_COLS });
+    const defaults = { ...DEFAULT_COLS };
+    setCols(defaults);
+    saveColVisibilityLocal(defaults);
+    saveColsToServer(defaults);
   }
 
   const visibleColCount = useMemo(
