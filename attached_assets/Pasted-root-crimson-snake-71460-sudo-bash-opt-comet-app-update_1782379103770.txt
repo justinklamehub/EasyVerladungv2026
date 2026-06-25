@@ -1,0 +1,53 @@
+root@crimson-snake-71460:~# sudo bash /opt/comet/app/update.sh
+==> Eigentuemer korrigieren...
+==> Git pull...
+From https://github.com/justinklamehub/Realtime-Sync
+ * branch            main       -> FETCH_HEAD
+Already up to date.
+==> Abhaengigkeiten aktualisieren...
+Scope: all 9 workspace projects
+Already up to date
+
+   ╭─────────────────────────────────────────╮
+   │                                         │
+   │   Update available! 11.7.0 → 11.9.0.    │
+   │   Changelog: https://pnpm.io/v/11.9.0   │
+   │    To update, run: pnpm add -g pnpm     │
+   │                                         │
+   ╰─────────────────────────────────────────╯
+
+Done in 613ms using pnpm v11.7.0
+==> Datenbankschema: neue Tabellen werden automatisch beim Server-Start angelegt...
+==> Backend bauen...
+$ node ./build.mjs
+✘ [ERROR] No matching export in "src/lib/logger.ts" for import "default"
+
+    src/routes/user-preferences.ts:5:7:
+      5 │ import logger from "../lib/logger";
+        ╵        ~~~~~~
+
+1 error
+
+  dist/pino-worker.mjs               153.4kb
+  dist/pino-file.mjs                 142.0kb
+  dist/pino-pretty.mjs               114.6kb
+  dist/thread-stream-worker.mjs        7.3kb
+  dist/pino-worker.mjs.map           256.9kb
+  dist/pino-file.mjs.map             229.0kb
+  dist/pino-pretty.mjs.map           204.0kb
+  dist/thread-stream-worker.mjs.map   12.0kb
+
+⚡ Done in 246ms
+Error: Build failed with 1 error:
+src/routes/user-preferences.ts:5:7: ERROR: No matching export in "src/lib/logger.ts" for import "default"
+    at failureErrorWithLog (/opt/comet/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1467:15)
+    at /opt/comet/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:926:25
+    at /opt/comet/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1345:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  errors: [Getter/Setter],
+  warnings: [Getter/Setter]
+}
+/opt/comet/app/artifacts/api-server:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 build: `node ./build.mjs`
+Exit status 1
+root@crimson-snake-71460:~#

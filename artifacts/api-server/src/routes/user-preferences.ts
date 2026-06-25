@@ -2,7 +2,6 @@ import { Router } from "express";
 import { requireAuth } from "../lib/auth";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
-import logger from "../lib/logger";
 
 const router = Router();
 
@@ -31,7 +30,7 @@ router.get("/user-preferences/:key", requireAuth, async (req, res) => {
     }
     return res.json({ value: (rows.rows[0] as any).value });
   } catch (err) {
-    logger.error({ err }, "GET user-preferences failed");
+    console.error("GET user-preferences failed", err);
     return res.status(500).json({ error: "internal" });
   }
 });
@@ -52,7 +51,7 @@ router.put("/user-preferences/:key", requireAuth, async (req, res) => {
     `);
     return res.json({ ok: true });
   } catch (err) {
-    logger.error({ err }, "PUT user-preferences failed");
+    console.error("PUT user-preferences failed", err);
     return res.status(500).json({ error: "internal" });
   }
 });
