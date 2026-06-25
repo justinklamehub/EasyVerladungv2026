@@ -28,7 +28,7 @@ type SortDir = "asc" | "desc";
 type ColKey =
   | "id" | "kennzeichen" | "spedition" | "subspedition"
   | "art" | "relation" | "bezeichnung"
-  | "eta" | "ata" | "status" | "ware" | "tor"
+  | "eta" | "status" | "ware" | "tor"
   | "gesperrt" | "cometBearbeitet" | "telefon" | "bemerkungen"
   | "createdBy" | "createdAt" | "updatedBy" | "updatedAt";
 
@@ -40,8 +40,7 @@ const COLUMN_DEFS: { key: ColKey; label: string }[] = [
   { key: "art",             label: "Art (LKW-Typ)" },
   { key: "relation",        label: "Relation" },
   { key: "bezeichnung",     label: "Bezeichnung" },
-  { key: "eta",             label: "ETA" },
-  { key: "ata",             label: "ATA" },
+  { key: "eta",             label: "ETA / ATA" },
   { key: "status",          label: "Status" },
   { key: "ware",            label: "Ware" },
   { key: "tor",             label: "Tor" },
@@ -64,7 +63,6 @@ const DEFAULT_COLS: Record<ColKey, boolean> = {
   relation: true,
   bezeichnung: true,
   eta: true,
-  ata: false,
   status: true,
   ware: true,
   tor: true,
@@ -679,8 +677,7 @@ export default function ShipmentsPage() {
                   case "art": return <TableHead key="art">Art</TableHead>;
                   case "relation": return <TableHead key="relation">Relation</TableHead>;
                   case "bezeichnung": return <TableHead key="bezeichnung">Bezeichnung</TableHead>;
-                  case "eta": return <TableHead key="eta" className="cursor-pointer select-none" onClick={() => toggleSort("etaDate")}>ETA <SortIcon field="etaDate" sortField={sortField} sortDir={sortDir} /></TableHead>;
-                  case "ata": return <TableHead key="ata">ATA</TableHead>;
+                  case "eta": return <TableHead key="eta" className="cursor-pointer select-none" onClick={() => toggleSort("etaDate")}>ETA / ATA <SortIcon field="etaDate" sortField={sortField} sortDir={sortDir} /></TableHead>;
                   case "status": return <TableHead key="status" className="cursor-pointer select-none" onClick={() => toggleSort("status")}>Status <SortIcon field="status" sortField={sortField} sortDir={sortDir} /></TableHead>;
                   case "ware": return <TableHead key="ware">Ware</TableHead>;
                   case "tor": return <TableHead key="tor" className="cursor-pointer select-none" onClick={() => toggleSort("tor")}>Tor <SortIcon field="tor" sortField={sortField} sortDir={sortDir} /></TableHead>;
@@ -744,12 +741,11 @@ export default function ShipmentsPage() {
                       case "bezeichnung": return <TableCell key="bezeichnung" className="text-slate-600 text-sm">{shipment.bezeichnung || "-"}</TableCell>;
                       case "eta": return (
                         <TableCell key="eta" className="text-xs">
-                          {shipment.etaDate ? <span className="font-medium text-slate-700">{format(new Date(shipment.etaDate), "dd.MM.yy")}{shipment.etaTime ? ` ${shipment.etaTime}` : ""}</span> : "-"}
-                        </TableCell>
-                      );
-                      case "ata": return (
-                        <TableCell key="ata" className="text-xs">
-                          {s.ataDate ? <span className="font-medium text-green-700">{format(new Date(s.ataDate), "dd.MM.yy")}{s.ataTime ? ` ${s.ataTime}` : ""}</span> : "-"}
+                          <div className="text-slate-600">
+                            {shipment.etaDate ? <div>ETA: <span className="font-medium text-slate-700">{format(new Date(shipment.etaDate), "dd.MM.yy")}{shipment.etaTime ? ` ${shipment.etaTime}` : ""}</span></div> : null}
+                            {s.ataDate ? <div className="text-green-700">ATA: <span className="font-medium">{format(new Date(s.ataDate), "dd.MM.yy")}{s.ataTime ? ` ${s.ataTime}` : ""}</span></div> : null}
+                            {!shipment.etaDate && !s.ataDate ? "-" : null}
+                          </div>
                         </TableCell>
                       );
                       case "status": return (
