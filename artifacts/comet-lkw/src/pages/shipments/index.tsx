@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Search, Loader2, Plus, Lock, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Search, Loader2, Plus, Lock, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ShipmentDrawer } from "./components/shipment-drawer";
 import { BulkCreateDialog } from "./components/bulk-create-dialog";
@@ -23,6 +24,48 @@ const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 
 type SortField = "kennzeichen" | "etaDate" | "status" | "tor" | "speditionName";
 type SortDir = "asc" | "desc";
+
+type ColKey = "id" | "kennzeichen" | "spedition" | "art" | "relation" | "bezeichnung" | "eta" | "status" | "ware" | "tor";
+
+const COLUMN_DEFS: { key: ColKey; label: string }[] = [
+  { key: "id",          label: "ID" },
+  { key: "kennzeichen", label: "Kennzeichen" },
+  { key: "spedition",   label: "Spedition" },
+  { key: "art",         label: "Art (LKW-Typ)" },
+  { key: "relation",    label: "Relation" },
+  { key: "bezeichnung", label: "Bezeichnung" },
+  { key: "eta",         label: "ETA / ATA" },
+  { key: "status",      label: "Status" },
+  { key: "ware",        label: "Ware" },
+  { key: "tor",         label: "Tor" },
+];
+
+const DEFAULT_COLS: Record<ColKey, boolean> = {
+  id: true,
+  kennzeichen: true,
+  spedition: true,
+  art: true,
+  relation: true,
+  bezeichnung: true,
+  eta: true,
+  status: true,
+  ware: true,
+  tor: true,
+};
+
+const STORAGE_KEY = "shipments_col_vis_v1";
+
+function loadColVisibility(): Record<ColKey, boolean> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return { ...DEFAULT_COLS, ...JSON.parse(raw) };
+  } catch {}
+  return { ...DEFAULT_COLS };
+}
+
+function saveColVisibility(v: Record<ColKey, boolean>) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(v)); } catch {}
+}
 
 function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: SortDir }) {
   if (sortField !== field) return <ChevronsUpDown className="w-3 h-3 ml-1 text-slate-400 inline" />;
@@ -67,6 +110,33 @@ export default function ShipmentsPage() {
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [cols, setCols] = useState<Record<ColKey, boolean>>(loadColVisibility);
+
+  function toggleCol(key: ColKey) {
+    setCols((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      saveColVisibility(next);
+      return next;
+    });
+  }
+
+  function resetCols() {
+    setCols({ ...DEFAULT_COLS });
+    saveColVisibility({ ...DEFAULT_COLS });
+  }
+
+  const visibleColCount = useMemo(
+    () => COLUMN_DEFS.filter((c) => cols[c.key]).length,
+    [cols]
+  );
+
+  const colSpan = useMemo(() => {
+    let n = visibleColCount + 1; // +1 for actions column
+    if (!isViewer && isCometUser) n += 1; // +1 for checkbox column
+    return n;
+  }, [visibleColCount, isViewer, isCometUser]);
+
+  const hiddenCount = COLUMN_DEFS.filter((c) => !cols[c.key]).length;
 
   const queryParams = {
     search: search.length > 2 ? search : undefined,
@@ -128,7 +198,7 @@ export default function ShipmentsPage() {
       const cmp = av.localeCompare(bv, "de");
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [shipments, sortField, sortDir]);
+  }, [shipments, sortField, sortDir, showAbgefertigt, showStorniert, filterStatus]);
 
   function toggleRow(id: number) {
     setSelectedIds((prev) => {
@@ -342,6 +412,52 @@ export default function ShipmentsPage() {
               </SelectContent>
             </Select>
           )}
+
+          {/* Column visibility picker */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto">
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                Spalten
+                {hiddenCount > 0 && (
+                  <span className="bg-primary text-primary-foreground text-[10px] leading-none px-1.5 py-0.5 rounded-full">
+                    {hiddenCount} aus
+                  </span>
+                )}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-56 p-3">
+              <div className="flex items-center justify-between mb-3 pb-2 border-b">
+                <span className="text-sm font-semibold text-slate-700">Sichtbare Spalten</span>
+                {hiddenCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs text-slate-500 gap-1"
+                    onClick={resetCols}
+                  >
+                    <RotateCcw className="w-3 h-3" />
+                    Alle
+                  </Button>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                {COLUMN_DEFS.map(({ key, label }) => (
+                  <label
+                    key={key}
+                    className="flex items-center gap-2.5 px-1 py-1 rounded cursor-pointer hover:bg-slate-50 select-none"
+                  >
+                    <Checkbox
+                      checked={cols[key]}
+                      onCheckedChange={() => toggleCol(key)}
+                      className="shrink-0"
+                    />
+                    <span className="text-sm text-slate-700">{label}</span>
+                  </label>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
@@ -437,39 +553,51 @@ export default function ShipmentsPage() {
                   />
                 </TableHead>
               )}
-              <TableHead className="w-[60px] text-slate-400 font-normal text-xs">ID</TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("kennzeichen")}>
-                Kennzeichen <SortIcon field="kennzeichen" sortField={sortField} sortDir={sortDir} />
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("speditionName")}>
-                Spedition <SortIcon field="speditionName" sortField={sortField} sortDir={sortDir} />
-              </TableHead>
-              <TableHead>Art</TableHead>
-              <TableHead>Relation</TableHead>
-              <TableHead>Bezeichnung</TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("etaDate")}>
-                ETA / ATA <SortIcon field="etaDate" sortField={sortField} sortDir={sortDir} />
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("status")}>
-                Status <SortIcon field="status" sortField={sortField} sortDir={sortDir} />
-              </TableHead>
-              <TableHead>Ware</TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("tor")}>
-                Tor <SortIcon field="tor" sortField={sortField} sortDir={sortDir} />
-              </TableHead>
+              {cols.id && (
+                <TableHead className="w-[60px] text-slate-400 font-normal text-xs">ID</TableHead>
+              )}
+              {cols.kennzeichen && (
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("kennzeichen")}>
+                  Kennzeichen <SortIcon field="kennzeichen" sortField={sortField} sortDir={sortDir} />
+                </TableHead>
+              )}
+              {cols.spedition && (
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("speditionName")}>
+                  Spedition <SortIcon field="speditionName" sortField={sortField} sortDir={sortDir} />
+                </TableHead>
+              )}
+              {cols.art && <TableHead>Art</TableHead>}
+              {cols.relation && <TableHead>Relation</TableHead>}
+              {cols.bezeichnung && <TableHead>Bezeichnung</TableHead>}
+              {cols.eta && (
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("etaDate")}>
+                  ETA / ATA <SortIcon field="etaDate" sortField={sortField} sortDir={sortDir} />
+                </TableHead>
+              )}
+              {cols.status && (
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("status")}>
+                  Status <SortIcon field="status" sortField={sortField} sortDir={sortDir} />
+                </TableHead>
+              )}
+              {cols.ware && <TableHead>Ware</TableHead>}
+              {cols.tor && (
+                <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("tor")}>
+                  Tor <SortIcon field="tor" sortField={sortField} sortDir={sortDir} />
+                </TableHead>
+              )}
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={!isViewer && isCometUser ? 10 : 9} className="text-center py-8">
+                <TableCell colSpan={colSpan} className="text-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                 </TableCell>
               </TableRow>
             ) : sorted.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={!isViewer && isCometUser ? 10 : 9} className="text-center py-8 text-slate-500">
+                <TableCell colSpan={colSpan} className="text-center py-8 text-slate-500">
                   Keine Verladungen gefunden.
                 </TableCell>
               </TableRow>
@@ -494,47 +622,67 @@ export default function ShipmentsPage() {
                       />
                     </TableCell>
                   )}
-                  <TableCell className="text-xs text-slate-400 font-mono">{shipment.id}</TableCell>
-                  <TableCell className="font-medium">{shipment.kennzeichen || "-"}</TableCell>
-                  <TableCell>{shipment.speditionName || "-"}</TableCell>
-                  <TableCell>{shipment.lkwArt || "-"}</TableCell>
-                  <TableCell className="text-slate-600 text-sm">{shipment.relation || "-"}</TableCell>
-                  <TableCell className="text-slate-600 text-sm">{shipment.bezeichnung || "-"}</TableCell>
-                  <TableCell>
-                    <div className="text-xs">
-                      {shipment.etaDate && shipment.etaTime ? (
-                        <div className="text-slate-600">
-                          ETA: <span className="font-medium">{format(new Date(shipment.etaDate), "dd.MM.yy")} {shipment.etaTime}</span>
-                        </div>
-                      ) : null}
-                      {shipment.ataDate && shipment.ataTime ? (
-                        <div className="text-green-700">
-                          ATA: <span className="font-medium">{format(new Date(shipment.ataDate), "dd.MM.yy")} {shipment.ataTime}</span>
-                        </div>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className={STATUS_COLOR[shipment.status] ?? "bg-slate-100 text-slate-700"}>
-                      {shipment.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    {(() => {
-                      const ws = (shipment as any).wareStatus || "nicht bereit";
-                      const cls = ws === "vorbereitet" ? "bg-green-100 text-green-700 border-green-200"
-                        : ws === "in bearbeitung" ? "bg-amber-100 text-amber-700 border-amber-200"
-                        : ws === "ausgedruckt" ? "bg-blue-100 text-blue-700 border-blue-200"
-                        : "bg-red-100 text-red-700 border-red-200";
-                      const label = ws === "nicht bereit" ? "Nicht bereit"
-                        : ws === "ausgedruckt" ? "Ausgedruckt"
-                        : ws === "in bearbeitung" ? "In Bearbeitung"
-                        : ws === "vorbereitet" ? "Vorbereitet"
-                        : ws;
-                      return <Badge variant="outline" className={`text-xs ${cls}`}>{label}</Badge>;
-                    })()}
-                  </TableCell>
-                  <TableCell className="font-medium">{shipment.tor || "-"}</TableCell>
+                  {cols.id && (
+                    <TableCell className="text-xs text-slate-400 font-mono">{shipment.id}</TableCell>
+                  )}
+                  {cols.kennzeichen && (
+                    <TableCell className="font-medium">{shipment.kennzeichen || "-"}</TableCell>
+                  )}
+                  {cols.spedition && (
+                    <TableCell>{shipment.speditionName || "-"}</TableCell>
+                  )}
+                  {cols.art && (
+                    <TableCell>{shipment.lkwArt || "-"}</TableCell>
+                  )}
+                  {cols.relation && (
+                    <TableCell className="text-slate-600 text-sm">{shipment.relation || "-"}</TableCell>
+                  )}
+                  {cols.bezeichnung && (
+                    <TableCell className="text-slate-600 text-sm">{shipment.bezeichnung || "-"}</TableCell>
+                  )}
+                  {cols.eta && (
+                    <TableCell>
+                      <div className="text-xs">
+                        {shipment.etaDate && shipment.etaTime ? (
+                          <div className="text-slate-600">
+                            ETA: <span className="font-medium">{format(new Date(shipment.etaDate), "dd.MM.yy")} {shipment.etaTime}</span>
+                          </div>
+                        ) : null}
+                        {shipment.ataDate && shipment.ataTime ? (
+                          <div className="text-green-700">
+                            ATA: <span className="font-medium">{format(new Date(shipment.ataDate), "dd.MM.yy")} {shipment.ataTime}</span>
+                          </div>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  )}
+                  {cols.status && (
+                    <TableCell>
+                      <Badge variant="outline" className={STATUS_COLOR[shipment.status] ?? "bg-slate-100 text-slate-700"}>
+                        {shipment.status}
+                      </Badge>
+                    </TableCell>
+                  )}
+                  {cols.ware && (
+                    <TableCell>
+                      {(() => {
+                        const ws = (shipment as any).wareStatus || "nicht bereit";
+                        const cls = ws === "vorbereitet" ? "bg-green-100 text-green-700 border-green-200"
+                          : ws === "in bearbeitung" ? "bg-amber-100 text-amber-700 border-amber-200"
+                          : ws === "ausgedruckt" ? "bg-blue-100 text-blue-700 border-blue-200"
+                          : "bg-red-100 text-red-700 border-red-200";
+                        const label = ws === "nicht bereit" ? "Nicht bereit"
+                          : ws === "ausgedruckt" ? "Ausgedruckt"
+                          : ws === "in bearbeitung" ? "In Bearbeitung"
+                          : ws === "vorbereitet" ? "Vorbereitet"
+                          : ws;
+                        return <Badge variant="outline" className={`text-xs ${cls}`}>{label}</Badge>;
+                      })()}
+                    </TableCell>
+                  )}
+                  {cols.tor && (
+                    <TableCell className="font-medium">{shipment.tor || "-"}</TableCell>
+                  )}
                   <TableCell>
                     <div className="flex items-center gap-1.5">
                       {isCometUser && gefahrgutSet.has(shipment.id) && (
