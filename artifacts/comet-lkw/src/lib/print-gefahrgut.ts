@@ -221,12 +221,12 @@ ${rows}
   <div class="pal-title">Europaletten</div>
   <div class="pal-grid">
     <div>
-      <div><strong>Angeliefert:</strong> ${vonEuro} Paletten</div>
+      <div><strong>Verladen (Von COMET):</strong> ${vonEuro} Paletten</div>
       <div class="pal-sub">davon defekt: ${vonDef} Paletten</div>
       <div class="pal-sub">LS: ${vonLasich} Paletten</div>
     </div>
     <div>
-      <div><strong>Verladen:</strong> ${anEuro} Paletten</div>
+      <div><strong>Angeliefert (An COMET):</strong> ${anEuro} Paletten</div>
       <div class="pal-sub">davon defekt: ${anDef} Paletten</div>
       <div class="pal-sub">LS: ${anLasich} Paletten</div>
     </div>
