@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { requireAuth } from "../lib/auth";
-import { db } from "../lib/db";
+import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 import logger from "../lib/logger";
 

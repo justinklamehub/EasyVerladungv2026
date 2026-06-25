@@ -1,0 +1,59 @@
+└────┴──────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+root@crimson-snake-71460:~# sudo bash /opt/comet/app/update.sh
+==> Eigentuemer korrigieren...
+==> Git pull...
+remote: Enumerating objects: 54, done.
+remote: Counting objects: 100% (54/54), done.
+remote: Compressing objects: 100% (16/16), done.
+remote: Total 40 (delta 29), reused 35 (delta 24), pack-reused 0 (from 0)
+Unpacking objects: 100% (40/40), 67.44 KiB | 2.41 MiB/s, done.
+From https://github.com/justinklamehub/Realtime-Sync
+ * branch            main       -> FETCH_HEAD
+   2b7e464..0dae808  main       -> origin/main
+Updating 2b7e464..0dae808
+Fast-forward
+ artifacts/api-server/src/index.ts                   |  14 ++++++
+ artifacts/api-server/src/routes/index.ts            |   2 +
+ artifacts/api-server/src/routes/tickets.ts          |  29 ++++++++++-
+ artifacts/api-server/src/routes/user-preferences.ts |  60 +++++++++++++++++++++++
+ artifacts/comet-lkw/src/pages/shipments/index.tsx   | 396 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++--------------------------
+ attached_assets/image_1782378171669.png             | Bin 0 -> 69997 bytes
+ 6 files changed, 433 insertions(+), 68 deletions(-)
+ create mode 100644 artifacts/api-server/src/routes/user-preferences.ts
+ create mode 100644 attached_assets/image_1782378171669.png
+==> Abhaengigkeiten aktualisieren...
+Scope: all 9 workspace projects
+Already up to date
+
+   ╭─────────────────────────────────────────╮
+   │                                         │
+   │   Update available! 11.7.0 → 11.9.0.    │
+   │   Changelog: https://pnpm.io/v/11.9.0   │
+   │    To update, run: pnpm add -g pnpm     │
+   │                                         │
+   ╰─────────────────────────────────────────╯
+
+Done in 573ms using pnpm v11.7.0
+==> Datenbankschema: neue Tabellen werden automatisch beim Server-Start angelegt...
+==> Backend bauen...
+$ node ./build.mjs
+✘ [ERROR] Could not resolve "../lib/db"
+
+    src/routes/user-preferences.ts:3:19:
+      3 │ import { db } from "../lib/db";
+        ╵                    ~~~~~~~~~~~
+
+1 error
+Error: Build failed with 1 error:
+src/routes/user-preferences.ts:3:19: ERROR: Could not resolve "../lib/db"
+    at failureErrorWithLog (/opt/comet/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1467:15)
+    at /opt/comet/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:926:25
+    at /opt/comet/app/node_modules/.pnpm/esbuild@0.27.3/node_modules/esbuild/lib/main.js:1345:9
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  errors: [Getter/Setter],
+  warnings: [Getter/Setter]
+}
+/opt/comet/app/artifacts/api-server:
+[ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL] @workspace/api-server@0.0.0 build: `node ./build.mjs`
+Exit status 1
+root@crimson-snake-71460:~#
