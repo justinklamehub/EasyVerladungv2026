@@ -144,18 +144,18 @@ export default function TicketsPage() {
 
   const { data: tickets = [], isLoading, refetch } = useQuery<TicketRow[]>({
     queryKey: ["tickets", activeStatus, filterCategory, filterPriority],
-    queryFn: () => customFetch(`/api/tickets?${params}`).then((r) => r.json()),
+    queryFn: () => customFetch<TicketRow[]>(`/api/tickets?${params}`),
   });
 
   const { data: detail, refetch: refetchDetail } = useQuery<TicketDetail>({
     queryKey: ["ticket", selectedTicket?.id],
-    queryFn: () => customFetch(`/api/tickets/${selectedTicket!.id}`).then((r) => r.json()),
+    queryFn: () => customFetch<TicketDetail>(`/api/tickets/${selectedTicket!.id}`),
     enabled: !!selectedTicket,
   });
 
   const createMutation = useMutation({
     mutationFn: (data: typeof newTicket) =>
-      customFetch("/api/tickets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then((r) => r.json()),
+      customFetch<TicketRow>("/api/tickets", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tickets"] });
       setShowCreate(false);
@@ -167,7 +167,7 @@ export default function TicketsPage() {
 
   const patchMutation = useMutation({
     mutationFn: ({ id, ...data }: { id: number; [k: string]: any }) =>
-      customFetch(`/api/tickets/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }).then((r) => r.json()),
+      customFetch<TicketRow>(`/api/tickets/${id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tickets"] });
       refetchDetail();
@@ -178,7 +178,7 @@ export default function TicketsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) =>
-      customFetch(`/api/tickets/${id}`, { method: "DELETE" }).then((r) => r.json()),
+      customFetch<{ ok: boolean }>(`/api/tickets/${id}`, { method: "DELETE" }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["tickets"] });
       setSelectedTicket(null);
@@ -189,7 +189,7 @@ export default function TicketsPage() {
 
   const commentMutation = useMutation({
     mutationFn: ({ ticketId, body }: { ticketId: number; body: string }) =>
-      customFetch(`/api/tickets/${ticketId}/comments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body }) }).then((r) => r.json()),
+      customFetch<Comment>(`/api/tickets/${ticketId}/comments`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ body }) }),
     onSuccess: () => {
       setCommentBody("");
       refetchDetail();
@@ -200,7 +200,7 @@ export default function TicketsPage() {
 
   const deleteCommentMutation = useMutation({
     mutationFn: ({ ticketId, commentId }: { ticketId: number; commentId: number }) =>
-      customFetch(`/api/tickets/${ticketId}/comments/${commentId}`, { method: "DELETE" }).then((r) => r.json()),
+      customFetch<{ ok: boolean }>(`/api/tickets/${ticketId}/comments/${commentId}`, { method: "DELETE" }),
     onSuccess: () => refetchDetail(),
   });
 
