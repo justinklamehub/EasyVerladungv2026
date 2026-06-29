@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, Image, Upload, Trash2 as TrashIcon } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, Image, Upload, Trash2 as TrashIcon, PanelLeft } from "lucide-react";
+import { SidebarNavConfig } from "./sidebar-nav-config";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -500,9 +501,12 @@ export default function SettingsPage() {
       </div>
 
       <Tabs defaultValue="allgemein" className="space-y-5">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="allgemein" className="flex items-center gap-1.5 text-xs">
             <Settings className="w-3.5 h-3.5" /> Allgemein
+          </TabsTrigger>
+          <TabsTrigger value="sidebar" className="flex items-center gap-1.5 text-xs">
+            <PanelLeft className="w-3.5 h-3.5" /> Sidebar
           </TabsTrigger>
           <TabsTrigger value="email" className="flex items-center gap-1.5 text-xs">
             <Mail className="w-3.5 h-3.5" /> E-Mail-Vorlagen
@@ -549,6 +553,11 @@ export default function SettingsPage() {
               <LogoUploadField value={s["company_logo"] ?? ""} onSave={handleSave} isSaving={isSavingKey("company_logo")} />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* ── Tab: Sidebar ── */}
+        <TabsContent value="sidebar" className="mt-0">
+          <SidebarNavConfig savedConfig={s["sidebar_nav_config"] ?? ""} />
         </TabsContent>
 
         {/* ── Tab: E-Mail-Vorlagen ── */}

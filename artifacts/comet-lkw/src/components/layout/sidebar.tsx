@@ -35,7 +35,9 @@ import {
   HelpCircle,
   TicketIcon,
   LayoutGrid,
+  type LucideProps,
 } from "lucide-react";
+import { NAV_ICONS } from "@/lib/nav-icons";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -308,7 +310,12 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
   const canManageSpeditionen = ROLES_WITH_SPEDITION_ACCESS.includes(user.role);
   const canManageUsers = isCometUser ? canManageSpeditionen : user.role === "speditions_admin";
 
-  const navigation = [
+  const navigation: {
+    name: string;
+    href: string;
+    icon: React.ComponentType<LucideProps>;
+    show: boolean;
+  }[] = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, show: true },
     { name: "Verladungen", href: "/shipments", icon: Truck, show: true },
     { name: "Kanban-Board", href: "/shipments/kanban", icon: LayoutGrid, show: ["comet_admin", "comet_leitstand", "comet_lager"].includes(user.role) },
@@ -326,6 +333,30 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     { name: "Tickets", href: "/tickets", icon: TicketIcon, show: true },
     { name: "Hilfe & Anleitung", href: "/hilfe", icon: HelpCircle, show: true },
   ];
+
+  // Apply sidebar_nav_config customizations (label, icon, color, order)
+  const navConfigRaw = pubSettings?.sidebar_nav_config;
+  const navOverrides: Array<{ href: string; label?: string; color?: string; iconName?: string }> = (() => {
+    try { return navConfigRaw ? JSON.parse(navConfigRaw) : []; }
+    catch { return []; }
+  })();
+  const overrideMap = new Map(navOverrides.map((o, idx) => [o.href, { ...o, order: idx }]));
+
+  const customizedNavigation = navigation
+    .filter((item) => item.show)
+    .map((item, defaultIdx) => {
+      const cfg = overrideMap.get(item.href);
+      const NavIcon: React.ComponentType<LucideProps> =
+        cfg?.iconName && NAV_ICONS[cfg.iconName] ? NAV_ICONS[cfg.iconName]! : item.icon;
+      return {
+        ...item,
+        name: cfg?.label || item.name,
+        NavIcon,
+        activeColor: cfg?.color ?? null,
+        order: cfg !== undefined ? cfg.order : 99999 + defaultIdx,
+      };
+    })
+    .sort((a, b) => a.order - b.order);
 
   const initials = user.username.substring(0, 2).toUpperCase();
 
@@ -414,7 +445,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
           {/* Navigation */}
           <div className="flex-1 overflow-y-auto py-2">
             <nav className={cn("space-y-0.5", collapsed ? "px-1.5" : "px-3")}>
-              {navigation.filter((item) => item.show).map((item) => {
+              {customizedNavigation.map((item) => {
                 const isActive =
                   location === item.href ||
                   (item.href !== "/dashboard" &&
@@ -423,20 +454,25 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   (item.href === "/shipments" &&
                     (location === "/shipments" || location.startsWith("/shipments/")));
 
+                const hasCustomColor = isActive && !!item.activeColor;
+
                 const linkEl = (
                   <Link
-                    key={item.name}
+                    key={item.href}
                     href={item.href}
                     data-tour={item.href === "/hilfe" ? "help-link" : undefined}
                     className={cn(
                       "flex items-center rounded-md text-sm font-medium transition-all duration-150",
                       collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2.5",
                       isActive
-                        ? "bg-primary text-white shadow-sm dark:bg-white/15 dark:text-white dark:shadow-none"
+                        ? hasCustomColor
+                          ? "text-white shadow-sm"
+                          : "bg-primary text-white shadow-sm dark:bg-white/15 dark:text-white dark:shadow-none"
                         : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
                     )}
+                    style={hasCustomColor ? { backgroundColor: item.activeColor! } : undefined}
                   >
-                    <item.icon
+                    <item.NavIcon
                       className={cn(
                         "shrink-0",
                         collapsed ? "w-5 h-5" : "w-4 h-4",
@@ -448,7 +484,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                 );
 
                 return collapsed ? (
-                  <Tooltip key={item.name}>
+                  <Tooltip key={item.href}>
                     <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
                     <TooltipContent side="right" className="text-xs">
                       {item.name}
