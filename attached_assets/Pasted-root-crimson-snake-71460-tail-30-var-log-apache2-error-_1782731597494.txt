@@ -1,0 +1,60 @@
+root@crimson-snake-71460:~# tail -30 /var/log/apache2/error.log
+[Mon Jun 29 13:12:45.178302 2026] [proxy_http:error] [pid 33554:tid 33554] [client 49.217.141.207:43440] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:47.406214 2026] [proxy:error] [pid 33558:tid 33558] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:47.406341 2026] [proxy_http:error] [pid 33558:tid 33558] [client 49.217.141.207:44210] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:49.673223 2026] [proxy:error] [pid 33555:tid 33555] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:49.673376 2026] [proxy_http:error] [pid 33555:tid 33555] [client 49.217.141.207:43823] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:51.795649 2026] [proxy:error] [pid 33553:tid 33553] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:51.795764 2026] [proxy_http:error] [pid 33553:tid 33553] [client 49.217.141.207:43503] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:53.019208 2026] [proxy:error] [pid 33570:tid 33570] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:53.019340 2026] [proxy_http:error] [pid 33570:tid 33570] [client 182.62.149.79:8681] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:54.173777 2026] [proxy:error] [pid 33567:tid 33567] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:54.173894 2026] [proxy_http:error] [pid 33567:tid 33567] [client 49.217.141.207:43839] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:56.419719 2026] [proxy:error] [pid 33557:tid 33557] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:56.419897 2026] [proxy_http:error] [pid 33557:tid 33557] [client 49.217.141.207:44348] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:57.913923 2026] [proxy:error] [pid 33556:tid 33556] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:57.914040 2026] [proxy_http:error] [pid 33556:tid 33556] [client 159.223.132.86:34462] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:58.715301 2026] [proxy:error] [pid 33553:tid 33553] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:58.715417 2026] [proxy_http:error] [pid 33553:tid 33553] [client 49.217.141.207:43706] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:58.720396 2026] [proxy:error] [pid 33555:tid 33555] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:58.720550 2026] [proxy_http:error] [pid 33555:tid 33555] [client 165.227.39.235:36628] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:58.815523 2026] [proxy:error] [pid 33556:tid 33556] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:58.815634 2026] [proxy_http:error] [pid 33556:tid 33556] [client 159.223.132.86:34470] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:59.009257 2026] [proxy:error] [pid 33567:tid 33567] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:59.009365 2026] [proxy_http:error] [pid 33567:tid 33567] [client 113.22.97.71:48876] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:59.212423 2026] [proxy:error] [pid 33570:tid 33570] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:59.212543 2026] [proxy_http:error] [pid 33570:tid 33570] [client 165.227.39.235:36644] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:12:59.814380 2026] [proxy:error] [pid 33555:tid 33555] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:12:59.814492 2026] [proxy_http:error] [pid 33555:tid 33555] [client 159.223.132.86:34476] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:13:00.215606 2026] [proxy:error] [pid 33601:tid 33601] (111)Connection refused: AH00957: http: attempt to connect to 127.0.0.1:18454 (127.0.0.1:18454) failed
+[Mon Jun 29 13:13:00.215772 2026] [proxy_http:error] [pid 33601:tid 33601] [client 165.227.39.235:36654] AH01114: HTTP: failed to make connection to backend: 127.0.0.1
+[Mon Jun 29 13:13:00.793144 2026] [authz_core:error] [pid 33567:tid 33567] [client 159.223.132.86:34486] AH01630: client denied by server configuration: proxy:http://127.0.0.1:18454/server-status
+root@crimson-snake-71460:~# ss -tlnp | grep -E "18454|8080"
+root@crimson-snake-71460:~# cat /etc/apache2/sites-enabled/easyverladung-le-ssl.conf
+<IfModule mod_ssl.c>
+<VirtualHost *:443>
+    ServerName easyverladung.de
+    ServerAlias www.easyverladung.de
+
+    # WebSocket-Support (für Socket.IO)
+    RewriteEngine On
+    RewriteCond %{HTTP:Upgrade} websocket [NC]
+    RewriteCond %{HTTP:Connection} upgrade [NC]
+    RewriteRule ^/?(.*) ws://127.0.0.1:18454/$1 [P,L]
+
+    # API
+    ProxyPass /api/ http://127.0.0.1:8080/api/
+    ProxyPassReverse /api/ http://127.0.0.1:8080/api/
+
+    # Frontend (React-App)
+    ProxyPass / http://127.0.0.1:18454/
+    ProxyPassReverse / http://127.0.0.1:18454/
+
+    ProxyPreserveHost On
+
+Include /etc/letsencrypt/options-ssl-apache.conf
+SSLCertificateFile /etc/letsencrypt/live/easyverladung.de/fullchain.pem
+SSLCertificateKeyFile /etc/letsencrypt/live/easyverladung.de/privkey.pem
+</VirtualHost>
+</IfModule>
+root@crimson-snake-71460:~#
