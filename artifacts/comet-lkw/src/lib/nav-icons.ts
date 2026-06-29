@@ -1,7 +1,7 @@
 import type { LucideProps } from "lucide-react";
 import {
   Activity, AlertTriangle, Archive, BarChart, BarChart2, Bell, Bookmark,
-  Box, Boxes, Building2, Calendar, CalendarCheck, CalendarDays, Car,
+  Box, Boxes, Building2, Calculator, Calendar, CalendarCheck, CalendarDays, Car,
   CheckCircle2, ClipboardCheck, ClipboardList, Clock, Clock3, Database,
   Eye, FileCheck2, FileText, Flag, Folder, Gauge, Globe, HelpCircle,
   History, Home, Info, Layers, LayoutDashboard, LayoutGrid, List, Lock,
@@ -25,6 +25,7 @@ export const NAV_ICONS: Record<string, React.ComponentType<LucideProps>> = {
   Box,
   Boxes,
   Building2,
+  Calculator,
   Calendar,
   CalendarCheck,
   CalendarDays,

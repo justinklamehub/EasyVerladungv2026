@@ -47,6 +47,7 @@ const DEFAULT_NAV_ITEMS: { href: string; defaultLabel: string; defaultIconName: 
   { href: "/users", defaultLabel: "Benutzer", defaultIconName: "Users" },
   { href: "/paletten", defaultLabel: "Palettenkonto", defaultIconName: "PackageSearch" },
   { href: "/abstimmungen", defaultLabel: "Abstimmungen", defaultIconName: "FileCheck2" },
+  { href: "/kalkulation", defaultLabel: "Kalkulation", defaultIconName: "Calculator" },
   { href: "/gefahrgut", defaultLabel: "Gefahrgut", defaultIconName: "ShieldAlert" },
   { href: "/auswertung", defaultLabel: "Auswertung", defaultIconName: "BarChart2" },
   { href: "/auditlog", defaultLabel: "Änderungslog", defaultIconName: "History" },
