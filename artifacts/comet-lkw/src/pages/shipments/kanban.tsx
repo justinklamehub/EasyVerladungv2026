@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Lock, ShieldOff, Search, X } from "lucide-react";
+import { Loader2, Lock, ShieldOff, Search, X, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import {
@@ -39,50 +39,73 @@ const STATUS_COLORS: Record<KanbanStatus, { column: string; header: string }> = 
   Verladen:       { column: "bg-green-50 border-green-200",   header: "bg-green-50 border-b border-green-200 text-green-800" },
 };
 
-const WARE_STATUS_CYCLE: Record<string, string> = {
-  "nicht bereit": "vorbereitet",
-  vorbereitet:    "ausgedruckt",
-  ausgedruckt:    "nicht bereit",
-};
+const WARE_STATUS_OPTIONS = [
+  { value: "__none__",       label: "—" },
+  { value: "nicht bereit",   label: "Nicht bereit" },
+  { value: "ausgedruckt",    label: "Ausgedruckt" },
+  { value: "in bearbeitung", label: "In Bearbeitung" },
+  { value: "vorbereitet",    label: "Vorbereitet" },
+] as const;
 
 const WARE_STATUS_COLORS: Record<string, string> = {
-  "nicht bereit": "bg-red-100 text-red-700 border-red-200",
-  vorbereitet:    "bg-amber-100 text-amber-700 border-amber-200",
-  ausgedruckt:    "bg-green-100 text-green-700 border-green-200",
+  "nicht bereit":   "bg-red-100 text-red-700 border-red-200",
+  vorbereitet:      "bg-amber-100 text-amber-700 border-amber-200",
+  ausgedruckt:      "bg-green-100 text-green-700 border-green-200",
+  "in bearbeitung": "bg-blue-100 text-blue-700 border-blue-200",
 };
 
 const WARE_STATUS_LABELS: Record<string, string> = {
-  "nicht bereit": "Nicht bereit",
-  vorbereitet:    "Vorbereitet",
-  ausgedruckt:    "Ausgedruckt",
+  "nicht bereit":   "Nicht bereit",
+  vorbereitet:      "Vorbereitet",
+  ausgedruckt:      "Ausgedruckt",
+  "in bearbeitung": "In Bearbeitung",
 };
 
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
 const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 
-function WareStatusBadge({
+function WareStatusSelect({
   wareStatus,
   canEdit,
-  onCycle,
+  onChange,
 }: {
   wareStatus: string | null;
   canEdit: boolean;
-  onCycle: () => void;
+  onChange: (value: string | null) => void;
 }) {
-  const ws = wareStatus || "nicht bereit";
-  const cls = WARE_STATUS_COLORS[ws] ?? "bg-slate-100 text-slate-600 border-slate-200";
+  const ws = wareStatus || "";
+  const cls = WARE_STATUS_COLORS[ws] ?? "bg-slate-100 text-slate-500 border-slate-200";
+  const label = WARE_STATUS_LABELS[ws] ?? "—";
+
+  if (!canEdit) {
+    return (
+      <span className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${ws ? cls : "bg-slate-100 text-slate-400 border-slate-200"}`}>
+        {label}
+      </span>
+    );
+  }
+
   return (
-    <span
-      className={`inline-flex items-center rounded border px-1.5 py-0.5 text-[10px] font-medium ${cls} ${canEdit ? "cursor-pointer select-none hover:opacity-80" : "cursor-default"}`}
-      title={canEdit ? "Klicken zum Wechseln" : undefined}
-      onClick={(e) => {
-        if (!canEdit) return;
-        e.stopPropagation();
-        onCycle();
-      }}
+    <Select
+      value={ws || "__none__"}
+      onValueChange={(v) => onChange(v === "__none__" ? null : v)}
     >
-      {WARE_STATUS_LABELS[ws] ?? ws}
-    </span>
+      <SelectTrigger
+        className={`h-auto px-1.5 py-0.5 text-[10px] font-medium rounded border gap-1 shadow-none focus:ring-0 focus:ring-offset-0 ${ws ? cls : "bg-slate-100 text-slate-500 border-slate-200"}`}
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        <SelectValue>{label}</SelectValue>
+        <ChevronDown className="w-2.5 h-2.5 opacity-60 shrink-0" />
+      </SelectTrigger>
+      <SelectContent>
+        {WARE_STATUS_OPTIONS.map((opt) => (
+          <SelectItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
   );
 }
 
@@ -90,12 +113,12 @@ function ShipmentCard({
   shipment,
   canDrag,
   canEditWare,
-  onWareStatusCycle,
+  onWareStatusChange,
 }: {
   shipment: any;
   canDrag: boolean;
   canEditWare: boolean;
-  onWareStatusCycle: (id: number, current: string | null) => void;
+  onWareStatusChange: (id: number, value: string | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: shipment.id, disabled: !canDrag });
@@ -132,10 +155,10 @@ function ShipmentCard({
             <div className="text-xs text-slate-400 truncate">{shipment.relation}</div>
           )}
           <div className="pt-0.5">
-            <WareStatusBadge
+            <WareStatusSelect
               wareStatus={shipment.wareStatus ?? null}
               canEdit={canEditWare}
-              onCycle={() => onWareStatusCycle(shipment.id, shipment.wareStatus ?? null)}
+              onChange={(v) => onWareStatusChange(shipment.id, v)}
             />
           </div>
         </CardContent>
@@ -150,14 +173,14 @@ function KanbanColumn({
   canDrag,
   canEditWare,
   isLoading,
-  onWareStatusCycle,
+  onWareStatusChange,
 }: {
   status: KanbanStatus;
   items: any[];
   canDrag: boolean;
   canEditWare: boolean;
   isLoading: boolean;
-  onWareStatusCycle: (id: number, current: string | null) => void;
+  onWareStatusChange: (id: number, value: string | null) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: status });
   const colors = STATUS_COLORS[status];
@@ -195,7 +218,7 @@ function KanbanColumn({
                 shipment={shipment}
                 canDrag={canDrag}
                 canEditWare={canEditWare}
-                onWareStatusCycle={onWareStatusCycle}
+                onWareStatusChange={onWareStatusChange}
               />
             ))
           )}
@@ -297,9 +320,8 @@ export default function KanbanPage() {
     updateShipment.mutate({ id: active.id, data: { status: toStatus as any } });
   };
 
-  const handleWareStatusCycle = (id: number, current: string | null) => {
-    const next = WARE_STATUS_CYCLE[current ?? "nicht bereit"] ?? "nicht bereit";
-    updateShipment.mutate({ id, data: { wareStatus: next } as any });
+  const handleWareStatusChange = (id: number, value: string | null) => {
+    updateShipment.mutate({ id, data: { wareStatus: value ?? "" } as any });
   };
 
   function resetFilters() {
@@ -348,7 +370,7 @@ export default function KanbanPage() {
             {canDrag
               ? "Per Drag & Drop zwischen den Spalten verschieben"
               : "Nur-Lesen — kein Drag & Drop"}
-            {" · "}Ware-Status per Klick auf den Badge ändern
+            {" · "}Ware-Status per Dropdown auf der Karte ändern
           </p>
         </div>
         <div className="text-xs text-slate-400 tabular-nums">
@@ -453,7 +475,7 @@ export default function KanbanPage() {
               canDrag={canDrag}
               canEditWare={canEditWare}
               isLoading={isLoading}
-              onWareStatusCycle={handleWareStatusCycle}
+              onWareStatusChange={handleWareStatusChange}
             />
           ))}
         </div>
