@@ -18,6 +18,7 @@ export const speditionenTable = pgTable("speditionen", {
   kraftstoffzuschlagProzent: doublePrecision("kraftstoffzuschlag_prozent"),
   fixkostenProFahrt: doublePrecision("fixkosten_pro_fahrt"),
   mautProKm: doublePrecision("maut_pro_km"),
+  dailyShipmentLimit: integer("daily_shipment_limit"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

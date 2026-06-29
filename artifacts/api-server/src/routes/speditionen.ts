@@ -33,7 +33,8 @@ router.post("/speditionen", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "Nur COMET Admin kann Speditionen anlegen" });
     }
     const { name, kuerzel, ansprechpartner, email, telefon, status, bemerkungen, palletFaktor,
-            preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm } = req.body;
+            preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm,
+            dailyShipmentLimit } = req.body;
     const [sped] = await db
       .insert(speditionenTable)
       .values({
@@ -45,6 +46,7 @@ router.post("/speditionen", requireAuth, async (req, res) => {
         kraftstoffzuschlagProzent: kraftstoffzuschlagProzent != null ? Number(kraftstoffzuschlagProzent) : null,
         fixkostenProFahrt: fixkostenProFahrt != null ? Number(fixkostenProFahrt) : null,
         mautProKm: mautProKm != null ? Number(mautProKm) : null,
+        dailyShipmentLimit: dailyShipmentLimit != null && dailyShipmentLimit !== "" ? Number(dailyShipmentLimit) : null,
       })
       .returning();
     await logAudit(req.session.userId!, "spedition", sped.id, "created", null, name);
@@ -77,7 +79,8 @@ router.patch("/speditionen/:id", requireAuth, async (req, res) => {
 
     const id = Number(req.params.id);
     const { name, kuerzel, ansprechpartner, email, telefon, status, bemerkungen, palletFaktor,
-            preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm } = req.body;
+            preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm,
+            dailyShipmentLimit } = req.body;
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (kuerzel !== undefined) updates.kuerzel = kuerzel;
@@ -93,6 +96,7 @@ router.patch("/speditionen/:id", requireAuth, async (req, res) => {
     if (kraftstoffzuschlagProzent !== undefined) updates.kraftstoffzuschlagProzent = kraftstoffzuschlagProzent != null ? Number(kraftstoffzuschlagProzent) : null;
     if (fixkostenProFahrt !== undefined) updates.fixkostenProFahrt = fixkostenProFahrt != null ? Number(fixkostenProFahrt) : null;
     if (mautProKm !== undefined) updates.mautProKm = mautProKm != null ? Number(mautProKm) : null;
+    if (dailyShipmentLimit !== undefined) updates.dailyShipmentLimit = dailyShipmentLimit != null && dailyShipmentLimit !== "" ? Number(dailyShipmentLimit) : null;
     updates.updatedAt = new Date();
 
     const [sped] = await db.update(speditionenTable).set(updates).where(eq(speditionenTable.id, id)).returning();

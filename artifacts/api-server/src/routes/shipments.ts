@@ -8,7 +8,7 @@ import {
   auditLogTable,
   settingsTable,
 } from "@workspace/db";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, gte, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
@@ -150,6 +150,28 @@ router.post("/shipments", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "Forbidden: cannot create shipment for another spedition" });
     }
 
+    if (targetSpeditionId) {
+      const [spedRow] = await db
+        .select({ dailyShipmentLimit: speditionenTable.dailyShipmentLimit })
+        .from(speditionenTable)
+        .where(eq(speditionenTable.id, targetSpeditionId))
+        .limit(1);
+      if (spedRow?.dailyShipmentLimit != null) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const [countRow] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(shipmentsTable)
+          .where(and(eq(shipmentsTable.speditionId, targetSpeditionId), gte(shipmentsTable.createdAt, todayStart)));
+        const todayCount = Number(countRow?.count ?? 0);
+        if (todayCount >= spedRow.dailyShipmentLimit) {
+          return res.status(429).json({
+            error: `Tageslimit erreicht: Diese Spedition darf maximal ${spedRow.dailyShipmentLimit} Verladung${spedRow.dailyShipmentLimit !== 1 ? "en" : ""} pro Tag anlegen.`,
+          });
+        }
+      }
+    }
+
     const [shipment] = await db
       .insert(shipmentsTable)
       .values({
@@ -267,6 +289,35 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
       );
       if (invalid) {
         return res.status(403).json({ error: "Forbidden: spedition users can only bulk-create for own spedition" });
+      }
+    }
+
+    const bulkSpeditionId = shipments[0]?.speditionId || sessionSpeditionId || null;
+    if (bulkSpeditionId) {
+      const [spedRow] = await db
+        .select({ dailyShipmentLimit: speditionenTable.dailyShipmentLimit })
+        .from(speditionenTable)
+        .where(eq(speditionenTable.id, bulkSpeditionId))
+        .limit(1);
+      if (spedRow?.dailyShipmentLimit != null) {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        const [countRow] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(shipmentsTable)
+          .where(and(eq(shipmentsTable.speditionId, bulkSpeditionId), gte(shipmentsTable.createdAt, todayStart)));
+        const todayCount = Number(countRow?.count ?? 0);
+        const remaining = spedRow.dailyShipmentLimit - todayCount;
+        if (remaining <= 0) {
+          return res.status(429).json({
+            error: `Tageslimit erreicht: Diese Spedition darf maximal ${spedRow.dailyShipmentLimit} Verladung${spedRow.dailyShipmentLimit !== 1 ? "en" : ""} pro Tag anlegen.`,
+          });
+        }
+        if (shipments.length > remaining) {
+          return res.status(429).json({
+            error: `Tageslimit überschritten: Noch ${remaining} von ${spedRow.dailyShipmentLimit} Verladung${spedRow.dailyShipmentLimit !== 1 ? "en" : ""} heute möglich, aber ${shipments.length} angefordert.`,
+          });
+        }
       }
     }
 

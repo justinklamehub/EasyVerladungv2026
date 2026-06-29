@@ -37,6 +37,7 @@ interface Spedition {
   kraftstoffzuschlagProzent?: number | null;
   fixkostenProFahrt?: number | null;
   mautProKm?: number | null;
+  dailyShipmentLimit?: number | null;
 }
 
 interface SpeditionDialogProps {
@@ -56,6 +57,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
     name: "", kuerzel: "", ansprechpartner: "", email: "", telefon: "", status: "aktiv", bemerkungen: "", palletFaktor: 1,
     preisProKm: "", mindestpreisProFahrt: "", palettenAufschlag: "",
     kraftstoffzuschlagProzent: "", fixkostenProFahrt: "", mautProKm: "",
+    dailyShipmentLimit: "",
   });
 
   useEffect(() => {
@@ -76,12 +78,14 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
           kraftstoffzuschlagProzent: editSpedition.kraftstoffzuschlagProzent != null ? String(editSpedition.kraftstoffzuschlagProzent) : "",
           fixkostenProFahrt: editSpedition.fixkostenProFahrt != null ? String(editSpedition.fixkostenProFahrt) : "",
           mautProKm: editSpedition.mautProKm != null ? String(editSpedition.mautProKm) : "",
+          dailyShipmentLimit: editSpedition.dailyShipmentLimit != null ? String(editSpedition.dailyShipmentLimit) : "",
         });
       } else {
         setForm({
           name: "", kuerzel: "", ansprechpartner: "", email: "", telefon: "", status: "aktiv", bemerkungen: "", palletFaktor: 1,
           preisProKm: "", mindestpreisProFahrt: "", palettenAufschlag: "",
           kraftstoffzuschlagProzent: "", fixkostenProFahrt: "", mautProKm: "",
+          dailyShipmentLimit: "",
         });
       }
     }
@@ -144,6 +148,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
       toast({ title: "Name erforderlich", variant: "destructive" });
       return;
     }
+    const toInt = (v: string) => v.trim() === "" ? null : parseInt(v, 10);
     const payload = {
       ...form,
       preisProKm: toNum(form.preisProKm),
@@ -152,6 +157,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
       kraftstoffzuschlagProzent: toNum(form.kraftstoffzuschlagProzent),
       fixkostenProFahrt: toNum(form.fixkostenProFahrt),
       mautProKm: toNum(form.mautProKm),
+      dailyShipmentLimit: toInt(form.dailyShipmentLimit),
     };
     if (isEditing && editSpedition) {
       updateMutation.mutate({ id: editSpedition.id, data: payload as any });
@@ -364,6 +370,20 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
               <div className="space-y-1 col-span-2">
                 <Label>Bemerkungen</Label>
                 <Input value={form.bemerkungen} onChange={e => setForm(f => ({ ...f, bemerkungen: e.target.value }))} />
+              </div>
+              <div className="space-y-1 col-span-2">
+                <Label>Tageslimit Verladungen</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="unbegrenzt"
+                  value={form.dailyShipmentLimit}
+                  onChange={e => setForm(f => ({ ...f, dailyShipmentLimit: e.target.value }))}
+                />
+                <p className="text-xs text-slate-400 mt-1">
+                  Maximale Anzahl Verladungen, die diese Spedition pro Tag anlegen darf. Leer lassen = unbegrenzt.
+                </p>
               </div>
               <div className="space-y-1 col-span-2">
                 <Label>Paletten-Tauschfaktor</Label>
