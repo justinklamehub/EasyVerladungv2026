@@ -1,0 +1,45 @@
+root@crimson-snake-71460:/opt/comet/app# # 1. PORT wieder auf 3333 setzen (Apache erwartet das jetzt)
+sed -i 's/^PORT=.*/PORT=3333/' /opt/comet/app/artifacts/api-server/.env
+grep PORT /opt/comet/app/artifacts/api-server/.env
+
+# 2. PM2 komplett löschen und neu starten (mit frischen Umgebungsvariablen)
+pm2 delete comet-api
+
+export $(grep -v '^#' /opt/comet/app/artifacts/api-server/.env | xargs)
+echo "PORT ist: $PORT"
+
+pm2 start /opt/comet/app/artifacts/api-server/dist/index.mjs \
+  --name "comet-api" \
+  --node-args "--enable-source-maps"
+
+pm2 save
+
+# 3. Warten und testen
+sleep 5
+pm2 status
+curl http://127.0.0.1:3333/api/auth/me
+PORT=3333
+[PM2] Applying action deleteProcessId on app [comet-api](ids: [ 0 ])
+[PM2] [comet-api](0) ✓
+┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+host metrics | cpu: 3% | ram usage: 31.5% | ens18: ⇓ 0.011mb/s ⇑ 0.017mb/s drop 10/min | disk: ⇓ 0mb/s ⇑ 0.02mb/s /snap/core20/2866 100% /snap/hello-world/29 100% /snap/core/17292 100% /snap/core24/1643 100% /snap/core/17284 100% /snap/mega-cmd/9 100% /snap/core22/2411 100% /snap/certbot/5603 100% |
+PORT ist: 3333
+[PM2] Starting /opt/comet/app/artifacts/api-server/dist/index.mjs in fork_mode (1 instance)
+[PM2] Done.
+┌────┬──────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name         │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ comet-api    │ default     │ 0.0.0   │ fork    │ 37192    │ 0s     │ 0    │ online    │ 0%       │ 20.5mb   │ root     │ disabled │
+└────┴──────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+host metrics | cpu: 3% | ram usage: 31.5% | ens18: ⇓ 0.011mb/s ⇑ 0.017mb/s drop 10/min | disk: ⇓ 0mb/s ⇑ 0.02mb/s /snap/core20/2866 100% /snap/hello-world/29 100% /snap/core/17292 100% /snap/core24/1643 100% /snap/core/17284 100% /snap/mega-cmd/9 100% /snap/core22/2411 100% /snap/certbot/5603 100% |
+[PM2] Saving current process list...
+[PM2] Successfully saved in /root/.pm2/dump.pm2
+┌────┬──────────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name         │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+├────┼──────────────┼─────────────┼─────────┼─────────┼──────────┼────────┼──────┼───────────┼──────────┼──────────┼──────────┼──────────┤
+│ 0  │ comet-api    │ default     │ 0.0.0   │ fork    │ 37443    │ 0s     │ 10   │ online    │ 0%       │ 50.3mb   │ root     │ disabled │
+└────┴──────────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+host metrics | cpu: 3% | ram usage: 31.5% | ens18: ⇓ 0.011mb/s ⇑ 0.017mb/s drop 10/min | disk: ⇓ 0mb/s ⇑ 0.02mb/s /snap/core20/2866 100% /snap/hello-world/29 100% /snap/core/17292 100% /snap/core24/1643 100% /snap/core/17284 100% /snap/mega-cmd/9 100% /snap/core22/2411 100% /snap/certbot/5603 100% |
+{"error":"Not authenticated"}root@crimson-snake-71460:/opt/comet/app#
