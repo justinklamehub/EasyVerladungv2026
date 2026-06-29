@@ -454,7 +454,8 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   (item.href === "/shipments" &&
                     (location === "/shipments" || location.startsWith("/shipments/")));
 
-                const hasCustomColor = isActive && !!item.activeColor;
+                const hasActiveCustomColor = isActive && !!item.activeColor;
+                const hasInactiveCustomColor = !isActive && !!item.activeColor;
 
                 const linkEl = (
                   <Link
@@ -465,19 +466,28 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                       "flex items-center rounded-md text-sm font-medium transition-all duration-150",
                       collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2.5",
                       isActive
-                        ? hasCustomColor
+                        ? hasActiveCustomColor
                           ? "text-white shadow-sm"
                           : "bg-primary text-white shadow-sm dark:bg-white/15 dark:text-white dark:shadow-none"
-                        : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                        : hasInactiveCustomColor
+                          ? "hover:bg-slate-800"
+                          : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
                     )}
-                    style={hasCustomColor ? { backgroundColor: item.activeColor! } : undefined}
+                    style={
+                      hasActiveCustomColor
+                        ? { backgroundColor: item.activeColor! }
+                        : hasInactiveCustomColor
+                        ? { color: item.activeColor! }
+                        : undefined
+                    }
                   >
                     <item.NavIcon
                       className={cn(
                         "shrink-0",
                         collapsed ? "w-5 h-5" : "w-4 h-4",
-                        isActive ? "text-white" : "text-slate-500"
+                        isActive ? "text-white" : !item.activeColor ? "text-slate-500" : undefined
                       )}
+                      style={hasInactiveCustomColor ? { color: item.activeColor! } : undefined}
                     />
                     {!collapsed && item.name}
                   </Link>
