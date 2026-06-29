@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useListShipments, useListSpeditionen, useUpdateShipment, getListShipmentsQueryKey } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Loader2, Lock, ShieldOff, Search, X, ChevronDown, Clock, CheckCircle2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import {
   DndContext,
   DragOverlay,
@@ -319,12 +320,7 @@ export default function KanbanPage() {
   const queryClient = useQueryClient();
   const [activeId, setActiveId] = useState<number | null>(null);
 
-  const { data: permissions, isLoading: permLoading } = useQuery<Record<string, boolean>>({
-    queryKey: ["auth-permissions"],
-    queryFn: () =>
-      fetch(`${API}/auth/permissions`, { credentials: "include" }).then((r) => r.json()),
-    staleTime: 60_000,
-  });
+  const permissions = usePermissions();
 
   const { data: speditionen } = useListSpeditionen();
 
@@ -339,8 +335,8 @@ export default function KanbanPage() {
 
   const { data: rawShipments, isLoading } = useListShipments(queryParams);
 
-  const canDrag     = permissions?.["kanban.use"]   ?? false;
-  const canEditWare = permissions?.["shipment.edit"] ?? false;
+  const canDrag     = !!permissions["kanban.use"];
+  const canEditWare = !!permissions["shipment.edit"];
 
   const updateShipment = useUpdateShipment({
     mutation: {
@@ -420,15 +416,7 @@ export default function KanbanPage() {
     filterDateFrom !== today ||
     filterDateTo !== today;
 
-  if (permLoading) {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (permissions && !permissions["kanban.use"]) {
+  if (!permissions["kanban.use"] && Object.keys(permissions).length > 0) {
     return (
       <div className="flex flex-col h-full items-center justify-center gap-3 text-slate-500">
         <ShieldOff className="w-10 h-10 text-slate-300" />

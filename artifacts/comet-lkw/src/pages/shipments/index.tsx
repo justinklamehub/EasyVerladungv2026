@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { getListShipmentsQueryKey } from "@workspace/api-client-react";
 import { useSocketStatus } from "@/hooks/use-socket";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
@@ -126,7 +127,10 @@ export default function ShipmentsPage() {
   const { isConnected } = useSocketStatus();
   const role = user?.role ?? "";
   const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(role);
-  const isViewer = role === "comet_viewer" || role === "speditions_viewer";
+  const permissions = usePermissions();
+  const canCreate = !!permissions["shipment.create"];
+  const canEdit   = !!permissions["shipment.edit"];
+  const canLock   = !!permissions["shipment.lock"];
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("__all__");
@@ -236,9 +240,9 @@ export default function ShipmentsPage() {
 
   const colSpan = useMemo(() => {
     let n = visibleColCount + 1; // +1 for actions column
-    if (!isViewer && isCometUser) n += 1; // +1 for checkbox column
+    if (canEdit) n += 1; // +1 for checkbox column
     return n;
-  }, [visibleColCount, isViewer, isCometUser]);
+  }, [visibleColCount, canEdit]);
 
   const hiddenCount = COLUMN_DEFS.filter((c) => !cols[c.key]).length;
 
@@ -440,7 +444,7 @@ export default function ShipmentsPage() {
             <FileSpreadsheet className="w-4 h-4 mr-1.5" />
             Excel
           </Button>
-          {!isViewer && (
+          {canCreate && (
             <>
               <Button variant="outline" onClick={() => setIsBulkOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
@@ -627,7 +631,7 @@ export default function ShipmentsPage() {
         </div>
       </div>
 
-      {selectedIds.size > 0 && !isViewer && isCometUser && (
+      {selectedIds.size > 0 && canEdit && (
         <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2">
           <span className="text-sm font-medium text-primary">{selectedIds.size} ausgewählt</span>
           <Select value={bulkStatus} onValueChange={setBulkStatus}>
@@ -659,7 +663,7 @@ export default function ShipmentsPage() {
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
-              {!isViewer && isCometUser && (
+              {canEdit && (
                 <TableHead className="w-[40px]">
                   <Checkbox
                     checked={sorted.length > 0 && selectedIds.size === sorted.length ? true : false}
@@ -720,7 +724,7 @@ export default function ShipmentsPage() {
                     setIsDrawerOpen(true);
                   }}
                 >
-                  {!isViewer && isCometUser && (
+                  {canEdit && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedIds.has(shipment.id)}

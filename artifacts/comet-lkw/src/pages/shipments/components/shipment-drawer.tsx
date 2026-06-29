@@ -30,6 +30,7 @@ import { printDeckblatt } from "@/lib/print-deckblatt";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import { format } from "date-fns";
 import { getSocket } from "@/lib/socket";
 import { onShipmentEditing, type ShipmentEditor } from "@/hooks/use-socket";
@@ -50,11 +51,13 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   const { user } = useAuth();
 
   const role = user?.role ?? "";
-  const isCometAdmin = ["comet_admin", "comet_leitstand"].includes(role);
   const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(role);
-  const isSpedUser = ["speditions_admin", "speditions_bearbeiter"].includes(role);
-  const isViewer = role === "comet_viewer" || role === "speditions_viewer";
-  const isEditing = !!shipmentId;
+  const isSpedUser  = ["speditions_admin", "speditions_bearbeiter"].includes(role);
+  const isEditing   = !!shipmentId;
+  const drawerPerms = usePermissions();
+  const canEditPerm        = !!drawerPerms["shipment.edit"];
+  const canLockPerm        = !!drawerPerms["shipment.lock"];
+  const canDeleteAustrag   = !!drawerPerms["austrag.delete"];
 
   const [otherEditors, setOtherEditors] = useState<ShipmentEditor[]>([]);
 
@@ -130,9 +133,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     };
   }, [shipmentId, open, shipment?.speditionId, user?.id]);
 
-  const isLocked = !!shipment?.gesperrtFuerSpedition;
-  const hasAta = !!(shipment?.ataDate);
-  const canEdit = !isViewer && (!isLocked || isCometUser);
+  const isLocked    = !!shipment?.gesperrtFuerSpedition;
+  const hasAta      = !!(shipment?.ataDate);
+  const canEdit     = canEditPerm && (!isLocked || isCometUser);
   const spedCanEdit = isSpedUser && !isLocked && !hasAta;
 
   const today = new Date().toISOString().slice(0, 10);
@@ -292,7 +295,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     }
     if (form.wareStatus) data.wareStatus = form.wareStatus;
 
-    if (isCometAdmin) {
+    if (isCometUser && canEditPerm) {
       data.speditionId = form.speditionId ? parseInt(form.speditionId) : undefined;
     }
 
@@ -350,7 +353,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                   <Printer className="w-3 h-3 mr-1" />Deckblatt
                 </Button>
               )}
-              {isCometAdmin && isEditing && (
+              {canLockPerm && isEditing && (
                 isLocked ? (
                   <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => unlockMutation.mutate({ id: shipmentId! })} disabled={unlockMutation.isPending}>
                     <LockOpen className="w-3 h-3 mr-1" />Freigeben
@@ -399,7 +402,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             </TabsList>
 
             <TabsContent value="details" className="space-y-4">
-              {isCometAdmin && (
+              {isCometUser && canEditPerm && (
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Spedition</Label>
                   <Select value={form.speditionId} onValueChange={v => setForm(f => ({ ...f, speditionId: v }))}>
@@ -625,7 +628,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                             {a.ladelistennummer && <span className="ml-2 text-slate-500">LL: {a.ladelistennummer}</span>}
                             {a.palettenscheinnummer && <span className="ml-2 text-slate-500">PS: {a.palettenscheinnummer}</span>}
                           </div>
-                          {isCometAdmin && (
+                          {canDeleteAustrag && (
                             <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-600" onClick={() => deleteAustragMutation.mutate(a.id)}>
                               <Trash2 className="w-3.5 h-3.5" />
                             </Button>

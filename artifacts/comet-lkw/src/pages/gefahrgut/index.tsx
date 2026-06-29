@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 import { printGefahrgutCheckliste } from "@/lib/print-gefahrgut";
 import { customFetch } from "@workspace/api-client-react";
 
@@ -313,17 +314,9 @@ export default function GefahrgutPage() {
   const [selected, setSelected] = useState<any | null>(null);
   const [assigning, setAssigning] = useState<any | null>(null);
 
-  const canReset = useMemo(() => {
-    const resetRoles = ["comet_admin", "comet_leitstand"];
-    return resetRoles.includes(user?.role ?? "");
-  }, [user?.role]);
-
-  // Load permission for assigning shipments
-  const { data: permsData } = useQuery({
-    queryKey: ["auth-permissions"],
-    queryFn: () => customFetch<{ [key: string]: boolean }>("/api/auth/permissions"),
-  });
-  const canAssign = permsData?.["gefahrgut.assign_shipment"] === true;
+  const permissions = usePermissions();
+  const canReset  = !!permissions["gefahrgut.reset"];
+  const canAssign = !!permissions["gefahrgut.assign_shipment"];
 
   const { data: checklisten, isLoading, refetch } = useQuery({
     queryKey: ["gefahrgut-checklisten-blanko"],

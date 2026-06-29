@@ -16,12 +16,17 @@ import { MovementDetailSheet } from "./components/movement-detail-sheet";
 import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 
 export default function PalettenPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const permissions = usePermissions();
   const isCometUser = user?.role && ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"].includes(user.role);
-  const canWrite = user?.role && ["comet_admin", "comet_leitstand", "comet_lager"].includes(user.role);
+  const canCreate = !!permissions["pallet.create"];
+  const canEdit   = !!permissions["pallet.edit"];
+  const canDelete = !!permissions["pallet.delete"];
+  const canWrite  = canCreate || canEdit;
 
   const [filterSpeditionId, setFilterSpeditionId] = useState<string>("__all__");
   const [dateFrom, setDateFrom] = useState("");

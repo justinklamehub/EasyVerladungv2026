@@ -27,6 +27,7 @@ import { Loader2, Plus, ChevronRight } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const STATUS_OPTIONS = [
   { value: "offen", label: "Offen" },
@@ -206,7 +207,8 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
   const { user } = useAuth();
   const role = user?.role ?? "";
   const isCometAdmin = ["comet_admin", "comet_leitstand"].includes(role);
-  const isSpedAdmin = ["speditions_admin", "speditions_bearbeiter"].includes(role);
+  const permissions = usePermissions();
+  const canSign = !!permissions["reconciliation.sign"];
 
   const { data: rec, isLoading } = useGetReconciliation(id, {
     query: { enabled: open, queryKey: getGetReconciliationQueryKey(id) },
@@ -269,7 +271,7 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
   const handleSaveBalances = () => {
     const updates: any = {};
     if (isCometAdmin && cometBalance !== "") updates.cometBalance = parseInt(cometBalance);
-    if (isSpedAdmin && spedBalance !== "") updates.speditionBalance = parseInt(spedBalance);
+    if (canSign && spedBalance !== "") updates.speditionBalance = parseInt(spedBalance);
     if (isCometAdmin && status) updates.status = status;
     updateMutation.mutate({ id, data: updates });
   };
@@ -318,7 +320,7 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Spedition Saldo</Label>
-                  {isSpedAdmin && rec.speditionBalance === null || isSpedAdmin && rec.speditionBalance === undefined ? (
+                  {canSign && rec.speditionBalance === null || canSign && rec.speditionBalance === undefined ? (
                     <Input
                       type="number"
                       placeholder="Saldo eingeben"
@@ -328,7 +330,7 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
                   ) : (
                     <div className="flex items-center gap-2">
                       <div className="text-lg font-bold text-slate-800">{rec.speditionBalance ?? "—"}</div>
-                      {isSpedAdmin && rec.speditionBalance !== null && rec.speditionBalance !== undefined && (
+                      {canSign && rec.speditionBalance !== null && rec.speditionBalance !== undefined && (
                         <span className="text-xs text-slate-400 italic">bereits eingetragen</span>
                       )}
                     </div>
@@ -348,7 +350,7 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
                 </div>
               )}
 
-              {(isCometAdmin || (isSpedAdmin && (rec.speditionBalance === null || rec.speditionBalance === undefined))) && (
+              {(isCometAdmin || (canSign && (rec.speditionBalance === null || rec.speditionBalance === undefined))) && (
                 <Button size="sm" onClick={handleSaveBalances} disabled={updateMutation.isPending} className="w-full">
                   {updateMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Speichern
@@ -430,6 +432,8 @@ export default function AbstimmungenPage() {
   const { user } = useAuth();
   const role = user?.role ?? "";
   const isCometAdmin = ["comet_admin", "comet_leitstand"].includes(role);
+  const permissions = usePermissions();
+  const canCreate = !!permissions["reconciliation.create"];
 
   const [filterStatus, setFilterStatus] = useState<string>("__all__");
   const [createOpen, setCreateOpen] = useState(false);
@@ -452,7 +456,7 @@ export default function AbstimmungenPage() {
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Abstimmungen</h1>
           <p className="text-sm text-slate-500">Regelmäßige Palettenkonto-Abgleiche mit Partnern.</p>
         </div>
-        {isCometAdmin && (
+        {canCreate && (
           <Button onClick={() => setCreateOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Neue Abstimmung

@@ -3,3 +3,4 @@
 - [Auth public routes](auth-public-routes.md) — AuthProvider in auth-context.tsx redirects unauthenticated users to /login; scanner/public pages must be added to the isPublicRoute check.
 - [Wouter catch-all routing](wouter-catchall-routing.md) — use path="*" not path="/:path*" for multi-segment catch-all routes; regexparam treats /:path* as single-segment only.
 - [Production deployment gotchas](production-deployment.md) — roles/role_permissions tables missing from Drizzle schema; COOKIE_SECURE required for HTTPS; PM2 env not refreshed without --update-env.
+- [COMET LKW permission refactor pattern](comet-lkw-permissions-pattern.md) — shared usePermissions hook; role checks stay only for data-scope; actions use permissions API.
