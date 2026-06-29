@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { useAuth } from "@/contexts/auth-context";
 
@@ -525,6 +525,140 @@ function EmailLogSection() {
   );
 }
 
+// ── SMTP Settings Card ────────────────────────────────────────────────────────
+
+function SmtpSettingsCard({ settings }: { settings: SettingsMap }) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [host, setHost] = useState(settings["smtp_host"] ?? "");
+  const [port, setPort] = useState(settings["smtp_port"] ?? "587");
+  const [user, setUser] = useState(settings["smtp_user"] ?? "");
+  const [pass, setPass] = useState(settings["smtp_pass"] ?? "");
+  const [showPass, setShowPass] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setHost(settings["smtp_host"] ?? "");
+    setPort(settings["smtp_port"] ?? "587");
+    setUser(settings["smtp_user"] ?? "");
+    setPass(settings["smtp_pass"] ?? "");
+  }, [settings]);
+
+  const usingSendmail = !host.trim();
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const pairs: [string, string][] = [
+        ["smtp_host", host.trim()],
+        ["smtp_port", port.trim() || "587"],
+        ["smtp_user", user.trim()],
+        ["smtp_pass", pass],
+      ];
+      const results = await Promise.all(
+        pairs.map(([key, value]) =>
+          fetch(`${API}/settings/${key}`, {
+            method: "PUT",
+            credentials: "include",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ value }),
+          })
+        )
+      );
+      if (results.some((r) => !r.ok)) throw new Error("Fehler");
+      await queryClient.invalidateQueries({ queryKey: ["settings"] });
+      toast({ title: "SMTP-Einstellungen gespeichert" });
+    } catch {
+      toast({ title: "Fehler beim Speichern", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Server className="w-4 h-4 text-primary" />
+            <CardTitle className="text-base">SMTP-Server</CardTitle>
+          </div>
+          <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${usingSendmail ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-blue-50 text-blue-700 border border-blue-200"}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${usingSendmail ? "bg-emerald-500" : "bg-blue-500"}`} />
+            {usingSendmail ? "Lokaler Mailserver (sendmail)" : "SMTP konfiguriert"}
+          </div>
+        </div>
+        <CardDescription className="text-xs">
+          Leer lassen = lokaler Mailserver wird verwendet (wie PHP&apos;s <code className="font-mono bg-slate-100 px-1 rounded">mail()</code>). SMTP-Daten angeben für externen Versand (z.&nbsp;B. Office 365, Gmail).
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <Label className="text-xs font-medium text-slate-600">SMTP-Host</Label>
+            <Input
+              value={host}
+              onChange={(e) => setHost(e.target.value)}
+              placeholder="Leer = lokaler Mailserver"
+              className="text-sm h-8"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-600">Port</Label>
+            <Input
+              value={port}
+              onChange={(e) => setPort(e.target.value)}
+              placeholder="587"
+              className="text-sm h-8"
+            />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-600">Benutzername</Label>
+            <Input
+              value={user}
+              onChange={(e) => setUser(e.target.value)}
+              placeholder="user@domain.de"
+              className="text-sm h-8"
+              autoComplete="off"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-medium text-slate-600">Passwort</Label>
+            <div className="relative">
+              <Input
+                type={showPass ? "text" : "password"}
+                value={pass}
+                onChange={(e) => setPass(e.target.value)}
+                placeholder="••••••••"
+                className="text-sm h-8 pr-8"
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPass((p) => !p)}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+              >
+                {showPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-slate-400 leading-relaxed">
+          Port 587 = STARTTLS · Port 465 = SSL/TLS · Leer lassen für lokalen Mailserver (funktioniert wenn Postfix/Sendmail auf dem Server läuft).
+        </p>
+        <div className="flex justify-end">
+          <Button size="sm" className="h-8 px-4 text-xs" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+            Speichern
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -644,6 +778,10 @@ export default function SettingsPage() {
 
         {/* ── Tab: E-Mail-Vorlagen ── */}
         <TabsContent value="email" className="space-y-5 mt-0">
+
+          {/* ── SMTP-Konfiguration ── */}
+          <SmtpSettingsCard settings={s} />
+
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
@@ -651,7 +789,7 @@ export default function SettingsPage() {
                 <CardTitle className="text-base">E-Mail-Benachrichtigungen</CardTitle>
               </div>
               <CardDescription className="text-xs">
-                Automatische E-Mails bei bestimmten Ereignissen. Der Server versendet E-Mails über den lokalen Mailserver (wie PHP mail()).
+                Automatische E-Mails bei bestimmten Ereignissen.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">

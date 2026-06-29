@@ -1,9 +1,9 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { emailLogTable } from "@workspace/db";
+import { emailLogTable, settingsTable } from "@workspace/db";
 import { desc, eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import nodemailer from "nodemailer";
+import { createEmailTransport } from "../lib/email";
 
 const router = Router();
 
@@ -47,21 +47,10 @@ router.post("/email-log/:id/resend", requireAuth, async (req, res) => {
     const [entry] = await db.select().from(emailLogTable).where(eq(emailLogTable.id, id)).limit(1);
     if (!entry) return res.status(404).json({ error: "Eintrag nicht gefunden" });
 
-    const from = process.env.SMTP_FROM ?? "noreply@comet-seasonal.de";
-
-    let transport: nodemailer.Transporter;
-    if (process.env.SMTP_HOST) {
-      transport = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT ?? 587),
-        secure: process.env.SMTP_PORT === "465",
-        auth: process.env.SMTP_USER
-          ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-          : undefined,
-      });
-    } else {
-      transport = nodemailer.createTransport({ sendmail: true, newline: "unix" });
-    }
+    const settingsRows = await db.select().from(settingsTable);
+    const settings: Record<string, string> = Object.fromEntries(settingsRows.map((r) => [r.key, r.value ?? ""]));
+    const from = settings["email_from"] || process.env.SMTP_FROM || "noreply-easy-verladung@comet-seasonal.de";
+    const transport = createEmailTransport(settings);
 
     await transport.sendMail({
       from,

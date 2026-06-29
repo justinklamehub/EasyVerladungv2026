@@ -17,19 +17,21 @@ function interpolate(template: string, vars: Record<string, string>): string {
   return template.replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 }
 
-function createTransport() {
-  if (!process.env.SMTP_HOST) {
-    throw new Error(
-      "SMTP nicht konfiguriert: Bitte SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS und SMTP_FROM als Umgebungsvariablen setzen."
-    );
+// Exported so email-log resend can reuse the same logic
+export function createEmailTransport(settings: Record<string, string>) {
+  // DB settings take precedence over env vars; empty host → local sendmail (like PHP mail())
+  const host = settings["smtp_host"] || process.env.SMTP_HOST || "";
+  if (!host) {
+    return nodemailer.createTransport({ sendmail: true, newline: "unix" });
   }
+  const port = Number(settings["smtp_port"] || process.env.SMTP_PORT || 587);
+  const user = settings["smtp_user"] || process.env.SMTP_USER || "";
+  const pass = settings["smtp_pass"] || process.env.SMTP_PASS || "";
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_PORT === "465",
-    auth: process.env.SMTP_USER
-      ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
-      : undefined,
+    host,
+    port,
+    secure: port === 465,
+    auth: user ? { user, pass } : undefined,
   });
 }
 
@@ -136,7 +138,7 @@ export async function sendEventEmail(
       .replace(/\{\{tabelle\}\}/g, vars.tabelleHtml ?? vars.tabelle ?? "")
       .replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 
-    const transport = createTransport();
+    const transport = createEmailTransport(settings);
     let logStatus = "sent";
     let logError: string | null = null;
     try {

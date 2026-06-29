@@ -71,6 +71,10 @@ router.put("/settings/:key", requireAuth, async (req, res) => {
       "sidebar_nav_config",
       "sidebar_categories",
       "sidebar_order",
+      "smtp_host",
+      "smtp_port",
+      "smtp_user",
+      "smtp_pass",
     ];
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: "Unbekannter Einstellungsschlüssel" });
