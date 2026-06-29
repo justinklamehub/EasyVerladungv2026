@@ -594,26 +594,40 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                           ? NAV_ICONS[cat.iconName]!
                           : Folder;
                         const isCatCollapsed = collapsedCategories.has(cat.id);
+                        const catAccent = cat.color || "#6366f1";
                         return (
-                          <div key={cat.id} className="mt-2">
+                          <div key={cat.id} className="mt-3">
+                            {/* Separator above category */}
+                            <div className="h-px bg-slate-800/80 mb-2 mx-0.5" />
                             <button
                               onClick={() => toggleCategory(cat.id)}
-                              className="flex items-center gap-2 w-full px-2 py-1 rounded-md text-[11px] font-semibold text-slate-500 uppercase tracking-wider hover:bg-slate-800/40 hover:text-slate-300 transition-colors"
+                              className="flex items-center gap-2.5 w-full px-2 py-1.5 rounded-lg hover:bg-slate-800/50 transition-colors group"
                             >
-                              <CatIcon
-                                className="w-3.5 h-3.5 shrink-0"
-                                style={cat.color ? { color: cat.color } : undefined}
-                              />
-                              <span className="flex-1 text-left truncate">{cat.name}</span>
+                              {/* Colored icon badge */}
+                              <div
+                                className="w-5 h-5 rounded flex items-center justify-center shrink-0 transition-opacity"
+                                style={{ backgroundColor: `${catAccent}30` }}
+                              >
+                                <CatIcon
+                                  className="w-3 h-3 shrink-0"
+                                  style={{ color: catAccent }}
+                                />
+                              </div>
+                              <span className="flex-1 text-left text-[10.5px] font-bold uppercase tracking-widest truncate text-slate-500 group-hover:text-slate-300 transition-colors">
+                                {cat.name}
+                              </span>
                               <ChevronRight
                                 className={cn(
-                                  "w-3.5 h-3.5 shrink-0 transition-transform duration-150",
+                                  "w-3 h-3 shrink-0 text-slate-600 group-hover:text-slate-400 transition-all duration-150",
                                   !isCatCollapsed && "rotate-90"
                                 )}
                               />
                             </button>
                             {!isCatCollapsed && (
-                              <div className="mt-0.5 space-y-0.5">
+                              <div
+                                className="mt-0.5 space-y-0.5 pl-2 ml-3.5 border-l"
+                                style={{ borderColor: `${catAccent}40` }}
+                              >
                                 {catItems.map((item) => renderItem(item))}
                               </div>
                             )}
