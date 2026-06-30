@@ -8,10 +8,11 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Loader2, Plus, Lock, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical } from "lucide-react";
+import { Search, Loader2, Plus, Lock, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ShipmentDrawer } from "./components/shipment-drawer";
-import { BulkCreateDialog } from "./components/bulk-create-dialog";
+import { BulkCreateDialog, type RowData } from "./components/bulk-create-dialog";
+import { TemplatesDialog, type TemplateRow } from "./components/templates-dialog";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
@@ -149,6 +150,8 @@ export default function ShipmentsPage() {
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
+  const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
+  const [templateInitialRows, setTemplateInitialRows] = useState<Partial<RowData>[] | undefined>(undefined);
   const initPrefs = loadColPrefs();
   const [cols, setCols] = useState<Record<ColKey, boolean>>(initPrefs.visibility);
   const [colOrder, setColOrder] = useState<ColKey[]>(initPrefs.order);
@@ -446,6 +449,10 @@ export default function ShipmentsPage() {
           </Button>
           {canCreate && (
             <>
+              <Button variant="outline" onClick={() => setIsTemplatesOpen(true)}>
+                <BookTemplate className="w-4 h-4 mr-2" />
+                Vorlagen
+              </Button>
               <Button variant="outline" onClick={() => setIsBulkOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Massenanlage
@@ -809,7 +816,29 @@ export default function ShipmentsPage() {
         open={isDrawerOpen}
         onOpenChange={setIsDrawerOpen}
       />
-      <BulkCreateDialog open={isBulkOpen} onOpenChange={setIsBulkOpen} />
+      <BulkCreateDialog
+        open={isBulkOpen}
+        onOpenChange={(v) => { setIsBulkOpen(v); if (!v) setTemplateInitialRows(undefined); }}
+        initialRows={templateInitialRows}
+      />
+      <TemplatesDialog
+        open={isTemplatesOpen}
+        onOpenChange={setIsTemplatesOpen}
+        onLoadToMassenanlage={(template: TemplateRow) => {
+          setTemplateInitialRows([{
+            bezeichnung: template.bezeichnung ?? "",
+            lkwArt: template.lkw_art ?? "",
+            etaTime: template.eta_time ?? "",
+            tor: template.tor ?? "",
+            speditionId: template.spedition_id ? String(template.spedition_id) : "",
+            relation: template.relation ?? "",
+            telefon: template.telefon ?? "",
+            status: template.status,
+          }]);
+          setIsTemplatesOpen(false);
+          setIsBulkOpen(true);
+        }}
+      />
     </div>
   );
 }

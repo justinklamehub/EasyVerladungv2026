@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useBulkCreateShipments, useListSpeditionen, getListShipmentsQueryKey, ShipmentInputLkwArt, ShipmentInputStatus } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
@@ -7,14 +7,14 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, AlertCircle } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertCircle, Upload, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
 const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen"];
 
-interface RowData {
+export interface RowData {
   id: number;
   kennzeichen: string;
   bezeichnung: string;
@@ -28,7 +28,7 @@ interface RowData {
   status: string;
 }
 
-function emptyRow(id: number): RowData {
+export function emptyRow(id: number, partial?: Partial<RowData>): RowData {
   return {
     id,
     kennzeichen: "",
@@ -41,6 +41,7 @@ function emptyRow(id: number): RowData {
     relation: "",
     telefon: "",
     status: "Angemeldet",
+    ...partial,
   };
 }
 
@@ -49,19 +50,119 @@ let rowCounter = 1;
 interface Props {
   open: boolean;
   onOpenChange: (v: boolean) => void;
+  initialRows?: Partial<RowData>[];
 }
 
-export function BulkCreateDialog({ open, onOpenChange }: Props) {
+// ── CSV helpers ───────────────────────────────────────────────────────────────
+
+const CSV_COLUMNS = ["Kennzeichen", "Bezeichnung", "LKW-Art", "ETA Datum (JJJJ-MM-TT)", "ETA Zeit (HH:MM)", "Tor", "Relation", "Telefon"];
+
+function downloadCsvTemplate() {
+  const header = CSV_COLUMNS.join(";");
+  const example = ["M-AB 1234", "Wöchentliche Lieferung", "Container", "2025-07-01", "08:00", "Tor 3", "München → Hamburg", "+49 89 12345"].join(";");
+  const blob = new Blob(["\uFEFF" + header + "\r\n" + example + "\r\n"], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "verladungen_vorlage.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function normalizeLkwArt(raw: string): string {
+  const lower = raw.toLowerCase().trim();
+  for (const opt of LKW_ART_OPTIONS) {
+    if (opt.toLowerCase() === lower) return opt;
+  }
+  return raw.trim();
+}
+
+function normalizeTor(raw: string): string {
+  const lower = raw.toLowerCase().trim().replace(/\s+/g, " ");
+  for (const opt of TOR_OPTIONS) {
+    if (opt.toLowerCase() === lower) return opt;
+  }
+  const m = raw.match(/\d+/);
+  if (m) return `Tor ${m[0]}`;
+  return raw.trim();
+}
+
+function parseDate(raw: string): string {
+  const trimmed = raw.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
+  const m = trimmed.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+  if (m) return `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`;
+  return "";
+}
+
+function parseCsv(text: string): Partial<RowData>[] {
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return [];
+
+  const sep = lines[0].includes(";") ? ";" : ",";
+  const headers = lines[0].split(sep).map((h) => h.trim().replace(/^\uFEFF/, "").toLowerCase());
+
+  const idx = (keywords: string[]): number => {
+    for (const kw of keywords) {
+      const i = headers.findIndex((h) => h.includes(kw));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  const colKennzeichen = idx(["kennzeichen", "license", "kfz"]);
+  const colBezeichnung = idx(["bezeichnung", "title", "name", "description"]);
+  const colLkwArt = idx(["lkw-art", "lkwart", "art", "type", "fahrzeug"]);
+  const colEtaDate = idx(["datum", "date", "eta dat"]);
+  const colEtaTime = idx(["zeit", "time", "eta z"]);
+  const colTor = idx(["tor", "gate", "dock"]);
+  const colRelation = idx(["relation", "route", "strecke"]);
+  const colTelefon = idx(["telefon", "phone", "tel"]);
+
+  const rows: Partial<RowData>[] = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split(sep);
+    const get = (col: number) => (col >= 0 ? (cells[col] ?? "").trim() : "");
+
+    const kz = get(colKennzeichen);
+    if (!kz) continue;
+
+    rows.push({
+      kennzeichen: kz,
+      bezeichnung: get(colBezeichnung),
+      lkwArt: normalizeLkwArt(get(colLkwArt)),
+      etaDate: parseDate(get(colEtaDate)),
+      etaTime: get(colEtaTime),
+      tor: normalizeTor(get(colTor)),
+      relation: get(colRelation),
+      telefon: get(colTelefon),
+      status: "Angemeldet",
+    });
+  }
+  return rows;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
+
+export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   const { user } = useAuth();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: speditionen } = useListSpeditionen();
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(user?.role ?? "");
   const isSpedUser = ["speditions_admin", "speditions_bearbeiter"].includes(user?.role ?? "");
 
   const [rows, setRows] = useState<RowData[]>([emptyRow(rowCounter++)]);
   const [errors, setErrors] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    if (open && initialRows && initialRows.length > 0) {
+      setRows(initialRows.map((partial) => emptyRow(rowCounter++, partial)));
+      setErrors(new Set());
+    }
+  }, [open, initialRows]);
 
   const bulkMutation = useBulkCreateShipments({
     mutation: {
@@ -90,6 +191,26 @@ export function BulkCreateDialog({ open, onOpenChange }: Props) {
   const removeRow = (id: number) => {
     setRows((prev) => prev.filter((r) => r.id !== id));
     setErrors((prev) => { const s = new Set(prev); s.delete(id); return s; });
+  };
+
+  const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const text = ev.target?.result as string;
+      const parsed = parseCsv(text);
+      if (parsed.length === 0) {
+        toast({ title: "Keine Daten gefunden", description: "Bitte prüfen Sie das CSV-Format.", variant: "destructive" });
+        return;
+      }
+      setRows(parsed.map((partial) => emptyRow(rowCounter++, partial)));
+      setErrors(new Set());
+      toast({ title: `${parsed.length} Zeile${parsed.length !== 1 ? "n" : ""} importiert` });
+    };
+    reader.readAsText(file, "utf-8");
   };
 
   const handleSubmit = () => {
@@ -131,7 +252,31 @@ export function BulkCreateDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[95vw] w-[1200px] max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>Massenanlage Verladungen</DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Massenanlage Verladungen</DialogTitle>
+            <div className="flex items-center gap-2 mr-6">
+              <input ref={fileRef} type="file" accept=".csv,text/csv" className="hidden" onChange={handleCsvImport} />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs gap-1.5 text-slate-600"
+                onClick={() => fileRef.current?.click()}
+              >
+                <Upload className="w-3.5 h-3.5" />
+                CSV importieren
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 text-xs gap-1.5 text-slate-400 hover:text-slate-600"
+                onClick={downloadCsvTemplate}
+                title="Muster-CSV herunterladen"
+              >
+                <Download className="w-3.5 h-3.5" />
+                Muster
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
 
         <div className="flex-1 overflow-auto">

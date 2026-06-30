@@ -7,6 +7,7 @@ import { seedEmailTemplates, ensureEmailLogTable, ensurePasswordResetTable } fro
 import { ensureTicketsTables } from "./routes/tickets";
 import { ensureUserPreferencesTable } from "./routes/user-preferences";
 import { startScheduler, ensureReportWeeklyLogTable } from "./lib/scheduler";
+import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
 
 const rawPort = process.env["PORT"];
 
@@ -255,6 +256,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("report_weekly_log table ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureReportWeeklyLogTable failed — non-fatal");
+  }
+  try {
+    await ensureShipmentTemplatesTable();
+    logger.info("shipment_templates table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureShipmentTemplatesTable failed — non-fatal");
   }
   try {
     await seedMissingPermissions();

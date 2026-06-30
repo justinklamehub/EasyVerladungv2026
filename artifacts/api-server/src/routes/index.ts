@@ -18,6 +18,7 @@ import emailLogRouter from "./email-log";
 import ticketsRouter from "./tickets";
 import userPreferencesRouter from "./user-preferences";
 import reportRouter from "./report";
+import shipmentTemplatesRouter from "./shipment-templates";
 
 const router: IRouter = Router();
 
@@ -40,5 +41,6 @@ router.use(emailLogRouter);
 router.use(ticketsRouter);
 router.use(userPreferencesRouter);
 router.use(reportRouter);
+router.use(shipmentTemplatesRouter);
 
 export default router;
