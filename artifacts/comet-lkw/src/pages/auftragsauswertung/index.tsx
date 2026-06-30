@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2, Package, ClipboardList
@@ -9,7 +8,8 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") + "/api";
 
-interface LeitgebietRow { leitgebiet: string; anzahl: number; }
+interface LeitgebietRow { leitgebiet: string; auftraege: number; paletten: number; }
+interface LieferterminRow { lfdat: string; auftraege: number; paletten: number; }
 
 interface SpedResult {
   spediteurNr: string;
@@ -19,9 +19,8 @@ interface SpedResult {
   matched: boolean;
   auftraege: number;
   paletten: number;
-  kartons: number;
   leitgebiete: LeitgebietRow[];
-  liefertermine: string[];
+  liefertermine: LieferterminRow[];
 }
 
 interface AnalyseResult {
@@ -57,7 +56,6 @@ export default function AuftragsauswertungPage() {
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
   const [result, setResult] = useState<AnalyseResult | null>(null);
 
-  // Load persisted analysis on mount
   useEffect(() => {
     let cancelled = false;
     setIsLoadingLatest(true);
@@ -130,12 +128,7 @@ export default function AuftragsauswertungPage() {
         </div>
         <div className="flex items-center gap-2">
           {isUploading && <Loader2 className="h-4 w-4 animate-spin text-blue-500" />}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={triggerUpload}
-            disabled={isUploading}
-          >
+          <Button variant="outline" size="sm" onClick={triggerUpload} disabled={isUploading}>
             <Upload className="h-4 w-4 mr-2" />
             {result ? "Neue CSV hochladen" : "CSV hochladen"}
           </Button>
@@ -223,19 +216,16 @@ export default function AuftragsauswertungPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
-                    <th className="px-4 py-2 text-left font-medium text-slate-600 whitespace-nowrap">Spediteur-Nr.</th>
                     <th className="px-4 py-2 text-left font-medium text-slate-600">Speditionsname</th>
                     <th className="px-4 py-2 text-center font-medium text-slate-600 whitespace-nowrap">Aufträge</th>
                     <th className="px-4 py-2 text-center font-medium text-slate-600 whitespace-nowrap">Paletten</th>
-                    <th className="px-4 py-2 text-center font-medium text-slate-600 whitespace-nowrap">Kartons</th>
-                    <th className="px-4 py-2 text-left font-medium text-slate-600">Leitgebiete</th>
-                    <th className="px-4 py-2 text-left font-medium text-slate-600 whitespace-nowrap">Liefertermin(e)</th>
+                    <th className="px-4 py-2 text-left font-medium text-slate-600">Pro Leitgebiet</th>
+                    <th className="px-4 py-2 text-left font-medium text-slate-600 whitespace-nowrap">Pro Liefertermin</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {result.results.map((s) => (
                     <tr key={s.spediteurNr} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-4 py-3 font-mono text-slate-700 whitespace-nowrap">{s.spediteurNr}</td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-slate-800">
@@ -265,25 +255,48 @@ export default function AuftragsauswertungPage() {
                           <span className="font-semibold text-slate-800">{s.paletten}</span>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-center text-slate-600">
-                        {s.kartons > 0 ? s.kartons : <span className="text-slate-300">—</span>}
+                      <td className="px-4 py-3">
+                        {s.leitgebiete.length === 0 ? (
+                          <span className="text-slate-300">—</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {s.leitgebiete.map((lg) => (
+                              <div key={lg.leitgebiet} className="flex items-center gap-2">
+                                <span className="font-mono text-xs font-semibold text-slate-700 w-10 shrink-0">
+                                  {lg.leitgebiet}
+                                </span>
+                                <span className="text-xs text-slate-500 whitespace-nowrap">
+                                  {lg.auftraege ?? 0}&nbsp;Auft.&nbsp;/&nbsp;{lg.paletten}&nbsp;Pal.
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1 max-w-xs">
-                          {s.leitgebiete.map((lg) => (
-                            <Badge key={lg.leitgebiet} variant="secondary" className="text-xs font-mono px-1.5 py-0">
-                              {lg.leitgebiet}
-                              {lg.anzahl > 1 && <span className="ml-1 text-slate-400">×{lg.anzahl}</span>}
-                            </Badge>
-                          ))}
-                          {s.leitgebiete.length === 0 && <span className="text-slate-300">—</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-slate-600 text-xs">
-                        {s.liefertermine.map((lt) => (
-                          <div key={lt}>{formatLfdat(lt)}</div>
-                        ))}
-                        {s.liefertermine.length === 0 && <span className="text-slate-300">—</span>}
+                        {s.liefertermine.length === 0 ? (
+                          <span className="text-slate-300">—</span>
+                        ) : (
+                          <div className="space-y-1">
+                            {s.liefertermine.map((lt) => {
+                              const lfdat = typeof lt === "string" ? lt : (lt as LieferterminRow).lfdat;
+                              const auft  = typeof lt === "string" ? null : (lt as LieferterminRow).auftraege;
+                              const pal   = typeof lt === "string" ? null : (lt as LieferterminRow).paletten;
+                              return (
+                                <div key={lfdat} className="flex items-center gap-2">
+                                  <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
+                                    {formatLfdat(lfdat)}
+                                  </span>
+                                  {auft !== null && (
+                                    <span className="text-xs text-slate-500 whitespace-nowrap">
+                                      {auft}&nbsp;Auft.&nbsp;/&nbsp;{pal}&nbsp;Pal.
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -83,6 +83,7 @@ function buildResults(
   rows: ReturnType<typeof parseCsv>,
   spedByNr: Map<string, { id: number; name: string }>
 ) {
+  type SubGroup = { auftraegeSet: Set<string>; paletten: number };
   type Group = {
     spediteurNr: string;
     csvName: string;
@@ -90,9 +91,8 @@ function buildResults(
     speditionDbName: string | null;
     auftraegeSet: Set<string>;
     paletten: number;
-    leitgebieteMap: Map<string, number>;
-    liefertermineSet: Set<string>;
-    kartons: number;
+    leitgebieteMap: Map<string, SubGroup>;
+    liefertermineMap: Map<string, SubGroup>;
   };
   const grouped = new Map<string, Group>();
 
@@ -108,16 +108,28 @@ function buildResults(
         auftraegeSet:     new Set(),
         paletten:         0,
         leitgebieteMap:   new Map(),
-        liefertermineSet: new Set(),
-        kartons:          0,
+        liefertermineMap: new Map(),
       });
     }
     const g = grouped.get(row.spediteurNr)!;
     if (row.auftrag) g.auftraegeSet.add(row.auftrag);
     g.paletten++;
-    if (row.leitgebiet) g.leitgebieteMap.set(row.leitgebiet, (g.leitgebieteMap.get(row.leitgebiet) ?? 0) + 1);
-    if (row.lfdat) g.liefertermineSet.add(row.lfdat);
-    g.kartons += row.kartons;
+
+    // Per-Leitgebiet: track auftraege + paletten
+    if (row.leitgebiet) {
+      const lg = g.leitgebieteMap.get(row.leitgebiet) ?? { auftraegeSet: new Set<string>(), paletten: 0 };
+      if (row.auftrag) lg.auftraegeSet.add(row.auftrag);
+      lg.paletten++;
+      g.leitgebieteMap.set(row.leitgebiet, lg);
+    }
+
+    // Per-Liefertermin: track auftraege + paletten
+    if (row.lfdat) {
+      const lt = g.liefertermineMap.get(row.lfdat) ?? { auftraegeSet: new Set<string>(), paletten: 0 };
+      if (row.auftrag) lt.auftraegeSet.add(row.auftrag);
+      lt.paletten++;
+      g.liefertermineMap.set(row.lfdat, lt);
+    }
   }
 
   return Array.from(grouped.values())
@@ -129,11 +141,20 @@ function buildResults(
       matched:         g.speditionId !== null,
       auftraege:       g.auftraegeSet.size,
       paletten:        g.paletten,
-      kartons:         g.kartons,
       leitgebiete: Array.from(g.leitgebieteMap.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([leitgebiet, anzahl]) => ({ leitgebiet, anzahl })),
-      liefertermine: Array.from(g.liefertermineSet).sort(),
+        .map(([leitgebiet, sub]) => ({
+          leitgebiet,
+          auftraege: sub.auftraegeSet.size,
+          paletten:  sub.paletten,
+        })),
+      liefertermine: Array.from(g.liefertermineMap.entries())
+        .sort((a, b) => a[0].localeCompare(b[0]))
+        .map(([lfdat, sub]) => ({
+          lfdat,
+          auftraege: sub.auftraegeSet.size,
+          paletten:  sub.paletten,
+        })),
     }))
     .sort((a, b) => a.spediteurNr.localeCompare(b.spediteurNr));
 }
