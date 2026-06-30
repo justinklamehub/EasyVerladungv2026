@@ -1,0 +1,31 @@
+kind = "slides"
+previewPath = "/comet-lkw-praesentation/"
+title = "COMET LKW – Präsentation"
+version = "1.0.0"
+id = "artifacts/comet-lkw-praesentation"
+router = "path"
+
+[[integratedSkills]]
+name = "slides"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/comet-lkw-praesentation/" ]
+localPort = 18316
+
+[services.development]
+run = "pnpm --filter @workspace/comet-lkw-praesentation run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/comet-lkw-praesentation", "run", "build" ]
+publicDir = "artifacts/comet-lkw-praesentation/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18316"
+BASE_PATH = "/comet-lkw-praesentation/"
