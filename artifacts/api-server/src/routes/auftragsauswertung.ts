@@ -83,53 +83,51 @@ function buildResults(
   rows: ReturnType<typeof parseCsv>,
   spedByNr: Map<string, { id: number; name: string }>
 ) {
-  type SubGroup = { auftraegeSet: Set<string>; paletten: number };
-  type Group = {
-    spediteurNr: string;
-    csvName: string;
-    speditionId: number | null;
-    speditionDbName: string | null;
-    auftraegeSet: Set<string>;
-    paletten: number;
-    leitgebieteMap: Map<string, SubGroup>;
-    liefertermineMap: Map<string, SubGroup>;
+  type LgEntry  = { auftraegeSet: Set<string>; paletten: number };
+  type LtEntry  = { auftraegeSet: Set<string>; paletten: number; leitgebiete: Map<string, LgEntry> };
+  type SpedEntry = {
+    spediteurNr: string; csvName: string;
+    speditionId: number | null; speditionDbName: string | null;
+    auftraegeSet: Set<string>; paletten: number;
+    liefertermine: Map<string, LtEntry>;
   };
-  const grouped = new Map<string, Group>();
+
+  const grouped = new Map<string, SpedEntry>();
 
   for (const row of rows) {
     if (!grouped.has(row.spediteurNr)) {
       const cleanName = row.spedName.replace(/\s*\*\d+\*\s*$/, "").trim();
-      const dbMatch = spedByNr.get(row.spediteurNr);
+      const dbMatch   = spedByNr.get(row.spediteurNr);
       grouped.set(row.spediteurNr, {
-        spediteurNr:      row.spediteurNr,
-        csvName:          cleanName,
-        speditionId:      dbMatch?.id ?? null,
-        speditionDbName:  dbMatch?.name ?? null,
-        auftraegeSet:     new Set(),
-        paletten:         0,
-        leitgebieteMap:   new Map(),
-        liefertermineMap: new Map(),
+        spediteurNr:    row.spediteurNr,
+        csvName:        cleanName,
+        speditionId:    dbMatch?.id ?? null,
+        speditionDbName: dbMatch?.name ?? null,
+        auftraegeSet:   new Set(),
+        paletten:       0,
+        liefertermine:  new Map(),
       });
     }
     const g = grouped.get(row.spediteurNr)!;
     if (row.auftrag) g.auftraegeSet.add(row.auftrag);
     g.paletten++;
 
-    // Per-Leitgebiet: track auftraege + paletten
-    if (row.leitgebiet) {
-      const lg = g.leitgebieteMap.get(row.leitgebiet) ?? { auftraegeSet: new Set<string>(), paletten: 0 };
-      if (row.auftrag) lg.auftraegeSet.add(row.auftrag);
-      lg.paletten++;
-      g.leitgebieteMap.set(row.leitgebiet, lg);
+    // Nest: Liefertermin → Leitgebiet
+    const lfdatKey = row.lfdat || "__kein_termin__";
+    if (!g.liefertermine.has(lfdatKey)) {
+      g.liefertermine.set(lfdatKey, { auftraegeSet: new Set(), paletten: 0, leitgebiete: new Map() });
     }
+    const lt = g.liefertermine.get(lfdatKey)!;
+    if (row.auftrag) lt.auftraegeSet.add(row.auftrag);
+    lt.paletten++;
 
-    // Per-Liefertermin: track auftraege + paletten
-    if (row.lfdat) {
-      const lt = g.liefertermineMap.get(row.lfdat) ?? { auftraegeSet: new Set<string>(), paletten: 0 };
-      if (row.auftrag) lt.auftraegeSet.add(row.auftrag);
-      lt.paletten++;
-      g.liefertermineMap.set(row.lfdat, lt);
+    const lgKey = row.leitgebiet || "__kein_leitgebiet__";
+    if (!lt.leitgebiete.has(lgKey)) {
+      lt.leitgebiete.set(lgKey, { auftraegeSet: new Set(), paletten: 0 });
     }
+    const lg = lt.leitgebiete.get(lgKey)!;
+    if (row.auftrag) lg.auftraegeSet.add(row.auftrag);
+    lg.paletten++;
   }
 
   return Array.from(grouped.values())
@@ -141,20 +139,20 @@ function buildResults(
       matched:         g.speditionId !== null,
       auftraege:       g.auftraegeSet.size,
       paletten:        g.paletten,
-      freigegeben: false,
-      leitgebiete: Array.from(g.leitgebieteMap.entries())
+      freigegeben:     false,
+      liefertermine: Array.from(g.liefertermine.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([leitgebiet, sub]) => ({
-          leitgebiet,
-          auftraege: sub.auftraegeSet.size,
-          paletten:  sub.paletten,
-        })),
-      liefertermine: Array.from(g.liefertermineMap.entries())
-        .sort((a, b) => a[0].localeCompare(b[0]))
-        .map(([lfdat, sub]) => ({
-          lfdat,
-          auftraege: sub.auftraegeSet.size,
-          paletten:  sub.paletten,
+        .map(([lfdat, lt]) => ({
+          lfdat: lfdat === "__kein_termin__" ? "" : lfdat,
+          auftraege: lt.auftraegeSet.size,
+          paletten:  lt.paletten,
+          leitgebiete: Array.from(lt.leitgebiete.entries())
+            .sort((a, b) => a[0].localeCompare(b[0]))
+            .map(([lg, sub]) => ({
+              leitgebiet: lg === "__kein_leitgebiet__" ? "" : lg,
+              auftraege:  sub.auftraegeSet.size,
+              paletten:   sub.paletten,
+            })),
         })),
     }))
     .sort((a, b) => a.spediteurNr.localeCompare(b.spediteurNr));

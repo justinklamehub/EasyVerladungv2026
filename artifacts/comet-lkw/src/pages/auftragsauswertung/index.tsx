@@ -11,8 +11,18 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") + "/api";
 
-interface LeitgebietRow { leitgebiet: string; auftraege: number; paletten: number; }
-interface LieferterminRow { lfdat: string; auftraege: number; paletten: number; }
+interface LeitgebietRow {
+  leitgebiet: string;
+  auftraege: number;
+  paletten: number;
+}
+
+interface LieferterminRow {
+  lfdat: string;
+  auftraege: number;
+  paletten: number;
+  leitgebiete: LeitgebietRow[];
+}
 
 interface SpedResult {
   spediteurNr: string;
@@ -23,7 +33,6 @@ interface SpedResult {
   auftraege: number;
   paletten: number;
   freigegeben: boolean;
-  leitgebiete: LeitgebietRow[];
   liefertermine: LieferterminRow[];
 }
 
@@ -38,9 +47,9 @@ interface AnalyseResult {
 }
 
 function formatLfdat(s: string): string {
+  if (!s) return "—";
   const m = s.match(/^(\d+)\.(\d{4})$/);
   if (m) return `KW\u00a0${m[1]}\u00a0/\u00a0${m[2]}`;
-  // Also handle dd.mm.yyyy
   const d = s.match(/^(\d{2})\.(\d{2})\.(\d{4})$/);
   if (d) return `${d[1]}.${d[2]}.${d[3]}`;
   return s;
@@ -58,21 +67,42 @@ function formatDate(iso?: string): string {
 
 const SPED_ROLES = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"];
 
-function SubTable({ rows }: { rows: { label: string; auftraege: number; paletten: number }[] }) {
-  if (rows.length === 0) return <span className="text-slate-300 text-xs">—</span>;
+/** Renders the nested Liefertermin → Leitgebiet hierarchy */
+function LieferterminBlock({ liefertermine }: { liefertermine: LieferterminRow[] }) {
+  if (liefertermine.length === 0) return <span className="text-slate-300 text-xs">—</span>;
+
   return (
-    <table className="text-xs w-full border-collapse">
-      <tbody>
-        {rows.map((r) => (
-          <tr key={r.label} className="align-baseline">
-            <td className="pr-3 py-px text-slate-700 whitespace-nowrap">{r.label}</td>
-            <td className="py-px text-right tabular-nums text-slate-500 whitespace-nowrap">
-              {r.auftraege}&nbsp;A&nbsp;/&nbsp;{r.paletten}&nbsp;P
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="space-y-3">
+      {liefertermine.map((lt, i) => (
+        <div key={lt.lfdat || i}>
+          {/* Liefertermin header row */}
+          <div className="flex items-baseline gap-2 mb-1">
+            <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
+              {formatLfdat(lt.lfdat)}
+            </span>
+            <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
+              {lt.auftraege}&thinsp;A&thinsp;/&thinsp;{lt.paletten}&thinsp;Pal.
+            </span>
+          </div>
+
+          {/* Leitgebiet sub-rows */}
+          {(lt.leitgebiete ?? []).length > 0 && (
+            <div className="pl-3 border-l-2 border-slate-100 space-y-0.5">
+              {(lt.leitgebiete ?? []).map((lg, j) => (
+                <div key={lg.leitgebiet || j} className="flex items-baseline gap-2">
+                  <span className="text-[11px] text-slate-600 whitespace-nowrap min-w-[100px]">
+                    {lg.leitgebiet || "—"}
+                  </span>
+                  <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
+                    {lg.auftraege}&thinsp;A&thinsp;/&thinsp;{lg.paletten}&thinsp;Pal.
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -166,8 +196,6 @@ export default function AuftragsauswertungPage() {
     if (file) processFile(file);
   }, [processFile]);
 
-  const triggerUpload = () => fileRef.current?.click();
-
   if (isLoadingLatest) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[300px]">
@@ -192,21 +220,22 @@ export default function AuftragsauswertungPage() {
           </div>
         </div>
         {!isSpedUser && (
-          <Button variant="outline" size="sm" onClick={triggerUpload} disabled={isUploading} className="gap-2">
+          <Button
+            variant="outline" size="sm"
+            onClick={() => fileRef.current?.click()}
+            disabled={isUploading}
+            className="gap-2"
+          >
             {isUploading
               ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <Upload className="h-4 w-4" />
-            }
+              : <Upload className="h-4 w-4" />}
             {result ? "Neue CSV hochladen" : "CSV hochladen"}
           </Button>
         )}
       </div>
 
       <input
-        ref={fileRef}
-        type="file"
-        accept=".csv"
-        className="hidden"
+        ref={fileRef} type="file" accept=".csv" className="hidden"
         onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
       />
 
@@ -222,7 +251,7 @@ export default function AuftragsauswertungPage() {
           onDrop={onDrop}
           onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
           onDragLeave={() => setIsDragging(false)}
-          onClick={triggerUpload}
+          onClick={() => fileRef.current?.click()}
         >
           <div className="flex flex-col items-center gap-4">
             <div className="p-4 rounded-full bg-slate-100">
@@ -235,7 +264,6 @@ export default function AuftragsauswertungPage() {
           </div>
         </div>
       )}
-
       {!result && isUploading && (
         <div className="border border-blue-100 bg-blue-50 rounded-xl p-14 text-center">
           <div className="flex flex-col items-center gap-3">
@@ -244,7 +272,6 @@ export default function AuftragsauswertungPage() {
           </div>
         </div>
       )}
-
       {!result && isSpedUser && (
         <div className="border border-slate-200 rounded-xl p-14 text-center">
           <FileSpreadsheet className="h-9 w-9 mx-auto mb-3 text-slate-200" />
@@ -260,12 +287,12 @@ export default function AuftragsauswertungPage() {
           onDragOver={!isSpedUser ? (e) => { e.preventDefault(); setIsDragging(true); } : undefined}
           onDragLeave={!isSpedUser ? () => setIsDragging(false) : undefined}
         >
-          {/* Summary cards — admin only */}
+          {/* Summary cards */}
           {!isSpedUser && (
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Speditionen", value: result.results.length },
-                { label: "Aufträge gesamt", value: result.totalAuftraege.toLocaleString("de-DE") },
+                { label: "Speditionen",       value: result.results.length },
+                { label: "Aufträge gesamt",   value: result.totalAuftraege.toLocaleString("de-DE") },
                 { label: "Paletten (HU) gesamt", value: result.totalPaletten.toLocaleString("de-DE") },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white border border-slate-200 rounded-lg px-5 py-4">
@@ -278,7 +305,7 @@ export default function AuftragsauswertungPage() {
 
           {/* Main table card */}
           <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-            {/* Table meta bar */}
+            {/* Meta bar */}
             <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-3 flex-wrap">
               <FileSpreadsheet className="h-4 w-4 text-slate-400 shrink-0" />
               {result.filename && (
@@ -296,9 +323,7 @@ export default function AuftragsauswertungPage() {
                     {result.uploadedByUsername}
                   </span>
                 )}
-                {result.uploadedAt && (
-                  <span>{formatDate(result.uploadedAt)}</span>
-                )}
+                {result.uploadedAt && <span>{formatDate(result.uploadedAt)}</span>}
               </div>
             </div>
 
@@ -317,10 +342,7 @@ export default function AuftragsauswertungPage() {
                       Paletten
                     </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
-                      Pro Leitgebiet
-                    </th>
-                    <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
-                      Pro Liefertermin
+                      Liefertermin / Leitgebiet
                     </th>
                     {!isSpedUser && (
                       <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
@@ -332,17 +354,6 @@ export default function AuftragsauswertungPage() {
                 <tbody className="divide-y divide-slate-100">
                   {result.results.map((s) => {
                     const isOwn = s.speditionId === mySpeditionId;
-                    const leitgebietRows = s.leitgebiete.map((lg) => ({
-                      label: lg.leitgebiet,
-                      auftraege: lg.auftraege ?? 0,
-                      paletten: lg.paletten,
-                    }));
-                    const lieferterminRows = s.liefertermine.map((lt) => {
-                      const lfdat   = typeof lt === "string" ? lt : (lt as LieferterminRow).lfdat;
-                      const auftr   = typeof lt === "string" ? 0  : (lt as LieferterminRow).auftraege;
-                      const paletts = typeof lt === "string" ? 0  : (lt as LieferterminRow).paletten;
-                      return { label: formatLfdat(lfdat), auftraege: auftr, paletten: paletts };
-                    });
                     return (
                       <tr
                         key={s.spediteurNr}
@@ -352,7 +363,7 @@ export default function AuftragsauswertungPage() {
                         )}
                       >
                         {/* Spedition name */}
-                        <td className="px-5 py-4 min-w-[200px]">
+                        <td className="px-5 py-4 min-w-[180px]">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-slate-800">
                               {s.speditionDbName ?? s.csvName}
@@ -369,38 +380,33 @@ export default function AuftragsauswertungPage() {
                             )}
                           </div>
                           {!isSpedUser && s.matched && s.csvName && s.speditionDbName !== s.csvName && (
-                            <div className="text-xs text-slate-400 mt-1 pl-0">{s.csvName}</div>
+                            <div className="text-xs text-slate-400 mt-1">{s.csvName}</div>
                           )}
                           {!isSpedUser && !s.matched && (
                             <div className="text-xs text-amber-500 mt-1">Keine Zuordnung</div>
                           )}
                         </td>
 
-                        {/* Aufträge */}
+                        {/* Aufträge total */}
                         <td className="px-4 py-4 text-center">
                           <span className="inline-flex items-center justify-center rounded-full bg-blue-50 text-blue-700 font-bold text-sm tabular-nums min-w-[2.5rem] h-9 px-2">
                             {s.auftraege}
                           </span>
                         </td>
 
-                        {/* Paletten */}
+                        {/* Paletten total */}
                         <td className="px-4 py-4 text-center">
                           <span className="font-bold text-slate-700 tabular-nums text-base">
                             {s.paletten.toLocaleString("de-DE")}
                           </span>
                         </td>
 
-                        {/* Pro Leitgebiet */}
-                        <td className="px-5 py-4 min-w-[220px]">
-                          <SubTable rows={leitgebietRows} />
+                        {/* Liefertermin → Leitgebiet (nested) */}
+                        <td className="px-5 py-4 min-w-[280px]">
+                          <LieferterminBlock liefertermine={s.liefertermine} />
                         </td>
 
-                        {/* Pro Liefertermin */}
-                        <td className="px-5 py-4 min-w-[220px]">
-                          <SubTable rows={lieferterminRows} />
-                        </td>
-
-                        {/* Freigabe toggle — admin only */}
+                        {/* Freigabe toggle */}
                         {!isSpedUser && (
                           <td className="px-4 py-4 text-center">
                             {togglingNr === s.spediteurNr ? (
@@ -428,7 +434,7 @@ export default function AuftragsauswertungPage() {
             </div>
           </div>
 
-          {/* Warning: unmatched speditionen */}
+          {/* Unmatched warning */}
           {!isSpedUser && result.results.some((r) => !r.matched) && (
             <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-800">
               <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
