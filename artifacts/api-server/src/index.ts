@@ -278,6 +278,21 @@ httpServer.listen(port, async (err?: Error) => {
     logger.warn({ err: e }, "speditionen.speditionsnummer column ensure failed — non-fatal");
   }
   try {
+    await pool.query(`
+      ALTER TABLE speditionen
+        ADD COLUMN IF NOT EXISTS preis_pro_km DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS mindestpreis_pro_fahrt DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS paletten_aufschlag DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS kraftstoffzuschlag_prozent DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS fixkosten_pro_fahrt DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS maut_pro_km DOUBLE PRECISION,
+        ADD COLUMN IF NOT EXISTS daily_shipment_limit INTEGER
+    `);
+    logger.info("speditionen tariff columns ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "speditionen tariff columns ensure failed — non-fatal");
+  }
+  try {
     await seedMissingPermissions();
     logger.info("Permissions seeded (missing rows backfilled)");
   } catch (e) {
