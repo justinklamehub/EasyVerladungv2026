@@ -39,24 +39,25 @@ const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
 // ── Roles ──────────────────────────────────────────────────────────────────────
 
-// null = all dynamically loaded roles are allowed
+// All items are fully configurable — actual access control is enforced
+// by ProtectedRoute in App.tsx and backend middleware independently.
 const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
   "/dashboard":         null,
   "/shipments":         null,
-  "/shipments/kanban":  ["comet_admin","comet_leitstand","comet_lager"],
+  "/shipments/kanban":  null,
   "/wochenansicht":     null,
-  "/speditionen":       ["comet_admin","comet_leitstand"],
-  "/users":             ["comet_admin","comet_leitstand","speditions_admin"],
+  "/speditionen":       null,
+  "/users":             null,
   "/paletten":          null,
   "/abstimmungen":      null,
-  "/kalkulation":       ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
-  "/gefahrgut":         ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
-  "/auswertung":        ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
+  "/kalkulation":       null,
+  "/gefahrgut":         null,
+  "/auswertung":        null,
   "/auftragsauswertung":null,
-  "/auditlog":          ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
-  "/speditionsfreigabe":["speditions_admin"],
-  "/settings":          ["comet_admin"],
-  "/berechtigungen":    ["comet_admin"],
+  "/auditlog":          null,
+  "/speditionsfreigabe":null,
+  "/settings":          null,
+  "/berechtigungen":    null,
   "/tickets":           null,
   "/hilfe":             null,
 };
@@ -862,7 +863,7 @@ export function SidebarNavConfig({
                 Rollensichtbarkeit
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Steuern Sie, welche Rolle welchen Menüpunkt sehen darf — ausgegraut bedeutet systemseitig nicht verfügbar
+                Steuern Sie, welche Rolle welchen Menüpunkt sehen darf — die eigentliche Zugriffskontrolle bleibt davon unberührt
               </CardDescription>
             </div>
             {Object.keys(roleVisibility).length > 0 && (
