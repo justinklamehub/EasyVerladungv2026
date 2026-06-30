@@ -57,7 +57,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
     name: "", kuerzel: "", ansprechpartner: "", email: "", telefon: "", status: "aktiv", bemerkungen: "", palletFaktor: 1,
     preisProKm: "", mindestpreisProFahrt: "", palettenAufschlag: "",
     kraftstoffzuschlagProzent: "", fixkostenProFahrt: "", mautProKm: "",
-    dailyShipmentLimit: "",
+    dailyShipmentLimit: "", speditionsnummer: "",
   });
 
   useEffect(() => {
@@ -79,13 +79,14 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
           fixkostenProFahrt: editSpedition.fixkostenProFahrt != null ? String(editSpedition.fixkostenProFahrt) : "",
           mautProKm: editSpedition.mautProKm != null ? String(editSpedition.mautProKm) : "",
           dailyShipmentLimit: editSpedition.dailyShipmentLimit != null ? String(editSpedition.dailyShipmentLimit) : "",
+          speditionsnummer: (editSpedition as any).speditionsnummer || "",
         });
       } else {
         setForm({
           name: "", kuerzel: "", ansprechpartner: "", email: "", telefon: "", status: "aktiv", bemerkungen: "", palletFaktor: 1,
           preisProKm: "", mindestpreisProFahrt: "", palettenAufschlag: "",
           kraftstoffzuschlagProzent: "", fixkostenProFahrt: "", mautProKm: "",
-          dailyShipmentLimit: "",
+          dailyShipmentLimit: "", speditionsnummer: "",
         });
       }
     }
@@ -354,6 +355,10 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
                     <SelectItem value="inaktiv">Inaktiv</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+              <div className="space-y-1">
+                <Label>Speditionsnummer (SAP)</Label>
+                <Input value={form.speditionsnummer} onChange={e => setForm(f => ({ ...f, speditionsnummer: e.target.value }))} placeholder="70935" maxLength={10} />
               </div>
               <div className="space-y-1">
                 <Label>Ansprechpartner</Label>

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { speditionenTable, speditionPermissionsTable, speditionContactsTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
@@ -20,8 +20,8 @@ const router = Router();
 
 router.get("/speditionen", requireAuth, async (req, res) => {
   try {
-    const rows = await db.select().from(speditionenTable).orderBy(speditionenTable.name);
-    return res.json(rows);
+    const result = await pool.query("SELECT * FROM speditionen ORDER BY name");
+    return res.json(result.rows);
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }
@@ -34,7 +34,7 @@ router.post("/speditionen", requireAuth, async (req, res) => {
     }
     const { name, kuerzel, ansprechpartner, email, telefon, status, bemerkungen, palletFaktor,
             preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm,
-            dailyShipmentLimit } = req.body;
+            dailyShipmentLimit, speditionsnummer } = req.body;
     const [sped] = await db
       .insert(speditionenTable)
       .values({
@@ -49,8 +49,12 @@ router.post("/speditionen", requireAuth, async (req, res) => {
         dailyShipmentLimit: dailyShipmentLimit != null && dailyShipmentLimit !== "" ? Number(dailyShipmentLimit) : null,
       })
       .returning();
+    if (speditionsnummer !== undefined) {
+      await pool.query("UPDATE speditionen SET speditionsnummer=$1 WHERE id=$2", [speditionsnummer || null, sped.id]);
+    }
+    const fresh = await pool.query("SELECT * FROM speditionen WHERE id=$1", [sped.id]);
     await logAudit(req.session.userId!, "spedition", sped.id, "created", null, name);
-    return res.status(201).json(sped);
+    return res.status(201).json(fresh.rows[0] ?? sped);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
@@ -80,7 +84,7 @@ router.patch("/speditionen/:id", requireAuth, async (req, res) => {
     const id = Number(req.params.id);
     const { name, kuerzel, ansprechpartner, email, telefon, status, bemerkungen, palletFaktor,
             preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm,
-            dailyShipmentLimit } = req.body;
+            dailyShipmentLimit, speditionsnummer } = req.body;
     const updates: any = {};
     if (name !== undefined) updates.name = name;
     if (kuerzel !== undefined) updates.kuerzel = kuerzel;
@@ -101,8 +105,12 @@ router.patch("/speditionen/:id", requireAuth, async (req, res) => {
 
     const [sped] = await db.update(speditionenTable).set(updates).where(eq(speditionenTable.id, id)).returning();
     if (!sped) return res.status(404).json({ error: "Not found" });
+    if (speditionsnummer !== undefined) {
+      await pool.query("UPDATE speditionen SET speditionsnummer=$1 WHERE id=$2", [speditionsnummer || null, id]);
+    }
+    const fresh = await pool.query("SELECT * FROM speditionen WHERE id=$1", [id]);
     await logAudit(req.session.userId!, "spedition", id, "updated", null, JSON.stringify(updates));
-    return res.json(sped);
+    return res.json(fresh.rows[0] ?? sped);
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });

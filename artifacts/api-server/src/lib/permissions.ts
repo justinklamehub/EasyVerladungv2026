@@ -18,7 +18,8 @@ export type Permission =
   | "spedition.edit"
   | "gefahrgut.reset"
   | "gefahrgut.assign_shipment"
-  | "kanban.use";
+  | "kanban.use"
+  | "auftrag.analyse";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -55,6 +56,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "gefahrgut.reset",
   "gefahrgut.assign_shipment",
   "kanban.use",
+  "auftrag.analyse",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
@@ -75,6 +77,7 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "gefahrgut.reset":            { label: "Checkliste zurücksetzen",       category: "Gefahrgut" },
   "gefahrgut.assign_shipment":  { label: "Checkliste LKW zuordnen",      category: "Gefahrgut" },
   "kanban.use":                 { label: "Kanban-Board nutzen (Drag & Drop)", category: "Kanban" },
+  "auftrag.analyse":            { label: "Auftragsauswertung (CSV-Upload)",    category: "Auftragsauswertung" },
 };
 
 export const ROLE_LABELS: Record<string, string> = {

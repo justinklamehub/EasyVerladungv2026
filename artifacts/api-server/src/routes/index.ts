@@ -19,6 +19,7 @@ import ticketsRouter from "./tickets";
 import userPreferencesRouter from "./user-preferences";
 import reportRouter from "./report";
 import shipmentTemplatesRouter from "./shipment-templates";
+import auftragsauswertungRouter from "./auftragsauswertung";
 
 const router: IRouter = Router();
 
@@ -42,5 +43,6 @@ router.use(emailLogRouter);
 router.use(ticketsRouter);
 router.use(userPreferencesRouter);
 router.use(reportRouter);
+router.use(auftragsauswertungRouter);
 
 export default router;

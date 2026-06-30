@@ -8,6 +8,7 @@ import { ensureTicketsTables } from "./routes/tickets";
 import { ensureUserPreferencesTable } from "./routes/user-preferences";
 import { startScheduler, ensureReportWeeklyLogTable } from "./lib/scheduler";
 import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
+import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
 
@@ -262,6 +263,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("shipment_templates table ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureShipmentTemplatesTable failed — non-fatal");
+  }
+  try {
+    await pool.query("ALTER TABLE speditionen ADD COLUMN IF NOT EXISTS speditionsnummer TEXT");
+    logger.info("speditionen.speditionsnummer column ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "speditionen.speditionsnummer column ensure failed — non-fatal");
   }
   try {
     await seedMissingPermissions();
