@@ -1047,6 +1047,15 @@ export default function SettingsPage() {
     },
   });
 
+  const { data: rolesData } = useQuery<{ roles: { roleKey: string; label: string; roleGroup: string; isSystem: boolean }[] }>({
+    queryKey: ["admin-permissions-roles"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/admin/permissions`, { credentials: "include" });
+      if (!res.ok) return { roles: [] };
+      return res.json();
+    },
+  });
+
   const saveMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
       const res = await fetch(`${API}/settings/${key}`, {
@@ -1168,7 +1177,7 @@ export default function SettingsPage() {
 
         {/* ── Tab: Sidebar ── */}
         <TabsContent value="sidebar" className="mt-0">
-          <SidebarNavConfig savedConfig={s["sidebar_nav_config"] ?? ""} savedCategories={s["sidebar_categories"] ?? ""} savedOrder={s["sidebar_order"] ?? ""} savedRoleVisibility={s["sidebar_role_visibility"] ?? ""} />
+          <SidebarNavConfig savedConfig={s["sidebar_nav_config"] ?? ""} savedCategories={s["sidebar_categories"] ?? ""} savedOrder={s["sidebar_order"] ?? ""} savedRoleVisibility={s["sidebar_role_visibility"] ?? ""} roles={rolesData?.roles ?? []} />
         </TabsContent>
 
         {/* ── Tab: E-Mail-Vorlagen ── */}

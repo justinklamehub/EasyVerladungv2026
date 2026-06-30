@@ -39,12 +39,30 @@ const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
 // ── Roles ──────────────────────────────────────────────────────────────────────
 
-const ALL_ROLES = [
-  "comet_admin", "comet_leitstand", "comet_lager", "comet_viewer",
-  "speditions_admin", "speditions_bearbeiter", "speditions_viewer",
-] as const;
+// null = all dynamically loaded roles are allowed
+const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
+  "/dashboard":         null,
+  "/shipments":         null,
+  "/shipments/kanban":  ["comet_admin","comet_leitstand","comet_lager"],
+  "/wochenansicht":     null,
+  "/speditionen":       ["comet_admin","comet_leitstand"],
+  "/users":             ["comet_admin","comet_leitstand","speditions_admin"],
+  "/paletten":          null,
+  "/abstimmungen":      null,
+  "/kalkulation":       ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
+  "/gefahrgut":         ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
+  "/auswertung":        ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
+  "/auftragsauswertung":null,
+  "/auditlog":          ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
+  "/speditionsfreigabe":["speditions_admin"],
+  "/settings":          ["comet_admin"],
+  "/berechtigungen":    ["comet_admin"],
+  "/tickets":           null,
+  "/hilfe":             null,
+};
 
-const ROLE_LABELS: Record<string, { short: string; long: string }> = {
+// Fallback short/long labels for built-in system roles
+const SYSTEM_ROLE_LABELS: Record<string, { short: string; long: string }> = {
   comet_admin:            { short: "CA",  long: "COMET Admin" },
   comet_leitstand:        { short: "LS",  long: "Leitstand" },
   comet_lager:            { short: "LA",  long: "Lager" },
@@ -54,26 +72,16 @@ const ROLE_LABELS: Record<string, { short: string; long: string }> = {
   speditions_viewer:      { short: "SV",  long: "Sped. Viewer" },
 };
 
-const ITEM_ALLOWED_ROLES: Record<string, readonly string[]> = {
-  "/dashboard":         ALL_ROLES,
-  "/shipments":         ALL_ROLES,
-  "/shipments/kanban":  ["comet_admin","comet_leitstand","comet_lager"],
-  "/wochenansicht":     ALL_ROLES,
-  "/speditionen":       ["comet_admin","comet_leitstand"],
-  "/users":             ["comet_admin","comet_leitstand","speditions_admin"],
-  "/paletten":          ALL_ROLES,
-  "/abstimmungen":      ALL_ROLES,
-  "/kalkulation":       ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
-  "/gefahrgut":         ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
-  "/auswertung":        ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
-  "/auftragsauswertung":["comet_admin","comet_leitstand","comet_lager","comet_viewer","speditions_admin","speditions_bearbeiter","speditions_viewer"],
-  "/auditlog":          ["comet_admin","comet_leitstand","comet_lager","comet_viewer"],
-  "/speditionsfreigabe":["speditions_admin"],
-  "/settings":          ["comet_admin"],
-  "/berechtigungen":    ["comet_admin"],
-  "/tickets":           ALL_ROLES,
-  "/hilfe":             ALL_ROLES,
-};
+interface RoleInfo { roleKey: string; label: string; roleGroup: string; isSystem: boolean; }
+
+function getRoleLabel(roleKey: string, roles: RoleInfo[]): { short: string; long: string } {
+  const sys = SYSTEM_ROLE_LABELS[roleKey];
+  if (sys) return sys;
+  const r = roles.find((x) => x.roleKey === roleKey);
+  const long = r?.label ?? roleKey;
+  const short = long.split(/[\s_]+/).map((w) => w[0]?.toUpperCase() ?? "").join("").slice(0, 3) || roleKey.slice(0, 3).toUpperCase();
+  return { short, long };
+}
 
 // ── Default nav items ──────────────────────────────────────────────────────────
 
@@ -480,9 +488,10 @@ function SortableNavItem({
 // ── SidebarNavConfig (main component) ─────────────────────────────────────────
 
 export function SidebarNavConfig({
-  savedConfig, savedCategories, savedOrder, savedRoleVisibility,
+  savedConfig, savedCategories, savedOrder, savedRoleVisibility, roles,
 }: {
   savedConfig: string; savedCategories: string; savedOrder: string; savedRoleVisibility: string;
+  roles: RoleInfo[];
 }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -511,12 +520,15 @@ export function SidebarNavConfig({
     try { setRoleVisibility(savedRoleVisibility ? JSON.parse(savedRoleVisibility) : {}); } catch { /* ignore */ }
   }, [savedRoleVisibility]);
 
+  const allRoleKeys = roles.map((r) => r.roleKey);
+
   function handleRoleToggle(href: string, role: string, checked: boolean) {
     setRoleVisibility((prev) => {
-      const allowedForItem = ITEM_ALLOWED_ROLES[href] ?? ALL_ROLES;
-      const current = prev[href] ?? [...allowedForItem];
+      const staticAllowed = ITEM_ALLOWED_ROLES[href]; // null = all roles
+      const effectiveAllowed = staticAllowed === null ? allRoleKeys : [...staticAllowed];
+      const current = prev[href] ?? effectiveAllowed;
       const next = checked ? [...new Set([...current, role])] : current.filter((r) => r !== role);
-      const allAllowed = allowedForItem.every((r) => next.includes(r));
+      const allAllowed = effectiveAllowed.every((r) => next.includes(r));
       if (allAllowed) {
         const { [href]: _, ...rest } = prev;
         void _;
@@ -867,18 +879,22 @@ export function SidebarNavConfig({
               <thead>
                 <tr className="border-b bg-slate-50">
                   <th className="text-left font-medium text-slate-500 px-4 py-2 min-w-[140px]">Menüpunkt</th>
-                  {ALL_ROLES.map((role) => (
-                    <th key={role} className="text-center font-medium text-slate-500 px-1 py-2 min-w-[44px]">
-                      <span title={ROLE_LABELS[role]?.long ?? role}>{ROLE_LABELS[role]?.short ?? role}</span>
-                    </th>
-                  ))}
+                  {allRoleKeys.map((roleKey) => {
+                    const lbl = getRoleLabel(roleKey, roles);
+                    return (
+                      <th key={roleKey} className="text-center font-medium text-slate-500 px-1 py-2 min-w-[44px]">
+                        <span title={lbl.long}>{lbl.short}</span>
+                      </th>
+                    );
+                  })}
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {DEFAULT_NAV_ITEMS.map((navItem) => {
-                  const allowed = ITEM_ALLOWED_ROLES[navItem.href] ?? ALL_ROLES;
+                  const staticAllowed = ITEM_ALLOWED_ROLES[navItem.href];
+                  const effectiveAllowed = staticAllowed === null ? allRoleKeys : [...staticAllowed];
                   const configured = roleVisibility[navItem.href];
-                  const activeSet = new Set(configured ?? allowed);
+                  const activeSet = new Set(configured ?? effectiveAllowed);
                   const hasRestriction = !!configured;
                   const customLabel = items.find((i) => i.href === navItem.href)?.label ?? navItem.defaultLabel;
                   return (
@@ -887,15 +903,15 @@ export function SidebarNavConfig({
                         {customLabel}
                         {hasRestriction && <span className="ml-1.5 text-[9px] text-amber-600 font-semibold bg-amber-100 rounded px-1">eingeschränkt</span>}
                       </td>
-                      {ALL_ROLES.map((role) => {
-                        const roleAllowed = allowed.includes(role);
-                        const isChecked = roleAllowed && activeSet.has(role);
+                      {allRoleKeys.map((roleKey) => {
+                        const roleAllowed = effectiveAllowed.includes(roleKey);
+                        const isChecked = roleAllowed && activeSet.has(roleKey);
                         return (
-                          <td key={role} className="px-1 py-2 text-center">
+                          <td key={roleKey} className="px-1 py-2 text-center">
                             {roleAllowed ? (
                               <Checkbox
                                 checked={isChecked}
-                                onCheckedChange={(v) => handleRoleToggle(navItem.href, role, !!v)}
+                                onCheckedChange={(v) => handleRoleToggle(navItem.href, roleKey, !!v)}
                                 className="mx-auto"
                               />
                             ) : (
@@ -911,7 +927,12 @@ export function SidebarNavConfig({
             </table>
           </div>
           <p className="text-[11px] text-slate-400 px-4 py-3 leading-relaxed border-t">
-            <strong>CA</strong> COMET Admin · <strong>LS</strong> Leitstand · <strong>LA</strong> Lager · <strong>CV</strong> COMET Viewer · <strong>SA</strong> Sped. Admin · <strong>BE</strong> Bearbeiter · <strong>SV</strong> Sped. Viewer
+            {allRoleKeys.map((roleKey, i) => {
+              const lbl = getRoleLabel(roleKey, roles);
+              return (
+                <span key={roleKey}>{i > 0 && " · "}<strong>{lbl.short}</strong> {lbl.long}</span>
+              );
+            })}
           </p>
         </CardContent>
       </Card>
