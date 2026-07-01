@@ -186,6 +186,12 @@ export function UserDialog({ open, onOpenChange, editUser }: UserDialogProps) {
           <div className="space-y-1">
             <Label>E-Mail</Label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="optional" />
+            {!email && !isEditing && (
+              <p className="text-xs text-amber-600 flex items-start gap-1 pt-0.5">
+                <span>ⓘ</span>
+                <span>Zugangsdaten werden an Ihre eigene E-Mail-Adresse gesendet.</span>
+              </p>
+            )}
           </div>
           <div className="space-y-1">
             <Label>{isEditing ? "Neues Passwort (leer lassen = unverändert)" : "Passwort *"}</Label>

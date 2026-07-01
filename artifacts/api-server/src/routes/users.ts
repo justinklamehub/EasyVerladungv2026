@@ -107,16 +107,33 @@ router.post("/users", requireAuth, async (req, res) => {
         const spedName = resolvedSpeditionId
           ? (await db.select({ name: speditionenTable.name }).from(speditionenTable).where(eq(speditionenTable.id, resolvedSpeditionId)).limit(1))[0]?.name ?? ""
           : "";
+
+        // Kein E-Mail-Empfänger beim neuen User → Ersteller als Empfänger verwenden
+        let mailRecipient: string | undefined = email || undefined;
+        let hinweis = "";
+        if (!mailRecipient) {
+          const [creator] = await db
+            .select({ email: usersTable.email })
+            .from(usersTable)
+            .where(eq(usersTable.id, req.session.userId!))
+            .limit(1);
+          mailRecipient = creator?.email || undefined;
+          if (mailRecipient) {
+            hinweis = `Hinweis: Für den Benutzer "${username}" wurde keine E-Mail-Adresse hinterlegt. Diese E-Mail wurde daher an Sie (${mailRecipient}) weitergeleitet.`;
+          }
+        }
+
         await sendEventEmail(
           "user",
           {
             username,
-            email: email || "",
+            email: email || "–",
             passwort: password,
             rolle: newRole,
             spedition: spedName,
+            hinweis,
           },
-          email || undefined,
+          mailRecipient,
         );
       } catch {}
     })();
