@@ -109,6 +109,7 @@ router.post("/reconciliations", requireAuth, async (req, res) => {
     if (io && sped) {
       await notify(io, {
         targetRoles: ["speditions_admin"],
+        pushEventKey: "reconciliation.started",
         title: "Neue Abstimmung gestartet",
         message: `COMET hat eine Paletten-Abstimmung für ${sped.name} (${dateFrom} – ${dateTo}) eröffnet.`,
         type: "warning",

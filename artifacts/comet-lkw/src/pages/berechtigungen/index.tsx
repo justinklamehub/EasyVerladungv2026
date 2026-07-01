@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, ShieldCheck, Lock, Plus, Pencil, Trash2, Check, X } from "lucide-react";
+import { PushEventSettings } from "@/components/push-event-settings";
 import { cn } from "@/lib/utils";
 
 interface RoleInfo {
@@ -379,6 +380,9 @@ export default function BerechtigungenPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ── Push-Ereignisse ────────────────────────────────────────────────── */}
+      <PushEventSettings />
 
       {/* ── Delete Confirm Dialog ──────────────────────────────────────────── */}
       <Dialog open={!!confirmDelete} onOpenChange={(o) => { if (!o) setConfirmDelete(null); }}>

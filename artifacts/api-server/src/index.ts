@@ -9,7 +9,7 @@ import { ensureUserPreferencesTable } from "./routes/user-preferences";
 import { startScheduler, ensureReportWeeklyLogTable } from "./lib/scheduler";
 import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
 import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
-import { initWebPush } from "./routes/push";
+import { initWebPush, seedPushEventSettings } from "./routes/push";
 import { pool } from "@workspace/db";
 
 const rawPort = process.env["PORT"];
@@ -304,6 +304,27 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("Email templates seeded");
   } catch (e) {
     logger.warn({ err: e }, "seedEmailTemplates failed — non-fatal");
+  }
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS push_event_settings (
+        id SERIAL PRIMARY KEY,
+        event_key TEXT UNIQUE NOT NULL,
+        label TEXT NOT NULL,
+        description TEXT DEFAULT '',
+        enabled BOOLEAN DEFAULT true,
+        target_roles TEXT[] DEFAULT '{}'
+      )
+    `);
+    logger.info("push_event_settings table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "push_event_settings table ensure failed — non-fatal");
+  }
+  try {
+    await seedPushEventSettings();
+    logger.info("push event settings seeded");
+  } catch (e) {
+    logger.warn({ err: e }, "seedPushEventSettings failed — non-fatal");
   }
   try {
     await pool.query(`

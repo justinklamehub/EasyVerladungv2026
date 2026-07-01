@@ -258,6 +258,7 @@ router.post("/shipments", requireAuth, async (req, res) => {
           message: `${spedName ? spedName + ": " : ""}${label}`,
           type: "info",
           linkTo: "/shipments",
+          pushEventKey: "shipment.created",
         });
       }
     }
@@ -509,6 +510,7 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
             message: `${label} ist eingetroffen${shipment.tor ? " – " + shipment.tor : ""}.`,
             type: "info",
             linkTo: "/shipments",
+            pushEventKey: "shipment.arrived",
           });
         } else if (updates.status === "Abgefertigt") {
           await notify(io, {
@@ -517,6 +519,7 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
             message: `${label} wurde abgefertigt.`,
             type: "success",
             linkTo: "/shipments",
+            pushEventKey: "shipment.dispatched",
           });
         }
       }
