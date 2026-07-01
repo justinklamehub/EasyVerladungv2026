@@ -48,3 +48,9 @@ id = "yTVhVJnTbH0PgcB6NIIww"
 uri = "file://.local/projektübersicht.md"
 type = "text"
 title = "COMET Easy-Verladung – Projektübersicht"
+
+[[outputs]]
+id = "0S1Ba80s5rDuvilBrtmG-"
+uri = "file://projektübersicht.docx"
+type = "word_document"
+title = "COMET Easy-Verladung – Projektübersicht (Word)"
