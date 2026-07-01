@@ -42,3 +42,9 @@ id = "XB924d3Vzsp8PY80gwp_d"
 uri = "file://attached_assets/stock_images/warehouse-mobile.jpg"
 type = "image"
 title = "warehouse worker using tablet mobile device scanning logistics operations"
+
+[[outputs]]
+id = "yTVhVJnTbH0PgcB6NIIww"
+uri = "file://.local/projektübersicht.md"
+type = "text"
+title = "COMET Easy-Verladung – Projektübersicht"
