@@ -52,7 +52,12 @@ export function useSocket() {
   useEffect(() => {
     const socket = getSocket();
 
-    const onConnect = () => { setIsConnected(true); _setConnected(true); };
+    const onConnect = () => {
+      setIsConnected(true);
+      _setConnected(true);
+      // Nach Reconnect (z. B. nach PWA-Hintergrund) alle Daten sofort neu laden
+      queryClient.invalidateQueries();
+    };
     const onDisconnect = () => { setIsConnected(false); _setConnected(false); };
 
     socket.on("connect", onConnect);
