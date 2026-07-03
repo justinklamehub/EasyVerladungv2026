@@ -11,13 +11,17 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { customFetch } from "@workspace/api-client-react";
+import { customFetch, useListSpeditionen } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/contexts/auth-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, ChevronLeft, ChevronRight, CalendarDays, GripVertical, Clock, Lock } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2, ChevronLeft, ChevronRight, CalendarDays, GripVertical, Clock, Lock, X, Filter } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
+
+const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 function toDateStr(d: Date): string {
@@ -275,11 +279,16 @@ function DroppableDay({
 export default function WochenansichtPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const role = user?.role ?? "";
+  const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(role);
 
   const [monday, setMonday] = useState<Date>(() => getMonday(new Date()));
   const [activeShipment, setActiveShipment] = useState<Shipment | null>(null);
   const [drawerShipmentId, setDrawerShipmentId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("__all__");
+  const [filterSpeditionId, setFilterSpeditionId] = useState("__all__");
 
   const openDrawer = (id: number) => {
     setDrawerShipmentId(id);
@@ -293,7 +302,7 @@ export default function WochenansichtPage() {
   const kw = getKW(monday);
 
   // Fetch shipments for this week
-  const { data: shipments = [], isLoading } = useQuery<Shipment[]>({
+  const { data: allShipments = [], isLoading } = useQuery<Shipment[]>({
     queryKey: ["shipments-week", from, to],
     queryFn: () => customFetch(`/api/shipments?dateFrom=${from}&dateTo=${to}`),
   });
@@ -305,7 +314,26 @@ export default function WochenansichtPage() {
     staleTime: 60_000,
   });
 
+  // Fetch Speditionen list (only relevant for COMET-side users)
+  const { data: speditionen } = useListSpeditionen({ query: { enabled: isCometUser } });
+
   const canDrag = !!permissions["shipment.reschedule"];
+
+  const hasActiveFilters = filterStatus !== "__all__" || filterSpeditionId !== "__all__";
+
+  const resetFilters = () => {
+    setFilterStatus("__all__");
+    setFilterSpeditionId("__all__");
+  };
+
+  // Apply status / Spedition filters
+  const shipments = useMemo(() => {
+    return allShipments.filter((s: any) => {
+      if (filterStatus !== "__all__" && s.status !== filterStatus) return false;
+      if (filterSpeditionId !== "__all__" && String(s.speditionId ?? "") !== filterSpeditionId) return false;
+      return true;
+    });
+  }, [allShipments, filterStatus, filterSpeditionId]);
 
   // Group shipments by etaDate
   const byDate = useMemo(() => {
@@ -371,60 +399,102 @@ export default function WochenansichtPage() {
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* Toolbar */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 bg-white shrink-0">
-        <div className="flex items-center gap-3">
-          <CalendarDays className="w-5 h-5 text-primary" />
-          <div>
-            <h1 className="text-base font-bold text-slate-900 leading-tight">Wochenplan</h1>
-            <p className="text-xs text-slate-400">
-              KW {kw} · {days[0].toLocaleDateString("de-DE")} – {days[6].toLocaleDateString("de-DE")}
-            </p>
+      <div className="border-b border-slate-200 bg-white shrink-0">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-3">
+            <CalendarDays className="w-5 h-5 text-primary" />
+            <div>
+              <h1 className="text-base font-bold text-slate-900 leading-tight">Wochenplan</h1>
+              <p className="text-xs text-slate-400">
+                KW {kw} · {days[0].toLocaleDateString("de-DE")} – {days[6].toLocaleDateString("de-DE")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {canDrag && (
+              <Badge variant="outline" className="text-xs text-slate-500 border-slate-200 hidden sm:flex items-center gap-1">
+                <GripVertical className="w-3 h-3" /> Drag & Drop aktiv
+              </Badge>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const m = getMonday(new Date());
+                setMonday(m);
+              }}
+              className="text-xs"
+            >
+              Heute
+            </Button>
+            <div className="flex items-center border border-slate-200 rounded-md">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-r-none"
+                onClick={() => {
+                  const m = new Date(monday);
+                  m.setDate(m.getDate() - 7);
+                  setMonday(m);
+                }}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 rounded-l-none"
+                onClick={() => {
+                  const m = new Date(monday);
+                  m.setDate(m.getDate() + 7);
+                  setMonday(m);
+                }}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {canDrag && (
-            <Badge variant="outline" className="text-xs text-slate-500 border-slate-200 hidden sm:flex items-center gap-1">
-              <GripVertical className="w-3 h-3" /> Drag & Drop aktiv
-            </Badge>
-          )}
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const m = getMonday(new Date());
-              setMonday(m);
-            }}
-            className="text-xs"
-          >
-            Heute
-          </Button>
-          <div className="flex items-center border border-slate-200 rounded-md">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-r-none"
-              onClick={() => {
-                const m = new Date(monday);
-                m.setDate(m.getDate() - 7);
-                setMonday(m);
-              }}
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-l-none"
-              onClick={() => {
-                const m = new Date(monday);
-                m.setDate(m.getDate() + 7);
-                setMonday(m);
-              }}
-            >
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+        {/* Filters */}
+        <div className="flex flex-wrap items-center gap-2 px-4 pb-3">
+          <div className="flex items-center gap-1.5 text-xs text-slate-400 mr-1">
+            <Filter className="w-3.5 h-3.5" />
+            Filter:
           </div>
+          <Select value={filterStatus} onValueChange={setFilterStatus}>
+            <SelectTrigger className="w-[150px] h-8 text-xs">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Alle Status</SelectItem>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {isCometUser && speditionen && (
+            <Select value={filterSpeditionId} onValueChange={setFilterSpeditionId}>
+              <SelectTrigger className="w-[180px] h-8 text-xs">
+                <SelectValue placeholder="Spedition" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__all__">Alle Speditionen</SelectItem>
+                {speditionen.map((s: any) => (
+                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-slate-500 h-8 text-xs">
+              <X className="w-3 h-3 mr-1" />
+              Filter zurücksetzen
+            </Button>
+          )}
         </div>
       </div>
 
