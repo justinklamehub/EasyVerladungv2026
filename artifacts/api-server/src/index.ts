@@ -10,6 +10,7 @@ import { startScheduler, ensureReportWeeklyLogTable } from "./lib/scheduler";
 import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
 import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
 import { initWebPush, seedPushEventSettings, seedPushMessageTemplates } from "./routes/push";
+import { ensureChangelogTable } from "./routes/changelog";
 import { pool } from "@workspace/db";
 
 // Load .env relative to this file (Node 20.6+ built-in, no dotenv needed).
@@ -355,6 +356,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("push_subscriptions table ensured");
   } catch (e) {
     logger.warn({ err: e }, "push_subscriptions table ensure failed — non-fatal");
+  }
+  try {
+    await ensureChangelogTable();
+    logger.info("changelog_entries table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureChangelogTable failed — non-fatal");
   }
   initWebPush();
   startScheduler(io);

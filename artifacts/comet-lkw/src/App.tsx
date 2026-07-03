@@ -50,6 +50,7 @@ import TicketsPage from "@/pages/tickets";
 import KalkulationPage from "@/pages/kalkulation";
 import ImpressumPage from "@/pages/impressum";
 import DatenschutzPage from "@/pages/datenschutz";
+import ChangelogPage from "@/pages/changelog";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -86,6 +87,7 @@ function Router() {
       <Route path="/scanner/gefahrgut" component={ScannerGefahrgutPage} />
       <Route path="/impressum" component={ImpressumPage} />
       <Route path="/datenschutz" component={DatenschutzPage} />
+      <Route path="/changelog" component={ChangelogPage} />
 
       <Route path="/">
         <Redirect to="/dashboard" />

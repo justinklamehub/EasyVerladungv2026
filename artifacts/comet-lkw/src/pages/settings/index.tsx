@@ -12,9 +12,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { useAuth } from "@/contexts/auth-context";
+import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -267,6 +268,38 @@ function KalkulationStartortField({ value, onSave, isSaving }: { value: string; 
         className="flex-1"
       />
       {isSaving && <Loader2 className="w-4 h-4 animate-spin text-slate-400 self-center" />}
+    </div>
+  );
+}
+
+// ── LegalTextField ────────────────────────────────────────────────────────────
+
+function LegalTextField({ settingKey, value, onSave, isSaving }: {
+  settingKey: string; value: string;
+  onSave: (key: string, val: string) => void; isSaving: boolean;
+}) {
+  const [local, setLocal] = useState(value);
+  useEffect(() => { setLocal(value); }, [value]);
+  const dirty = local !== value;
+
+  return (
+    <div className="space-y-2">
+      <RichTextEditor value={local} onChange={setLocal} placeholder="Text eingeben…" />
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-slate-400">
+          Wenn kein Text hinterlegt ist, wird ein Standard-Platzhalter mit Hinweis auf fehlende Angaben angezeigt.
+        </p>
+        <div className="flex items-center gap-2">
+          {isSaving && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+          <Button
+            size="sm"
+            disabled={!dirty || isSaving}
+            onClick={() => onSave(settingKey, local)}
+          >
+            <Save className="w-3.5 h-3.5 mr-1.5" /> Speichern
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -1184,6 +1217,246 @@ function PushTemplateSettings() {
 
 type RestartStatus = "idle" | "running" | "done" | "error";
 
+// ── ChangelogManager ──────────────────────────────────────────────────────────
+
+interface ChangelogEntry {
+  id: number;
+  title: string;
+  bodyHtml: string;
+  version: string | null;
+  isPublished: boolean;
+  publishedAt: string;
+}
+
+function formatChangelogDate(iso: string) {
+  return new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function ChangelogEntryDialog({ open, onOpenChange, entry, onSaved }: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  entry: ChangelogEntry | null;
+  onSaved: () => void;
+}) {
+  const { toast } = useToast();
+  const [title, setTitle] = useState("");
+  const [version, setVersion] = useState("");
+  const [bodyHtml, setBodyHtml] = useState("");
+  const [isPublished, setIsPublished] = useState(true);
+  const [publishedAt, setPublishedAt] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (open) {
+      setTitle(entry?.title ?? "");
+      setVersion(entry?.version ?? "");
+      setBodyHtml(entry?.bodyHtml ?? "");
+      setIsPublished(entry?.isPublished ?? true);
+      setPublishedAt(entry ? entry.publishedAt.slice(0, 10) : new Date().toISOString().slice(0, 10));
+    }
+  }, [open, entry]);
+
+  const handleSubmit = async () => {
+    if (!title.trim()) {
+      toast({ title: "Titel darf nicht leer sein", variant: "destructive" });
+      return;
+    }
+    setSaving(true);
+    try {
+      const url = entry ? `${API}/changelog/${entry.id}` : `${API}/changelog`;
+      const method = entry ? "PUT" : "POST";
+      const res = await fetch(url, {
+        method,
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: title.trim(),
+          bodyHtml,
+          version: version.trim() || null,
+          isPublished,
+          publishedAt: new Date(publishedAt).toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error ?? "Fehler beim Speichern");
+      }
+      toast({ title: entry ? "Eintrag aktualisiert" : "Eintrag erstellt" });
+      onSaved();
+      onOpenChange(false);
+    } catch (e: any) {
+      toast({ title: e?.message ?? "Fehler beim Speichern", variant: "destructive" });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{entry ? "Changelog-Eintrag bearbeiten" : "Neuer Changelog-Eintrag"}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="col-span-2 space-y-1.5">
+              <Label className="text-sm font-medium">Titel</Label>
+              <Input value={title} onChange={e => setTitle(e.target.value)} placeholder="z.B. Neue Funktion: Kalkulation" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Version (optional)</Label>
+              <Input value={version} onChange={e => setVersion(e.target.value)} placeholder="1.2.0" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Datum</Label>
+              <Input type="date" value={publishedAt} onChange={e => setPublishedAt(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Sichtbarkeit</Label>
+              <div className="flex items-center gap-2 h-9">
+                <Switch checked={isPublished} onCheckedChange={setIsPublished} />
+                <span className="text-sm text-slate-600 flex items-center gap-1">
+                  {isPublished ? <><Globe className="w-3.5 h-3.5" /> Veröffentlicht</> : <><GlobeLock className="w-3.5 h-3.5" /> Entwurf</>}
+                </span>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-sm font-medium">Beschreibung</Label>
+            <RichTextEditor value={bodyHtml} onChange={setBodyHtml} placeholder="Was hat sich geändert?" />
+          </div>
+        </div>
+        <div className="flex justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
+          <Button onClick={handleSubmit} disabled={saving}>
+            {saving && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+            <Save className="w-3.5 h-3.5 mr-1.5" /> Speichern
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function ChangelogManager() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<ChangelogEntry | null>(null);
+  const [deleteId, setDeleteId] = useState<number | null>(null);
+
+  const { data: entries, isLoading } = useQuery<ChangelogEntry[]>({
+    queryKey: ["changelog-admin"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/changelog`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API}/changelog/${id}`, { method: "DELETE", credentials: "include" });
+      if (!res.ok) throw new Error("Löschen fehlgeschlagen");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["changelog-admin"] });
+      toast({ title: "Eintrag gelöscht" });
+      setDeleteId(null);
+    },
+    onError: () => toast({ title: "Löschen fehlgeschlagen", variant: "destructive" }),
+  });
+
+  const openNew = () => { setEditingEntry(null); setDialogOpen(true); };
+  const openEdit = (entry: ChangelogEntry) => { setEditingEntry(entry); setDialogOpen(true); };
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <FileClock className="w-4 h-4 text-primary" />
+              <CardTitle className="text-base">Changelog</CardTitle>
+            </div>
+            <CardDescription className="text-xs mt-1">
+              Öffentlich sichtbare Übersicht der Systemänderungen (auf der Login-Seite verlinkt).
+            </CardDescription>
+          </div>
+          <Button size="sm" onClick={openNew}>
+            <Plus className="w-3.5 h-3.5 mr-1.5" /> Neuer Eintrag
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+          </div>
+        ) : !entries || entries.length === 0 ? (
+          <p className="text-sm text-slate-400 py-6 text-center">Noch keine Changelog-Einträge vorhanden.</p>
+        ) : (
+          <div className="space-y-2">
+            {entries.map(entry => (
+              <div key={entry.id} className="flex items-start justify-between gap-3 border rounded-lg p-3">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-medium text-sm text-slate-900">{entry.title}</span>
+                    {entry.version && <Badge variant="outline" className="text-xs">v{entry.version}</Badge>}
+                    {entry.isPublished ? (
+                      <Badge className="text-xs bg-emerald-100 text-emerald-700 hover:bg-emerald-100"><Globe className="w-3 h-3 mr-1" />Veröffentlicht</Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs"><GlobeLock className="w-3 h-3 mr-1" />Entwurf</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">{formatChangelogDate(entry.publishedAt)}</p>
+                  <div
+                    className="prose prose-sm max-w-none mt-1.5 text-slate-600 line-clamp-2"
+                    dangerouslySetInnerHTML={{ __html: entry.bodyHtml }}
+                  />
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEdit(entry)}>
+                    <Pencil className="w-3.5 h-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-red-500 hover:text-red-600" onClick={() => setDeleteId(entry.id)}>
+                    <TrashIcon className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+
+      <ChangelogEntryDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        entry={editingEntry}
+        onSaved={() => queryClient.invalidateQueries({ queryKey: ["changelog-admin"] })}
+      />
+
+      <Dialog open={deleteId !== null} onOpenChange={(v) => !v && setDeleteId(null)}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Eintrag löschen?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-slate-500">Diese Aktion kann nicht rückgängig gemacht werden.</p>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Abbrechen</Button>
+            <Button variant="destructive" onClick={() => deleteId !== null && deleteMutation.mutate(deleteId)} disabled={deleteMutation.isPending}>
+              {deleteMutation.isPending && <Loader2 className="w-3.5 h-3.5 mr-1.5 animate-spin" />}
+              Löschen
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </Card>
+  );
+}
+
 function ServerRestartCard() {
   const [status, setStatus] = useState<RestartStatus>("idle");
   const [lines, setLines] = useState<string[]>([]);
@@ -1393,34 +1666,40 @@ export default function SettingsPage() {
   const s = settings ?? {};
 
   return (
-    <div className="p-6 max-w-3xl mx-auto space-y-6">
+    <div className="p-6 max-w-4xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Einstellungen</h1>
         <p className="text-sm text-slate-500 mt-1">Globale Systemkonfiguration — nur für COMET-Admins sichtbar</p>
       </div>
 
       <Tabs defaultValue="allgemein" className="space-y-5">
-        <TabsList className="grid w-full grid-cols-7">
-          <TabsTrigger value="allgemein" className="flex items-center gap-1.5 text-xs">
-            <Settings className="w-3.5 h-3.5" /> Allgemein
+        <TabsList className="flex flex-wrap h-auto w-full gap-1 justify-start p-1.5">
+          <TabsTrigger value="allgemein" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Settings className="w-3.5 h-3.5 shrink-0" /> Allgemein
           </TabsTrigger>
-          <TabsTrigger value="sidebar" className="flex items-center gap-1.5 text-xs">
-            <PanelLeft className="w-3.5 h-3.5" /> Sidebar
+          <TabsTrigger value="sidebar" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <PanelLeft className="w-3.5 h-3.5 shrink-0" /> Sidebar
           </TabsTrigger>
-          <TabsTrigger value="email" className="flex items-center gap-1.5 text-xs">
-            <Mail className="w-3.5 h-3.5" /> E-Mail
+          <TabsTrigger value="email" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Mail className="w-3.5 h-3.5 shrink-0" /> E-Mail
           </TabsTrigger>
-          <TabsTrigger value="push" className="flex items-center gap-1.5 text-xs">
-            <BellRing className="w-3.5 h-3.5" /> Push-Texte
+          <TabsTrigger value="push" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <BellRing className="w-3.5 h-3.5 shrink-0" /> Push-Texte
           </TabsTrigger>
-          <TabsTrigger value="berichte" className="flex items-center gap-1.5 text-xs">
-            <BarChart2 className="w-3.5 h-3.5" /> Berichte
+          <TabsTrigger value="berichte" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <BarChart2 className="w-3.5 h-3.5 shrink-0" /> Berichte
           </TabsTrigger>
-          <TabsTrigger value="postausgang" className="flex items-center gap-1.5 text-xs">
-            <Inbox className="w-3.5 h-3.5" /> Postausgang
+          <TabsTrigger value="postausgang" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Inbox className="w-3.5 h-3.5 shrink-0" /> Postausgang
           </TabsTrigger>
-          <TabsTrigger value="system" className="flex items-center gap-1.5 text-xs">
-            <Server className="w-3.5 h-3.5" /> System
+          <TabsTrigger value="rechtliches" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Scale className="w-3.5 h-3.5 shrink-0" /> Rechtliches
+          </TabsTrigger>
+          <TabsTrigger value="changelog" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <FileClock className="w-3.5 h-3.5 shrink-0" /> Changelog
+          </TabsTrigger>
+          <TabsTrigger value="system" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Server className="w-3.5 h-3.5 shrink-0" /> System
           </TabsTrigger>
         </TabsList>
 
@@ -1531,6 +1810,44 @@ export default function SettingsPage() {
         {/* ── Tab: Push-Texte ── */}
         <TabsContent value="push" className="mt-0">
           <PushTemplateSettings />
+        </TabsContent>
+
+        {/* ── Tab: Rechtliches ── */}
+        <TabsContent value="rechtliches" className="space-y-5 mt-0">
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Scale className="w-4 h-4 text-primary" />
+                <CardTitle className="text-base">Impressum</CardTitle>
+              </div>
+              <CardDescription className="text-xs">
+                Inhalt der öffentlich zugänglichen Impressum-Seite (auf der Login-Seite verlinkt).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LegalTextField settingKey="impressum_text" value={s["impressum_text"] ?? ""} onSave={handleSave} isSaving={isSavingKey("impressum_text")} />
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-sm">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <Scale className="w-4 h-4 text-primary" />
+                <CardTitle className="text-base">Datenschutzerklärung</CardTitle>
+              </div>
+              <CardDescription className="text-xs">
+                Inhalt der öffentlich zugänglichen Datenschutz-Seite (auf der Login-Seite verlinkt).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <LegalTextField settingKey="datenschutz_text" value={s["datenschutz_text"] ?? ""} onSave={handleSave} isSaving={isSavingKey("datenschutz_text")} />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ── Tab: Changelog ── */}
+        <TabsContent value="changelog" className="space-y-5 mt-0">
+          <ChangelogManager />
         </TabsContent>
 
         {/* ── Tab: System ── */}

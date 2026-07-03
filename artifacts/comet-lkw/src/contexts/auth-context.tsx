@@ -27,7 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const isPublicRoute = location === "/login" || location === "/forgot-password" || location.startsWith("/reset-password") || location.startsWith("/scanner") || location === "/impressum" || location === "/datenschutz";
+    const isPublicRoute = location === "/login" || location === "/forgot-password" || location.startsWith("/reset-password") || location.startsWith("/scanner") || location === "/impressum" || location === "/datenschutz" || location === "/changelog";
     if (!isLoading && (isError || !user) && !isPublicRoute) {
       setLocation("/login");
     }

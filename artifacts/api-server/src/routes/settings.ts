@@ -6,7 +6,7 @@ import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
-const PUBLIC_KEYS = ["app_name", "company_name", "login_subtitle", "company_logo", "page_title", "sidebar_nav_config", "sidebar_categories", "sidebar_order", "sidebar_role_visibility"] as const;
+const PUBLIC_KEYS = ["app_name", "company_name", "login_subtitle", "company_logo", "page_title", "sidebar_nav_config", "sidebar_categories", "sidebar_order", "sidebar_role_visibility", "impressum_text", "datenschutz_text"] as const;
 
 router.get("/settings/public", async (_req, res) => {
   try {
@@ -83,6 +83,8 @@ router.put("/settings/:key", requireAuth, async (req, res) => {
       "report_weekly_email",
       "report_weekly_day",
       "report_weekly_time",
+      "impressum_text",
+      "datenschutz_text",
     ];
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: "Unbekannter Einstellungsschlüssel" });
