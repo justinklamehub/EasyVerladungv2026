@@ -34,6 +34,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { format } from "date-fns";
 import { getSocket } from "@/lib/socket";
 import { onShipmentEditing, type ShipmentEditor } from "@/hooks/use-socket";
+import { cn } from "@/lib/utils";
 
 interface ShipmentDrawerProps {
   shipmentId: number | null;
@@ -209,6 +210,8 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     telefon: "",
   });
 
+  const [formErrors, setFormErrors] = useState<Set<string>>(new Set());
+
   useEffect(() => {
     if (shipment && open) {
       setForm({
@@ -230,6 +233,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     } else if (!shipmentId && open) {
       setForm({ bezeichnung: "", kennzeichen: "", relation: "", lkwArt: "", etaDate: "", etaTime: "", ataDate: "", ataTime: "", tor: "", status: "Angemeldet", wareStatus: "nicht bereit", speditionId: user?.speditionId ? String(user.speditionId) : "", bemerkungen: "", telefon: "" });
     }
+    if (open) setFormErrors(new Set());
   }, [shipment, open, shipmentId, user]);
 
   const invalidate = () => {
@@ -276,6 +280,22 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   });
 
   const handleSave = () => {
+    if (!isEditing) {
+      const missing = new Set<string>();
+      const missingLabels: string[] = [];
+      if (isCometUser && !form.speditionId) { missing.add("speditionId"); missingLabels.push("Spedition"); }
+      if (!form.lkwArt) { missing.add("lkwArt"); missingLabels.push("LKW-Art"); }
+      if (!form.relation.trim()) { missing.add("relation"); missingLabels.push("Relation"); }
+      if (!form.etaDate) { missing.add("etaDate"); missingLabels.push("ETA Datum"); }
+      if (!form.etaTime) { missing.add("etaTime"); missingLabels.push("ETA Uhrzeit"); }
+      if (missing.size > 0) {
+        setFormErrors(missing);
+        toast({ title: "Pflichtfelder fehlen", description: `Bitte ausfüllen: ${missingLabels.join(", ")}`, variant: "destructive" });
+        return;
+      }
+      setFormErrors(new Set());
+    }
+
     const data: any = {
       bezeichnung: form.bezeichnung || undefined,
       kennzeichen: form.kennzeichen || undefined,
@@ -404,9 +424,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             <TabsContent value="details" className="space-y-4">
               {isCometUser && canEditPerm && (
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">Spedition</Label>
-                  <Select value={form.speditionId} onValueChange={v => setForm(f => ({ ...f, speditionId: v }))}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Spedition wählen" /></SelectTrigger>
+                  <Label className="text-xs text-slate-500">Spedition {!isEditing && <span className="text-red-500">*</span>}</Label>
+                  <Select value={form.speditionId} onValueChange={v => { setForm(f => ({ ...f, speditionId: v })); setFormErrors(prev => { if (!prev.has("speditionId")) return prev; const next = new Set(prev); next.delete("speditionId"); return next; }); }}>
+                    <SelectTrigger className={cn("h-9", formErrors.has("speditionId") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Spedition wählen" /></SelectTrigger>
                     <SelectContent>
                       {speditionen?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                     </SelectContent>
@@ -425,17 +445,23 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                   <Input value={form.kennzeichen} onChange={e => setForm(f => ({ ...f, kennzeichen: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} placeholder="M-AB 1234" />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">LKW-Art</Label>
-                  <Select value={form.lkwArt} onValueChange={v => setForm(f => ({ ...f, lkwArt: v }))} disabled={!canEdit || (isSpedUser && isLocked)}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Wählen..." /></SelectTrigger>
+                  <Label className="text-xs text-slate-500">LKW-Art {!isEditing && <span className="text-red-500">*</span>}</Label>
+                  <Select value={form.lkwArt} onValueChange={v => { setForm(f => ({ ...f, lkwArt: v })); setFormErrors(prev => { if (!prev.has("lkwArt")) return prev; const next = new Set(prev); next.delete("lkwArt"); return next; }); }} disabled={!canEdit || (isSpedUser && isLocked)}>
+                    <SelectTrigger className={cn("h-9", formErrors.has("lkwArt") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Wählen..." /></SelectTrigger>
                     <SelectContent>{LKW_ART_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-xs text-slate-500">Relation</Label>
-                <Input value={form.relation} onChange={e => setForm(f => ({ ...f, relation: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} placeholder="Start → Ziel" />
+                <Label className="text-xs text-slate-500">Relation {!isEditing && <span className="text-red-500">*</span>}</Label>
+                <Input
+                  value={form.relation}
+                  onChange={e => { setForm(f => ({ ...f, relation: e.target.value })); if (e.target.value.trim()) setFormErrors(prev => { if (!prev.has("relation")) return prev; const next = new Set(prev); next.delete("relation"); return next; }); }}
+                  disabled={!canEdit || (isSpedUser && isLocked)}
+                  placeholder="Start → Ziel"
+                  className={cn(formErrors.has("relation") && "border-red-400 ring-1 ring-red-400")}
+                />
               </div>
 
               <div className="space-y-1">
@@ -445,12 +471,24 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">ETA Datum</Label>
-                  <Input type="date" value={form.etaDate} onChange={e => setForm(f => ({ ...f, etaDate: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} />
+                  <Label className="text-xs text-slate-500">ETA Datum {!isEditing && <span className="text-red-500">*</span>}</Label>
+                  <Input
+                    type="date"
+                    value={form.etaDate}
+                    onChange={e => { setForm(f => ({ ...f, etaDate: e.target.value })); if (e.target.value) setFormErrors(prev => { if (!prev.has("etaDate")) return prev; const next = new Set(prev); next.delete("etaDate"); return next; }); }}
+                    disabled={!canEdit || (isSpedUser && isLocked)}
+                    className={cn(formErrors.has("etaDate") && "border-red-400 ring-1 ring-red-400")}
+                  />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs text-slate-500">ETA Zeit</Label>
-                  <Input type="time" value={form.etaTime} onChange={e => setForm(f => ({ ...f, etaTime: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} />
+                  <Label className="text-xs text-slate-500">ETA Zeit {!isEditing && <span className="text-red-500">*</span>}</Label>
+                  <Input
+                    type="time"
+                    value={form.etaTime}
+                    onChange={e => { setForm(f => ({ ...f, etaTime: e.target.value })); if (e.target.value) setFormErrors(prev => { if (!prev.has("etaTime")) return prev; const next = new Set(prev); next.delete("etaTime"); return next; }); }}
+                    disabled={!canEdit || (isSpedUser && isLocked)}
+                    className={cn(formErrors.has("etaTime") && "border-red-400 ring-1 ring-red-400")}
+                  />
                 </div>
               </div>
 

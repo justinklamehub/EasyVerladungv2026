@@ -146,7 +146,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   const isSpedUser  = ["speditions_admin", "speditions_bearbeiter"].includes(user?.role ?? "");
 
   const [rows, setRows] = useState<RowData[]>([emptyRow(rowCounter++)]);
-  const [errors, setErrors] = useState<Set<number>>(new Set());
+  const [fieldErrors, setFieldErrors] = useState<Map<number, Set<keyof RowData>>>(new Map());
 
   // Muster-CSV: role-aware columns
   function downloadCsvTemplate() {
@@ -186,7 +186,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   useEffect(() => {
     if (open && initialRows && initialRows.length > 0) {
       setRows(initialRows.map((partial) => emptyRow(rowCounter++, partial)));
-      setErrors(new Set());
+      setFieldErrors(new Map());
     }
   }, [open, initialRows]);
 
@@ -196,7 +196,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
         queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
         toast({ title: `${created.length} Verladung${created.length !== 1 ? "en" : ""} erfolgreich angelegt` });
         setRows([emptyRow(rowCounter++)]);
-        setErrors(new Set());
+        setFieldErrors(new Map());
         onOpenChange(false);
       },
       onError: (e: any) => {
@@ -207,8 +207,17 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
 
   const updateRow = (id: number, field: keyof RowData, value: string) => {
     setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
-    if (field === "kennzeichen" && value.trim()) {
-      setErrors((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    if (value.trim()) {
+      setFieldErrors((prev) => {
+        if (!prev.has(id)) return prev;
+        const rowSet = prev.get(id)!;
+        if (!rowSet.has(field)) return prev;
+        const next = new Map(prev);
+        const newRowSet = new Set(rowSet);
+        newRowSet.delete(field);
+        if (newRowSet.size === 0) next.delete(id); else next.set(id, newRowSet);
+        return next;
+      });
     }
   };
 
@@ -216,7 +225,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
 
   const removeRow = (id: number) => {
     setRows((prev) => prev.filter((r) => r.id !== id));
-    setErrors((prev) => { const s = new Set(prev); s.delete(id); return s; });
+    setFieldErrors((prev) => { if (!prev.has(id)) return prev; const next = new Map(prev); next.delete(id); return next; });
   };
 
   const handleCsvImport = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -233,22 +242,34 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
         return;
       }
       setRows(parsed.map((partial) => emptyRow(rowCounter++, partial)));
-      setErrors(new Set());
+      setFieldErrors(new Map());
       toast({ title: `${parsed.length} Zeile${parsed.length !== 1 ? "n" : ""} importiert` });
     };
     reader.readAsText(file, "utf-8");
   };
 
   const handleSubmit = () => {
-    const invalid = new Set<number>();
+    const invalid = new Map<number, Set<keyof RowData>>();
     for (const row of rows) {
-      if (!row.kennzeichen.trim()) invalid.add(row.id);
+      const missing = new Set<keyof RowData>();
+      if (!row.kennzeichen.trim()) missing.add("kennzeichen");
+      if (!row.lkwArt) missing.add("lkwArt");
+      if (!row.relation.trim()) missing.add("relation");
+      if (!row.etaDate) missing.add("etaDate");
+      if (!row.etaTime) missing.add("etaTime");
+      if (isCometUser && !row.speditionId) missing.add("speditionId");
+      if (missing.size > 0) invalid.set(row.id, missing);
     }
     if (invalid.size > 0) {
-      setErrors(invalid);
-      toast({ title: "Bitte alle Kennzeichen ausfüllen", variant: "destructive" });
+      setFieldErrors(invalid);
+      toast({
+        title: "Bitte alle Pflichtfelder ausfüllen",
+        description: `Kennzeichen, LKW-Art, Relation, ETA Datum & Uhrzeit${isCometUser ? " sowie Spedition" : ""} sind erforderlich.`,
+        variant: "destructive",
+      });
       return;
     }
+    setFieldErrors(new Map());
 
     const shipments = rows.map((r) => ({
       kennzeichen:  r.kennzeichen.trim(),
@@ -270,7 +291,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   const handleClose = (v: boolean) => {
     if (!v) {
       setRows([emptyRow(rowCounter++)]);
-      setErrors(new Set());
+      setFieldErrors(new Map());
     }
     onOpenChange(v);
   };
@@ -316,15 +337,25 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                     Kennzeichen <span className="text-red-500">*</span>
                   </th>
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[160px]">Bezeichnung</th>
-                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[140px]">LKW-Art</th>
-                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[140px]">ETA Datum</th>
-                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[110px]">ETA Zeit</th>
+                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[140px]">
+                    LKW-Art <span className="text-red-500">*</span>
+                  </th>
+                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[140px]">
+                    ETA Datum <span className="text-red-500">*</span>
+                  </th>
+                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[110px]">
+                    ETA Zeit <span className="text-red-500">*</span>
+                  </th>
                   {isCometUser && <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[120px]">Tor</th>}
                   {isCometUser && <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[120px]">Status</th>}
                   {isCometUser && (
-                    <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[160px]">Spedition</th>
+                    <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[160px]">
+                      Spedition <span className="text-red-500">*</span>
+                    </th>
                   )}
-                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[130px]">Relation</th>
+                  <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[130px]">
+                    Relation <span className="text-red-500">*</span>
+                  </th>
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[120px]">Telefon</th>
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[180px]">Bemerkungen</th>
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 w-8"></th>
@@ -332,7 +363,8 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
               </thead>
               <tbody>
                 {rows.map((row, idx) => {
-                  const hasError = errors.has(row.id);
+                  const rowErrors = fieldErrors.get(row.id);
+                  const hasError = !!rowErrors?.has("kennzeichen");
                   return (
                     <tr key={row.id} className={cn("group", idx % 2 === 0 ? "bg-white" : "bg-slate-50/50")}>
                       <td className="px-2 py-1.5 text-xs text-slate-400 border-b border-slate-100">{idx + 1}</td>
@@ -355,7 +387,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                       </td>
                       <td className="px-1 py-1.5 border-b border-slate-100">
                         <Select value={row.lkwArt} onValueChange={(v) => updateRow(row.id, "lkwArt", v)}>
-                          <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Art wählen" /></SelectTrigger>
+                          <SelectTrigger className={cn("h-8 text-sm", rowErrors?.has("lkwArt") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Art wählen" /></SelectTrigger>
                           <SelectContent>
                             {LKW_ART_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
                           </SelectContent>
@@ -366,7 +398,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                           type="date"
                           value={row.etaDate}
                           onChange={(e) => updateRow(row.id, "etaDate", e.target.value)}
-                          className="h-8 text-sm"
+                          className={cn("h-8 text-sm", rowErrors?.has("etaDate") && "border-red-400 ring-1 ring-red-400")}
                         />
                       </td>
                       <td className="px-1 py-1.5 border-b border-slate-100">
@@ -374,7 +406,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                           type="time"
                           value={row.etaTime}
                           onChange={(e) => updateRow(row.id, "etaTime", e.target.value)}
-                          className="h-8 text-sm"
+                          className={cn("h-8 text-sm", rowErrors?.has("etaTime") && "border-red-400 ring-1 ring-red-400")}
                         />
                       </td>
                       {isCometUser && (
@@ -400,7 +432,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                       {isCometUser && (
                         <td className="px-1 py-1.5 border-b border-slate-100">
                           <Select value={row.speditionId} onValueChange={(v) => updateRow(row.id, "speditionId", v)}>
-                            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Spedition" /></SelectTrigger>
+                            <SelectTrigger className={cn("h-8 text-sm", rowErrors?.has("speditionId") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Spedition" /></SelectTrigger>
                             <SelectContent>
                               {(speditionen ?? []).map((s) => (
                                 <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
@@ -414,7 +446,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                           value={row.relation}
                           onChange={(e) => updateRow(row.id, "relation", e.target.value)}
                           placeholder="Start → Ziel"
-                          className="h-8 text-sm"
+                          className={cn("h-8 text-sm", rowErrors?.has("relation") && "border-red-400 ring-1 ring-red-400")}
                         />
                       </td>
                       <td className="px-1 py-1.5 border-b border-slate-100">
