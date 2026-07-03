@@ -661,6 +661,17 @@ export default function ScannerGefahrgutPage() {
     setDebugLog((prev) => [...prev.slice(-49), `${time}  ${message}`]);
   }, []);
 
+  useEffect(() => {
+    addLog(`Seite geladen. URL-Protokoll: ${window.location.protocol}`);
+    addLog(`Sicherer Kontext (window.isSecureContext): ${window.isSecureContext}`);
+    addLog(`navigator.mediaDevices vorhanden: ${!!navigator.mediaDevices}`);
+    addLog(`User-Agent: ${navigator.userAgent}`);
+    if (window.location.protocol !== "https:" && window.location.hostname !== "localhost") {
+      addLog("WARNUNG: Seite läuft NICHT über HTTPS -> Kamera-API wird vom Browser blockiert!");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const addPhotoFile = useCallback(
     async (file: File) => {
       setPhotoUploadError("");
