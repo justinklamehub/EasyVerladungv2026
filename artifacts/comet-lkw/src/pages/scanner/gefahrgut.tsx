@@ -444,10 +444,12 @@ function LiveCamera({
   onCapture,
   onCancel,
   onError,
+  onLog,
 }: {
   onCapture: (file: File) => void;
   onCancel: () => void;
   onError: (message: string) => void;
+  onLog: (message: string) => void;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -455,6 +457,7 @@ function LiveCamera({
 
   useEffect(() => {
     let cancelled = false;
+    onLog("getUserMedia() wird aufgerufen...");
     navigator.mediaDevices
       .getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false })
       .then((stream) => {
@@ -462,15 +465,17 @@ function LiveCamera({
           stream.getTracks().forEach((t) => t.stop());
           return;
         }
+        onLog(`getUserMedia() erfolgreich, Tracks: ${stream.getTracks().length}`);
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          videoRef.current.play().catch(() => {});
+          videoRef.current.play().catch((e) => onLog(`video.play() Fehler: ${e?.name} - ${e?.message}`));
         }
         setReady(true);
       })
       .catch((err) => {
         if (cancelled) return;
+        onLog(`getUserMedia() FEHLER: ${err?.name ?? "?"} - ${err?.message ?? String(err)}`);
         onError(err?.name === "NotAllowedError"
           ? "Kamerazugriff wurde verweigert."
           : "Kamera konnte nicht gestartet werden.");
@@ -485,16 +490,27 @@ function LiveCamera({
 
   function capture() {
     const video = videoRef.current;
-    if (!video || !video.videoWidth) return;
+    if (!video || !video.videoWidth) {
+      onLog("Aufnahme abgebrochen: kein Videoframe verfügbar (videoWidth=0)");
+      return;
+    }
+    onLog(`Aufnahme wird erstellt (${video.videoWidth}x${video.videoHeight})...`);
     const canvas = document.createElement("canvas");
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!ctx) {
+      onLog("Fehler: Canvas 2D-Kontext nicht verfügbar");
+      return;
+    }
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     canvas.toBlob(
       (blob) => {
-        if (!blob) return;
+        if (!blob) {
+          onLog("Fehler: canvas.toBlob() lieferte kein Ergebnis");
+          return;
+        }
+        onLog(`Foto aufgenommen, Größe: ${(blob.size / 1024).toFixed(0)} KB`);
         const file = new File([blob], `ladung-${Date.now()}.jpg`, { type: "image/jpeg" });
         onCapture(file);
       },
@@ -638,15 +654,24 @@ export default function ScannerGefahrgutPage() {
   const photoInputRef = useRef<HTMLInputElement>(null);
   const [liveCameraOpen, setLiveCameraOpen] = useState(false);
   const cameraSupportedRef = useRef<boolean | null>(null);
+  const [debugLog, setDebugLog] = useState<string[]>([]);
+
+  const addLog = useCallback((message: string) => {
+    const time = new Date().toLocaleTimeString("de-DE", { hour12: false });
+    setDebugLog((prev) => [...prev.slice(-49), `${time}  ${message}`]);
+  }, []);
 
   const addPhotoFile = useCallback(
     async (file: File) => {
       setPhotoUploadError("");
+      addLog(`Upload gestartet: ${file.name} (${(file.size / 1024).toFixed(0)} KB, ${file.type})`);
       const result = await uploadFile(file);
       if (!result) {
+        addLog("Upload FEHLGESCHLAGEN");
         setPhotoUploadError("Foto-Upload fehlgeschlagen. Bitte erneut versuchen.");
         return;
       }
+      addLog(`Upload erfolgreich: ${result.objectPath}`);
       setPhotos((prev) => [
         ...prev,
         {
@@ -657,27 +682,37 @@ export default function ScannerGefahrgutPage() {
         },
       ]);
     },
-    [uploadFile]
+    [uploadFile, addLog]
   );
 
   const handlePhotoSelected = useCallback(
     async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       e.target.value = "";
-      if (!file) return;
+      if (!file) {
+        addLog("Datei-Dialog geschlossen ohne Auswahl");
+        return;
+      }
+      addLog(`Datei ausgewählt: ${file.name}`);
       await addPhotoFile(file);
     },
-    [addPhotoFile]
+    [addPhotoFile, addLog]
   );
 
   const openPhotoCapture = useCallback(() => {
-    if (cameraSupportedRef.current === false || !navigator.mediaDevices?.getUserMedia) {
+    addLog("Button 'Foto aufnehmen' geklickt");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      addLog("navigator.mediaDevices.getUserMedia ist nicht verfügbar -> nutze Datei-Dialog");
       cameraSupportedRef.current = false;
+    }
+    if (cameraSupportedRef.current === false) {
+      addLog("Öffne nativen Datei-/Kamera-Dialog...");
       photoInputRef.current?.click();
       return;
     }
+    addLog("Öffne Live-Kamera-Vorschau...");
     setLiveCameraOpen(true);
-  }, []);
+  }, [addLog]);
 
   const removePhoto = useCallback((index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
@@ -797,16 +832,21 @@ export default function ScannerGefahrgutPage() {
 
       {liveCameraOpen && (
         <LiveCamera
+          onLog={addLog}
           onCapture={(file) => {
             cameraSupportedRef.current = true;
             setLiveCameraOpen(false);
             addPhotoFile(file);
           }}
-          onCancel={() => setLiveCameraOpen(false)}
+          onCancel={() => {
+            addLog("Live-Kamera abgebrochen");
+            setLiveCameraOpen(false);
+          }}
           onError={(message) => {
             cameraSupportedRef.current = false;
             setLiveCameraOpen(false);
             setPhotoUploadError(message);
+            addLog("Fallback: Öffne nativen Datei-/Kamera-Dialog...");
             photoInputRef.current?.click();
           }}
         />
@@ -1121,6 +1161,44 @@ export default function ScannerGefahrgutPage() {
               <AlertCircle size={14} /> {photoUploadError}
             </div>
           )}
+
+          <div style={{ marginTop: 12 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <div style={{ fontSize: 10, fontWeight: 700, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
+                Debug-Log (Kamera)
+              </div>
+              {debugLog.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setDebugLog([])}
+                  style={{
+                    fontSize: 10, color: "#64748b", background: "transparent",
+                    border: `1px solid ${BORDER}`, borderRadius: 4, padding: "2px 8px", cursor: "pointer",
+                  }}
+                >
+                  Log leeren
+                </button>
+              )}
+            </div>
+            <div style={{
+              background: "#050c16",
+              border: `1px solid ${BORDER}`,
+              borderRadius: 6,
+              padding: "8px 10px",
+              maxHeight: 160,
+              overflowY: "auto",
+              fontFamily: "monospace",
+              fontSize: 11,
+              lineHeight: 1.6,
+              color: "#7dd3fc",
+            }}>
+              {debugLog.length === 0 ? (
+                <div style={{ color: "#475569" }}>Noch keine Ereignisse. Auf "Foto aufnehmen" klicken, um zu starten.</div>
+              ) : (
+                debugLog.map((line, i) => <div key={i}>{line}</div>)
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
