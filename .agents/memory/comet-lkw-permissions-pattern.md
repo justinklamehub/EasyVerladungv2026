@@ -37,3 +37,10 @@ Action-based guards (can a user CREATE / EDIT / DELETE / LOCK?) must use the con
 - `gefahrgut/index.tsx` (unified two separate queries into one)
 - `abstimmungen/index.tsx` (both ReconciliationDetail and AbstimmungenPage)
 - `shipments/kanban.tsx` (standardized query key, removed inline query)
+
+## Related: dynamic role lists (custom roles)
+Roles are dynamic — admins can create custom roles at runtime via the `roles` table (`role_key`, `label`, `role_group`, `is_system`), not just the 7 built-in system roles.
+
+**Why:** Any UI that hardcodes a fixed role list (e.g. a `ROLE_LABELS`/`ALL_ROLES` const) silently excludes custom roles from that feature — seen in both the sidebar visibility config and the push-notification event settings.
+
+**How to apply:** Any component that must display/configure something "per role" (sidebar visibility, push notification targets, etc.) should fetch the live role list from `GET /api/admin/permissions` (returns `{ roles: [{roleKey, label, roleGroup, isSystem}], ... }`) or `GET /api/admin/roles`, and render from that list — keep a small hardcoded system-role label map only as a fallback for display labels, never as the source of truth for which roles exist.

@@ -12,9 +12,17 @@ const router = Router();
 export function initWebPush() {
   const publicKey = process.env.VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
-  const email = process.env.VAPID_EMAIL ?? "mailto:admin@comet-lkw.local";
+  let email = process.env.VAPID_EMAIL ?? "mailto:admin@comet-lkw.local";
+  // web-push requires the VAPID subject to be a "mailto:" or "https:" URL.
+  if (!/^mailto:|^https?:\/\//i.test(email)) {
+    email = `mailto:${email}`;
+  }
   if (publicKey && privateKey) {
-    webpush.setVapidDetails(email, publicKey, privateKey);
+    try {
+      webpush.setVapidDetails(email, publicKey, privateKey);
+    } catch (err) {
+      console.error("Ungültige VAPID-Konfiguration, Web-Push wird deaktiviert:", err);
+    }
   }
 }
 

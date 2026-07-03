@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
-const ROLE_LABELS: Record<string, string> = {
+const SYSTEM_ROLE_LABELS: Record<string, string> = {
   comet_admin:            "COMET Admin",
   comet_leitstand:        "Leitstand",
   comet_lager:            "Lager",
@@ -18,8 +18,6 @@ const ROLE_LABELS: Record<string, string> = {
   speditions_viewer:      "Sped. Viewer",
 };
 
-const ALL_ROLES = Object.keys(ROLE_LABELS);
-
 interface PushEventSetting {
   event_key: string;
   label: string;
@@ -28,13 +26,22 @@ interface PushEventSetting {
   target_roles: string[];
 }
 
+interface RoleInfo {
+  roleKey: string;
+  label: string;
+  roleGroup: string;
+  isSystem: boolean;
+}
+
 function RoleToggle({
   role,
+  label,
   active,
   onChange,
   disabled,
 }: {
   role: string;
+  label: string;
   active: boolean;
   onChange: (v: boolean) => void;
   disabled: boolean;
@@ -51,7 +58,7 @@ function RoleToggle({
         disabled && "opacity-40 cursor-not-allowed"
       )}
     >
-      {ROLE_LABELS[role] ?? role}
+      {label ?? role}
     </button>
   );
 }
@@ -68,6 +75,28 @@ export function PushEventSettings() {
       fetch(`${API}/push/event-settings`, { credentials: "include" }).then((r) => r.json()),
     staleTime: 30_000,
   });
+
+  const { data: rolesData } = useQuery<{ roles: RoleInfo[] }>({
+    queryKey: ["admin-permissions-roles"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/admin/permissions`, { credentials: "include" });
+      if (!res.ok) return { roles: [] };
+      return res.json();
+    },
+    staleTime: 30_000,
+  });
+
+  const allRoles: RoleInfo[] = rolesData?.roles?.length
+    ? rolesData.roles
+    : Object.entries(SYSTEM_ROLE_LABELS).map(([roleKey, label]) => ({
+        roleKey,
+        label,
+        roleGroup: "",
+        isSystem: true,
+      }));
+
+  const roleLabel = (roleKey: string) =>
+    allRoles.find((r) => r.roleKey === roleKey)?.label ?? SYSTEM_ROLE_LABELS[roleKey] ?? roleKey;
 
   const patchMutation = useMutation({
     mutationFn: ({ event_key, enabled, target_roles }: Partial<PushEventSetting> & { event_key: string }) =>
@@ -178,12 +207,13 @@ export function PushEventSettings() {
 
                       {/* Role toggles */}
                       <div className="flex flex-wrap gap-1.5 mt-2">
-                        {ALL_ROLES.map((role) => (
+                        {allRoles.map((r) => (
                           <RoleToggle
-                            key={role}
-                            role={role}
-                            active={ev.target_roles.includes(role)}
-                            onChange={() => toggleRole(ev, role)}
+                            key={r.roleKey}
+                            role={r.roleKey}
+                            label={r.label}
+                            active={ev.target_roles.includes(r.roleKey)}
+                            onChange={() => toggleRole(ev, r.roleKey)}
                             disabled={!ev.enabled || patchMutation.isPending}
                           />
                         ))}
