@@ -60,6 +60,7 @@ const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
   "/berechtigungen":    null,
   "/tickets":           null,
   "/hilfe":             null,
+  "/changelog":         null,
 };
 
 // Fallback short/long labels for built-in system roles
@@ -105,6 +106,7 @@ const DEFAULT_NAV_ITEMS: { href: string; defaultLabel: string; defaultIconName: 
   { href: "/berechtigungen", defaultLabel: "Berechtigungen", defaultIconName: "ShieldCheck" },
   { href: "/tickets", defaultLabel: "Tickets", defaultIconName: "TicketIcon" },
   { href: "/hilfe", defaultLabel: "Hilfe & Anleitung", defaultIconName: "HelpCircle" },
+  { href: "/changelog", defaultLabel: "Neuerungen", defaultIconName: "FileClock" },
 ];
 
 // ── Color palette ──────────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@ import {
   Activity, AlertTriangle, Archive, BarChart, BarChart2, Bell, Bookmark,
   Box, Boxes, Building2, Calculator, Calendar, CalendarCheck, CalendarDays, Car,
   CheckCircle2, ClipboardCheck, ClipboardList, Clock, Clock3, Database,
-  Eye, FileCheck2, FileText, Flag, Folder, Gauge, Globe, HelpCircle,
+  Eye, FileClock, FileCheck2, FileText, Flag, Folder, Gauge, Globe, HelpCircle,
   History, Home, Info, Layers, LayoutDashboard, LayoutGrid, List, Lock,
   Mail, Map, MapPin, Navigation, Package, Package2, PackageSearch, Phone,
   PieChart, Receipt, Route, Ruler, Scale, Search, Settings, Share2,

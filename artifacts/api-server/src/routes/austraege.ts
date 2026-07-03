@@ -80,20 +80,43 @@ router.post("/austraege", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Datum ist erforderlich" });
     }
 
-    // Correct formula: subtract defects from totals
-    const vonNet =
-      Number(vonCometEuropaletten ?? 0) +
-      Number(vonCometLadungssicherung ?? 0) -
-      Number(vonDefektePaletten ?? 0);
-    const anNet =
-      Number(anCometEuropaletten ?? 0) +
-      Number(anCometLadungssicherung ?? 0) -
-      Number(anDefektePaletten ?? 0);
+    // Gross = euro + ladungssicherung (ohne Defekte-Abzug); Net = gross - defekte.
+    // Identisch zur Berechnung in "Palettenkonto -> Neue Buchung" (movement-dialog.tsx).
+    const vonGross =
+      Number(vonCometEuropaletten ?? 0) + Number(vonCometLadungssicherung ?? 0);
+    const anGross =
+      Number(anCometEuropaletten ?? 0) + Number(anCometLadungssicherung ?? 0);
+    const vonTotal = vonGross - Number(vonDefektePaletten ?? 0);
+    const anTotal = anGross - Number(anDefektePaletten ?? 0);
+    const calculatedAmount = vonTotal - anTotal;
 
-    // Net pallet exchange from COMET's perspective:
-    // vonNet > anNet → COMET gave out more than received back → Ausgang (net loss)
-    // anNet > vonNet → COMET received more back than gave out  → Eingang (net gain)
-    const netAmount = vonNet - anNet;
+    // Art wird wie im Buchungsdialog anhand der Brutto-Mengen ermittelt:
+    // beide Seiten (brutto) > 0 → Neutral, nur Von → Ausgang, nur An → Eingang.
+    const movementType: "neutral" | "ausgang" | "eingang" | null =
+      vonGross > 0 && anGross > 0
+        ? "neutral"
+        : vonGross > 0
+          ? "ausgang"
+          : anGross > 0
+            ? "eingang"
+            : null;
+
+    let palletFaktor = 1;
+    const spedIdForFaktor = beauftragteSpeditionId ? Number(beauftragteSpeditionId) : null;
+    if (spedIdForFaktor) {
+      const [sped] = await db
+        .select({ palletFaktor: speditionenTable.palletFaktor })
+        .from(speditionenTable)
+        .where(eq(speditionenTable.id, spedIdForFaktor));
+      palletFaktor = sped?.palletFaktor ?? 1;
+    }
+
+    // Bei Neutral-Buchungen mit Tauschfaktor > 1 zählen Defekte nicht (Brutto-Mengen),
+    // und der Eingang wird faktor-fach gewertet — identisch zum Buchungsdialog.
+    const netAmount =
+      movementType === "neutral" && palletFaktor > 1
+        ? anGross * palletFaktor - vonGross
+        : calculatedAmount;
 
     const [row] = await db
       .insert(lkwAustraegeTable)
@@ -118,10 +141,10 @@ router.post("/austraege", requireAuth, async (req, res) => {
 
     await logAudit(req.session.userId!, "austrag", row.id, "create", null, JSON.stringify({ shipmentId, datum, tor }));
 
-    // Auto-book a single net pallet movement if a spedition is assigned
+    // Auto-book a single pallet movement if a spedition is assigned and pallets were exchanged.
+    // Art und Betrag werden identisch zu "Palettenkonto -> Neue Buchung" berechnet (inkl. Tauschfaktor).
     const spedId = beauftragteSpeditionId ? Number(beauftragteSpeditionId) : null;
-    if (spedId && netAmount !== 0) {
-      const movementType = netAmount > 0 ? "ausgang" : "eingang";
+    if (spedId && movementType) {
       const absNet = Math.abs(netAmount);
       await db.insert(palletMovementsTable).values({
         speditionId: spedId,
