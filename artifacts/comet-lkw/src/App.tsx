@@ -87,7 +87,6 @@ function Router() {
       <Route path="/scanner/gefahrgut" component={ScannerGefahrgutPage} />
       <Route path="/impressum" component={ImpressumPage} />
       <Route path="/datenschutz" component={DatenschutzPage} />
-      <Route path="/changelog" component={ChangelogPage} />
 
       <Route path="/">
         <Redirect to="/dashboard" />
@@ -115,6 +114,7 @@ function Router() {
             <Route path="/hilfe"><ProtectedRoute component={HilfePage} /></Route>
             <Route path="/tickets"><ProtectedRoute component={TicketsPage} /></Route>
             <Route path="/kalkulation"><ProtectedRoute component={KalkulationPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
+            <Route path="/changelog"><ProtectedRoute component={ChangelogPage} /></Route>
             <Route component={NotFound} />
           </Switch>
         </AppLayout>

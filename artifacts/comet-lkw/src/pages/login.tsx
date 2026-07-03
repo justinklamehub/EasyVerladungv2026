@@ -119,8 +119,6 @@ export default function LoginPage() {
             <Link href="/impressum" className="hover:text-slate-600 transition-colors">Impressum</Link>
             <span aria-hidden="true">·</span>
             <Link href="/datenschutz" className="hover:text-slate-600 transition-colors">Datenschutzerklärung</Link>
-            <span aria-hidden="true">·</span>
-            <Link href="/changelog" className="hover:text-slate-600 transition-colors">Änderungsprotokoll</Link>
           </div>
         </div>
       </Card>

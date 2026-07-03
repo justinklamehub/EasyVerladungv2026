@@ -1,8 +1,7 @@
-import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileClock } from "lucide-react";
+import { FileClock } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -29,16 +28,16 @@ export default function ChangelogPage() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 p-4 flex justify-center">
-      <div className="w-full max-w-2xl py-8">
-        <Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-4">
-          <ArrowLeft className="w-4 h-4" /> Zurück zur Anmeldung
-        </Link>
-        <div className="flex items-center gap-2 mb-6">
+    <div className="space-y-6 max-w-3xl mx-auto">
+      <div>
+        <div className="flex items-center gap-3 mb-1">
           <FileClock className="w-6 h-6 text-primary" />
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Änderungsprotokoll</h1>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Änderungsprotokoll</h1>
         </div>
+        <p className="text-sm text-slate-500">Übersicht der letzten Systemänderungen und Neuerungen.</p>
+      </div>
 
+      <div>
         {isLoading ? (
           <p className="text-sm text-slate-400">Lädt…</p>
         ) : !entries || entries.length === 0 ? (
