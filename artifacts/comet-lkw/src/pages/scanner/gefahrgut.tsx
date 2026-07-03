@@ -440,6 +440,145 @@ function SignaturePad({
   );
 }
 
+function LiveCamera({
+  onCapture,
+  onCancel,
+  onError,
+}: {
+  onCapture: (file: File) => void;
+  onCancel: () => void;
+  onError: (message: string) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false })
+      .then((stream) => {
+        if (cancelled) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        setReady(true);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        onError(err?.name === "NotAllowedError"
+          ? "Kamerazugriff wurde verweigert."
+          : "Kamera konnte nicht gestartet werden.");
+      });
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function capture() {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `ladung-${Date.now()}.jpg`, { type: "image/jpeg" });
+        onCapture(file);
+      },
+      "image/jpeg",
+      0.9
+    );
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      background: "rgba(0,0,0,0.92)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 16,
+    }}>
+      <div style={{
+        background: "#111d2e",
+        border: `1px solid ${BORDER}`,
+        borderRadius: 12,
+        padding: 16,
+        width: "100%",
+        maxWidth: 480,
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", marginBottom: 10, letterSpacing: "0.1em" }}>
+          FOTO DER LADUNG
+        </div>
+        <div style={{
+          position: "relative",
+          width: "100%",
+          aspectRatio: "4 / 3",
+          background: "#000",
+          borderRadius: 6,
+          overflow: "hidden",
+          border: `2px solid ${C}`,
+        }}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          {!ready && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex",
+              alignItems: "center", justifyContent: "center", color: "#64748b", fontSize: 13,
+            }}>
+              <Loader2 size={20} style={{ animation: "spin 1s linear infinite", marginRight: 8 }} />
+              Kamera wird gestartet...
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: "11px", borderRadius: 6,
+              border: `1px solid #374151`, background: "transparent",
+              color: "#6b7280", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            }}
+          >
+            Abbrechen
+          </button>
+          <button
+            disabled={!ready}
+            onClick={capture}
+            style={{
+              flex: 2, padding: "11px", borderRadius: 6,
+              border: "none",
+              background: ready ? C : "#1e3a5f",
+              color: ready ? BG : "#475569",
+              cursor: ready ? "pointer" : "not-allowed",
+              fontSize: 13, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <Camera size={14} /> Foto aufnehmen
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function FocusInput(props: React.InputHTMLAttributes<HTMLInputElement>) {
   const [focused, setFocused] = useState(false);
   return (
@@ -497,12 +636,11 @@ export default function ScannerGefahrgutPage() {
   const [photoUploadError, setPhotoUploadError] = useState("");
   const { uploadFile, isUploading: isUploadingPhoto } = useUpload({ basePath: `${API}/storage` });
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const [liveCameraOpen, setLiveCameraOpen] = useState(false);
+  const cameraSupportedRef = useRef<boolean | null>(null);
 
-  const handlePhotoSelected = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      e.target.value = "";
-      if (!file) return;
+  const addPhotoFile = useCallback(
+    async (file: File) => {
       setPhotoUploadError("");
       const result = await uploadFile(file);
       if (!result) {
@@ -521,6 +659,25 @@ export default function ScannerGefahrgutPage() {
     },
     [uploadFile]
   );
+
+  const handlePhotoSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      await addPhotoFile(file);
+    },
+    [addPhotoFile]
+  );
+
+  const openPhotoCapture = useCallback(() => {
+    if (cameraSupportedRef.current === false || !navigator.mediaDevices?.getUserMedia) {
+      cameraSupportedRef.current = false;
+      photoInputRef.current?.click();
+      return;
+    }
+    setLiveCameraOpen(true);
+  }, []);
 
   const removePhoto = useCallback((index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
@@ -635,6 +792,23 @@ export default function ScannerGefahrgutPage() {
             setSigTarget(null);
           }}
           onCancel={() => setSigTarget(null)}
+        />
+      )}
+
+      {liveCameraOpen && (
+        <LiveCamera
+          onCapture={(file) => {
+            cameraSupportedRef.current = true;
+            setLiveCameraOpen(false);
+            addPhotoFile(file);
+          }}
+          onCancel={() => setLiveCameraOpen(false)}
+          onError={(message) => {
+            cameraSupportedRef.current = false;
+            setLiveCameraOpen(false);
+            setPhotoUploadError(message);
+            photoInputRef.current?.click();
+          }}
         />
       )}
 
@@ -923,7 +1097,7 @@ export default function ScannerGefahrgutPage() {
           />
           <button
             type="button"
-            onClick={() => photoInputRef.current?.click()}
+            onClick={openPhotoCapture}
             disabled={isUploadingPhoto}
             style={{
               display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
