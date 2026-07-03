@@ -6,3 +6,4 @@
 - [COMET LKW permission refactor pattern](comet-lkw-permissions-pattern.md) — shared usePermissions hook; role checks stay only for data-scope; actions use permissions API.
 - [Auftragsauswertung CSV schema](auftragsauswertung-csv.md) — SAP export, semicolon-delimited; "Name 1" appears twice (col5=Kunde, col17=Spedition); Spediteur=col16; matched via speditionsnummer in speditionen table.
 - [COMET LKW object storage image URLs](comet-lkw-object-storage-urls.md) — strip leading /objects from stored objectPath before appending to /storage/objects route, or the URL doubles the segment.
+- [SOTI Surf kiosk camera access](soti-surf-kiosk-camera.md) — 3-layer checklist (HTTPS, Android app permission, MobiControl WebView permission) for getUserMedia in kiosk WebViews.
