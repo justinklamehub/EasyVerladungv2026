@@ -24,7 +24,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, LockOpen, AlertCircle, Pencil, Trash2, ClipboardCheck, Plus, Clock, Printer, ShieldAlert, FileDown } from "lucide-react";
+import { Loader2, Lock, LockOpen, AlertCircle, Pencil, Trash2, ClipboardCheck, Plus, Clock, Printer, ShieldAlert, FileDown, ImageIcon } from "lucide-react";
 import { printGefahrgutCheckliste } from "@/lib/print-gefahrgut";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
@@ -59,6 +59,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   const canEditPerm        = !!drawerPerms["shipment.edit"];
   const canLockPerm        = !!drawerPerms["shipment.lock"];
   const canDeleteAustrag   = !!drawerPerms["austrag.delete"];
+  const canViewFotos       = isCometUser || !!drawerPerms["foto.view"];
 
   const [otherEditors, setOtherEditors] = useState<ShipmentEditor[]>([]);
 
@@ -90,6 +91,16 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
       return res.json() as Promise<any[]>;
     },
     enabled: !!shipmentId && open && isCometUser,
+  });
+
+  const { data: shipmentFotos, isLoading: fotosLoading } = useQuery({
+    queryKey: ["shipment-fotos", shipmentId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/fotos?shipmentId=${shipmentId}`, { credentials: "include" });
+      if (!res.ok) return [] as any[];
+      return res.json() as Promise<any[]>;
+    },
+    enabled: !!shipmentId && open && canViewFotos,
   });
 
   const resetGefahrgutMutation = useMutation({
@@ -415,6 +426,16 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                   {gefahrgutChecklisten && gefahrgutChecklisten.length > 0 && (
                     <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] leading-none px-1 py-0.5 rounded-full">
                       {gefahrgutChecklisten.length}
+                    </span>
+                  )}
+                </TabsTrigger>
+              )}
+              {isEditing && canViewFotos && (
+                <TabsTrigger value="fotos" className="flex-1 gap-1">
+                  Fotos
+                  {shipmentFotos && shipmentFotos.length > 0 && (
+                    <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 text-[10px] leading-none px-1 py-0.5 rounded-full">
+                      {shipmentFotos.length}
                     </span>
                   )}
                 </TabsTrigger>
@@ -924,6 +945,45 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                             </div>
                           )}
                         </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </TabsContent>
+            )}
+            {isEditing && canViewFotos && (
+              <TabsContent value="fotos" className="space-y-3">
+                {fotosLoading ? (
+                  <div className="flex justify-center py-8">
+                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                  </div>
+                ) : !shipmentFotos || shipmentFotos.length === 0 ? (
+                  <div className="text-center py-8 space-y-2">
+                    <ImageIcon className="w-10 h-10 text-slate-300 mx-auto" />
+                    <p className="text-sm text-slate-500">Noch keine Fotos vorhanden.</p>
+                    <p className="text-xs text-slate-400">
+                      Fotos können optional beim Ausfüllen der Gefahrgut-Checkliste im Scanner aufgenommen werden.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 gap-3">
+                    {shipmentFotos.map((f: any) => {
+                      const imgUrl = f.objectPath ? `${API_BASE}/storage/objects${String(f.objectPath).replace(/^\/objects/, "")}` : null;
+                      return (
+                        <a
+                          key={f.id}
+                          href={imgUrl ?? undefined}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="block border border-slate-200 rounded-md overflow-hidden bg-slate-50 hover:border-primary transition-colors"
+                        >
+                          {imgUrl && (
+                            <img src={imgUrl} alt={f.fileName ?? "Foto"} className="w-full h-32 object-cover" />
+                          )}
+                          <div className="p-2 text-xs text-slate-500">
+                            {f.createdAt ? format(new Date(f.createdAt), "dd.MM.yyyy HH:mm") : "—"} Uhr
+                          </div>
+                        </a>
                       );
                     })}
                   </div>

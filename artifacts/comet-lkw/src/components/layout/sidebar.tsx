@@ -44,6 +44,7 @@ import {
   ChevronRight,
   Folder,
   Send,
+  ImageIcon,
   type LucideProps,
 } from "lucide-react";
 import { NAV_ICONS } from "@/lib/nav-icons";
@@ -350,6 +351,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     { name: "Abstimmungen", href: "/abstimmungen", icon: FileCheck2, show: true },
     { name: "Kalkulation", href: "/kalkulation", icon: Calculator, show: isCometUser },
     { name: "Gefahrgut", href: "/gefahrgut", icon: ShieldAlert, show: isCometUser },
+    { name: "Fotos", href: "/fotos", icon: ImageIcon, show: isCometUser || !!permissions["foto.view"] },
     { name: "Auswertung", href: "/auswertung", icon: BarChart2, show: isCometUser },
     { name: "Auftragsauswertung", href: "/auftragsauswertung", icon: FileSpreadsheet, show: isCometUser || !!user.speditionId },
     { name: "Änderungslog", href: "/auditlog", icon: History, show: isCometUser },

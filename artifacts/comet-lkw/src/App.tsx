@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useSocket } from "@/hooks/use-socket";
+import { usePermissions } from "@/hooks/use-permissions";
 import NotFound from "@/pages/not-found";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
@@ -51,6 +52,7 @@ import KalkulationPage from "@/pages/kalkulation";
 import ImpressumPage from "@/pages/impressum";
 import DatenschutzPage from "@/pages/datenschutz";
 import ChangelogPage from "@/pages/changelog";
+import FotosPage from "@/pages/fotos/index";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -61,14 +63,18 @@ const queryClient = new QueryClient({
   },
 });
 
-function ProtectedRoute({ component: Component, roles }: { component: any, roles?: string[] }) {
+function ProtectedRoute({ component: Component, roles, permission }: { component: any, roles?: string[], permission?: string }) {
   const { user, isLoading } = useAuth();
+  const permissions = usePermissions();
 
   if (isLoading) return <div className="h-screen w-full flex items-center justify-center">Laden...</div>;
   if (!user) return <Redirect to="/login" />;
-  
+
   if (roles && !roles.includes(user.role)) {
-    return <Redirect to="/dashboard" />;
+    const hasPermissionOverride = permission && !!permissions[permission];
+    if (!hasPermissionOverride) {
+      return <Redirect to="/dashboard" />;
+    }
   }
 
   return <Component />;
@@ -111,6 +117,7 @@ function Router() {
             <Route path="/auftragsauswertung"><ProtectedRoute component={AuftragsauswertungPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
             <Route path="/profil"><ProtectedRoute component={ProfilPage} /></Route>
             <Route path="/gefahrgut"><ProtectedRoute component={GefahrgutPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
+            <Route path="/fotos"><ProtectedRoute component={FotosPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} permission="foto.view" /></Route>
             <Route path="/hilfe"><ProtectedRoute component={HilfePage} /></Route>
             <Route path="/tickets"><ProtectedRoute component={TicketsPage} /></Route>
             <Route path="/kalkulation"><ProtectedRoute component={KalkulationPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>

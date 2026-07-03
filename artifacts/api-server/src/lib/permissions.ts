@@ -21,7 +21,8 @@ export type Permission =
   | "kanban.use"
   | "auftrag.analyse"
   | "auftrag.analyse.spedition"
-  | "push.send_custom";
+  | "push.send_custom"
+  | "foto.view";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -61,6 +62,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "auftrag.analyse",
   "auftrag.analyse.spedition",
   "push.send_custom",
+  "foto.view",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
@@ -84,6 +86,7 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "auftrag.analyse":            { label: "Auftragsauswertung (CSV-Upload)",    category: "Auftragsauswertung" },
   "auftrag.analyse.spedition":  { label: "Auftragsauswertung (eigene Zeile sehen)", category: "Auftragsauswertung" },
   "push.send_custom":           { label: "Freie Nachricht senden",     category: "Benachrichtigungen" },
+  "foto.view":                  { label: "Fotogalerie ansehen",        category: "Fotos" },
 };
 
 export const ROLE_LABELS: Record<string, string> = {

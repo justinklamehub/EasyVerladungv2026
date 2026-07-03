@@ -23,6 +23,8 @@ import auftragsauswertungRouter from "./auftragsauswertung";
 import pushRouter from "./push";
 import systemRouter from "./system";
 import changelogRouter from "./changelog";
+import storageRouter from "./storage";
+import fotosRouter from "./fotos";
 
 const router: IRouter = Router();
 
@@ -50,5 +52,7 @@ router.use(auftragsauswertungRouter);
 router.use(pushRouter);
 router.use(systemRouter);
 router.use(changelogRouter);
+router.use(storageRouter);
+router.use(fotosRouter);
 
 export default router;

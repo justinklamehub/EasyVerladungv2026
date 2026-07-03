@@ -2,8 +2,9 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
   CheckSquare, Square, ChevronLeft, Send, RotateCcw,
-  PenTool, CheckCircle2, AlertCircle, Loader2,
+  PenTool, CheckCircle2, AlertCircle, Loader2, Camera, X, ImagePlus,
 } from "lucide-react";
+import { useUpload } from "@workspace/object-storage-web";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -491,6 +492,40 @@ export default function ScannerGefahrgutPage() {
   const [submitted, setSubmitted] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  type PendingPhoto = { previewUrl: string; objectPath: string; fileName: string; contentType: string };
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
+  const [photoUploadError, setPhotoUploadError] = useState("");
+  const { uploadFile, isUploading: isUploadingPhoto } = useUpload({ basePath: `${API}/storage` });
+  const photoInputRef = useRef<HTMLInputElement>(null);
+
+  const handlePhotoSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      setPhotoUploadError("");
+      const result = await uploadFile(file);
+      if (!result) {
+        setPhotoUploadError("Foto-Upload fehlgeschlagen. Bitte erneut versuchen.");
+        return;
+      }
+      setPhotos((prev) => [
+        ...prev,
+        {
+          previewUrl: URL.createObjectURL(file),
+          objectPath: result.objectPath,
+          fileName: file.name,
+          contentType: file.type || "application/octet-stream",
+        },
+      ]);
+    },
+    [uploadFile]
+  );
+
+  const removePhoto = useCallback((index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }, []);
+
   const toggle = useCallback((key: string) => {
     setChecks((prev) => ({ ...prev, [key]: !prev[key] }));
   }, []);
@@ -543,6 +578,27 @@ export default function ScannerGefahrgutPage() {
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error((await res.json()).error ?? "Fehler");
+      const { id: gefahrgutChecklisteId } = await res.json();
+
+      if (photos.length > 0) {
+        await Promise.all(
+          photos.map((photo) =>
+            fetch(`${API}/scanner/fotos`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                shipmentId,
+                kennzeichen: localKennzeichen || null,
+                gefahrgutChecklisteId: gefahrgutChecklisteId ?? null,
+                objectPath: photo.objectPath,
+                fileName: photo.fileName,
+                contentType: photo.contentType,
+              }),
+            }).catch(() => null)
+          )
+        );
+      }
+
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {
@@ -818,6 +874,79 @@ export default function ScannerGefahrgutPage() {
               <input type="number" min="0" value={anDuesseldorfer} onChange={(e) => setAnDuesseldorfer(e.target.value)} style={S.numInput} placeholder="0" />
             </div>
           </div>
+        </div>
+      </div>
+
+      <div style={S.section}>
+        <div style={S.sectionTitle}>
+          <span>Foto der Ladung</span>
+          <span style={{ fontSize: 11, fontWeight: 400, color: "#64748b" }}>(optional)</span>
+        </div>
+        <div style={{ padding: "12px 14px" }}>
+          <div style={{ fontSize: 12, color: "#94a3b8", marginBottom: 10 }}>
+            "Ladung auf LKW" fotografieren und der Sendung zuordnen. Nicht erforderlich zum Abschicken.
+          </div>
+
+          {photos.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              {photos.map((photo, i) => (
+                <div key={photo.objectPath + i} style={{ position: "relative", width: 84, height: 84 }}>
+                  <img
+                    src={photo.previewUrl}
+                    alt={photo.fileName}
+                    style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, border: `1px solid ${BORDER}` }}
+                  />
+                  <button
+                    onClick={() => removePhoto(i)}
+                    style={{
+                      position: "absolute", top: -6, right: -6, width: 22, height: 22,
+                      borderRadius: "50%", background: "#ef4444", border: "none",
+                      color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                    title="Foto entfernen"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handlePhotoSelected}
+            style={{ display: "none" }}
+          />
+          <button
+            type="button"
+            onClick={() => photoInputRef.current?.click()}
+            disabled={isUploadingPhoto}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              width: "100%", padding: "12px", borderRadius: 8,
+              background: "transparent", border: `1px dashed ${BORDER}`,
+              color: C, fontSize: 13, fontWeight: 600, cursor: "pointer",
+              opacity: isUploadingPhoto ? 0.6 : 1,
+            }}
+          >
+            {isUploadingPhoto ? (
+              <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Foto wird hochgeladen...</>
+            ) : photos.length > 0 ? (
+              <><ImagePlus size={16} /> Weiteres Foto aufnehmen</>
+            ) : (
+              <><Camera size={16} /> Foto aufnehmen</>
+            )}
+          </button>
+
+          {photoUploadError && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "#f87171", display: "flex", alignItems: "center", gap: 6 }}>
+              <AlertCircle size={14} /> {photoUploadError}
+            </div>
+          )}
         </div>
       </div>
 
