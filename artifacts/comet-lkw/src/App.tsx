@@ -48,6 +48,8 @@ import GefahrgutPage from "@/pages/gefahrgut/index";
 import HilfePage from "@/pages/hilfe";
 import TicketsPage from "@/pages/tickets";
 import KalkulationPage from "@/pages/kalkulation";
+import ImpressumPage from "@/pages/impressum";
+import DatenschutzPage from "@/pages/datenschutz";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -82,6 +84,8 @@ function Router() {
       <Route path="/reset-password" component={ResetPasswordPage} />
       <Route path="/scanner" component={ScannerLandingPage} />
       <Route path="/scanner/gefahrgut" component={ScannerGefahrgutPage} />
+      <Route path="/impressum" component={ImpressumPage} />
+      <Route path="/datenschutz" component={DatenschutzPage} />
 
       <Route path="/">
         <Redirect to="/dashboard" />

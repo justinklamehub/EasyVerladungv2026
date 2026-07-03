@@ -111,10 +111,15 @@ export default function LoginPage() {
             </Button>
           </form>
         </CardContent>
-        <div className="px-6 pb-5 text-center">
-          <Link href="/forgot-password" className="text-sm text-slate-400 hover:text-slate-600 transition-colors">
+        <div className="px-6 pb-5 text-center space-y-3">
+          <Link href="/forgot-password" className="block text-sm text-slate-400 hover:text-slate-600 transition-colors">
             Passwort vergessen?
           </Link>
+          <div className="flex items-center justify-center gap-3 text-xs text-slate-400">
+            <Link href="/impressum" className="hover:text-slate-600 transition-colors">Impressum</Link>
+            <span aria-hidden="true">·</span>
+            <Link href="/datenschutz" className="hover:text-slate-600 transition-colors">Datenschutzerklärung</Link>
+          </div>
         </div>
       </Card>
     </div>
