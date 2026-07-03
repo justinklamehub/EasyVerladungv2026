@@ -652,6 +652,7 @@ export default function ScannerGefahrgutPage() {
   const [photoUploadError, setPhotoUploadError] = useState("");
   const { uploadFile, isUploading: isUploadingPhoto } = useUpload({ basePath: `${API}/storage` });
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [liveCameraOpen, setLiveCameraOpen] = useState(false);
   const cameraSupportedRef = useRef<boolean | null>(null);
   const [debugLog, setDebugLog] = useState<string[]>([]);
@@ -723,6 +724,11 @@ export default function ScannerGefahrgutPage() {
     }
     addLog("Öffne Live-Kamera-Vorschau...");
     setLiveCameraOpen(true);
+  }, [addLog]);
+
+  const openGalleryPicker = useCallback(() => {
+    addLog("Button 'Foto auswählen (Galerie/Datei)' geklickt");
+    galleryInputRef.current?.click();
   }, [addLog]);
 
   const removePhoto = useCallback((index: number) => {
@@ -1146,6 +1152,13 @@ export default function ScannerGefahrgutPage() {
             onChange={handlePhotoSelected}
             style={{ display: "none" }}
           />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelected}
+            style={{ display: "none" }}
+          />
           <button
             type="button"
             onClick={openPhotoCapture}
@@ -1165,6 +1178,21 @@ export default function ScannerGefahrgutPage() {
             ) : (
               <><Camera size={16} /> Foto aufnehmen</>
             )}
+          </button>
+
+          <button
+            type="button"
+            onClick={openGalleryPicker}
+            disabled={isUploadingPhoto}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              width: "100%", padding: "10px", borderRadius: 8, marginTop: 8,
+              background: "transparent", border: `1px dashed ${BORDER}`,
+              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              opacity: isUploadingPhoto ? 0.6 : 1,
+            }}
+          >
+            <ImagePlus size={14} /> Foto aus Galerie/Datei wählen (falls Kamera blockiert)
           </button>
 
           {photoUploadError && (
