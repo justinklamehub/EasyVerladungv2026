@@ -37,6 +37,3 @@ channel = "stable-25_05"
 [userenv]
 
 [userenv.shared]
-VAPID_PUBLIC_KEY = "BEbdGQVYS1uAMiwa8-HZf5uXO5MvuRQBGaB964PmGkYA7ugu6MVJ_Gjmv3vXqsDEpGIuvXhTbN_TwcryeVra3vM"
-VAPID_PRIVATE_KEY = "rNeKH_MctXuG5z7vh0_EDE8VJmPuPlU3R2WFm6I-h3k"
-VAPID_EMAIL = "mailto:admin@comet-lkw.local"
