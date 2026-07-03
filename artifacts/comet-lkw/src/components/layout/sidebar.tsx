@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Link, useLocation } from "wouter";
 import { cn } from "@/lib/utils";
 import {
@@ -41,6 +42,7 @@ import {
   Calculator,
   ChevronRight,
   Folder,
+  Send,
   type LucideProps,
 } from "lucide-react";
 import { NAV_ICONS } from "@/lib/nav-icons";
@@ -59,6 +61,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useLocation as useWouterLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
+import { SendPushDialog } from "@/components/layout/send-push-dialog";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -284,10 +287,13 @@ function NotificationPanel({
 
 export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSidebarProps) {
   const { user, refetch } = useAuth();
+  const permissions = usePermissions();
+  const canSendCustomPush = !!permissions["push.send_custom"];
   const [location, setLocation] = useLocation();
   const [, navigate] = useWouterLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showOnline, setShowOnline] = useState(false);
+  const [showSendPush, setShowSendPush] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
   const { notifications, unreadCount, markRead, markAllRead, dismiss, dismissAll } = useNotifications();
   const { state: pushState, error: pushError, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
@@ -745,6 +751,17 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   </Link>
                 </div>
 
+                {/* Nachricht senden (konfigurierbar über Berechtigungen) — full width */}
+                {canSendCustomPush && (
+                  <button
+                    onClick={() => setShowSendPush(true)}
+                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-200 p-2 text-xs transition-colors mb-1.5"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                    Nachricht senden
+                  </button>
+                )}
+
                 {/* Push-Benachrichtigungen — full width */}
                 {pushState !== "unsupported" && (
                   <button
@@ -850,6 +867,23 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                   </Tooltip>
                 </div>
 
+                {/* Nachricht senden (collapsed) */}
+                {canSendCustomPush && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowSendPush(true)}
+                        className="mt-1 w-full h-9 flex items-center justify-center rounded-md text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="text-xs">
+                      Nachricht senden
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+
                 {/* Push toggle (collapsed) */}
                 {pushState !== "unsupported" && (
                   <Tooltip>
@@ -903,6 +937,9 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
           </div>
         </div>
       </div>
+      {canSendCustomPush && (
+        <SendPushDialog open={showSendPush} onOpenChange={setShowSendPush} />
+      )}
     </TooltipProvider>
   );
 }

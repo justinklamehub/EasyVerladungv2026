@@ -20,7 +20,8 @@ export type Permission =
   | "gefahrgut.assign_shipment"
   | "kanban.use"
   | "auftrag.analyse"
-  | "auftrag.analyse.spedition";
+  | "auftrag.analyse.spedition"
+  | "push.send_custom";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -59,6 +60,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "kanban.use",
   "auftrag.analyse",
   "auftrag.analyse.spedition",
+  "push.send_custom",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
@@ -81,6 +83,7 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "kanban.use":                 { label: "Kanban-Board nutzen (Drag & Drop)", category: "Kanban" },
   "auftrag.analyse":            { label: "Auftragsauswertung (CSV-Upload)",    category: "Auftragsauswertung" },
   "auftrag.analyse.spedition":  { label: "Auftragsauswertung (eigene Zeile sehen)", category: "Auftragsauswertung" },
+  "push.send_custom":           { label: "Freie Nachricht senden",     category: "Benachrichtigungen" },
 };
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -119,13 +122,8 @@ export function invalidatePermissionsCache() {
 
 /** Ensures every role has a row for every permission (new perms default to false). */
 export async function seedMissingPermissions(): Promise<void> {
-  for (const perm of ALL_PERMISSIONS) {
-    await db.execute(
-      sql`INSERT INTO role_permissions (role, permission, allowed)
-          SELECT role_key, ${perm}, false FROM roles
-          ON CONFLICT (role, permission) DO NOTHING`
-    );
-  }
+  // Smart defaults must be inserted BEFORE the generic false-fallback below,
+  // since both use ON CONFLICT DO NOTHING — whichever runs first "wins" the row.
   // Smart defaults: kanban.use enabled by default for lager & leitstand
   await db.execute(
     sql`INSERT INTO role_permissions (role, permission, allowed)
@@ -140,6 +138,21 @@ export async function seedMissingPermissions(): Promise<void> {
         WHERE role_key IN ('speditions_admin', 'speditions_bearbeiter', 'speditions_viewer')
         ON CONFLICT (role, permission) DO NOTHING`
   );
+  // Smart defaults: push.send_custom enabled by default for leitstand (matches prior fixed behavior)
+  await db.execute(
+    sql`INSERT INTO role_permissions (role, permission, allowed)
+        SELECT role_key, 'push.send_custom', true FROM roles
+        WHERE role_key = 'comet_leitstand'
+        ON CONFLICT (role, permission) DO NOTHING`
+  );
+
+  for (const perm of ALL_PERMISSIONS) {
+    await db.execute(
+      sql`INSERT INTO role_permissions (role, permission, allowed)
+          SELECT role_key, ${perm}, false FROM roles
+          ON CONFLICT (role, permission) DO NOTHING`
+    );
+  }
 }
 
 async function ensureCache(): Promise<Map<string, Map<string, boolean>>> {

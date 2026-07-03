@@ -1,6 +1,8 @@
 import React, { createContext, useContext, ReactNode, useEffect } from "react";
 import { AuthUser, useGetMe, getGetMeQueryKey } from "@workspace/api-client-react";
 import { useLocation } from "wouter";
+import { useQueryClient } from "@tanstack/react-query";
+import { getSocket } from "@/lib/socket";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -16,6 +18,7 @@ const AuthContext = createContext<AuthContextType>({
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [location, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const { data: user, isLoading, refetch, isError } = useGetMe({
     query: {
       retry: false,
@@ -29,6 +32,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLocation("/login");
     }
   }, [isLoading, isError, user, location, setLocation]);
+
+  useEffect(() => {
+    const socket = getSocket();
+    const handleForceLogout = () => {
+      queryClient.setQueryData(getGetMeQueryKey(), null);
+      queryClient.clear();
+      setLocation("/login?reason=admin");
+    };
+    socket.on("force-logout", handleForceLogout);
+    return () => {
+      socket.off("force-logout", handleForceLogout);
+    };
+  }, [queryClient, setLocation]);
 
   return (
     <AuthContext.Provider value={{ user: user || null, isLoading, refetch }}>

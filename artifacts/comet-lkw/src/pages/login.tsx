@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { useLogin } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
@@ -19,6 +19,7 @@ export default function LoginPage() {
   const { refetch } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const forceLoggedOut = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("reason") === "admin";
 
   const { data: pubSettings } = useQuery<Record<string, string>>({
     queryKey: ["settings-public"],
@@ -71,6 +72,12 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="pt-6">
+          {forceLoggedOut && (
+            <div className="mb-4 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-800">
+              <ShieldAlert className="w-4 h-4 mt-0.5 shrink-0" />
+              <span>Sie wurden von einem Administrator abgemeldet.</span>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="identifier">E-Mail oder Benutzername</Label>

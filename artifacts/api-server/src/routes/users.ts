@@ -1,6 +1,6 @@
 import { Router } from "express";
 import bcrypt from "bcryptjs";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import { usersTable, speditionenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
@@ -292,6 +292,38 @@ router.delete("/users/:id", requireAuth, async (req, res) => {
 
     return res.json({ ok: true });
   } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/users/:id/force-logout", requireAuth, async (req, res) => {
+  try {
+    if (req.session.role !== "comet_admin") {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
+    const targetId = Number(req.params.id);
+    if (!targetId) return res.status(400).json({ error: "Ungültige Benutzer-ID" });
+
+    if (targetId === req.session.userId) {
+      return res.status(400).json({ error: "Sie können sich nicht selbst abmelden" });
+    }
+
+    const [existing] = await db.select().from(usersTable).where(eq(usersTable.id, targetId)).limit(1);
+    if (!existing) return res.status(404).json({ error: "Not found" });
+
+    await pool.query(`DELETE FROM session WHERE (sess->>'userId')::int = $1`, [targetId]);
+
+    const io = getIO(req);
+    if (io) {
+      io.to(`user:${targetId}`).emit("force-logout", { reason: "admin" });
+      const sockets = await io.in(`user:${targetId}`).fetchSockets();
+      for (const s of sockets) s.disconnect(true);
+    }
+
+    return res.json({ ok: true });
+  } catch (err) {
+    console.error("force-logout error", err);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

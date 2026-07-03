@@ -1,13 +1,25 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useListUsers } from "@workspace/api-client-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { Loader2, Plus, UserCog, BellRing } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Loader2, Plus, UserCog, BellRing, LogOut } from "lucide-react";
 import { UserDialog } from "./components/user-dialog";
 import { useAuth } from "@/contexts/auth-context";
+import { usePresence } from "@/hooks/use-presence";
+import { useToast } from "@/hooks/use-toast";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -18,9 +30,14 @@ export default function UsersPage() {
   const { data: users, isLoading } = useListUsers();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editUser, setEditUser] = useState<any | null>(null);
+  const [logoutTarget, setLogoutTarget] = useState<{ id: number; username: string } | null>(null);
+  const { toast } = useToast();
 
   const canManage = currentUser?.role === "comet_admin" || currentUser?.role === "speditions_admin";
   const isAdmin = currentUser?.role === "comet_admin";
+
+  const { onlineUsers } = usePresence(currentUser?.id);
+  const onlineIds = new Set(onlineUsers.map((u) => u.userId));
 
   const { data: pushOverview } = useQuery<PushOverviewEntry[]>({
     queryKey: ["push-subscriptions-overview"],
@@ -30,6 +47,29 @@ export default function UsersPage() {
   });
 
   const pushMap = new Map((pushOverview ?? []).map((e) => [e.user_id, e.count]));
+
+  const forceLogoutMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API}/users/${id}/force-logout`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "Fehler beim Abmelden");
+      }
+      return res.json();
+    },
+    onSuccess: (_data, id) => {
+      const username = users?.find((u) => u.id === id)?.username;
+      toast({ title: `${username ?? "Benutzer"} wurde abgemeldet` });
+      setLogoutTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Fehler", description: err.message, variant: "destructive" });
+      setLogoutTarget(null);
+    },
+  });
 
   const getRoleBadge = (role: string) => {
     if (role.startsWith("comet_")) {
@@ -133,14 +173,31 @@ export default function UsersPage() {
                       )}
                       {canManage && (
                         <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditUser(user)}
-                            title="Bearbeiten"
-                          >
-                            <UserCog className="w-4 h-4 text-slate-500" />
-                          </Button>
+                          <div className="flex items-center justify-end gap-1">
+                            {isAdmin && onlineIds.has(user.id) && user.id !== currentUser?.id && (
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => setLogoutTarget({ id: user.id, username: user.username })}
+                                    title="Abmelden"
+                                  >
+                                    <LogOut className="w-4 h-4 text-slate-500 hover:text-red-600" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent className="text-xs">Benutzer ist online – jetzt abmelden</TooltipContent>
+                              </Tooltip>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditUser(user)}
+                              title="Bearbeiten"
+                            >
+                              <UserCog className="w-4 h-4 text-slate-500" />
+                            </Button>
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
@@ -158,6 +215,28 @@ export default function UsersPage() {
         onOpenChange={(v) => { if (!v) setEditUser(null); }}
         editUser={editUser}
       />
+
+      <AlertDialog open={!!logoutTarget} onOpenChange={(v) => { if (!v) setLogoutTarget(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Benutzer abmelden?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {logoutTarget?.username} wird sofort von allen Geräten abgemeldet und muss sich erneut anmelden.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={forceLogoutMutation.isPending}>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => logoutTarget && forceLogoutMutation.mutate(logoutTarget.id)}
+              disabled={forceLogoutMutation.isPending}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {forceLogoutMutation.isPending ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Abmelden
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

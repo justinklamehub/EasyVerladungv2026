@@ -1,7 +1,9 @@
 import { Router } from "express";
 import webpush from "web-push";
-import { pool } from "@workspace/db";
-import { requireAuth, requireCometAdmin } from "../lib/auth";
+import { pool, db, notifications, usersTable } from "@workspace/db";
+import { eq } from "drizzle-orm";
+import { requireAuth, requireCometAdmin, requireRoles } from "../lib/auth";
+import { can } from "../lib/permissions";
 
 const router = Router();
 
@@ -306,5 +308,79 @@ export async function sendPushToUsers(
     )
   );
 }
+
+// ── Custom (Ad-hoc) Push von Admin/Leitstand ────────────────────────────────
+
+router.post("/push/send-custom", requireAuth, async (req: any, res) => {
+  try {
+    if (!(await can(req.session.role, "push.send_custom"))) {
+      return res.status(403).json({ error: "Keine Berechtigung zum Senden von Nachrichten" });
+    }
+    const { target, role, userId, title, message } = req.body as {
+      target?: "all" | "role" | "user";
+      role?: string;
+      userId?: number;
+      title?: string;
+      message?: string;
+    };
+
+    const trimmedTitle = (title ?? "").trim();
+    if (!trimmedTitle) {
+      return res.status(400).json({ error: "Titel ist erforderlich" });
+    }
+
+    let userIds: number[] = [];
+    if (target === "user") {
+      if (!userId) return res.status(400).json({ error: "Benutzer erforderlich" });
+      const rows = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.id, Number(userId)));
+      userIds = rows.map((r) => r.id);
+    } else if (target === "role") {
+      if (!role) return res.status(400).json({ error: "Rolle erforderlich" });
+      const rows = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.role, role));
+      userIds = rows.map((r) => r.id);
+    } else {
+      const rows = await db.select({ id: usersTable.id }).from(usersTable).where(eq(usersTable.isActive, true));
+      userIds = rows.map((r) => r.id);
+    }
+
+    if (userIds.length === 0) {
+      return res.status(400).json({ error: "Keine passenden Empfänger gefunden" });
+    }
+
+    const trimmedMessage = (message ?? "").trim() || null;
+
+    const created = await db
+      .insert(notifications)
+      .values(
+        userIds.map((uid) => ({
+          userId: uid,
+          title: trimmedTitle,
+          message: trimmedMessage,
+          type: "info" as const,
+        }))
+      )
+      .returning();
+
+    const io = req.app.get("io");
+    if (io) {
+      for (const notif of created) {
+        io.to(`user:${notif.userId}`).emit("notification.new", notif);
+      }
+    }
+
+    sendPushToUsers(userIds, {
+      title: trimmedTitle,
+      message: trimmedMessage ?? undefined,
+      tag: "comet-custom",
+    }).catch((err) => {
+      console.warn("Custom Push Fehler:", err?.message ?? err);
+    });
+
+    return res.json({ ok: true, count: userIds.length });
+  } catch (err) {
+    console.error("send-custom push error", err);
+    return res.status(500).json({ error: "Fehler beim Senden" });
+  }
+});
 
 export default router;
