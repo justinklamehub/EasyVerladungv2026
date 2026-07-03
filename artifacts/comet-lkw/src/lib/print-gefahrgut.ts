@@ -1,21 +1,23 @@
-const PRINT_ITEMS = [
-  { id: 1,  text: "zwei plombierte Feuerlöscher (min. 6 kg) mit Prüfdatum" },
-  { id: 2,  text: "mind. zwei Unterlegkeile" },
-  { id: 3,  text: "Fahrzeugkennzeichnung (Warntafel und Gefahrzettel)" },
-  { id: 4,  text: "zwei selbststehende Warnzeichen (z.B. Warndreieck + Warnblinkleuchte)" },
-  { id: 5,  text: "eine geeignete Warnweste oder Warnkleidung (nach Norm EN 471)" },
-  { id: 6,  text: "keine sichtbaren Mängel am Fahrzeug (Reifen, Beleuchtung)" },
-  { id: 7,  text: "gültige Fahrerlaubnis (Fahrer + ggf. Beifahrer)" },
-  { id: 8,  text: "Lichtbildausweis (Fahrer + ggf. Beifahrer)" },
-  { id: 9,  text: "ADR\u2013Schein mit Eintrag der Klasse 1 \u2013 gültig bis:", specialInput: "adr" },
-  { id: 10, text: "Zusammenladungsverbot beachtet" },
-  { id: 11, text: "Ladungssicherung mit geeigneten Mitteln durchgeführt" },
-  { id: 12, text: "Beförderungspapier" },
-  { id: 13, text: "neue schriftliche Weisung gem. ADR 2023 an Bord?" },
-  { id: 14, text: "Fahrzeug verschlussfähig" },
-  { id: 15, text: "auf Rauchverbot im Fahrerhaus hingewiesen (auch E-Zigaretten)" },
-  { id: 16, text: "Plombe(n) übergeben mit der/den Nr.:", specialInput: "plomben" },
-  { id: 17, text: "\u201cLadung auf LKW\u201d mit Foto dokumentiert" },
+type PrintCol = "b" | "v";
+
+const PRINT_ITEMS: { id: number; text: string; specialInput?: string; cols: PrintCol[] }[] = [
+  { id: 1,  text: "zwei plombierte Feuerlöscher (min. 6 kg) mit Prüfdatum", cols: ["b"] },
+  { id: 2,  text: "mind. zwei Unterlegkeile", cols: ["b"] },
+  { id: 3,  text: "Fahrzeugkennzeichnung (Warntafel und Gefahrzettel)", cols: ["b", "v"] },
+  { id: 4,  text: "zwei selbststehende Warnzeichen (z.B. Warndreieck + Warnblinkleuchte)", cols: ["b"] },
+  { id: 5,  text: "eine geeignete Warnweste oder Warnkleidung (nach Norm EN 471)", cols: ["b"] },
+  { id: 6,  text: "keine sichtbaren Mängel am Fahrzeug (Reifen, Beleuchtung)", cols: ["b"] },
+  { id: 7,  text: "gültige Fahrerlaubnis (Fahrer + ggf. Beifahrer)", cols: ["b", "v"] },
+  { id: 8,  text: "Lichtbildausweis (Fahrer + ggf. Beifahrer)", cols: ["b", "v"] },
+  { id: 9,  text: "ADR\u2013Schein mit Eintrag der Klasse 1 \u2013 gültig bis:", specialInput: "adr", cols: ["b", "v"] },
+  { id: 10, text: "Zusammenladungsverbot beachtet", cols: ["b", "v"] },
+  { id: 11, text: "Ladungssicherung mit geeigneten Mitteln durchgeführt", cols: ["b", "v"] },
+  { id: 12, text: "Beförderungspapier", cols: ["v"] },
+  { id: 13, text: "neue schriftliche Weisung gem. ADR 2023 an Bord?", cols: ["b"] },
+  { id: 14, text: "Fahrzeug verschlussfähig", cols: ["b"] },
+  { id: 15, text: "auf Rauchverbot im Fahrerhaus hingewiesen (auch E-Zigaretten)", cols: ["v"] },
+  { id: 16, text: "Plombe(n) übergeben mit der/den Nr.:", specialInput: "plomben", cols: ["v"] },
+  { id: 17, text: "\u201cLadung auf LKW\u201d mit Foto dokumentiert", cols: ["v"] },
 ];
 
 export interface GefahrgutPrintData {
@@ -85,9 +87,15 @@ export function printGefahrgutCheckliste(data: GefahrgutPrintData): void {
     if (item.specialInput === "plomben" && plombenNr) {
       textHtml += ` <strong>${esc(plombenNr)}</strong>`;
     }
+    const bCell = item.cols.includes("b")
+      ? `<td style="text-align:center;width:30px;padding:2px 3px;font-size:12pt;">${cb(bChecked)}</td>`
+      : `<td style="text-align:center;width:30px;padding:2px 3px;font-size:12pt;color:#ccc;">&#8212;</td>`;
+    const vCell = item.cols.includes("v")
+      ? `<td style="text-align:center;width:30px;padding:2px 3px;font-size:12pt;">${cb(vChecked)}</td>`
+      : `<td style="text-align:center;width:30px;padding:2px 3px;font-size:12pt;color:#ccc;">&#8212;</td>`;
     return `<tr>
-      <td style="text-align:center;width:30px;padding:2px 3px;font-size:12pt;">${cb(bChecked)}</td>
-      <td style="text-align:center;width:30px;padding:2px 3px;font-size:12pt;">${cb(vChecked)}</td>
+      ${bCell}
+      ${vCell}
       <td style="padding:3px 6px;font-size:8.5pt;line-height:1.35;">${textHtml}</td>
     </tr>`;
   }).join("\n");

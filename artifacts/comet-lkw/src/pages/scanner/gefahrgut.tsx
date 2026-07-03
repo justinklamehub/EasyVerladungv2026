@@ -7,24 +7,26 @@ import {
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
-const ITEMS = [
-  { id: 1,  text: "zwei plombierte Feuerlöscher (min. 6 kg) mit Prüfdatum" },
-  { id: 2,  text: "mind. zwei Unterlegkeile" },
-  { id: 3,  text: "Fahrzeugkennzeichnung (Warntafel und Gefahrzettel)" },
-  { id: 4,  text: "zwei selbststehende Warnzeichen (z.B. Warndreieck + Warnblinkleuchte)" },
-  { id: 5,  text: "eine geeignete Warnweste oder Warnkleidung (nach Norm EN 471)" },
-  { id: 6,  text: "keine sichtbaren Mängel am Fahrzeug (Reifen, Beleuchtung)" },
-  { id: 7,  text: "gültige Fahrerlaubnis (Fahrer + ggf. Beifahrer)" },
-  { id: 8,  text: "Lichtbildausweis (Fahrer + ggf. Beifahrer)" },
-  { id: 9,  text: "ADR–Schein mit Eintrag der Klasse 1 – gültig bis:", specialInput: "adr" },
-  { id: 10, text: "Zusammenladungsverbot beachtet" },
-  { id: 11, text: "Ladungssicherung mit geeigneten Mitteln durchgeführt" },
-  { id: 12, text: "Beförderungspapier" },
-  { id: 13, text: "neue schriftliche Weisung gem. ADR 2023 an Bord?" },
-  { id: 14, text: "Fahrzeug verschlussfähig" },
-  { id: 15, text: "auf Rauchverbot im Fahrerhaus hingewiesen (auch E-Zigaretten)" },
-  { id: 16, text: "Plombe(n) übergeben mit der/den Nr.:", specialInput: "plomben" },
-  { id: 17, text: '"Ladung auf LKW" mit Foto dokumentiert' },
+type Col = "b" | "v";
+
+const ITEMS: { id: number; text: string; specialInput?: string; cols: Col[] }[] = [
+  { id: 1,  text: "zwei plombierte Feuerlöscher (min. 6 kg) mit Prüfdatum", cols: ["b"] },
+  { id: 2,  text: "mind. zwei Unterlegkeile", cols: ["b"] },
+  { id: 3,  text: "Fahrzeugkennzeichnung (Warntafel und Gefahrzettel)", cols: ["b", "v"] },
+  { id: 4,  text: "zwei selbststehende Warnzeichen (z.B. Warndreieck + Warnblinkleuchte)", cols: ["b"] },
+  { id: 5,  text: "eine geeignete Warnweste oder Warnkleidung (nach Norm EN 471)", cols: ["b"] },
+  { id: 6,  text: "keine sichtbaren Mängel am Fahrzeug (Reifen, Beleuchtung)", cols: ["b"] },
+  { id: 7,  text: "gültige Fahrerlaubnis (Fahrer + ggf. Beifahrer)", cols: ["b", "v"] },
+  { id: 8,  text: "Lichtbildausweis (Fahrer + ggf. Beifahrer)", cols: ["b", "v"] },
+  { id: 9,  text: "ADR–Schein mit Eintrag der Klasse 1 – gültig bis:", specialInput: "adr", cols: ["b", "v"] },
+  { id: 10, text: "Zusammenladungsverbot beachtet", cols: ["b", "v"] },
+  { id: 11, text: "Ladungssicherung mit geeigneten Mitteln durchgeführt", cols: ["b", "v"] },
+  { id: 12, text: "Beförderungspapier", cols: ["v"] },
+  { id: 13, text: "neue schriftliche Weisung gem. ADR 2023 an Bord?", cols: ["b"] },
+  { id: 14, text: "Fahrzeug verschlussfähig", cols: ["b"] },
+  { id: 15, text: "auf Rauchverbot im Fahrerhaus hingewiesen (auch E-Zigaretten)", cols: ["v"] },
+  { id: 16, text: "Plombe(n) übergeben mit der/den Nr.:", specialInput: "plomben", cols: ["v"] },
+  { id: 17, text: '"Ladung auf LKW" mit Foto dokumentiert', cols: ["v"] },
 ];
 
 type SigTarget = "fahrer" | "verlader" | null;
@@ -495,9 +497,10 @@ export default function ScannerGefahrgutPage() {
 
   const markAll = useCallback((col: "b" | "v") => {
     setChecks((prev) => {
-      const allChecked = ITEMS.every((it) => !!prev[`${it.id}_${col}`]);
+      const relevant = ITEMS.filter((it) => it.cols.includes(col));
+      const allChecked = relevant.every((it) => !!prev[`${it.id}_${col}`]);
       const next = { ...prev };
-      ITEMS.forEach((it) => { next[`${it.id}_${col}`] = !allChecked; });
+      relevant.forEach((it) => { next[`${it.id}_${col}`] = !allChecked; });
       return next;
     });
   }, []);
@@ -619,24 +622,32 @@ export default function ScannerGefahrgutPage() {
         {ITEMS.map((item) => (
           <div key={item.id} style={S.checkRow}>
             <div style={S.checkboxes}>
-              <button
-                style={S.checkBox(!!checks[`${item.id}_b`])}
-                onClick={() => toggle(`${item.id}_b`)}
-                title="Besatzung"
-              >
-                {checks[`${item.id}_b`]
-                  ? <CheckSquare size={16} color="#3b82f6" />
-                  : <Square size={16} color="#2d4a6b" />}
-              </button>
-              <button
-                style={S.checkBox(!!checks[`${item.id}_v`])}
-                onClick={() => toggle(`${item.id}_v`)}
-                title="Verlader"
-              >
-                {checks[`${item.id}_v`]
-                  ? <CheckSquare size={16} color="#3b82f6" />
-                  : <Square size={16} color="#2d4a6b" />}
-              </button>
+              {item.cols.includes("b") ? (
+                <button
+                  style={S.checkBox(!!checks[`${item.id}_b`])}
+                  onClick={() => toggle(`${item.id}_b`)}
+                  title="Besatzung"
+                >
+                  {checks[`${item.id}_b`]
+                    ? <CheckSquare size={16} color="#3b82f6" />
+                    : <Square size={16} color="#2d4a6b" />}
+                </button>
+              ) : (
+                <div style={{ width: 30, height: 30, flexShrink: 0 }} />
+              )}
+              {item.cols.includes("v") ? (
+                <button
+                  style={S.checkBox(!!checks[`${item.id}_v`])}
+                  onClick={() => toggle(`${item.id}_v`)}
+                  title="Verlader"
+                >
+                  {checks[`${item.id}_v`]
+                    ? <CheckSquare size={16} color="#3b82f6" />
+                    : <Square size={16} color="#2d4a6b" />}
+                </button>
+              ) : (
+                <div style={{ width: 30, height: 30, flexShrink: 0 }} />
+              )}
             </div>
 
             <div style={{ flex: 1 }}>
