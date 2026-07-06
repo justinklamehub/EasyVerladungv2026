@@ -18,7 +18,7 @@ export interface ShipmentUpdate {
   /** @nullable */
   speditionId?: number | null;
   /** @nullable */
-  subSpeditionId?: number | null;
+  subSpedition?: string | null;
   /** @nullable */
   bemerkungen?: string | null;
   /** @nullable */

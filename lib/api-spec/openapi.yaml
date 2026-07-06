@@ -1186,9 +1186,7 @@ components:
           type: ["integer", "null"]
         speditionName:
           type: ["string", "null"]
-        subSpeditionId:
-          type: ["integer", "null"]
-        subSpeditionName:
+        subSpedition:
           type: ["string", "null"]
         bemerkungen:
           type: ["string", "null"]
@@ -1238,8 +1236,8 @@ components:
           type: ["string", "null"]
         speditionId:
           type: ["integer", "null"]
-        subSpeditionId:
-          type: ["integer", "null"]
+        subSpedition:
+          type: ["string", "null"]
         bemerkungen:
           type: ["string", "null"]
         telefon:
@@ -1272,8 +1270,8 @@ components:
           type: ["string", "null"]
         speditionId:
           type: ["integer", "null"]
-        subSpeditionId:
-          type: ["integer", "null"]
+        subSpedition:
+          type: ["string", "null"]
         bemerkungen:
           type: ["string", "null"]
         telefon:

@@ -8,7 +8,7 @@ import {
   auditLogTable,
   settingsTable,
 } from "@workspace/db";
-import { eq, and, inArray, gte, sql } from "drizzle-orm";
+import { eq, and, gte, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
@@ -67,7 +67,6 @@ async function buildShipmentResponse(shipment: any) {
   return {
     ...shipment,
     speditionName: shipment.speditionId ? spedMap[shipment.speditionId] ?? null : null,
-    subSpeditionName: shipment.subSpeditionId ? spedMap[shipment.subSpeditionId] ?? null : null,
     createdByName: shipment.createdBy ? userMap[shipment.createdBy] ?? null : null,
     updatedByName: shipment.updatedBy ? userMap[shipment.updatedBy] ?? null : null,
   };
@@ -126,7 +125,6 @@ router.get("/shipments", requireAuth, async (req, res) => {
       rows.map((s) => ({
         ...s,
         speditionName: s.speditionId ? spedMap[s.speditionId] ?? null : null,
-        subSpeditionName: s.subSpeditionId ? spedMap[s.subSpeditionId] ?? null : null,
         createdByName: s.createdBy ? userMap[s.createdBy] ?? null : null,
         updatedByName: s.updatedBy ? userMap[s.updatedBy] ?? null : null,
       })),
@@ -192,19 +190,16 @@ router.post("/shipments", requireAuth, async (req, res) => {
     // E-Mail-Benachrichtigung (fire-and-forget)
     (async () => {
       try {
-        const [spedRow, subSpedRow, creatorRow] = await Promise.all([
+        const [spedRow, creatorRow] = await Promise.all([
           shipment.speditionId
             ? db.select({ name: speditionenTable.name }).from(speditionenTable).where(eq(speditionenTable.id, shipment.speditionId)).limit(1)
-            : Promise.resolve([]),
-          shipment.subSpeditionId
-            ? db.select({ name: speditionenTable.name }).from(speditionenTable).where(eq(speditionenTable.id, shipment.subSpeditionId)).limit(1)
             : Promise.resolve([]),
           req.session.userId
             ? db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1)
             : Promise.resolve([]),
         ]);
         const spedName = (spedRow as { name: string }[])[0]?.name ?? "";
-        const subSpedName = (subSpedRow as { name: string }[])[0]?.name ?? "";
+        const subSpedName = shipment.subSpedition ?? "";
         const creatorEmail = (creatorRow as { email: string }[])[0]?.email ?? undefined;
         const ALL_SHIP_FIELDS = [
           { key: "bezeichnung", label: "Bezeichnung", value: shipment.bezeichnung ?? "" },
@@ -364,28 +359,22 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
     (async () => {
       try {
         const bulkSpedId = inserted[0]?.speditionId;
-        const uniqueSubSpedIds = [...new Set(inserted.map((s) => s.subSpeditionId).filter((id): id is number => id != null))];
-        const [spedRows, subSpedRows, creatorRows] = await Promise.all([
+        const [spedRows, creatorRows] = await Promise.all([
           bulkSpedId
             ? db.select({ name: speditionenTable.name }).from(speditionenTable).where(eq(speditionenTable.id, bulkSpedId)).limit(1)
-            : Promise.resolve([]),
-          uniqueSubSpedIds.length > 0
-            ? db.select({ id: speditionenTable.id, name: speditionenTable.name }).from(speditionenTable).where(inArray(speditionenTable.id, uniqueSubSpedIds))
             : Promise.resolve([]),
           req.session.userId
             ? db.select({ email: usersTable.email }).from(usersTable).where(eq(usersTable.id, req.session.userId)).limit(1)
             : Promise.resolve([]),
         ]);
         const spedName = (spedRows as { name: string }[])[0]?.name ?? "";
-        const subSpedMap: Record<number, string> = {};
-        for (const r of subSpedRows as { id: number; name: string }[]) subSpedMap[r.id] = r.name;
         const creatorEmail = (creatorRows as { email: string }[])[0]?.email ?? undefined;
         const bulkDatum = new Date().toLocaleDateString("de-DE");
         const bulkRows = inserted.map((s) => ({
           bezeichnung:  s.bezeichnung ?? "",
           kennzeichen:  s.kennzeichen ?? "",
           spedition:    spedName,
-          subSpedition: s.subSpeditionId ? (subSpedMap[s.subSpeditionId] ?? "") : "",
+          subSpedition: s.subSpedition ?? "",
           relation:     s.relation ?? "",
           lkwArt:       s.lkwArt ?? "",
           telefon:      s.telefon ?? "",
@@ -481,7 +470,7 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
     const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(role);
 
     const SPED_ALLOWED = ["bezeichnung", "kennzeichen", "relation", "lkwArt", "etaDate", "etaTime", "bemerkungen", "telefon", "wareStatus"];
-    const COMET_ALLOWED = [...SPED_ALLOWED, "status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet", "speditionId", "subSpeditionId"];
+    const COMET_ALLOWED = [...SPED_ALLOWED, "status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet", "speditionId", "subSpedition"];
     const allowedFields = isCometUser ? COMET_ALLOWED : SPED_ALLOWED;
 
     const updates: Record<string, any> = {};

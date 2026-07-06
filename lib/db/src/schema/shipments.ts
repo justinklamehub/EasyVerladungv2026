@@ -8,7 +8,7 @@ export const shipmentsTable = pgTable("shipments", {
   kennzeichen: text("kennzeichen"),
   relation: text("relation"),
   speditionId: integer("spedition_id"),
-  subSpeditionId: integer("sub_spedition_id"),
+  subSpedition: text("sub_spedition"),
   bemerkungen: text("bemerkungen"),
   telefon: text("telefon"),
   etaDate: date("eta_date"),

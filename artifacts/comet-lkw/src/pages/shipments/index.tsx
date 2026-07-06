@@ -746,7 +746,7 @@ export default function ShipmentsPage() {
                       case "id": return <TableCell key="id" className="text-xs text-slate-400 font-mono">{shipment.id}</TableCell>;
                       case "kennzeichen": return <TableCell key="kennzeichen" className="font-medium">{shipment.kennzeichen || "-"}</TableCell>;
                       case "spedition": return <TableCell key="spedition">{s.speditionName || "-"}</TableCell>;
-                      case "subspedition": return <TableCell key="subspedition">{s.subSpeditionName || "-"}</TableCell>;
+                      case "subspedition": return <TableCell key="subspedition">{(s as any).subSpedition || "-"}</TableCell>;
                       case "art": return <TableCell key="art">{shipment.lkwArt || "-"}</TableCell>;
                       case "relation": return <TableCell key="relation" className="text-slate-600 text-sm">{shipment.relation || "-"}</TableCell>;
                       case "bezeichnung": return <TableCell key="bezeichnung" className="text-slate-600 text-sm">{shipment.bezeichnung || "-"}</TableCell>;

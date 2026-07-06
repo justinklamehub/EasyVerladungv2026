@@ -282,9 +282,7 @@ export interface Shipment {
   /** @nullable */
   speditionName?: string | null;
   /** @nullable */
-  subSpeditionId?: number | null;
-  /** @nullable */
-  subSpeditionName?: string | null;
+  subSpedition?: string | null;
   /** @nullable */
   bemerkungen?: string | null;
   /** @nullable */
@@ -355,7 +353,7 @@ export interface ShipmentInput {
   /** @nullable */
   speditionId?: number | null;
   /** @nullable */
-  subSpeditionId?: number | null;
+  subSpedition?: string | null;
   /** @nullable */
   bemerkungen?: string | null;
   /** @nullable */
@@ -414,7 +412,7 @@ export interface ShipmentUpdate {
   /** @nullable */
   speditionId?: number | null;
   /** @nullable */
-  subSpeditionId?: number | null;
+  subSpedition?: string | null;
   /** @nullable */
   bemerkungen?: string | null;
   /** @nullable */

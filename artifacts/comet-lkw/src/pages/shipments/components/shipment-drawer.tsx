@@ -217,7 +217,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     status: "Angemeldet",
     wareStatus: "nicht bereit",
     speditionId: "",
-    subSpeditionId: "",
+    subSpedition: "",
     bemerkungen: "",
     telefon: "",
   });
@@ -239,12 +239,12 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
         status: shipment.status || "Angemeldet",
         wareStatus: (shipment as any).wareStatus || "",
         speditionId: shipment.speditionId ? String(shipment.speditionId) : "",
-        subSpeditionId: (shipment as any).subSpeditionId ? String((shipment as any).subSpeditionId) : "",
+        subSpedition: (shipment as any).subSpedition || "",
         bemerkungen: shipment.bemerkungen || "",
         telefon: shipment.telefon || "",
       });
     } else if (!shipmentId && open) {
-      setForm({ bezeichnung: "", kennzeichen: "", relation: "", lkwArt: "", etaDate: "", etaTime: "", ataDate: "", ataTime: "", tor: "", status: "Angemeldet", wareStatus: "nicht bereit", speditionId: user?.speditionId ? String(user.speditionId) : "", subSpeditionId: "", bemerkungen: "", telefon: "" });
+      setForm({ bezeichnung: "", kennzeichen: "", relation: "", lkwArt: "", etaDate: "", etaTime: "", ataDate: "", ataTime: "", tor: "", status: "Angemeldet", wareStatus: "nicht bereit", speditionId: user?.speditionId ? String(user.speditionId) : "", subSpedition: "", bemerkungen: "", telefon: "" });
     }
     if (open) setFormErrors(new Set());
   }, [shipment, open, shipmentId, user]);
@@ -330,7 +330,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
     if (isCometUser && canEditPerm) {
       data.speditionId = form.speditionId ? parseInt(form.speditionId) : undefined;
-      data.subSpeditionId = form.subSpeditionId ? parseInt(form.subSpeditionId) : null;
+      data.subSpedition = form.subSpedition || null;
     }
 
     if (isEditing && shipmentId) {
@@ -461,13 +461,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               {isCometUser && canEditPerm && (
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Sub-Spedition</Label>
-                  <Select value={form.subSpeditionId || "__none__"} onValueChange={v => setForm(f => ({ ...f, subSpeditionId: v === "__none__" ? "" : v }))}>
-                    <SelectTrigger className="h-9"><SelectValue placeholder="Optional" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">Keine</SelectItem>
-                      {speditionen?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
+                  <Input value={form.subSpedition} onChange={e => setForm(f => ({ ...f, subSpedition: e.target.value }))} placeholder="Optional" />
                 </div>
               )}
 

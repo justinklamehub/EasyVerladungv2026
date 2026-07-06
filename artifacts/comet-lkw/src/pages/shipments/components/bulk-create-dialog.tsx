@@ -24,7 +24,7 @@ export interface RowData {
   etaTime: string;
   tor: string;
   speditionId: string;
-  subSpeditionId: string;
+  subSpedition: string;
   relation: string;
   telefon: string;
   bemerkungen: string;
@@ -41,7 +41,7 @@ export function emptyRow(id: number, partial?: Partial<RowData>): RowData {
     etaTime: "",
     tor: "",
     speditionId: "",
-    subSpeditionId: "",
+    subSpedition: "",
     relation: "",
     telefon: "",
     bemerkungen: "",
@@ -281,7 +281,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
       etaTime:      r.etaTime || undefined,
       tor:          isCometUser ? (r.tor || undefined) : undefined,
       speditionId:  r.speditionId ? parseInt(r.speditionId) : (isSpedUser ? user?.speditionId : undefined),
-      subSpeditionId: isCometUser && r.subSpeditionId ? parseInt(r.subSpeditionId) : undefined,
+      subSpedition: isCometUser && r.subSpedition.trim() ? r.subSpedition.trim() : undefined,
       relation:     r.relation.trim() || undefined,
       telefon:      r.telefon.trim() || undefined,
       bemerkungen:  r.bemerkungen.trim() || undefined,
@@ -451,15 +451,12 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                       )}
                       {isCometUser && (
                         <td className="px-1 py-1.5 border-b border-slate-100">
-                          <Select value={row.subSpeditionId || "__none__"} onValueChange={(v) => updateRow(row.id, "subSpeditionId", v === "__none__" ? "" : v)}>
-                            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Optional" /></SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="__none__">Keine</SelectItem>
-                              {(speditionen ?? []).map((s) => (
-                                <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Input
+                            value={row.subSpedition}
+                            onChange={(e) => updateRow(row.id, "subSpedition", e.target.value)}
+                            placeholder="Optional"
+                            className="h-8 text-sm"
+                          />
                         </td>
                       )}
                       <td className="px-1 py-1.5 border-b border-slate-100">
