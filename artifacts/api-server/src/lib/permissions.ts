@@ -22,7 +22,9 @@ export type Permission =
   | "auftrag.analyse"
   | "auftrag.analyse.spedition"
   | "push.send_custom"
-  | "foto.view";
+  | "foto.view"
+  | "foto.edit"
+  | "foto.delete";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -63,6 +65,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   "auftrag.analyse.spedition",
   "push.send_custom",
   "foto.view",
+  "foto.edit",
+  "foto.delete",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
@@ -87,6 +91,8 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "auftrag.analyse.spedition":  { label: "Auftragsauswertung (eigene Zeile sehen)", category: "Auftragsauswertung" },
   "push.send_custom":           { label: "Freie Nachricht senden",     category: "Benachrichtigungen" },
   "foto.view":                  { label: "Fotogalerie ansehen",        category: "Fotos" },
+  "foto.edit":                  { label: "Foto bearbeiten (LKW zuordnen)", category: "Fotos" },
+  "foto.delete":                { label: "Foto löschen",               category: "Fotos" },
 };
 
 export const ROLE_LABELS: Record<string, string> = {

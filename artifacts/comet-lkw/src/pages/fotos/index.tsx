@@ -1,14 +1,17 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useListSpeditionen } from "@workspace/api-client-react";
+import { customFetch } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ImageIcon, Loader2, X, Truck, Calendar } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ImageIcon, Loader2, X, Truck, Calendar, Link2, Trash2, Search, CheckCircle2 } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -30,12 +33,156 @@ function toImageUrl(objectPath: string) {
   return `${API_BASE}/storage/objects${objectPath.replace(/^\/objects/, "")}`;
 }
 
+type ShipmentOption = {
+  id: number;
+  kennzeichen: string | null;
+  bezeichnung: string | null;
+  relation: string | null;
+  status: string;
+};
+
+function ReassignDialog({
+  foto,
+  onClose,
+  onReassigned,
+}: {
+  foto: Foto;
+  onClose: () => void;
+  onReassigned: () => void;
+}) {
+  const { toast } = useToast();
+  const [search, setSearch] = useState(foto.kennzeichen ?? "");
+  const [selected, setSelected] = useState<ShipmentOption | null>(null);
+
+  const { data: shipments = [], isFetching } = useQuery<ShipmentOption[]>({
+    queryKey: ["shipments-foto-reassign-search", search],
+    queryFn: () =>
+      customFetch<ShipmentOption[]>(`/api/shipments?search=${encodeURIComponent(search)}&limit=30`),
+    enabled: search.trim().length >= 1,
+    staleTime: 10_000,
+  });
+
+  const reassignMutation = useMutation({
+    mutationFn: () =>
+      customFetch<{ success: boolean }>(`/api/fotos/${foto.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shipmentId: selected!.id }),
+      }),
+    onSuccess: () => {
+      toast({ title: `Foto wurde Verladung #${selected!.id} zugeordnet` });
+      onReassigned();
+      onClose();
+    },
+    onError: (e: any) =>
+      toast({ title: e?.data?.error ?? "Fehler bei der Zuordnung", variant: "destructive" }),
+  });
+
+  return (
+    <DialogContent className="sm:max-w-lg">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Link2 className="w-4 h-4 text-blue-500" />
+          Foto einem anderen LKW zuordnen
+        </DialogTitle>
+      </DialogHeader>
+
+      <div className="space-y-3 py-1">
+        <div className="text-xs text-slate-500 bg-slate-50 rounded p-2 flex items-center gap-2">
+          <Truck className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+          Aktuell: <span className="font-medium text-slate-700">
+            {foto.shipmentBezeichnung ?? (foto.shipmentId ? `#${foto.shipmentId}` : "Nicht zugeordnet")}
+          </span>
+        </div>
+
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+          <Input
+            className="pl-8 text-sm"
+            placeholder="Kennzeichen, Bezeichnung oder ID suchen..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setSelected(null); }}
+            autoFocus
+          />
+          {isFetching && (
+            <Loader2 className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 animate-spin text-slate-400" />
+          )}
+        </div>
+
+        <div className="border rounded-md overflow-hidden max-h-64 overflow-y-auto">
+          {shipments.length === 0 && search.trim().length >= 1 && !isFetching && (
+            <div className="py-8 text-center text-sm text-slate-400">Keine Verladungen gefunden</div>
+          )}
+          {search.trim().length < 1 && (
+            <div className="py-8 text-center text-sm text-slate-400">Suchbegriff eingeben um Verladungen zu finden</div>
+          )}
+          {shipments.map((s) => {
+            const isSelected = selected?.id === s.id;
+            const label = s.bezeichnung || s.kennzeichen || `#${s.id}`;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setSelected(isSelected ? null : s)}
+                className={`w-full text-left px-3 py-2.5 text-sm flex items-center justify-between gap-2 transition-colors border-b last:border-0 ${
+                  isSelected
+                    ? "bg-blue-50 border-l-2 border-l-blue-500"
+                    : "hover:bg-slate-50"
+                }`}
+              >
+                <div className="min-w-0">
+                  <div className="font-medium text-slate-800 truncate">{label}</div>
+                  <div className="text-xs text-slate-400 flex items-center gap-2 mt-0.5">
+                    <span>#{s.id}</span>
+                    {s.kennzeichen && s.bezeichnung && <span>{s.kennzeichen}</span>}
+                    {s.relation && <span>{s.relation}</span>}
+                    <span className="px-1 py-0.5 rounded bg-slate-100 text-slate-500">{s.status}</span>
+                  </div>
+                </div>
+                {isSelected && <CheckCircle2 className="w-4 h-4 text-blue-500 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+
+        {selected && (
+          <div className="flex items-center gap-2 text-xs bg-blue-50 border border-blue-200 rounded p-2">
+            <CheckCircle2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+            <span className="text-slate-700">
+              Zuordnen zu: <strong>#{selected.id} – {selected.bezeichnung || selected.kennzeichen}</strong>
+            </span>
+          </div>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>Abbrechen</Button>
+        <Button
+          disabled={!selected || reassignMutation.isPending}
+          onClick={() => reassignMutation.mutate()}
+          className="gap-1.5"
+        >
+          {reassignMutation.isPending && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+          <Link2 className="w-3.5 h-3.5" />
+          Zuordnen
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
 export default function FotosPage() {
   const [kennzeichen, setKennzeichen] = useState("");
   const [speditionId, setSpeditionId] = useState<string>("all");
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [preview, setPreview] = useState<Foto | null>(null);
+  const [reassigning, setReassigning] = useState<Foto | null>(null);
+
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const permissions = usePermissions();
+  const canEdit = !!permissions["foto.edit"];
+  const canDelete = !!permissions["foto.delete"];
 
   const { data: speditionen } = useListSpeditionen();
 
@@ -52,6 +199,31 @@ export default function FotosPage() {
       return res.json();
     },
   });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API_BASE}/fotos/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Fehler beim Löschen");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["fotos"] });
+      toast({ title: "Foto gelöscht" });
+      setPreview(null);
+    },
+    onError: (e: any) => toast({ title: e.message ?? "Fehler", variant: "destructive" }),
+  });
+
+  const handleReassigned = () => {
+    queryClient.invalidateQueries({ queryKey: ["fotos"] });
+    setPreview(null);
+  };
 
   const resetFilters = () => {
     setKennzeichen("");
@@ -203,9 +375,52 @@ export default function FotosPage() {
                   <div className="font-medium text-slate-800 truncate">{preview.fileName ?? "—"}</div>
                 </div>
               </div>
+              {(canEdit || canDelete) && (
+                <DialogFooter className="gap-2 sm:gap-2">
+                  {canEdit && (
+                    <Button
+                      variant="outline"
+                      className="gap-1.5"
+                      onClick={() => setReassigning(preview)}
+                    >
+                      <Link2 className="w-3.5 h-3.5" />
+                      Anderem LKW zuordnen
+                    </Button>
+                  )}
+                  {canDelete && (
+                    <Button
+                      variant="destructive"
+                      className="gap-1.5"
+                      disabled={deleteMutation.isPending}
+                      onClick={() => {
+                        if (confirm("Dieses Foto wirklich löschen? Dies kann nicht rückgängig gemacht werden.")) {
+                          deleteMutation.mutate(preview.id);
+                        }
+                      }}
+                    >
+                      {deleteMutation.isPending ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      Löschen
+                    </Button>
+                  )}
+                </DialogFooter>
+              )}
             </>
           )}
         </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!reassigning} onOpenChange={(o) => !o && setReassigning(null)}>
+        {reassigning && (
+          <ReassignDialog
+            foto={reassigning}
+            onClose={() => setReassigning(null)}
+            onReassigned={handleReassigned}
+          />
+        )}
       </Dialog>
     </div>
   );

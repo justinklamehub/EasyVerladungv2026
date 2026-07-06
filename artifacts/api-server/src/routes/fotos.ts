@@ -150,4 +150,87 @@ router.get("/fotos", requireAuth, async (req, res) => {
   }
 });
 
+/**
+ * PATCH /fotos/:id
+ * Requires "foto.edit" permission (or comet_admin). Allows re-assigning a
+ * photo to a different shipment (e.g. it was captured for the wrong LKW).
+ */
+router.patch("/fotos/:id", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const allowed = role === "comet_admin" || (await can(role, "foto.edit"));
+    if (!allowed) {
+      return res.status(403).json({ error: "Keine Berechtigung (foto.edit)" });
+    }
+
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Ungültige ID" });
+
+    const { shipmentId, kennzeichen } = req.body as {
+      shipmentId?: number | null;
+      kennzeichen?: string | null;
+    };
+
+    const updates: Partial<typeof shipmentFotosTable.$inferInsert> = {};
+
+    if (shipmentId !== undefined) {
+      const sid = shipmentId !== null ? Number(shipmentId) : null;
+      if (sid !== null) {
+        const ship = await db.select({ id: shipmentsTable.id })
+          .from(shipmentsTable).where(eq(shipmentsTable.id, sid)).limit(1);
+        if (ship.length === 0) return res.status(404).json({ error: "Verladung nicht gefunden" });
+      }
+      updates.shipmentId = sid;
+    }
+
+    if (kennzeichen !== undefined) {
+      updates.kennzeichen = kennzeichen ? String(kennzeichen).toUpperCase().trim() : null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ error: "Keine Änderungen übergeben" });
+    }
+
+    const [updated] = await db
+      .update(shipmentFotosTable)
+      .set(updates)
+      .where(eq(shipmentFotosTable.id, id))
+      .returning();
+
+    if (!updated) return res.status(404).json({ error: "Foto nicht gefunden" });
+    return res.json({ success: true, foto: updated });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Serverfehler" });
+  }
+});
+
+/**
+ * DELETE /fotos/:id
+ * Requires "foto.delete" permission (or comet_admin).
+ */
+router.delete("/fotos/:id", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const allowed = role === "comet_admin" || (await can(role, "foto.delete"));
+    if (!allowed) {
+      return res.status(403).json({ error: "Keine Berechtigung (foto.delete)" });
+    }
+
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Ungültige ID" });
+
+    const [deleted] = await db
+      .delete(shipmentFotosTable)
+      .where(eq(shipmentFotosTable.id, id))
+      .returning();
+
+    if (!deleted) return res.status(404).json({ error: "Foto nicht gefunden" });
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Serverfehler" });
+  }
+});
+
 export default router;
