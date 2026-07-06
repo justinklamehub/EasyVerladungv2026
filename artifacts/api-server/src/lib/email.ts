@@ -3,7 +3,7 @@ import { db, pool } from "@workspace/db";
 import { settingsTable, emailLogTable } from "@workspace/db";
 import { eq, notLike, and } from "drizzle-orm";
 
-export type EmailEvent = "shipment" | "bulk" | "user";
+export type EmailEvent = "shipment" | "bulk" | "user" | "password_expiry";
 
 export interface ShipmentRow { label: string; value: string }
 export interface BulkShipmentRow {
@@ -276,6 +276,26 @@ Bitte wenden Sie sich bei Fragen an Ihren Administrator.
 
 Diese E-Mail wurde automatisch generiert.`,
     },
+
+    // Passwort läuft bald ab
+    { key: "email_tpl_password_expiry_enabled", value: "1" },
+    { key: "email_tpl_password_expiry_to", value: "" },
+    { key: "email_tpl_password_expiry_subject", value: "Ihr Passwort läuft in {{tage}} Tag(en) ab" },
+    {
+      key: "email_tpl_password_expiry_body",
+      value: `Guten Tag {{username}},
+
+Ihr Passwort für das System COMET LKW-Verladungsverwaltung läuft in {{tage}} Tag(en) ab (am {{ablaufdatum}}).
+
+Bitte ändern Sie Ihr Passwort rechtzeitig, um weiterhin Zugriff auf Ihr Konto zu haben.
+
+Benutzername:  {{username}}
+E-Mail:        {{email}}
+
+Diese E-Mail wurde automatisch generiert.`,
+    },
+    { key: "password_expiry_days", value: "90" },
+    { key: "password_expiry_reminder_days", value: "7,3,1" },
   ];
 
   for (const { key, value } of defaults) {

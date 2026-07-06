@@ -4,6 +4,7 @@ import app, { sessionMiddleware } from "./app";
 import { logger } from "./lib/logger";
 import { seedMissingPermissions } from "./lib/permissions";
 import { seedEmailTemplates, ensureEmailLogTable, ensurePasswordResetTable } from "./lib/email";
+import { ensurePasswordExpiryRemindersTable } from "./lib/password-policy";
 import { ensureTicketsTables } from "./routes/tickets";
 import { ensureUserPreferencesTable } from "./routes/user-preferences";
 import { startScheduler, ensureReportWeeklyLogTable } from "./lib/scheduler";
@@ -249,6 +250,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("password_reset_tokens table ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensurePasswordResetTable failed — non-fatal");
+  }
+  try {
+    await ensurePasswordExpiryRemindersTable();
+    logger.info("password_expiry_reminders table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensurePasswordExpiryRemindersTable failed — non-fatal");
   }
   try {
     await ensureTicketsTables();

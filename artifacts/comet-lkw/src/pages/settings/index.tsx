@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { useAuth } from "@/contexts/auth-context";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -124,12 +124,23 @@ const EMAIL_EVENTS = [
     availableFields: null as { key: string; label: string }[] | null,
     defaultEnabledKeys: null as string[] | null,
   },
+  {
+    key: "password_expiry",
+    label: "Passwort läuft bald ab",
+    description: "Wird als Erinnerung gesendet, bevor das Passwort eines Benutzers abläuft",
+    placeholders: ["{{username}}", "{{email}}", "{{tage}}", "{{ablaufdatum}}"],
+    recipientNote: "Die E-Mail-Adresse des betroffenen Benutzers wird automatisch als Empfänger hinzugefügt.",
+    tableFieldsKey: null as string | null,
+    availableFields: null as { key: string; label: string }[] | null,
+    defaultEnabledKeys: null as string[] | null,
+  },
 ];
 
 const EVENT_LABELS: Record<string, string> = {
   shipment: "Einzel-Verladung",
   bulk: "Massen-Verladung",
   user: "Benutzer angelegt",
+  password_expiry: "Passwort läuft ab",
 };
 
 // ── SettingField ──────────────────────────────────────────────────────────────
@@ -1142,6 +1153,91 @@ function WeeklyReportCard({
   );
 }
 
+// ── PasswordExpiryCard ────────────────────────────────────────────────────────
+
+function PasswordExpiryCard({
+  settings,
+  onSave,
+  isSaving,
+}: {
+  settings: SettingsMap;
+  onSave: (k: string, v: string) => void;
+  isSaving: (k: string) => boolean;
+}) {
+  const expiryDays = settings["password_expiry_days"] ?? "90";
+  const reminderDays = settings["password_expiry_reminder_days"] ?? "7,3,1";
+
+  const [localExpiryDays, setLocalExpiryDays] = useState(expiryDays);
+  const [localReminderDays, setLocalReminderDays] = useState(reminderDays);
+
+  useEffect(() => setLocalExpiryDays(settings["password_expiry_days"] ?? "90"), [settings]);
+  useEffect(() => setLocalReminderDays(settings["password_expiry_reminder_days"] ?? "7,3,1"), [settings]);
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="w-4 h-4 text-primary" />
+          <CardTitle className="text-base">Passwort-Ablauf</CardTitle>
+        </div>
+        <CardDescription className="text-xs">
+          Legt fest, wie lange Passwörter gültig sind und wann Benutzer per E-Mail an den bevorstehenden Ablauf erinnert werden.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">Gültigkeitsdauer (Tage)</Label>
+          <p className="text-xs text-slate-500">Nach dieser Anzahl von Tagen muss das Passwort erneuert werden</p>
+          <div className="flex gap-2 max-w-xs">
+            <Input
+              type="number"
+              min={1}
+              value={localExpiryDays}
+              onChange={(e) => setLocalExpiryDays(e.target.value)}
+              className="text-sm"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSave("password_expiry_days", localExpiryDays)}
+              disabled={isSaving("password_expiry_days") || localExpiryDays === expiryDays}
+            >
+              {isSaving("password_expiry_days") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium">Erinnerungs-Intervalle (Tage vor Ablauf)</Label>
+          <p className="text-xs text-slate-500">Kommagetrennte Liste, z.B. 7,3,1 — sendet an diesen Tagen vor Ablauf jeweils eine Erinnerungs-E-Mail</p>
+          <div className="flex gap-2 max-w-xs">
+            <Input
+              value={localReminderDays}
+              onChange={(e) => setLocalReminderDays(e.target.value)}
+              placeholder="7,3,1"
+              className="text-sm"
+            />
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => onSave("password_expiry_reminder_days", localReminderDays)}
+              disabled={isSaving("password_expiry_reminder_days") || localReminderDays === reminderDays}
+            >
+              {isSaving("password_expiry_reminder_days") ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            </Button>
+          </div>
+        </div>
+
+        <p className="text-xs text-amber-600">
+          Der Text der Erinnerungs-E-Mail kann im Tab „E-Mail“ unter „Passwort läuft bald ab“ angepasst werden.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Push Template Settings ────────────────────────────────────────────────────
 
 interface PushTemplateEntry {
@@ -1960,6 +2056,9 @@ export default function SettingsPage() {
           <TabsTrigger value="berichte" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <BarChart2 className="w-3.5 h-3.5 shrink-0" /> Berichte
           </TabsTrigger>
+          <TabsTrigger value="sicherheit" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Sicherheit
+          </TabsTrigger>
           <TabsTrigger value="postausgang" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <Inbox className="w-3.5 h-3.5 shrink-0" /> Postausgang
           </TabsTrigger>
@@ -2145,6 +2244,11 @@ export default function SettingsPage() {
         {/* ── Tab: Berichte ── */}
         <TabsContent value="berichte" className="space-y-5 mt-0">
           <WeeklyReportCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
+        </TabsContent>
+
+        {/* ── Tab: Sicherheit ── */}
+        <TabsContent value="sicherheit" className="space-y-5 mt-0">
+          <PasswordExpiryCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
         </TabsContent>
 
         {/* ── Tab: Postausgang ── */}

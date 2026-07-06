@@ -6,7 +6,7 @@ import { usersTable, speditionenTable, settingsTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { createEmailTransport } from "../lib/email";
-import { validatePasswordPolicy, computePasswordChangeRequired } from "../lib/password-policy";
+import { validatePasswordPolicy, computePasswordChangeRequired, resetPasswordExpiryReminders } from "../lib/password-policy";
 
 const router = Router();
 
@@ -55,7 +55,7 @@ router.post("/auth/login", async (req, res) => {
       speditionId: user.speditionId,
       speditionName,
       isActive: user.isActive,
-      passwordChangeRequired: computePasswordChangeRequired(user),
+      passwordChangeRequired: await computePasswordChangeRequired(user),
     });
   } catch (err) {
     console.error(err);
@@ -99,7 +99,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
       speditionId: user.speditionId,
       speditionName,
       isActive: user.isActive,
-      passwordChangeRequired: computePasswordChangeRequired(user),
+      passwordChangeRequired: await computePasswordChangeRequired(user),
     });
   } catch (err) {
     console.error(err);
@@ -158,6 +158,7 @@ router.post("/auth/change-password", requireAuth, async (req, res) => {
       .update(usersTable)
       .set({ passwordHash, mustChangePassword: false, passwordChangedAt: new Date(), updatedAt: new Date() })
       .where(eq(usersTable.id, user.id));
+    await resetPasswordExpiryReminders(user.id);
 
     return res.json({ ok: true });
   } catch (err) {
@@ -253,6 +254,7 @@ router.post("/auth/reset-password", async (req, res) => {
         .where(eq(usersTable.id, row.user_id)),
       pool.query("UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1", [row.id]),
     ]);
+    await resetPasswordExpiryReminders(row.user_id);
 
     return res.json({ ok: true });
   } catch (err) {

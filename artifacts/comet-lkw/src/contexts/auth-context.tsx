@@ -45,10 +45,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLocation("/login?reason=admin");
     };
     socket.on("force-logout", handleForceLogout);
+
+    const handlePasswordChanged = () => {
+      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      refetch();
+    };
+    socket.on("password-changed", handlePasswordChanged);
+
     return () => {
       socket.off("force-logout", handleForceLogout);
+      socket.off("password-changed", handlePasswordChanged);
     };
-  }, [queryClient, setLocation]);
+  }, [queryClient, setLocation, refetch]);
 
   return (
     <AuthContext.Provider value={{ user: user || null, isLoading, refetch }}>

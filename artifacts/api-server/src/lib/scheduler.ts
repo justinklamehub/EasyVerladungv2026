@@ -1,9 +1,11 @@
-import { db, pool, notifications, shipmentsTable, settingsTable } from "@workspace/db";
+import { db, pool, notifications, shipmentsTable, settingsTable, usersTable } from "@workspace/db";
 import { and, gte, eq, lt, notInArray, isNotNull, count } from "drizzle-orm";
 import { sendWeeklyReport } from "./weekly-report";
 import type { Server as SocketIOServer } from "socket.io";
 import { notify } from "./notify";
 import { logger } from "./logger";
+import { sendEventEmail } from "./email";
+import { getPasswordMaxAgeDays } from "./password-policy";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const ABGESCHLOSSEN = ["Abgefertigt", "Storniert"];
@@ -127,6 +129,65 @@ async function runWeeklyReportCheck() {
   logger.info("Wöchentlicher Bericht erfolgreich versendet und protokolliert");
 }
 
+// ── Passwort-Ablauf-Erinnerung ───────────────────────────────────────────────
+
+async function tryClaimPasswordExpiryReminder(userId: number, daysThreshold: number): Promise<boolean> {
+  const result = await pool.query(
+    "INSERT INTO password_expiry_reminders (user_id, days_threshold) VALUES ($1, $2) ON CONFLICT (user_id, days_threshold) DO NOTHING RETURNING id",
+    [userId, daysThreshold],
+  );
+  return result.rows.length > 0;
+}
+
+async function runPasswordExpiryReminderCheck() {
+  const rows = await db.select().from(settingsTable);
+  const s = Object.fromEntries(rows.map((r) => [r.key, r.value ?? ""]));
+
+  const reminderDays = (s.password_expiry_reminder_days || "7,3,1")
+    .split(",")
+    .map((d) => parseInt(d.trim(), 10))
+    .filter((d) => Number.isFinite(d) && d > 0);
+
+  if (reminderDays.length === 0) return;
+
+  const maxAgeDays = await getPasswordMaxAgeDays();
+  const maxAgeMs = maxAgeDays * 24 * 60 * 60 * 1000;
+
+  const users = await db
+    .select()
+    .from(usersTable)
+    .where(and(eq(usersTable.isActive, true), eq(usersTable.mustChangePassword, false)));
+
+  for (const user of users) {
+    if (!user.email) continue;
+    const changedAt = new Date(user.passwordChangedAt).getTime();
+    const expiresAt = changedAt + maxAgeMs;
+    const daysRemaining = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
+
+    if (daysRemaining <= 0 || daysRemaining > Math.max(...reminderDays)) continue;
+
+    const threshold = reminderDays.find((d) => d === daysRemaining);
+    if (threshold === undefined) continue;
+
+    const claimed = await tryClaimPasswordExpiryReminder(user.id, threshold);
+    if (!claimed) continue;
+
+    const ablaufdatum = new Date(expiresAt).toLocaleDateString("de-DE");
+    logger.info({ userId: user.id, daysRemaining }, "Sending password expiry reminder");
+
+    await sendEventEmail(
+      "password_expiry",
+      {
+        username: user.username,
+        email: user.email,
+        tage: String(daysRemaining),
+        ablaufdatum,
+      },
+      user.email,
+    );
+  }
+}
+
 // ── Scheduler starten ─────────────────────────────────────────────────────────
 
 async function runAllChecks(io: SocketIOServer) {
@@ -140,9 +201,12 @@ async function runAllChecks(io: SocketIOServer) {
   await runWeeklyReportCheck().catch((e) =>
     logger.warn({ err: e }, "Weekly report check failed — non-fatal")
   );
+  await runPasswordExpiryReminderCheck().catch((e) =>
+    logger.warn({ err: e }, "Password expiry reminder check failed — non-fatal")
+  );
 }
 
-export { ensureReportWeeklyLogTable };
+export { ensureReportWeeklyLogTable, runPasswordExpiryReminderCheck };
 
 export function startScheduler(io: SocketIOServer) {
   runAllChecks(io);

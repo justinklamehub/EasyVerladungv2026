@@ -4,7 +4,7 @@ import { db, pool } from "@workspace/db";
 import { usersTable, speditionenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
-import { validatePasswordPolicy } from "../lib/password-policy";
+import { validatePasswordPolicy, resetPasswordExpiryReminders } from "../lib/password-policy";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
 import { sendEventEmail } from "../lib/email";
@@ -264,6 +264,12 @@ router.patch("/users/:id", requireAuth, async (req, res) => {
     }
 
     emit(req, "user.updated", { id: targetId });
+
+    if (password) {
+      await resetPasswordExpiryReminders(targetId);
+      const io = getIO(req);
+      if (io) io.to(`user:${targetId}`).emit("password-changed", {});
+    }
 
     const speds = await db.select().from(speditionenTable);
     const spedMap: Record<number, string> = {};
