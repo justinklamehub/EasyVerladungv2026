@@ -85,9 +85,15 @@ router.put("/settings/:key", requireAuth, async (req, res) => {
       "report_weekly_time",
       "impressum_text",
       "datenschutz_text",
+      "storage_backend",
+      "storage_local_path",
     ];
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: "Unbekannter Einstellungsschlüssel" });
+    }
+
+    if (key === "storage_backend" && value !== "gcs" && value !== "local") {
+      return res.status(400).json({ error: "Ungültiger Speicher-Backend-Wert" });
     }
 
     await db

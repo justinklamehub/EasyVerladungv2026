@@ -3,6 +3,8 @@ import { Readable } from "stream";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
+import { db, settingsTable } from "@workspace/db";
+import { inArray } from "drizzle-orm";
 import {
   ObjectAclPolicy,
   ObjectPermission,
@@ -55,20 +57,54 @@ export type ObjectHandle =
 
 type StorageBackend = "gcs" | "local";
 
-function resolveBackend(): StorageBackend {
-  return process.env.STORAGE_BACKEND === "local" ? "local" : "gcs";
+interface StorageConfig {
+  backend: StorageBackend;
+  localDir: string;
+}
+
+let cachedStorageConfig: (StorageConfig & { expiresAt: number }) | null = null;
+const STORAGE_CONFIG_CACHE_MS = 5000;
+
+/**
+ * Resolves the storage backend/localDir. DB-backed settings (configurable via
+ * the admin Settings UI) take priority; falls back to STORAGE_BACKEND /
+ * LOCAL_STORAGE_DIR env vars for backward compatibility. Result is cached
+ * briefly to avoid a DB round-trip on every request.
+ */
+async function loadStorageConfig(): Promise<StorageConfig> {
+  const now = Date.now();
+  if (cachedStorageConfig && cachedStorageConfig.expiresAt > now) {
+    return cachedStorageConfig;
+  }
+
+  let backend: StorageBackend = process.env.STORAGE_BACKEND === "local" ? "local" : "gcs";
+  let localDir = process.env.LOCAL_STORAGE_DIR || path.join(process.cwd(), "storage-data");
+
+  try {
+    const rows = await db
+      .select()
+      .from(settingsTable)
+      .where(inArray(settingsTable.key, ["storage_backend", "storage_local_path"]));
+    for (const row of rows) {
+      if (row.key === "storage_backend" && (row.value === "local" || row.value === "gcs")) {
+        backend = row.value;
+      }
+      if (row.key === "storage_local_path" && row.value && row.value.trim()) {
+        localDir = row.value.trim();
+      }
+    }
+  } catch {
+    // DB unreachable or settings table not migrated yet — silently fall
+    // back to env vars so the app keeps working.
+  }
+
+  cachedStorageConfig = { backend, localDir, expiresAt: now + STORAGE_CONFIG_CACHE_MS };
+  return cachedStorageConfig;
 }
 
 export class ObjectStorageService {
-  private backend: StorageBackend;
-  private localDir: string;
-
-  constructor() {
-    this.backend = resolveBackend();
-    this.localDir = process.env.LOCAL_STORAGE_DIR || path.join(process.cwd(), "storage-data");
-  }
-
-  getPublicObjectSearchPaths(): Array<string> {
+  async getPublicObjectSearchPaths(): Promise<Array<string>> {
+    const { backend, localDir } = await loadStorageConfig();
     const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
     const paths = Array.from(
       new Set(
@@ -79,7 +115,7 @@ export class ObjectStorageService {
       )
     );
     if (paths.length === 0) {
-      if (this.backend === "local") {
+      if (backend === "local") {
         return ["public"];
       }
       throw new Error(
@@ -90,9 +126,10 @@ export class ObjectStorageService {
     return paths;
   }
 
-  getPrivateObjectDir(): string {
-    if (this.backend === "local") {
-      return path.join(this.localDir, "uploads");
+  async getPrivateObjectDir(): Promise<string> {
+    const { backend, localDir } = await loadStorageConfig();
+    if (backend === "local") {
+      return path.join(localDir, "uploads");
     }
     const dir = process.env.PRIVATE_OBJECT_DIR || "";
     if (!dir) {
@@ -105,9 +142,10 @@ export class ObjectStorageService {
   }
 
   async searchPublicObject(filePath: string): Promise<ObjectHandle | null> {
-    if (this.backend === "local") {
-      for (const searchPath of this.getPublicObjectSearchPaths()) {
-        const fullPath = path.join(this.localDir, searchPath, filePath);
+    const { backend, localDir } = await loadStorageConfig();
+    if (backend === "local") {
+      for (const searchPath of await this.getPublicObjectSearchPaths()) {
+        const fullPath = path.join(localDir, searchPath, filePath);
         if (fs.existsSync(fullPath)) {
           return { kind: "local", filePath: fullPath };
         }
@@ -115,7 +153,7 @@ export class ObjectStorageService {
       return null;
     }
 
-    for (const searchPath of this.getPublicObjectSearchPaths()) {
+    for (const searchPath of await this.getPublicObjectSearchPaths()) {
       const fullPath = `${searchPath}/${filePath}`;
 
       const { bucketName, objectName } = parseObjectPath(fullPath);
@@ -170,7 +208,8 @@ export class ObjectStorageService {
   }
 
   async getObjectEntityUploadURL(baseUrl?: string): Promise<string> {
-    if (this.backend === "local") {
+    const { backend } = await loadStorageConfig();
+    if (backend === "local") {
       const objectId = randomUUID();
       const relativePath = `${LOCAL_UPLOAD_URL_PREFIX}${objectId}`;
       // The response schema requires a fully-qualified URL (mirroring the
@@ -179,7 +218,7 @@ export class ObjectStorageService {
       return baseUrl ? new URL(relativePath, baseUrl).toString() : relativePath;
     }
 
-    const privateObjectDir = this.getPrivateObjectDir();
+    const privateObjectDir = await this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error(
         "PRIVATE_OBJECT_DIR not set. Create a bucket in 'Object Storage' " +
@@ -205,7 +244,8 @@ export class ObjectStorageService {
    * Only relevant when running with STORAGE_BACKEND=local.
    */
   async saveLocalUpload(objectId: string, data: Buffer, contentType: string): Promise<void> {
-    const dir = path.join(this.localDir, "uploads");
+    const { localDir } = await loadStorageConfig();
+    const dir = path.join(localDir, "uploads");
     await fs.promises.mkdir(dir, { recursive: true });
     await fs.promises.writeFile(path.join(dir, objectId), data);
     await fs.promises.writeFile(
@@ -236,15 +276,16 @@ export class ObjectStorageService {
 
     const entityId = parts.slice(1).join("/");
 
-    if (this.backend === "local") {
-      const filePath = path.join(this.localDir, "uploads", entityId);
+    const { backend, localDir } = await loadStorageConfig();
+    if (backend === "local") {
+      const filePath = path.join(localDir, "uploads", entityId);
       if (!fs.existsSync(filePath)) {
         throw new ObjectNotFoundError();
       }
       return { kind: "local", filePath };
     }
 
-    let entityDir = this.getPrivateObjectDir();
+    let entityDir = await this.getPrivateObjectDir();
     if (!entityDir.endsWith("/")) {
       entityDir = `${entityDir}/`;
     }
@@ -259,7 +300,7 @@ export class ObjectStorageService {
     return { kind: "gcs", file: objectFile };
   }
 
-  normalizeObjectEntityPath(rawPath: string): string {
+  async normalizeObjectEntityPath(rawPath: string): Promise<string> {
     if (rawPath.includes(LOCAL_UPLOAD_URL_PREFIX)) {
       const idx = rawPath.indexOf(LOCAL_UPLOAD_URL_PREFIX);
       return `/objects/${rawPath.slice(idx + LOCAL_UPLOAD_URL_PREFIX.length)}`;
@@ -272,7 +313,7 @@ export class ObjectStorageService {
     const url = new URL(rawPath);
     const rawObjectPath = url.pathname;
 
-    let objectEntityDir = this.getPrivateObjectDir();
+    let objectEntityDir = await this.getPrivateObjectDir();
     if (!objectEntityDir.endsWith("/")) {
       objectEntityDir = `${objectEntityDir}/`;
     }
@@ -289,7 +330,7 @@ export class ObjectStorageService {
     rawPath: string,
     aclPolicy: ObjectAclPolicy
   ): Promise<string> {
-    const normalizedPath = this.normalizeObjectEntityPath(rawPath);
+    const normalizedPath = await this.normalizeObjectEntityPath(rawPath);
     if (!normalizedPath.startsWith("/")) {
       return normalizedPath;
     }

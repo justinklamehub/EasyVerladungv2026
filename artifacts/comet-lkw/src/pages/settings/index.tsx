@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { useAuth } from "@/contexts/auth-context";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -39,6 +39,7 @@ const SETTING_LABELS: Record<string, { label: string; description?: string; mult
   login_subtitle: { label: "Login-Untertitel", description: "Untertitel auf der Login-Seite" },
   page_title: { label: "Browser-Titel (<title>)", description: "Wird im Tab des Browsers angezeigt" },
   default_bemerkung: { label: "Standard-Bemerkung", description: "Wird bei neuen Verladungen vorausgefüllt", multiline: true },
+  storage_local_path: { label: "Lokaler Speicherpfad", description: "Verzeichnis auf dem Server, in dem Dateien abgelegt werden (nur bei Backend „Lokale Festplatte“)" },
 };
 
 const SECTIONS = [
@@ -269,6 +270,82 @@ function KalkulationStartortField({ value, onSave, isSaving }: { value: string; 
       />
       {isSaving && <Loader2 className="w-4 h-4 animate-spin text-slate-400 self-center" />}
     </div>
+  );
+}
+
+// ── StorageSettingsCard ───────────────────────────────────────────────────────
+
+function StorageSettingsCard({ settings, onSave, isSaving }: {
+  settings: SettingsMap;
+  onSave: (key: string, val: string) => void;
+  isSaving: (key: string) => boolean;
+}) {
+  const backend = settings["storage_backend"] || "gcs";
+  const [localPath, setLocalPath] = useState(settings["storage_local_path"] ?? "");
+  useEffect(() => { setLocalPath(settings["storage_local_path"] ?? ""); }, [settings["storage_local_path"]]);
+  const pathDirty = localPath !== (settings["storage_local_path"] ?? "");
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Server className="w-4 h-4 text-primary" />
+          <CardTitle className="text-base">Dateispeicher</CardTitle>
+        </div>
+        <CardDescription className="text-xs">
+          Legt fest, wo hochgeladene Dateien (z. B. Fotos, Anhänge) gespeichert werden.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-5">
+        <div className="space-y-1.5">
+          <Label className="text-sm font-medium text-slate-700">Speicher-Backend</Label>
+          <p className="text-xs text-slate-400 mt-0.5">
+            „Replit Object Storage“ für den Betrieb im Replit-Workspace, „Lokale Festplatte“ für selbst gehostete Server.
+          </p>
+          <Select value={backend} onValueChange={(v) => onSave("storage_backend", v)}>
+            <SelectTrigger className="text-sm max-w-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="gcs">Replit Object Storage</SelectItem>
+              <SelectItem value="local">Lokale Festplatte</SelectItem>
+            </SelectContent>
+          </Select>
+          {isSaving("storage_backend") && <Loader2 className="w-3.5 h-3.5 animate-spin text-slate-400" />}
+        </div>
+
+        {backend === "local" && (
+          <>
+            <Separator />
+            <div className="space-y-1.5">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <Label className="text-sm font-medium text-slate-700">Lokaler Speicherpfad</Label>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Verzeichnis auf dem Server, in dem Dateien abgelegt werden (absoluter Pfad, z. B. /var/lib/comet-lkw/storage).
+                  </p>
+                </div>
+                {pathDirty && (
+                  <Button size="sm" className="h-7 px-3 text-xs shrink-0" onClick={() => onSave("storage_local_path", localPath)} disabled={isSaving("storage_local_path")}>
+                    {isSaving("storage_local_path") ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+                    Speichern
+                  </Button>
+                )}
+              </div>
+              <Input
+                value={localPath}
+                onChange={(e) => setLocalPath(e.target.value)}
+                placeholder="/var/lib/comet-lkw/storage"
+                className="text-sm"
+              />
+              <p className="text-xs text-amber-600 mt-1">
+                Änderungen greifen für neue Anfragen innerhalb weniger Sekunden — ein Neustart des Servers ist nicht nötig. Bereits hochgeladene Dateien werden beim Wechsel des Backends nicht automatisch verschoben.
+              </p>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
@@ -1701,6 +1778,9 @@ export default function SettingsPage() {
           <TabsTrigger value="system" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <Server className="w-3.5 h-3.5 shrink-0" /> System
           </TabsTrigger>
+          <TabsTrigger value="speicher" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <HardDrive className="w-3.5 h-3.5 shrink-0" /> Speicher
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Allgemein ── */}
@@ -1853,6 +1933,11 @@ export default function SettingsPage() {
         {/* ── Tab: System ── */}
         <TabsContent value="system" className="mt-0">
           <ServerRestartCard />
+        </TabsContent>
+
+        {/* ── Tab: Speicher ── */}
+        <TabsContent value="speicher" className="space-y-5 mt-0">
+          <StorageSettingsCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
         </TabsContent>
 
         {/* ── Tab: Berichte ── */}
