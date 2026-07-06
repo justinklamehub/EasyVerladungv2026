@@ -6,6 +6,7 @@ import { usersTable, speditionenTable, settingsTable } from "@workspace/db";
 import { eq, or } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { createEmailTransport } from "../lib/email";
+import { validatePasswordPolicy, computePasswordChangeRequired } from "../lib/password-policy";
 
 const router = Router();
 
@@ -54,6 +55,7 @@ router.post("/auth/login", async (req, res) => {
       speditionId: user.speditionId,
       speditionName,
       isActive: user.isActive,
+      passwordChangeRequired: computePasswordChangeRequired(user),
     });
   } catch (err) {
     console.error(err);
@@ -97,6 +99,7 @@ router.get("/auth/me", requireAuth, async (req, res) => {
       speditionId: user.speditionId,
       speditionName,
       isActive: user.isActive,
+      passwordChangeRequired: computePasswordChangeRequired(user),
     });
   } catch (err) {
     console.error(err);
@@ -139,8 +142,9 @@ router.post("/auth/change-password", requireAuth, async (req, res) => {
     if (!currentPassword || !newPassword) {
       return res.status(400).json({ error: "Aktuelles und neues Passwort erforderlich" });
     }
-    if (newPassword.length < 6) {
-      return res.status(400).json({ error: "Neues Passwort muss mindestens 6 Zeichen lang sein" });
+    const policyError = validatePasswordPolicy(newPassword);
+    if (policyError) {
+      return res.status(400).json({ error: policyError });
     }
 
     const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)).limit(1);
@@ -150,7 +154,10 @@ router.post("/auth/change-password", requireAuth, async (req, res) => {
     if (!valid) return res.status(400).json({ error: "Aktuelles Passwort ist falsch" });
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
-    await db.update(usersTable).set({ passwordHash, updatedAt: new Date() }).where(eq(usersTable.id, user.id));
+    await db
+      .update(usersTable)
+      .set({ passwordHash, mustChangePassword: false, passwordChangedAt: new Date(), updatedAt: new Date() })
+      .where(eq(usersTable.id, user.id));
 
     return res.json({ ok: true });
   } catch (err) {
@@ -222,8 +229,9 @@ router.post("/auth/reset-password", async (req, res) => {
     if (!token || !password) {
       return res.status(400).json({ error: "Token und Passwort erforderlich" });
     }
-    if (password.length < 6) {
-      return res.status(400).json({ error: "Passwort muss mindestens 6 Zeichen lang sein" });
+    const policyError = validatePasswordPolicy(password);
+    if (policyError) {
+      return res.status(400).json({ error: policyError });
     }
 
     const result = await pool.query(
@@ -239,7 +247,10 @@ router.post("/auth/reset-password", async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 12);
 
     await Promise.all([
-      db.update(usersTable).set({ passwordHash, updatedAt: new Date() }).where(eq(usersTable.id, row.user_id)),
+      db
+        .update(usersTable)
+        .set({ passwordHash, mustChangePassword: false, passwordChangedAt: new Date(), updatedAt: new Date() })
+        .where(eq(usersTable.id, row.user_id)),
       pool.query("UPDATE password_reset_tokens SET used_at = NOW() WHERE id = $1", [row.id]),
     ]);
 

@@ -4,6 +4,7 @@ import { db, pool } from "@workspace/db";
 import { usersTable, speditionenTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { validatePasswordPolicy } from "../lib/password-policy";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
 import { sendEventEmail } from "../lib/email";
@@ -83,6 +84,11 @@ router.post("/users", requireAuth, async (req, res) => {
       }
     }
 
+    const policyError = validatePasswordPolicy(password);
+    if (policyError) {
+      return res.status(400).json({ error: policyError });
+    }
+
     const passwordHash = await bcrypt.hash(password, 12);
     const resolvedSpeditionId = role === "speditions_admin" ? sessionSpeditionId ?? null : speditionId ?? null;
 
@@ -95,6 +101,8 @@ router.post("/users", requireAuth, async (req, res) => {
         role: newRole,
         speditionId: resolvedSpeditionId,
         isActive: isActive !== false,
+        mustChangePassword: true,
+        passwordChangedAt: new Date(),
       })
       .returning();
 
@@ -228,7 +236,15 @@ router.patch("/users/:id", requireAuth, async (req, res) => {
     if (newRole !== undefined) updates.role = newRole;
     if (role === "comet_admin" && speditionId !== undefined) updates.speditionId = speditionId;
     if (isActive !== undefined) updates.isActive = isActive;
-    if (password) updates.passwordHash = await bcrypt.hash(password, 12);
+    if (password) {
+      const policyError = validatePasswordPolicy(password);
+      if (policyError) {
+        return res.status(400).json({ error: policyError });
+      }
+      updates.passwordHash = await bcrypt.hash(password, 12);
+      updates.mustChangePassword = true;
+      updates.passwordChangedAt = new Date();
+    }
     updates.updatedAt = new Date();
 
     const [user] = await db

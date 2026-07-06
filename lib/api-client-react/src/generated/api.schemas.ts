@@ -68,6 +68,7 @@ export interface AuthUser {
   /** @nullable */
   speditionName?: string | null;
   isActive: boolean;
+  passwordChangeRequired?: boolean;
 }
 
 export type UserRole = typeof UserRole[keyof typeof UserRole];

@@ -36,9 +36,9 @@ export default function LoginPage() {
 
   const loginMutation = useLogin({
     mutation: {
-      onSuccess: () => {
+      onSuccess: (data: any) => {
         refetch();
-        setLocation("/dashboard");
+        setLocation(data?.passwordChangeRequired ? "/passwort-aendern" : "/dashboard");
       },
       onError: () => {
         toast({

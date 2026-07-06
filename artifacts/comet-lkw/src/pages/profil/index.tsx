@@ -191,10 +191,11 @@ export default function ProfilPage() {
                 type="password"
                 value={pwForm.newPassword}
                 onChange={e => setPwForm(f => ({ ...f, newPassword: e.target.value }))}
-                placeholder="Mindestens 6 Zeichen"
+                placeholder="Mindestens 8 Zeichen"
                 required
                 autoComplete="new-password"
               />
+              <p className="text-xs text-slate-400">Mind. 8 Zeichen, mit Groß- und Kleinbuchstaben sowie einer Zahl.</p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confirmPassword">Neues Passwort bestätigen</Label>

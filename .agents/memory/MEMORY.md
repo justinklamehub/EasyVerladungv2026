@@ -11,3 +11,4 @@
 - [Dual storage backend (GCS/local)](dual-storage-backend.md) — objectStorage.ts supports STORAGE_BACKEND=local for self-hosted servers with no Replit sidecar access; default stays "gcs".
 - [drizzle-kit push non-interactive](drizzle-push-non-interactive.md) — `drizzle-kit push` fails on column rename/retype (needs a TTY prompt); apply such changes via direct SQL when no data migration is needed.
 - [COMET LKW custom design settings](comet-lkw-custom-design.md) — app-wide theming stored as one JSON settings key, applied via CSS variable overrides on document root; pattern for future admin-configurable styling.
+- [COMET LKW password policy](comet-lkw-password-policy.md) — forced first-login change, 90-day expiry, complexity rules via must_change_password/password_changed_at columns; dev DB schema drift can silently add NOT NULL constraints not in the Drizzle schema.

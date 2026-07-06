@@ -1025,6 +1025,8 @@ components:
           type: ["string", "null"]
         isActive:
           type: boolean
+        passwordChangeRequired:
+          type: boolean
 
     User:
       type: object

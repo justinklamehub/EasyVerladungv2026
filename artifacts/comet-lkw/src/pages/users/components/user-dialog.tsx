@@ -196,6 +196,10 @@ export function UserDialog({ open, onOpenChange, editUser }: UserDialogProps) {
           <div className="space-y-1">
             <Label>{isEditing ? "Neues Passwort (leer lassen = unverändert)" : "Passwort *"}</Label>
             <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder={isEditing ? "••••••••" : "Passwort eingeben"} />
+            <p className="text-xs text-slate-400">
+              Mind. 8 Zeichen, mit Groß- und Kleinbuchstaben sowie einer Zahl.
+              {isEditing ? " Der Benutzer muss es beim nächsten Login ändern." : " Muss beim ersten Login geändert werden."}
+            </p>
           </div>
           <div className="space-y-1">
             <Label>Rolle</Label>

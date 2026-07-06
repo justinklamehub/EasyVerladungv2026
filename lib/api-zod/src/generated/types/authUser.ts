@@ -17,4 +17,5 @@ export interface AuthUser {
   /** @nullable */
   speditionName?: string | null;
   isActive: boolean;
+  passwordChangeRequired?: boolean;
 }

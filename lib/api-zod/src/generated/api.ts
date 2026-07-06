@@ -32,7 +32,8 @@ export const LoginResponse = zod.object({
   "role": zod.enum(['comet_admin', 'comet_leitstand', 'comet_lager', 'comet_viewer', 'speditions_admin', 'speditions_bearbeiter', 'speditions_viewer']),
   "speditionId": zod.number().nullish(),
   "speditionName": zod.string().nullish(),
-  "isActive": zod.boolean()
+  "isActive": zod.boolean(),
+  "passwordChangeRequired": zod.boolean().optional()
 })
 
 
@@ -46,7 +47,8 @@ export const GetMeResponse = zod.object({
   "role": zod.enum(['comet_admin', 'comet_leitstand', 'comet_lager', 'comet_viewer', 'speditions_admin', 'speditions_bearbeiter', 'speditions_viewer']),
   "speditionId": zod.number().nullish(),
   "speditionName": zod.string().nullish(),
-  "isActive": zod.boolean()
+  "isActive": zod.boolean(),
+  "passwordChangeRequired": zod.boolean().optional()
 })
 
 

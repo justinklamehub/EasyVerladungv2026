@@ -30,6 +30,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const isPublicRoute = location === "/login" || location === "/forgot-password" || location.startsWith("/reset-password") || location.startsWith("/scanner") || location === "/impressum" || location === "/datenschutz";
     if (!isLoading && (isError || !user) && !isPublicRoute) {
       setLocation("/login");
+      return;
+    }
+    if (!isLoading && user && (user as any).passwordChangeRequired && location !== "/passwort-aendern") {
+      setLocation("/passwort-aendern");
     }
   }, [isLoading, isError, user, location, setLocation]);
 
