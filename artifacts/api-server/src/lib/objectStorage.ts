@@ -1,6 +1,8 @@
 import { Storage, File } from "@google-cloud/storage";
 import { Readable } from "stream";
 import { randomUUID } from "crypto";
+import fs from "fs";
+import path from "path";
 import {
   ObjectAclPolicy,
   ObjectPermission,
@@ -10,6 +12,7 @@ import {
 } from "./objectAcl";
 
 const REPLIT_SIDECAR_ENDPOINT = "http://127.0.0.1:1106";
+const LOCAL_UPLOAD_URL_PREFIX = "/api/storage/local-uploads/";
 
 export const objectStorageClient = new Storage({
   credentials: {
@@ -37,8 +40,33 @@ export class ObjectNotFoundError extends Error {
   }
 }
 
+/**
+ * A resolved object handle, abstracting over the two supported storage
+ * backends:
+ * - "gcs": Replit App Storage (Google Cloud Storage via the Replit sidecar).
+ *   Only works when running on Replit (dev or a Replit deployment).
+ * - "local": Plain files on the local disk of the server the app runs on.
+ *   Used when self-hosting outside of Replit, where the Replit sidecar
+ *   (and therefore Replit App Storage) is not reachable.
+ */
+export type ObjectHandle =
+  | { kind: "gcs"; file: File }
+  | { kind: "local"; filePath: string };
+
+type StorageBackend = "gcs" | "local";
+
+function resolveBackend(): StorageBackend {
+  return process.env.STORAGE_BACKEND === "local" ? "local" : "gcs";
+}
+
 export class ObjectStorageService {
-  constructor() {}
+  private backend: StorageBackend;
+  private localDir: string;
+
+  constructor() {
+    this.backend = resolveBackend();
+    this.localDir = process.env.LOCAL_STORAGE_DIR || path.join(process.cwd(), "storage-data");
+  }
 
   getPublicObjectSearchPaths(): Array<string> {
     const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
@@ -51,6 +79,9 @@ export class ObjectStorageService {
       )
     );
     if (paths.length === 0) {
+      if (this.backend === "local") {
+        return ["public"];
+      }
       throw new Error(
         "PUBLIC_OBJECT_SEARCH_PATHS not set. Create a bucket in 'Object Storage' " +
           "tool and set PUBLIC_OBJECT_SEARCH_PATHS env var (comma-separated paths)."
@@ -60,6 +91,9 @@ export class ObjectStorageService {
   }
 
   getPrivateObjectDir(): string {
+    if (this.backend === "local") {
+      return path.join(this.localDir, "uploads");
+    }
     const dir = process.env.PRIVATE_OBJECT_DIR || "";
     if (!dir) {
       throw new Error(
@@ -70,7 +104,17 @@ export class ObjectStorageService {
     return dir;
   }
 
-  async searchPublicObject(filePath: string): Promise<File | null> {
+  async searchPublicObject(filePath: string): Promise<ObjectHandle | null> {
+    if (this.backend === "local") {
+      for (const searchPath of this.getPublicObjectSearchPaths()) {
+        const fullPath = path.join(this.localDir, searchPath, filePath);
+        if (fs.existsSync(fullPath)) {
+          return { kind: "local", filePath: fullPath };
+        }
+      }
+      return null;
+    }
+
     for (const searchPath of this.getPublicObjectSearchPaths()) {
       const fullPath = `${searchPath}/${filePath}`;
 
@@ -80,14 +124,33 @@ export class ObjectStorageService {
 
       const [exists] = await file.exists();
       if (exists) {
-        return file;
+        return { kind: "gcs", file };
       }
     }
 
     return null;
   }
 
-  async downloadObject(file: File, cacheTtlSec: number = 3600): Promise<Response> {
+  async downloadObject(handle: ObjectHandle, cacheTtlSec: number = 3600): Promise<Response> {
+    if (handle.kind === "local") {
+      if (!fs.existsSync(handle.filePath)) {
+        throw new ObjectNotFoundError();
+      }
+      const stat = await fs.promises.stat(handle.filePath);
+      const contentType = await this.readLocalContentType(handle.filePath);
+      const nodeStream = fs.createReadStream(handle.filePath);
+      const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
+      return new Response(webStream, {
+        headers: {
+          "Content-Type": contentType,
+          "Cache-Control": `private, max-age=${cacheTtlSec}`,
+          "Content-Length": String(stat.size),
+        },
+      });
+    }
+
+    const { file } = handle;
     const [metadata] = await file.getMetadata();
     const aclPolicy = await getObjectAclPolicy(file);
     const isPublic = aclPolicy?.visibility === "public";
@@ -106,7 +169,16 @@ export class ObjectStorageService {
     return new Response(webStream, { headers });
   }
 
-  async getObjectEntityUploadURL(): Promise<string> {
+  async getObjectEntityUploadURL(baseUrl?: string): Promise<string> {
+    if (this.backend === "local") {
+      const objectId = randomUUID();
+      const relativePath = `${LOCAL_UPLOAD_URL_PREFIX}${objectId}`;
+      // The response schema requires a fully-qualified URL (mirroring the
+      // presigned GCS URL shape), so resolve against the incoming request's
+      // own origin — this works both behind a reverse proxy and directly.
+      return baseUrl ? new URL(relativePath, baseUrl).toString() : relativePath;
+    }
+
     const privateObjectDir = this.getPrivateObjectDir();
     if (!privateObjectDir) {
       throw new Error(
@@ -128,7 +200,31 @@ export class ObjectStorageService {
     });
   }
 
-  async getObjectEntityFile(objectPath: string): Promise<File> {
+  /**
+   * Persists an upload sent to PUT /storage/local-uploads/:objectId to disk.
+   * Only relevant when running with STORAGE_BACKEND=local.
+   */
+  async saveLocalUpload(objectId: string, data: Buffer, contentType: string): Promise<void> {
+    const dir = path.join(this.localDir, "uploads");
+    await fs.promises.mkdir(dir, { recursive: true });
+    await fs.promises.writeFile(path.join(dir, objectId), data);
+    await fs.promises.writeFile(
+      path.join(dir, `${objectId}.meta.json`),
+      JSON.stringify({ contentType })
+    );
+  }
+
+  private async readLocalContentType(filePath: string): Promise<string> {
+    try {
+      const raw = await fs.promises.readFile(`${filePath}.meta.json`, "utf-8");
+      const meta = JSON.parse(raw) as { contentType?: string };
+      return meta.contentType || "application/octet-stream";
+    } catch {
+      return "application/octet-stream";
+    }
+  }
+
+  async getObjectEntityFile(objectPath: string): Promise<ObjectHandle> {
     if (!objectPath.startsWith("/objects/")) {
       throw new ObjectNotFoundError();
     }
@@ -139,6 +235,15 @@ export class ObjectStorageService {
     }
 
     const entityId = parts.slice(1).join("/");
+
+    if (this.backend === "local") {
+      const filePath = path.join(this.localDir, "uploads", entityId);
+      if (!fs.existsSync(filePath)) {
+        throw new ObjectNotFoundError();
+      }
+      return { kind: "local", filePath };
+    }
+
     let entityDir = this.getPrivateObjectDir();
     if (!entityDir.endsWith("/")) {
       entityDir = `${entityDir}/`;
@@ -151,10 +256,15 @@ export class ObjectStorageService {
     if (!exists) {
       throw new ObjectNotFoundError();
     }
-    return objectFile;
+    return { kind: "gcs", file: objectFile };
   }
 
   normalizeObjectEntityPath(rawPath: string): string {
+    if (rawPath.includes(LOCAL_UPLOAD_URL_PREFIX)) {
+      const idx = rawPath.indexOf(LOCAL_UPLOAD_URL_PREFIX);
+      return `/objects/${rawPath.slice(idx + LOCAL_UPLOAD_URL_PREFIX.length)}`;
+    }
+
     if (!rawPath.startsWith("https://storage.googleapis.com/")) {
       return rawPath;
     }
@@ -184,8 +294,13 @@ export class ObjectStorageService {
       return normalizedPath;
     }
 
-    const objectFile = await this.getObjectEntityFile(normalizedPath);
-    await setObjectAclPolicy(objectFile, aclPolicy);
+    const handle = await this.getObjectEntityFile(normalizedPath);
+    if (handle.kind === "local") {
+      // ACL policies are a GCS-only concept in this codebase; local storage
+      // has no equivalent yet since nothing currently relies on it.
+      return normalizedPath;
+    }
+    await setObjectAclPolicy(handle.file, aclPolicy);
     return normalizedPath;
   }
 

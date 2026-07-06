@@ -1,4 +1,4 @@
-import { Router, type IRouter, type Request, type Response } from "express";
+import express, { Router, type IRouter, type Request, type Response } from "express";
 import { Readable } from "stream";
 import {
   RequestUploadUrlBody,
@@ -27,7 +27,8 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
   try {
     const { name, size, contentType } = parsed.data;
 
-    const uploadURL = await objectStorageService.getObjectEntityUploadURL();
+    const baseUrl = `${req.protocol}://${req.get("host")}`;
+    const uploadURL = await objectStorageService.getObjectEntityUploadURL(baseUrl);
     const objectPath = objectStorageService.normalizeObjectEntityPath(uploadURL);
 
     res.json(
@@ -42,6 +43,44 @@ router.post("/storage/uploads/request-url", async (req: Request, res: Response) 
     res.status(500).json({ error: "Failed to generate upload URL" });
   }
 });
+
+/**
+ * PUT /storage/local-uploads/:objectId
+ *
+ * Receives the raw file bytes when running with STORAGE_BACKEND=local
+ * (self-hosted outside of Replit, where the Replit sidecar and therefore
+ * Replit App Storage is not reachable). The client PUTs directly to this
+ * URL, mirroring the shape of the presigned-URL flow used for GCS.
+ */
+router.put(
+  "/storage/local-uploads/:objectId",
+  express.raw({ type: () => true, limit: "25mb" }),
+  async (req: Request, res: Response) => {
+    try {
+      const rawObjectId = req.params.objectId;
+      const objectId = Array.isArray(rawObjectId) ? rawObjectId[0] : rawObjectId;
+      if (!objectId || !/^[a-f0-9-]{10,}$/i.test(objectId)) {
+        res.status(400).json({ error: "Invalid object id" });
+        return;
+      }
+      const contentTypeHeader = req.headers["content-type"];
+      const contentType = Array.isArray(contentTypeHeader)
+        ? contentTypeHeader[0]
+        : contentTypeHeader || "application/octet-stream";
+      const body = req.body;
+      if (!Buffer.isBuffer(body) || body.length === 0) {
+        res.status(400).json({ error: "Missing file body" });
+        return;
+      }
+
+      await objectStorageService.saveLocalUpload(objectId, body, contentType);
+      res.status(200).json({ success: true });
+    } catch (error) {
+      req.log.error({ err: error }, "Error saving local upload");
+      res.status(500).json({ error: "Failed to save uploaded file" });
+    }
+  },
+);
 
 /**
  * GET /storage/public-objects/*

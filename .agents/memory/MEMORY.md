@@ -8,3 +8,4 @@
 - [COMET LKW object storage image URLs](comet-lkw-object-storage-urls.md) — strip leading /objects from stored objectPath before appending to /storage/objects route, or the URL doubles the segment.
 - [SOTI Surf kiosk camera access](soti-surf-kiosk-camera.md) — 3-layer checklist (HTTPS, Android app permission, MobiControl WebView permission) for getUserMedia in kiosk WebViews.
 - [Silent fetch .catch(() => null)](silent-fetch-catch-antipattern.md) — swallowing failed fetch results in submit flows causes silent data loss (e.g. photos "not saving") with no user-visible error; surface failures instead.
+- [Dual storage backend (GCS/local)](dual-storage-backend.md) — objectStorage.ts supports STORAGE_BACKEND=local for self-hosted servers with no Replit sidecar access; default stays "gcs".
