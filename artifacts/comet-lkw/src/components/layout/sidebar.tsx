@@ -320,6 +320,19 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
 
   const appName = pubSettings?.app_name || "Easy-Verladung";
 
+  const isCometUserForBadge = ROLES_WITH_FULL_ACCESS.includes(user?.role ?? "");
+  const { data: gefahrgutBlankoCount } = useQuery({
+    queryKey: ["gefahrgut-blanko-count"],
+    queryFn: async () => {
+      const res = await fetch(`${API}/gefahrgut-checklisten?blanko=true`, { credentials: "include" });
+      if (!res.ok) return 0;
+      const data = await res.json();
+      return Array.isArray(data) ? data.length : 0;
+    },
+    enabled: isCometUserForBadge,
+    refetchInterval: 60_000,
+  });
+
   const logoutMutation = useLogout({
     mutation: {
       onSuccess: () => {
@@ -340,6 +353,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     href: string;
     icon: React.ComponentType<LucideProps>;
     show: boolean;
+    badgeCount?: number;
   }[] = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, show: true },
     { name: "Verladungen", href: "/shipments", icon: Truck, show: true },
@@ -350,7 +364,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     { name: "Palettenkonto", href: "/paletten", icon: PackageSearch, show: true },
     { name: "Abstimmungen", href: "/abstimmungen", icon: FileCheck2, show: true },
     { name: "Kalkulation", href: "/kalkulation", icon: Calculator, show: isCometUser },
-    { name: "Gefahrgut", href: "/gefahrgut", icon: ShieldAlert, show: isCometUser },
+    { name: "Gefahrgut", href: "/gefahrgut", icon: ShieldAlert, show: isCometUser, badgeCount: gefahrgutBlankoCount || 0 },
     { name: "Fotos", href: "/fotos", icon: ImageIcon, show: isCometUser || !!permissions["foto.view"] },
     { name: "Auswertung", href: "/auswertung", icon: BarChart2, show: isCometUser },
     { name: "Auftragsauswertung", href: "/auftragsauswertung", icon: FileSpreadsheet, show: isCometUser || !!user.speditionId },
@@ -584,15 +598,31 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                           : undefined
                       }
                     >
-                      <item.NavIcon
-                        className={cn(
-                          "shrink-0",
-                          collapsed ? "w-5 h-5" : "w-4 h-4",
-                          isActive ? "text-white" : !item.activeColor ? "text-slate-500" : undefined
+                      <span className="relative shrink-0">
+                        <item.NavIcon
+                          className={cn(
+                            "shrink-0",
+                            collapsed ? "w-5 h-5" : "w-4 h-4",
+                            isActive ? "text-white" : !item.activeColor ? "text-slate-500" : undefined
+                          )}
+                          style={hasInactiveCustomColor ? { color: item.activeColor! } : undefined}
+                        />
+                        {collapsed && !!item.badgeCount && item.badgeCount > 0 && (
+                          <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] font-semibold flex items-center justify-center leading-none">
+                            {item.badgeCount > 99 ? "99+" : item.badgeCount}
+                          </span>
                         )}
-                        style={hasInactiveCustomColor ? { color: item.activeColor! } : undefined}
-                      />
-                      {!collapsed && item.name}
+                      </span>
+                      {!collapsed && (
+                        <span className="flex-1 flex items-center justify-between min-w-0">
+                          <span className="truncate">{item.name}</span>
+                          {!!item.badgeCount && item.badgeCount > 0 && (
+                            <span className="ml-2 shrink-0 min-w-[18px] h-[18px] px-1.5 rounded-full bg-red-500 text-white text-[11px] font-semibold flex items-center justify-center leading-none">
+                              {item.badgeCount > 99 ? "99+" : item.badgeCount}
+                            </span>
+                          )}
+                        </span>
+                      )}
                     </Link>
                   );
 
@@ -600,7 +630,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                     <Tooltip key={item.href}>
                       <TooltipTrigger asChild>{linkEl}</TooltipTrigger>
                       <TooltipContent side="right" className="text-xs">
-                        {item.name}
+                        {item.name}{!!item.badgeCount && item.badgeCount > 0 ? ` (${item.badgeCount})` : ""}
                       </TooltipContent>
                     </Tooltip>
                   ) : (
