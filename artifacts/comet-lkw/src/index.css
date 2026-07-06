@@ -159,6 +159,27 @@
   --muted-border: hsl(from hsl(var(--muted)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --accent-border: hsl(from hsl(var(--accent)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
+
+  /* ── Anpassbares Design (Einstellungen > Design) ────────────────────────
+     Diese Variablen haben Standardwerte, die dem bisherigen Aussehen
+     entsprechen. Sie werden zur Laufzeit per Inline-Style überschrieben,
+     sobald ein Admin unter Einstellungen > Design eigene Werte speichert. */
+  --custom-button-radius: var(--radius);
+  --custom-button-bg: hsl(var(--primary));
+  --custom-button-fg: hsl(var(--primary-foreground));
+
+  --custom-card-bg: hsl(var(--card));
+  --custom-card-border: hsl(var(--card-border));
+  --custom-card-radius: 0.75rem;
+
+  --custom-table-header-bg: transparent;
+  --custom-table-header-fg: hsl(var(--muted-foreground));
+  --custom-table-row-hover-bg: hsl(var(--muted) / 0.5);
+  --custom-table-row-stripe-bg: transparent;
+
+  --custom-filter-bg: #ffffff;
+  --custom-filter-border: hsl(214.3 31.8% 91.4%);
+  --custom-filter-radius: 0.5rem;
 }
 
 .dark {
@@ -212,6 +233,9 @@
   --chart-3: 30 80% 55%;
   --chart-4: 280 65% 60%;
   --chart-5: 340 75% 55%;
+
+  --custom-filter-bg: hsl(222 47% 16%);
+  --custom-filter-border: hsl(217 32% 24%);
 }
 
 @layer base {
@@ -307,6 +331,17 @@
 }
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background: hsl(222 47% 36%);
+}
+
+/* ── Anpassbares Design: Tabellen-Zeilenstreifen & Filterleiste ─────────────── */
+.app-table tbody tr:nth-child(even) {
+  background-color: var(--custom-table-row-stripe-bg);
+}
+
+.app-filter-bar {
+  background-color: var(--custom-filter-bg);
+  border-color: var(--custom-filter-border);
+  border-radius: var(--custom-filter-radius);
 }
 
 /* Sonner toast progress bar */

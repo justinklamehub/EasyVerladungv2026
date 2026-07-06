@@ -466,7 +466,7 @@ export default function ShipmentsPage() {
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm space-y-3">
+      <div className="app-filter-bar p-4 border shadow-sm space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[180px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

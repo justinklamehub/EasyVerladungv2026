@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { useAuth } from "@/contexts/auth-context";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -1683,6 +1683,166 @@ function ServerRestartCard() {
   );
 }
 
+// ── DesignSettingsCard ────────────────────────────────────────────────────────
+
+const DESIGN_GROUPS: {
+  title: string;
+  description: string;
+  fields: { key: string; label: string; placeholder: string }[];
+}[] = [
+  {
+    title: "Buttons",
+    description: "Standard-Buttons (z. B. „Neue Verladung“)",
+    fields: [
+      { key: "buttonBg", label: "Hintergrundfarbe", placeholder: "z.B. #1e293b" },
+      { key: "buttonFg", label: "Textfarbe", placeholder: "z.B. #ffffff" },
+      { key: "buttonRadius", label: "Eckenradius", placeholder: "z.B. 0.5rem" },
+    ],
+  },
+  {
+    title: "Tabellenkopf",
+    description: "Kopfzeile der Tabellen (Spaltentitel)",
+    fields: [
+      { key: "tableHeaderBg", label: "Hintergrundfarbe", placeholder: "z.B. #f1f5f9" },
+      { key: "tableHeaderFg", label: "Textfarbe", placeholder: "z.B. #64748b" },
+    ],
+  },
+  {
+    title: "Tabellenzeilen",
+    description: "Zeilen innerhalb der Tabellen",
+    fields: [
+      { key: "tableRowHover", label: "Hover-Hintergrund", placeholder: "z.B. #f8fafc" },
+      { key: "tableRowStripe", label: "Streifen (jede 2. Zeile)", placeholder: "leer = kein Streifen" },
+    ],
+  },
+  {
+    title: "Filter",
+    description: "Filterleisten oberhalb von Listen (z. B. Verladungen)",
+    fields: [
+      { key: "filterBg", label: "Hintergrundfarbe", placeholder: "z.B. #ffffff" },
+      { key: "filterBorder", label: "Rahmenfarbe", placeholder: "z.B. #e2e8f0" },
+      { key: "filterRadius", label: "Eckenradius", placeholder: "z.B. 0.5rem" },
+    ],
+  },
+  {
+    title: "Cards",
+    description: "Kartenelemente auf Dashboard und Einstellungsseiten",
+    fields: [
+      { key: "cardBg", label: "Hintergrundfarbe", placeholder: "z.B. #ffffff" },
+      { key: "cardBorder", label: "Rahmenfarbe", placeholder: "z.B. #e2e8f0" },
+      { key: "cardRadius", label: "Eckenradius", placeholder: "z.B. 0.75rem" },
+    ],
+  },
+];
+
+function DesignSwatch({ value }: { value: string }) {
+  const isColor = /^#|^rgb|^hsl|^var\(/.test(value.trim());
+  return (
+    <div
+      className="w-7 h-7 rounded border border-slate-200 shrink-0"
+      style={isColor && value.trim() ? { backgroundColor: value } : { backgroundColor: "transparent" }}
+      title={value || "Standard"}
+    />
+  );
+}
+
+function DesignSettingsCard({ settings, onSave, isSaving }: {
+  settings: SettingsMap;
+  onSave: (key: string, val: string) => void;
+  isSaving: boolean;
+}) {
+  const { toast } = useToast();
+
+  function parse(): Record<string, string> {
+    const raw = settings["custom_design"];
+    if (!raw) return {};
+    try {
+      const obj = JSON.parse(raw);
+      return typeof obj === "object" && obj ? obj : {};
+    } catch {
+      return {};
+    }
+  }
+
+  const saved = parse();
+  const [values, setValues] = useState<Record<string, string>>(saved);
+  useEffect(() => { setValues(parse()); }, [settings["custom_design"]]);
+
+  const dirty = JSON.stringify(values) !== JSON.stringify(saved);
+
+  function update(key: string, val: string) {
+    setValues((prev) => ({ ...prev, [key]: val }));
+  }
+
+  function save() {
+    const cleaned: Record<string, string> = {};
+    for (const [k, v] of Object.entries(values)) {
+      if (v && v.trim() !== "") cleaned[k] = v.trim();
+    }
+    onSave("custom_design", JSON.stringify(cleaned));
+  }
+
+  function resetAll() {
+    setValues({});
+    onSave("custom_design", JSON.stringify({}));
+    toast({ title: "Design auf Standard zurückgesetzt" });
+  }
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 text-primary" />
+            <CardTitle className="text-base">Erscheinungsbild</CardTitle>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button size="sm" variant="outline" className="h-7 px-3 text-xs" onClick={resetAll} disabled={isSaving}>
+              Alle zurücksetzen
+            </Button>
+            <Button size="sm" className="h-7 px-3 text-xs" onClick={save} disabled={!dirty || isSaving}>
+              {isSaving ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Save className="w-3 h-3 mr-1" />}
+              Speichern
+            </Button>
+          </div>
+        </div>
+        <CardDescription className="text-xs">
+          Legt fest, wie Buttons, Tabellen, Filter und Cards im gesamten Programm aussehen — Änderungen gelten für alle Nutzer. Leer lassen = Standarddesign.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        {DESIGN_GROUPS.map((group, gi) => (
+          <div key={group.title}>
+            {gi > 0 && <Separator className="mb-5" />}
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-semibold text-slate-700">{group.title}</p>
+                <p className="text-xs text-slate-400">{group.description}</p>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-3">
+                {group.fields.map((field) => (
+                  <div key={field.key} className="space-y-1">
+                    <Label className="text-xs font-medium text-slate-600">{field.label}</Label>
+                    <div className="flex items-center gap-2">
+                      <DesignSwatch value={values[field.key] ?? ""} />
+                      <Input
+                        value={values[field.key] ?? ""}
+                        onChange={(e) => update(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                        className="text-sm"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -1780,6 +1940,9 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="speicher" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <HardDrive className="w-3.5 h-3.5 shrink-0" /> Speicher
+          </TabsTrigger>
+          <TabsTrigger value="design" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Palette className="w-3.5 h-3.5 shrink-0" /> Design
           </TabsTrigger>
         </TabsList>
 
@@ -1938,6 +2101,11 @@ export default function SettingsPage() {
         {/* ── Tab: Speicher ── */}
         <TabsContent value="speicher" className="space-y-5 mt-0">
           <StorageSettingsCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
+        </TabsContent>
+
+        {/* ── Tab: Design ── */}
+        <TabsContent value="design" className="space-y-5 mt-0">
+          <DesignSettingsCard settings={s} onSave={handleSave} isSaving={isSavingKey("custom_design")} />
         </TabsContent>
 
         {/* ── Tab: Berichte ── */}

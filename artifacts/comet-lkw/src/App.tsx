@@ -8,6 +8,7 @@ import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useSocket } from "@/hooks/use-socket";
 import { usePermissions } from "@/hooks/use-permissions";
+import { useCustomDesign } from "@/hooks/use-custom-design";
 import NotFound from "@/pages/not-found";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
@@ -22,6 +23,7 @@ function TitleSetter() {
     const title = data?.page_title || data?.app_name || "Easy-Verladung";
     document.title = title;
   }, [data]);
+  useCustomDesign(data?.custom_design);
   return null;
 }
 
