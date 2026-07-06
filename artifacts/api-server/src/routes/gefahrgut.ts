@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
-import { gefahrgutChecklistenTable, shipmentsTable, speditionenTable, lkwAustraegeTable } from "@workspace/db";
+import { gefahrgutChecklistenTable, shipmentsTable, speditionenTable, lkwAustraegeTable, shipmentFotosTable } from "@workspace/db";
 import { eq, desc, isNotNull, isNull, count, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { isCometRole } from "../lib/auth";
@@ -309,6 +309,13 @@ router.patch("/gefahrgut-checklisten/:id/assign", requireAuth, async (req, res) 
       .returning();
 
     if (!updated) return res.status(404).json({ error: "Checkliste nicht gefunden" });
+
+    // Fotos, die mit dieser Checkliste aufgenommen wurden, der Verladung ebenfalls zuordnen
+    await db
+      .update(shipmentFotosTable)
+      .set({ shipmentId: sid })
+      .where(eq(shipmentFotosTable.gefahrgutChecklisteId, id));
+
     return res.json({ success: true, checkliste: updated });
   } catch (err) {
     console.error(err);
