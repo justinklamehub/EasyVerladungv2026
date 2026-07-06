@@ -789,8 +789,9 @@ export default function ScannerGefahrgutPage() {
       if (!res.ok) throw new Error((await res.json()).error ?? "Fehler");
       const { id: gefahrgutChecklisteId } = await res.json();
 
+      let failedPhotoCount = 0;
       if (photos.length > 0) {
-        await Promise.all(
+        const results = await Promise.all(
           photos.map((photo) =>
             fetch(`${API}/scanner/fotos`, {
               method: "POST",
@@ -803,9 +804,19 @@ export default function ScannerGefahrgutPage() {
                 fileName: photo.fileName,
                 contentType: photo.contentType,
               }),
-            }).catch(() => null)
+            })
+              .then((r) => r.ok)
+              .catch(() => false)
           )
         );
+        failedPhotoCount = results.filter((ok) => !ok).length;
+      }
+
+      if (failedPhotoCount > 0) {
+        setSubmitError(
+          `Checkliste wurde übermittelt, aber ${failedPhotoCount} von ${photos.length} Foto(s) konnten nicht gespeichert werden. Bitte Fotos ggf. erneut aufnehmen.`
+        );
+        return;
       }
 
       setSubmitted(true);
@@ -1200,44 +1211,6 @@ export default function ScannerGefahrgutPage() {
               <AlertCircle size={14} /> {photoUploadError}
             </div>
           )}
-
-          <div style={{ marginTop: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <div style={{ fontSize: 10, fontWeight: 700, color: "#475569", letterSpacing: "0.08em", textTransform: "uppercase" as const }}>
-                Debug-Log (Kamera)
-              </div>
-              {debugLog.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => setDebugLog([])}
-                  style={{
-                    fontSize: 10, color: "#64748b", background: "transparent",
-                    border: `1px solid ${BORDER}`, borderRadius: 4, padding: "2px 8px", cursor: "pointer",
-                  }}
-                >
-                  Log leeren
-                </button>
-              )}
-            </div>
-            <div style={{
-              background: "#050c16",
-              border: `1px solid ${BORDER}`,
-              borderRadius: 6,
-              padding: "8px 10px",
-              maxHeight: 160,
-              overflowY: "auto",
-              fontFamily: "monospace",
-              fontSize: 11,
-              lineHeight: 1.6,
-              color: "#7dd3fc",
-            }}>
-              {debugLog.length === 0 ? (
-                <div style={{ color: "#475569" }}>Noch keine Ereignisse. Auf "Foto aufnehmen" klicken, um zu starten.</div>
-              ) : (
-                debugLog.map((line, i) => <div key={i}>{line}</div>)
-              )}
-            </div>
-          </div>
         </div>
       </div>
 
