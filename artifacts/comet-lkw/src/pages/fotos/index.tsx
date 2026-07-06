@@ -57,7 +57,7 @@ function ReassignDialog({
   const { data: shipments = [], isFetching } = useQuery<ShipmentOption[]>({
     queryKey: ["shipments-foto-reassign-search", search],
     queryFn: () =>
-      customFetch<ShipmentOption[]>(`/api/shipments?search=${encodeURIComponent(search)}&limit=30`),
+      customFetch<ShipmentOption[]>(`/api/shipments?search=${encodeURIComponent(search)}&activeOnly=true&limit=30`),
     enabled: search.trim().length >= 1,
     staleTime: 10_000,
   });

@@ -77,7 +77,7 @@ router.get("/shipments", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;
     const sessionSpeditionId = req.session.speditionId;
-    const { dateFrom, dateTo, speditionId, status, lkwArt, relation, kennzeichen, tor, search } =
+    const { dateFrom, dateTo, speditionId, status, lkwArt, relation, kennzeichen, tor, search, activeOnly } =
       req.query as Record<string, string>;
 
     let rows = await db.select().from(shipmentsTable);
@@ -96,6 +96,9 @@ router.get("/shipments", requireAuth, async (req, res) => {
     if (relation) rows = rows.filter((s) => s.relation?.toLowerCase().includes(relation.toLowerCase()));
     if (kennzeichen) rows = rows.filter((s) => s.kennzeichen?.toLowerCase().includes(kennzeichen.toLowerCase()));
     if (tor) rows = rows.filter((s) => s.tor === tor);
+    if (activeOnly === "true" || activeOnly === "1") {
+      rows = rows.filter((s) => s.status !== "Abgefertigt" && s.status !== "Storniert");
+    }
     if (search) {
       const q = search.toLowerCase();
       rows = rows.filter(

@@ -194,7 +194,7 @@ function AssignDialog({
   const { data: shipments = [], isFetching } = useQuery<Shipment[]>({
     queryKey: ["shipments-assign-search", search],
     queryFn: () =>
-      customFetch<Shipment[]>(`/api/shipments?search=${encodeURIComponent(search)}&limit=30`),
+      customFetch<Shipment[]>(`/api/shipments?search=${encodeURIComponent(search)}&activeOnly=true&limit=30`),
     enabled: search.trim().length >= 1,
     staleTime: 10_000,
   });
