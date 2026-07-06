@@ -217,6 +217,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     status: "Angemeldet",
     wareStatus: "nicht bereit",
     speditionId: "",
+    subSpeditionId: "",
     bemerkungen: "",
     telefon: "",
   });
@@ -238,11 +239,12 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
         status: shipment.status || "Angemeldet",
         wareStatus: (shipment as any).wareStatus || "",
         speditionId: shipment.speditionId ? String(shipment.speditionId) : "",
+        subSpeditionId: (shipment as any).subSpeditionId ? String((shipment as any).subSpeditionId) : "",
         bemerkungen: shipment.bemerkungen || "",
         telefon: shipment.telefon || "",
       });
     } else if (!shipmentId && open) {
-      setForm({ bezeichnung: "", kennzeichen: "", relation: "", lkwArt: "", etaDate: "", etaTime: "", ataDate: "", ataTime: "", tor: "", status: "Angemeldet", wareStatus: "nicht bereit", speditionId: user?.speditionId ? String(user.speditionId) : "", bemerkungen: "", telefon: "" });
+      setForm({ bezeichnung: "", kennzeichen: "", relation: "", lkwArt: "", etaDate: "", etaTime: "", ataDate: "", ataTime: "", tor: "", status: "Angemeldet", wareStatus: "nicht bereit", speditionId: user?.speditionId ? String(user.speditionId) : "", subSpeditionId: "", bemerkungen: "", telefon: "" });
     }
     if (open) setFormErrors(new Set());
   }, [shipment, open, shipmentId, user]);
@@ -328,6 +330,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
     if (isCometUser && canEditPerm) {
       data.speditionId = form.speditionId ? parseInt(form.speditionId) : undefined;
+      data.subSpeditionId = form.subSpeditionId ? parseInt(form.subSpeditionId) : null;
     }
 
     if (isEditing && shipmentId) {
@@ -449,6 +452,19 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                   <Select value={form.speditionId} onValueChange={v => { setForm(f => ({ ...f, speditionId: v })); setFormErrors(prev => { if (!prev.has("speditionId")) return prev; const next = new Set(prev); next.delete("speditionId"); return next; }); }}>
                     <SelectTrigger className={cn("h-9", formErrors.has("speditionId") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Spedition wählen" /></SelectTrigger>
                     <SelectContent>
+                      {speditionen?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {isCometUser && canEditPerm && (
+                <div className="space-y-1">
+                  <Label className="text-xs text-slate-500">Sub-Spedition</Label>
+                  <Select value={form.subSpeditionId || "__none__"} onValueChange={v => setForm(f => ({ ...f, subSpeditionId: v === "__none__" ? "" : v }))}>
+                    <SelectTrigger className="h-9"><SelectValue placeholder="Optional" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Keine</SelectItem>
                       {speditionen?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>

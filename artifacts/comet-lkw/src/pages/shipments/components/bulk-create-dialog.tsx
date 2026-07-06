@@ -24,6 +24,7 @@ export interface RowData {
   etaTime: string;
   tor: string;
   speditionId: string;
+  subSpeditionId: string;
   relation: string;
   telefon: string;
   bemerkungen: string;
@@ -40,6 +41,7 @@ export function emptyRow(id: number, partial?: Partial<RowData>): RowData {
     etaTime: "",
     tor: "",
     speditionId: "",
+    subSpeditionId: "",
     relation: "",
     telefon: "",
     bemerkungen: "",
@@ -279,6 +281,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
       etaTime:      r.etaTime || undefined,
       tor:          isCometUser ? (r.tor || undefined) : undefined,
       speditionId:  r.speditionId ? parseInt(r.speditionId) : (isSpedUser ? user?.speditionId : undefined),
+      subSpeditionId: isCometUser && r.subSpeditionId ? parseInt(r.subSpeditionId) : undefined,
       relation:     r.relation.trim() || undefined,
       telefon:      r.telefon.trim() || undefined,
       bemerkungen:  r.bemerkungen.trim() || undefined,
@@ -351,6 +354,11 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                   {isCometUser && (
                     <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[160px]">
                       Spedition <span className="text-red-500">*</span>
+                    </th>
+                  )}
+                  {isCometUser && (
+                    <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[160px]">
+                      Sub-Spedition
                     </th>
                   )}
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[130px]">
@@ -434,6 +442,19 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                           <Select value={row.speditionId} onValueChange={(v) => updateRow(row.id, "speditionId", v)}>
                             <SelectTrigger className={cn("h-8 text-sm", rowErrors?.has("speditionId") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Spedition" /></SelectTrigger>
                             <SelectContent>
+                              {(speditionen ?? []).map((s) => (
+                                <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      )}
+                      {isCometUser && (
+                        <td className="px-1 py-1.5 border-b border-slate-100">
+                          <Select value={row.subSpeditionId || "__none__"} onValueChange={(v) => updateRow(row.id, "subSpeditionId", v === "__none__" ? "" : v)}>
+                            <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Optional" /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="__none__">Keine</SelectItem>
                               {(speditionen ?? []).map((s) => (
                                 <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                               ))}
