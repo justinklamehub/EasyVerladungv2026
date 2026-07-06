@@ -1735,14 +1735,40 @@ const DESIGN_GROUPS: {
   },
 ];
 
-function DesignSwatch({ value }: { value: string }) {
-  const isColor = /^#|^rgb|^hsl|^var\(/.test(value.trim());
+function toHex(value: string): string {
+  const v = value.trim();
+  if (/^#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/.test(v)) {
+    if (v.length === 4) {
+      return "#" + v[1] + v[1] + v[2] + v[2] + v[3] + v[3];
+    }
+    return v;
+  }
+  return "#000000";
+}
+
+function ColorField({ value, onChange, placeholder }: {
+  value: string;
+  onChange: (val: string) => void;
+  placeholder: string;
+}) {
   return (
-    <div
-      className="w-7 h-7 rounded border border-slate-200 shrink-0"
-      style={isColor && value.trim() ? { backgroundColor: value } : { backgroundColor: "transparent" }}
-      title={value || "Standard"}
-    />
+    <div className="flex items-center gap-2">
+      <div className="relative w-7 h-7 shrink-0">
+        <input
+          type="color"
+          value={toHex(value)}
+          onChange={(e) => onChange(e.target.value)}
+          className="absolute inset-0 w-full h-full cursor-pointer rounded border border-slate-200 p-0 [&::-webkit-color-swatch-wrapper]:p-0 [&::-webkit-color-swatch]:rounded [&::-webkit-color-swatch]:border-none"
+          title="Farbe wählen"
+        />
+      </div>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="text-sm"
+      />
+    </div>
   );
 }
 
@@ -1820,20 +1846,28 @@ function DesignSettingsCard({ settings, onSave, isSaving }: {
                 <p className="text-xs text-slate-400">{group.description}</p>
               </div>
               <div className="grid sm:grid-cols-2 gap-3">
-                {group.fields.map((field) => (
-                  <div key={field.key} className="space-y-1">
-                    <Label className="text-xs font-medium text-slate-600">{field.label}</Label>
-                    <div className="flex items-center gap-2">
-                      <DesignSwatch value={values[field.key] ?? ""} />
-                      <Input
-                        value={values[field.key] ?? ""}
-                        onChange={(e) => update(field.key, e.target.value)}
-                        placeholder={field.placeholder}
-                        className="text-sm"
-                      />
+                {group.fields.map((field) => {
+                  const isRadius = /radius/i.test(field.key);
+                  return (
+                    <div key={field.key} className="space-y-1">
+                      <Label className="text-xs font-medium text-slate-600">{field.label}</Label>
+                      {isRadius ? (
+                        <Input
+                          value={values[field.key] ?? ""}
+                          onChange={(e) => update(field.key, e.target.value)}
+                          placeholder={field.placeholder}
+                          className="text-sm"
+                        />
+                      ) : (
+                        <ColorField
+                          value={values[field.key] ?? ""}
+                          onChange={(val) => update(field.key, val)}
+                          placeholder={field.placeholder}
+                        />
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           </div>
