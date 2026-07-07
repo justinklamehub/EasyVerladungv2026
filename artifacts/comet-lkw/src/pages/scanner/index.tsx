@@ -142,12 +142,23 @@ type ShipmentInfo = {
   wareStatus: string | null;
 } | null;
 
+type ShipmentListItem = {
+  id: number;
+  bezeichnung: string | null;
+  kennzeichen: string | null;
+  relation: string | null;
+  status: string;
+  tor: string | null;
+  speditionName: string | null;
+};
+
 export default function ScannerLandingPage() {
   const [idInput, setIdInput] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [searched, setSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [shipment, setShipment] = useState<ShipmentInfo>(null);
+  const [shipmentList, setShipmentList] = useState<ShipmentListItem[]>([]);
   const [spedition, setSpedition] = useState<string | null>(null);
   const [checklistCount, setChecklistCount] = useState(0);
   const [confirmedDuplicate, setConfirmedDuplicate] = useState(false);
@@ -161,10 +172,7 @@ export default function ScannerLandingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [, setLocation] = useLocation();
 
-  async function handleSearch(e: React.FormEvent) {
-    e.preventDefault();
-    const val = idInput.trim();
-    if (!val) return;
+  async function doFetch(val: string) {
     setIsSearching(true);
     setSearched(false);
     setSearchError(null);
@@ -172,6 +180,7 @@ export default function ScannerLandingPage() {
     setEditOpen(false);
     setSaveOk(false);
     setSaveError("");
+    setShipmentList([]);
     try {
       const res = await fetch(`${API}/scanner/find-shipment?q=${encodeURIComponent(val)}&id=${encodeURIComponent(val)}`, {
         credentials: "include",
@@ -185,6 +194,14 @@ export default function ScannerLandingPage() {
         return;
       }
       const data = await res.json();
+      // Trefferliste (Bezeichnung-Suche mit mehreren Ergebnissen)
+      if (data.shipments && data.shipments.length > 0 && !data.shipment) {
+        setShipmentList(data.shipments);
+        setShipment(null);
+        setChecklistCount(0);
+        setSearched(true);
+        return;
+      }
       const s = data.found ? data.shipment : null;
       setShipment(s);
       setSpedition(data.spedition ?? null);
@@ -203,6 +220,18 @@ export default function ScannerLandingPage() {
     } finally {
       setIsSearching(false);
     }
+  }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const val = idInput.trim();
+    if (!val) return;
+    await doFetch(val);
+  }
+
+  async function selectFromList(item: ShipmentListItem) {
+    setIdInput(String(item.id));
+    await doFetch(String(item.id));
   }
 
   async function handleSave() {
@@ -281,33 +310,32 @@ export default function ScannerLandingPage() {
 
       <div style={{ width: "100%", maxWidth: 480, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
         <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
-        <span style={{ fontSize: 11, color: "#475569", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>oder nach LKW-ID suchen</span>
+        <span style={{ fontSize: 11, color: "#475569", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>oder nach ID / Bezeichnung suchen</span>
         <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
       </div>
 
       <div style={S.card}>
         <form onSubmit={handleSearch}>
-          <label style={S.label}>LKW-ID</label>
+          <label style={S.label}>LKW-ID oder Bezeichnung</label>
           <input
             ref={inputRef}
             style={S.input}
             type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
+            inputMode="text"
             autoCorrect="off"
             autoCapitalize="off"
             value={idInput}
             onChange={(e) => {
-              const v = e.target.value.replace(/\D/g, "");
-              setIdInput(v);
+              setIdInput(e.target.value);
               setSearched(false);
               setShipment(null);
+              setShipmentList([]);
               setSearchError(null);
             }}
-            placeholder="z.B. 42"
+            placeholder='z.B. 42 oder "ACME Trans"'
             autoFocus
           />
-          <div style={S_hint}>Numerische Verladungs-ID eingeben</div>
+          <div style={S_hint}>Numerische ID oder Bezeichnung (Freitext) eingeben</div>
           <button
             type="submit"
             style={S.btnGreen}
@@ -321,7 +349,60 @@ export default function ScannerLandingPage() {
         </form>
       </div>
 
-      {searched && (
+      {searched && shipmentList.length > 0 && (
+        <div style={{ width: "100%", maxWidth: 480 }}>
+          <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 10, textAlign: "center" as const }}>
+            <span style={{ color: "#b4ff00", fontWeight: 700 }}>{shipmentList.length}</span> Verladung{shipmentList.length !== 1 ? "en" : ""} gefunden – bitte auswählen:
+          </div>
+          {shipmentList.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => selectFromList(item)}
+              style={{
+                display: "block",
+                width: "100%",
+                background: "#162032",
+                border: "1px solid #1e3a5f",
+                borderRadius: 10,
+                padding: "14px 16px",
+                marginBottom: 10,
+                cursor: "pointer",
+                textAlign: "left" as const,
+                color: "#f8fafc",
+              }}
+            >
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                <div>
+                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
+                    {item.bezeichnung ?? `Verladung #${item.id}`}
+                  </div>
+                  <div style={{ fontSize: 12, color: "#94a3b8", display: "flex", flexWrap: "wrap" as const, gap: "4px 12px" }}>
+                    {item.kennzeichen && <span>🚛 {item.kennzeichen}</span>}
+                    {item.relation && <span>📍 {item.relation}</span>}
+                    {item.speditionName && <span>🏢 {item.speditionName}</span>}
+                    {item.tor && <span>🚪 {item.tor}</span>}
+                  </div>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "flex-end", gap: 4, flexShrink: 0, marginLeft: 8 }}>
+                  <span style={{ fontSize: 11, color: "#64748b" }}>#{item.id}</span>
+                  <span style={{
+                    fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
+                    background: "rgba(180,255,0,0.1)", color: "#b4ff00", border: "1px solid #b4ff00",
+                  }}>{item.status}</span>
+                </div>
+              </div>
+            </button>
+          ))}
+          <button
+            style={{ ...S.btnGray, marginTop: 4 }}
+            onClick={() => { setSearched(false); setShipmentList([]); }}
+          >
+            ABBRECHEN
+          </button>
+        </div>
+      )}
+
+      {searched && shipmentList.length === 0 && (
         <div style={S.card}>
           {shipment ? (
             <>

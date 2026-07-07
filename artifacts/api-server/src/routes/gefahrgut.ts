@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { gefahrgutChecklistenTable, shipmentsTable, speditionenTable, lkwAustraegeTable, shipmentFotosTable } from "@workspace/db";
-import { eq, desc, isNotNull, isNull, count, inArray } from "drizzle-orm";
+import { eq, desc, isNotNull, isNull, count, inArray, ilike } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { isCometRole } from "../lib/auth";
 import { can } from "../lib/permissions";
@@ -19,14 +19,37 @@ router.get("/scanner/find-shipment", async (req, res) => {
     const { id, q } = req.query as { id?: string; q?: string };
     const raw = (q ?? id ?? "").trim();
     if (!raw) {
-      return res.status(400).json({ error: "LKW-ID erforderlich" });
+      return res.status(400).json({ error: "LKW-ID oder Bezeichnung erforderlich" });
     }
 
     const numId = Number(raw);
-    if (isNaN(numId) || !Number.isInteger(numId) || numId <= 0) {
-      return res.status(400).json({ error: "Bitte eine gültige LKW-ID (Zahl) eingeben" });
+    const isIdSearch = !isNaN(numId) && Number.isInteger(numId) && numId > 0;
+
+    // ── Bezeichnung-Suche (Freitext) ───────────────────────────────────────
+    if (!isIdSearch) {
+      const rows = await db
+        .select({
+          id: shipmentsTable.id,
+          kennzeichen: shipmentsTable.kennzeichen,
+          bezeichnung: shipmentsTable.bezeichnung,
+          relation: shipmentsTable.relation,
+          status: shipmentsTable.status,
+          tor: shipmentsTable.tor,
+          speditionId: shipmentsTable.speditionId,
+          speditionName: speditionenTable.name,
+        })
+        .from(shipmentsTable)
+        .leftJoin(speditionenTable, eq(shipmentsTable.speditionId, speditionenTable.id))
+        .where(ilike(shipmentsTable.bezeichnung, `%${raw}%`))
+        .limit(10);
+
+      if (rows.length === 0) {
+        return res.json({ found: false, shipment: null, shipments: [], spedition: null, checklistCount: 0 });
+      }
+      return res.json({ found: true, shipment: null, shipments: rows, spedition: null, checklistCount: 0 });
     }
 
+    // ── ID-Suche (numerisch) ───────────────────────────────────────────────
     const shipments = await db
       .select({
         id: shipmentsTable.id,
@@ -42,7 +65,7 @@ router.get("/scanner/find-shipment", async (req, res) => {
       .limit(1);
 
     if (shipments.length === 0) {
-      return res.json({ found: false, shipment: null, spedition: null, checklistCount: 0 });
+      return res.json({ found: false, shipment: null, shipments: [], spedition: null, checklistCount: 0 });
     }
 
     const shipmentBase = shipments[0];
@@ -82,7 +105,7 @@ router.get("/scanner/find-shipment", async (req, res) => {
       // gefahrgut_checklisten-Tabelle existiert möglicherweise noch nicht auf älteren Installationen
     }
 
-    return res.json({ found: true, shipment, spedition: speditionName, checklistCount });
+    return res.json({ found: true, shipment, shipments: [], spedition: speditionName, checklistCount });
   } catch (err) {
     console.error("find-shipment error:", err);
     return res.status(500).json({ error: "Serverfehler" });
