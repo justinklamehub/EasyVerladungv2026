@@ -39,29 +39,33 @@ const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
 // ── Roles ──────────────────────────────────────────────────────────────────────
 
-// All items are fully configurable — actual access control is enforced
-// by ProtectedRoute in App.tsx and backend middleware independently.
+// Defines which roles can ever reach a page (mirrors App.tsx ProtectedRoute + sidebar show logic).
+// null  = all roles (fully configurable visibility)
+// array = only these roles can access the page; others get a "—" placeholder in the table
+//
+// Permission-based pages (kanban.use, foto.view, auftrag.analyse.spedition) stay null because
+// any role could in principle be granted that permission via the Berechtigungen matrix.
 const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
-  "/dashboard":         null,
-  "/shipments":         null,
-  "/shipments/kanban":  null,
-  "/wochenansicht":     null,
-  "/speditionen":       null,
-  "/users":             null,
-  "/paletten":          null,
-  "/abstimmungen":      null,
-  "/kalkulation":       null,
-  "/gefahrgut":         null,
-  "/auswertung":        null,
-  "/auftragsauswertung":null,
-  "/auditlog":          null,
-  "/speditionsfreigabe":null,
-  "/fotos":             null,
-  "/settings":          null,
-  "/berechtigungen":    null,
-  "/tickets":           null,
-  "/hilfe":             null,
-  "/changelog":         null,
+  "/dashboard":          null,  // all roles
+  "/shipments":          null,  // all roles
+  "/shipments/kanban":   null,  // dynamic: kanban.use permission controls access
+  "/wochenansicht":      null,  // all roles
+  "/speditionen":        ["comet_admin", "comet_leitstand"],
+  "/users":              ["comet_admin", "comet_leitstand", "speditions_admin"],
+  "/paletten":           null,  // all roles
+  "/abstimmungen":       null,  // all roles
+  "/kalkulation":        ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
+  "/gefahrgut":          ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
+  "/auswertung":         ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
+  "/auftragsauswertung": null,  // dynamic: comet roles + auftrag.analyse.spedition permission
+  "/auditlog":           ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
+  "/speditionsfreigabe": ["speditions_admin"],
+  "/fotos":              null,  // dynamic: comet roles + foto.view permission
+  "/settings":           ["comet_admin"],
+  "/berechtigungen":     ["comet_admin"],
+  "/tickets":            null,  // all roles
+  "/hilfe":              null,  // all roles
+  "/changelog":          null,  // all roles
 };
 
 // Fallback short/long labels for built-in system roles
