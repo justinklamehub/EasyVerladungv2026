@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { customFetch } from "@workspace/api-client-react";
+import { useUpload } from "@workspace/object-storage-web";
 import { formatDistanceToNow, format } from "date-fns";
 import { de } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,10 @@ import {
   Clock,
   CircleDot,
   XCircle,
+  ImageIcon,
+  Upload,
+  ZoomIn,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -123,6 +128,20 @@ type Comment = {
 
 type TicketDetail = TicketRow & { comments: Comment[] };
 
+type Attachment = {
+  id: number;
+  ticketId: number;
+  objectPath: string;
+  fileName: string;
+  contentType: string;
+  uploadedBy: number;
+  createdAt: string;
+};
+
+function imgUrl(objectPath: string) {
+  return "/api/storage/objects/" + objectPath.replace(/^\/objects\//, "");
+}
+
 export default function TicketsPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
@@ -136,6 +155,10 @@ export default function TicketsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [newTicket, setNewTicket] = useState({ title: "", description: "", category: "System", priority: "Mittel" });
+  const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
+  const [isUploadingImg, setIsUploadingImg] = useState(false);
+  const imgFileRef = useRef<HTMLInputElement>(null);
+  const { uploadFile } = useUpload();
 
   const params = new URLSearchParams();
   params.set("status", activeStatus);
@@ -198,6 +221,52 @@ export default function TicketsPage() {
     },
     onError: () => toast({ title: "Fehler beim Löschen", variant: "destructive" }),
   });
+
+  const { data: attachments = [], refetch: refetchAttachments } = useQuery<Attachment[]>({
+    queryKey: ["ticket-attachments", selectedTicket?.id],
+    queryFn: () => customFetch<Attachment[]>(`/api/tickets/${selectedTicket!.id}/attachments`),
+    enabled: !!selectedTicket,
+  });
+
+  const attachMutation = useMutation({
+    mutationFn: ({ ticketId, objectPath, fileName, contentType }: { ticketId: number; objectPath: string; fileName: string; contentType: string }) =>
+      customFetch<Attachment>(`/api/tickets/${ticketId}/attachments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ objectPath, fileName, contentType }),
+      }),
+    onSuccess: () => refetchAttachments(),
+    onError: () => toast({ title: "Fehler beim Speichern des Anhangs", variant: "destructive" }),
+  });
+
+  const deleteAttachmentMutation = useMutation({
+    mutationFn: ({ ticketId, attachmentId }: { ticketId: number; attachmentId: number }) =>
+      customFetch<{ ok: boolean }>(`/api/tickets/${ticketId}/attachments/${attachmentId}`, { method: "DELETE" }),
+    onSuccess: () => refetchAttachments(),
+    onError: () => toast({ title: "Fehler beim Löschen des Anhangs", variant: "destructive" }),
+  });
+
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !selectedTicket) return;
+    e.target.value = "";
+    setIsUploadingImg(true);
+    try {
+      const result = await uploadFile(file);
+      if (result) {
+        await attachMutation.mutateAsync({
+          ticketId: selectedTicket.id,
+          objectPath: result.objectPath,
+          fileName: result.metadata.name,
+          contentType: result.metadata.contentType,
+        });
+      }
+    } catch {
+      toast({ title: "Upload fehlgeschlagen", variant: "destructive" });
+    } finally {
+      setIsUploadingImg(false);
+    }
+  }
 
   const commentMutation = useMutation({
     mutationFn: ({ ticketId, body }: { ticketId: number; body: string }) =>
@@ -415,6 +484,74 @@ export default function TicketsPage() {
               )}
             </div>
 
+            {/* Anhänge */}
+            <div className="px-5 py-4 border-b border-slate-100">
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <ImageIcon className="w-4 h-4 text-slate-400" />
+                  <span className="text-sm font-medium text-slate-600">
+                    Bilder {attachments.length > 0 ? `(${attachments.length})` : ""}
+                  </span>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs gap-1.5"
+                  disabled={isUploadingImg}
+                  onClick={() => imgFileRef.current?.click()}
+                >
+                  {isUploadingImg
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Lädt hoch…</>
+                    : <><Upload className="w-3.5 h-3.5" /> Bild hochladen</>
+                  }
+                </Button>
+                <input
+                  ref={imgFileRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleImageSelect}
+                />
+              </div>
+              {attachments.length === 0 && !isUploadingImg && (
+                <p className="text-xs text-slate-400">Noch keine Bilder angehängt.</p>
+              )}
+              {attachments.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {attachments.map((a) => (
+                    <div key={a.id} className="relative group w-20 h-20 rounded-md overflow-hidden border border-slate-200 bg-slate-100 shrink-0">
+                      <img
+                        src={imgUrl(a.objectPath)}
+                        alt={a.fileName}
+                        className="w-full h-full object-cover cursor-pointer"
+                        onClick={() => setLightboxSrc(imgUrl(a.objectPath))}
+                      />
+                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
+                        <button
+                          className="bg-white/90 rounded-full p-1 hover:bg-white"
+                          onClick={() => setLightboxSrc(imgUrl(a.objectPath))}
+                          title="Vergrößern"
+                        >
+                          <ZoomIn className="w-3.5 h-3.5 text-slate-700" />
+                        </button>
+                        <button
+                          className="bg-white/90 rounded-full p-1 hover:bg-white"
+                          onClick={() => {
+                            if (confirm("Bild löschen?")) {
+                              deleteAttachmentMutation.mutate({ ticketId: selectedTicket!.id, attachmentId: a.id });
+                            }
+                          }}
+                          title="Löschen"
+                        >
+                          <X className="w-3.5 h-3.5 text-red-500" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
             {/* Comments */}
             <div className="px-5 py-4">
               <div className="flex items-center gap-2 mb-3">
@@ -549,6 +686,27 @@ export default function TicketsPage() {
               Ticket erstellen
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Lightbox */}
+      <Dialog open={!!lightboxSrc} onOpenChange={() => setLightboxSrc(null)}>
+        <DialogContent className="max-w-4xl p-0 overflow-hidden bg-black border-0">
+          <div className="relative flex items-center justify-center min-h-[300px] max-h-[90vh]">
+            {lightboxSrc && (
+              <img
+                src={lightboxSrc}
+                alt="Anhang"
+                className="max-w-full max-h-[90vh] object-contain"
+              />
+            )}
+            <button
+              className="absolute top-3 right-3 bg-black/60 hover:bg-black/80 text-white rounded-full p-1.5"
+              onClick={() => setLightboxSrc(null)}
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

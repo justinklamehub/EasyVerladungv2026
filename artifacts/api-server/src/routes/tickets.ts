@@ -27,6 +27,17 @@ export async function ensureTicketsTables(): Promise<void> {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS ticket_attachments (
+      id           SERIAL PRIMARY KEY,
+      ticket_id    INTEGER     NOT NULL,
+      object_path  TEXT        NOT NULL,
+      file_name    TEXT        NOT NULL,
+      content_type TEXT        NOT NULL DEFAULT 'image/jpeg',
+      uploaded_by  INTEGER     NOT NULL,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
 }
 
 const router = Router();
@@ -287,6 +298,81 @@ router.delete("/tickets/:id/comments/:commentId", requireAuth, async (req: any, 
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Fehler" });
+  }
+});
+
+router.get("/tickets/:id/attachments", requireAuth, async (req: any, res) => {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const { rows } = await pool.query(
+      `SELECT id, ticket_id, object_path, file_name, content_type, uploaded_by, created_at
+       FROM ticket_attachments WHERE ticket_id = $1 ORDER BY created_at`,
+      [ticketId]
+    );
+    res.json(rows.map((r: any) => ({
+      id: r.id,
+      ticketId: r.ticket_id,
+      objectPath: r.object_path,
+      fileName: r.file_name,
+      contentType: r.content_type,
+      uploadedBy: r.uploaded_by,
+      createdAt: r.created_at,
+    })));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Fehler beim Laden der Anhänge" });
+  }
+});
+
+router.post("/tickets/:id/attachments", requireAuth, async (req: any, res) => {
+  try {
+    const ticketId = parseInt(req.params.id);
+    const { objectPath, fileName, contentType } = req.body;
+    if (!objectPath || !fileName) {
+      return res.status(400).json({ error: "objectPath und fileName erforderlich" });
+    }
+    const { rows } = await pool.query(
+      `INSERT INTO ticket_attachments (ticket_id, object_path, file_name, content_type, uploaded_by)
+       VALUES ($1, $2, $3, $4, $5) RETURNING *`,
+      [ticketId, objectPath, fileName, contentType || "image/jpeg", req.session.userId]
+    );
+    const r = rows[0];
+    res.status(201).json({
+      id: r.id,
+      ticketId: r.ticket_id,
+      objectPath: r.object_path,
+      fileName: r.file_name,
+      contentType: r.content_type,
+      uploadedBy: r.uploaded_by,
+      createdAt: r.created_at,
+    });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Fehler beim Speichern des Anhangs" });
+  }
+});
+
+router.delete("/tickets/:id/attachments/:attachmentId", requireAuth, async (req: any, res) => {
+  try {
+    const attachmentId = parseInt(req.params.attachmentId);
+    const userId = req.session.userId as number;
+    const role = req.session.role as string;
+
+    const { rows } = await pool.query(
+      `SELECT * FROM ticket_attachments WHERE id = $1`,
+      [attachmentId]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: "Anhang nicht gefunden" });
+
+    const attachment = rows[0];
+    const canDelete = ["comet_admin", "comet_leitstand"].includes(role) || attachment.uploaded_by === userId;
+    if (!canDelete) return res.status(403).json({ error: "Keine Berechtigung" });
+
+    await pool.query(`DELETE FROM ticket_attachments WHERE id = $1`, [attachmentId]);
+    res.json({ ok: true });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Fehler beim Löschen des Anhangs" });
   }
 });
 
