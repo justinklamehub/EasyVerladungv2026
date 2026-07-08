@@ -357,7 +357,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
   }[] = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard, show: true },
     { name: "Verladungen", href: "/shipments", icon: Truck, show: true },
-    { name: "Kanban-Board", href: "/shipments/kanban", icon: LayoutGrid, show: ["comet_admin", "comet_leitstand", "comet_lager"].includes(user.role) },
+    { name: "Kanban-Board", href: "/shipments/kanban", icon: LayoutGrid, show: user.role === "comet_admin" || !!permissions["kanban.use"] },
     { name: "Wochenplan", href: "/wochenansicht", icon: CalendarDays, show: true },
     { name: "Speditionen", href: "/speditionen", icon: Building2, show: canManageSpeditionen },
     { name: "Benutzer", href: "/users", icon: Users, show: canManageUsers },
@@ -367,7 +367,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     { name: "Gefahrgut", href: "/gefahrgut", icon: ShieldAlert, show: isCometUser, badgeCount: gefahrgutBlankoCount || 0 },
     { name: "Fotos", href: "/fotos", icon: ImageIcon, show: isCometUser || !!permissions["foto.view"] },
     { name: "Auswertung", href: "/auswertung", icon: BarChart2, show: isCometUser },
-    { name: "Auftragsauswertung", href: "/auftragsauswertung", icon: FileSpreadsheet, show: isCometUser || !!user.speditionId },
+    { name: "Auftragsauswertung", href: "/auftragsauswertung", icon: FileSpreadsheet, show: isCometUser || !!permissions["auftrag.analyse.spedition"] },
     { name: "Änderungslog", href: "/auditlog", icon: History, show: isCometUser },
     { name: "Speditionsfreigabe", href: "/speditionsfreigabe", icon: Share2, show: user.role === "speditions_admin" },
     { name: "Einstellungen", href: "/settings", icon: Settings, show: user.role === "comet_admin" },

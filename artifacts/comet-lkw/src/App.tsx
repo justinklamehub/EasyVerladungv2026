@@ -106,10 +106,10 @@ function Router() {
         <AppLayout>
           <Switch>
             <Route path="/dashboard"><ProtectedRoute component={DashboardPage} /></Route>
-            <Route path="/shipments/kanban"><ProtectedRoute component={KanbanPage} /></Route>
+            <Route path="/shipments/kanban"><ProtectedRoute component={KanbanPage} roles={["comet_admin"]} permission="kanban.use" /></Route>
             <Route path="/shipments"><ProtectedRoute component={ShipmentsPage} /></Route>
             <Route path="/speditionen"><ProtectedRoute component={SpeditionenPage} roles={["comet_admin", "comet_leitstand"]} /></Route>
-            <Route path="/users"><ProtectedRoute component={UsersPage} /></Route>
+            <Route path="/users"><ProtectedRoute component={UsersPage} roles={["comet_admin", "comet_leitstand", "speditions_admin"]} /></Route>
             <Route path="/paletten"><ProtectedRoute component={PalettenPage} /></Route>
             <Route path="/abstimmungen"><ProtectedRoute component={AbstimmungenPage} /></Route>
             <Route path="/auditlog"><ProtectedRoute component={AuditlogPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
@@ -118,7 +118,7 @@ function Router() {
             <Route path="/berechtigungen"><ProtectedRoute component={BerechtigungenPage} roles={["comet_admin"]} /></Route>
             <Route path="/wochenansicht"><ProtectedRoute component={WochenansichtPage} /></Route>
             <Route path="/auswertung"><ProtectedRoute component={AuswertungPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
-            <Route path="/auftragsauswertung"><ProtectedRoute component={AuftragsauswertungPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
+            <Route path="/auftragsauswertung"><ProtectedRoute component={AuftragsauswertungPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} permission="auftrag.analyse.spedition" /></Route>
             <Route path="/profil"><ProtectedRoute component={ProfilPage} /></Route>
             <Route path="/gefahrgut"><ProtectedRoute component={GefahrgutPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
             <Route path="/fotos"><ProtectedRoute component={FotosPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} permission="foto.view" /></Route>
