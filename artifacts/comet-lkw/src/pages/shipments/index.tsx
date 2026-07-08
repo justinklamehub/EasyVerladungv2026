@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { useListShipments, useListSpeditionen, useUpdateShipment, Shipment } from "@workspace/api-client-react";
+import { useListShipments, useListSpeditionen, useUpdateShipment, useLockShipment, useUnlockShipment, Shipment } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Loader2, Plus, Lock, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate } from "lucide-react";
+import { Search, Loader2, Plus, Lock, LockOpen, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ShipmentDrawer } from "./components/shipment-drawer";
 import { BulkCreateDialog, type RowData } from "./components/bulk-create-dialog";
@@ -21,6 +21,7 @@ import { useSocketStatus } from "@/hooks/use-socket";
 import { usePermissions } from "@/hooks/use-permissions";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
+const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
 const TOR_OPTIONS = Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`);
 
@@ -147,6 +148,7 @@ export default function ShipmentsPage() {
   const [showStorniert, setShowStorniert] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkStatus, setBulkStatus] = useState("__none__");
+  const [bulkWareStatus, setBulkWareStatus] = useState("__none__");
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isBulkOpen, setIsBulkOpen] = useState(false);
@@ -262,6 +264,8 @@ export default function ShipmentsPage() {
   const { data: shipments, isLoading } = useListShipments(queryParams);
   const { data: speditionen } = useListSpeditionen();
   const updateShipment = useUpdateShipment();
+  const lockShipment = useLockShipment();
+  const unlockShipment = useUnlockShipment();
 
   const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
   const { data: gefahrgutStatus } = useQuery({
@@ -339,6 +343,33 @@ export default function ShipmentsPage() {
       setBulkStatus("__none__");
     } catch {
       toast({ title: "Fehler", description: "Status konnte nicht gesetzt werden.", variant: "destructive" });
+    }
+  }
+
+  async function applyBulkWareStatus() {
+    if (bulkWareStatus === "__none__" || selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map((id) => updateShipment.mutateAsync({ id, data: { wareStatus: bulkWareStatus as any } })));
+      await queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+      toast({ title: `Ware-Status auf „${bulkWareStatus}" gesetzt`, description: `${ids.length} Verladung(en) aktualisiert.` });
+      setSelectedIds(new Set());
+      setBulkWareStatus("__none__");
+    } catch {
+      toast({ title: "Fehler", description: "Ware-Status konnte nicht gesetzt werden.", variant: "destructive" });
+    }
+  }
+
+  async function applyBulkLock(lock: boolean) {
+    if (selectedIds.size === 0) return;
+    const ids = Array.from(selectedIds);
+    try {
+      await Promise.all(ids.map((id) => lock ? lockShipment.mutateAsync({ id }) : unlockShipment.mutateAsync({ id })));
+      await queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+      toast({ title: lock ? "Verladungen gesperrt" : "Verladungen freigegeben", description: `${ids.length} Verladung(en) aktualisiert.` });
+      setSelectedIds(new Set());
+    } catch {
+      toast({ title: "Fehler", description: lock ? "Sperren fehlgeschlagen." : "Freigeben fehlgeschlagen.", variant: "destructive" });
     }
   }
 
@@ -639,28 +670,89 @@ export default function ShipmentsPage() {
       </div>
 
       {selectedIds.size > 0 && canEdit && (
-        <div className="flex items-center gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2">
-          <span className="text-sm font-medium text-primary">{selectedIds.size} ausgewählt</span>
-          <Select value={bulkStatus} onValueChange={setBulkStatus}>
-            <SelectTrigger className="w-[170px] h-8 text-sm">
-              <SelectValue placeholder="Status setzen…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">Status wählen…</SelectItem>
-              {STATUS_OPTIONS.map((s) => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button
-            size="sm"
-            disabled={bulkStatus === "__none__" || updateShipment.isPending}
-            onClick={applyBulkStatus}
-          >
-            {updateShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
-            Anwenden
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+        <div className="flex items-center flex-wrap gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2">
+          <span className="text-sm font-medium text-primary whitespace-nowrap">{selectedIds.size} ausgewählt</span>
+
+          <div className="h-5 w-px bg-primary/20 shrink-0" />
+
+          {/* Status ändern */}
+          <div className="flex items-center gap-2">
+            <Select value={bulkStatus} onValueChange={setBulkStatus}>
+              <SelectTrigger className="w-[160px] h-8 text-sm">
+                <SelectValue placeholder="Status setzen…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Status wählen…</SelectItem>
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              disabled={bulkStatus === "__none__" || updateShipment.isPending}
+              onClick={applyBulkStatus}
+            >
+              {updateShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Anwenden
+            </Button>
+          </div>
+
+          <div className="h-5 w-px bg-primary/20 shrink-0" />
+
+          {/* Ware-Status ändern */}
+          <div className="flex items-center gap-2">
+            <Select value={bulkWareStatus} onValueChange={setBulkWareStatus}>
+              <SelectTrigger className="w-[155px] h-8 text-sm">
+                <SelectValue placeholder="Ware-Status…" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">Ware-Status wählen…</SelectItem>
+                {WARE_STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              disabled={bulkWareStatus === "__none__" || updateShipment.isPending}
+              onClick={applyBulkWareStatus}
+            >
+              {updateShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
+              Anwenden
+            </Button>
+          </div>
+
+          {canLock && (
+            <>
+              <div className="h-5 w-px bg-primary/20 shrink-0" />
+              {/* Sperren / Freigeben */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-sm"
+                  disabled={lockShipment.isPending || unlockShipment.isPending}
+                  onClick={() => applyBulkLock(true)}
+                >
+                  {lockShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Lock className="w-3 h-3 mr-1" />}
+                  Sperren
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8 text-sm"
+                  disabled={lockShipment.isPending || unlockShipment.isPending}
+                  onClick={() => applyBulkLock(false)}
+                >
+                  {unlockShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <LockOpen className="w-3 h-3 mr-1" />}
+                  Freigeben
+                </Button>
+              </div>
+            </>
+          )}
+
+          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedIds(new Set())}>
             Abbrechen
           </Button>
         </div>
