@@ -254,7 +254,6 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
     const invalid = new Map<number, Set<keyof RowData>>();
     for (const row of rows) {
       const missing = new Set<keyof RowData>();
-      if (!row.kennzeichen.trim()) missing.add("kennzeichen");
       if (!row.lkwArt) missing.add("lkwArt");
       if (!row.relation.trim()) missing.add("relation");
       if (!row.etaDate) missing.add("etaDate");
@@ -266,7 +265,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
       setFieldErrors(invalid);
       toast({
         title: "Bitte alle Pflichtfelder ausfüllen",
-        description: `Kennzeichen, LKW-Art, Relation, ETA Datum & Uhrzeit${isCometUser ? " sowie Spedition" : ""} sind erforderlich.`,
+        description: `LKW-Art, Relation, ETA Datum & Uhrzeit${isCometUser ? " sowie Spedition" : ""} sind erforderlich.`,
         variant: "destructive",
       });
       return;
@@ -337,7 +336,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                 <tr className="bg-slate-50">
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 w-6">#</th>
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[130px]">
-                    Kennzeichen <span className="text-red-500">*</span>
+                    Kennzeichen
                   </th>
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[160px]">Bezeichnung</th>
                   <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[140px]">
@@ -372,7 +371,6 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
               <tbody>
                 {rows.map((row, idx) => {
                   const rowErrors = fieldErrors.get(row.id);
-                  const hasError = !!rowErrors?.has("kennzeichen");
                   return (
                     <tr key={row.id} className={cn("group", idx % 2 === 0 ? "bg-white" : "bg-slate-50/50")}>
                       <td className="px-2 py-1.5 text-xs text-slate-400 border-b border-slate-100">{idx + 1}</td>
@@ -381,9 +379,8 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                           value={row.kennzeichen}
                           onChange={(e) => updateRow(row.id, "kennzeichen", e.target.value)}
                           placeholder="M-AB 1234"
-                          className={cn("h-8 text-sm", hasError && "border-red-400 ring-1 ring-red-400")}
+                          className="h-8 text-sm"
                         />
-                        {hasError && <AlertCircle className="w-3 h-3 text-red-500 absolute mt-[-24px] ml-[-18px]" />}
                       </td>
                       <td className="px-1 py-1.5 border-b border-slate-100">
                         <Input
