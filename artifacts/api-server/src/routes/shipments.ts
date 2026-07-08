@@ -462,6 +462,9 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
       if (existing.gesperrtFuerSpedition) {
         return res.status(403).json({ error: "Shipment is locked for editing by Spedition" });
       }
+      if (existing.wareStatus === "ausgedruckt") {
+        return res.status(403).json({ error: "Das Deckblatt wurde bereits gedruckt. Die Verladung kann nicht mehr bearbeitet werden." });
+      }
       if (existing.ataDate) {
         return res.status(403).json({ error: "Sendung kann nicht mehr bearbeitet werden, da ATA bereits eingetragen ist" });
       }

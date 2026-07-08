@@ -145,10 +145,11 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     };
   }, [shipmentId, open, shipment?.speditionId, user?.id]);
 
-  const isLocked    = !!shipment?.gesperrtFuerSpedition;
-  const hasAta      = !!(shipment?.ataDate);
-  const canEdit     = canEditPerm && (!isLocked || isCometUser);
-  const spedCanEdit = isSpedUser && !isLocked && !hasAta;
+  const isLocked      = !!shipment?.gesperrtFuerSpedition;
+  const isAusgedruckt = !!shipment && shipment.wareStatus === "ausgedruckt";
+  const hasAta        = !!(shipment?.ataDate);
+  const canEdit       = canEditPerm && (!isLocked || isCometUser);
+  const spedCanEdit   = isSpedUser && !isLocked && !hasAta;
 
   const today = new Date().toISOString().slice(0, 10);
   const emptyAustrag = (): LkwAustragInput => ({
@@ -406,6 +407,12 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               Diese Verladung ist durch COMET gesperrt und kann nicht bearbeitet werden.
             </div>
           )}
+          {isSpedUser && !isLocked && isAusgedruckt && (
+            <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-2 mt-1">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              Das Deckblatt wurde bereits gedruckt. Die Verladungsdaten können nicht mehr geändert werden.
+            </div>
+          )}
           {otherEditors.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-3 py-2 mt-1">
               <Pencil className="w-4 h-4 flex-shrink-0" />
@@ -467,17 +474,17 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">Bezeichnung</Label>
-                <Input value={form.bezeichnung} onChange={e => setForm(f => ({ ...f, bezeichnung: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} placeholder="z.B. MTG-001 Containerbeladung" />
+                <Input value={form.bezeichnung} onChange={e => setForm(f => ({ ...f, bezeichnung: e.target.value }))} disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))} placeholder="z.B. MTG-001 Containerbeladung" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Kennzeichen</Label>
-                  <Input value={form.kennzeichen} onChange={e => setForm(f => ({ ...f, kennzeichen: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} placeholder="M-AB 1234" />
+                  <Input value={form.kennzeichen} onChange={e => setForm(f => ({ ...f, kennzeichen: e.target.value }))} disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))} placeholder="M-AB 1234" />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">LKW-Art {!isEditing && <span className="text-red-500">*</span>}</Label>
-                  <Select value={form.lkwArt} onValueChange={v => { setForm(f => ({ ...f, lkwArt: v })); setFormErrors(prev => { if (!prev.has("lkwArt")) return prev; const next = new Set(prev); next.delete("lkwArt"); return next; }); }} disabled={!canEdit || (isSpedUser && isLocked)}>
+                  <Select value={form.lkwArt} onValueChange={v => { setForm(f => ({ ...f, lkwArt: v })); setFormErrors(prev => { if (!prev.has("lkwArt")) return prev; const next = new Set(prev); next.delete("lkwArt"); return next; }); }} disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}>
                     <SelectTrigger className={cn("h-9", formErrors.has("lkwArt") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Wählen..." /></SelectTrigger>
                     <SelectContent>{LKW_ART_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
@@ -489,7 +496,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                 <Input
                   value={form.relation}
                   onChange={e => { setForm(f => ({ ...f, relation: e.target.value })); if (e.target.value.trim()) setFormErrors(prev => { if (!prev.has("relation")) return prev; const next = new Set(prev); next.delete("relation"); return next; }); }}
-                  disabled={!canEdit || (isSpedUser && isLocked)}
+                  disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}
                   placeholder="Start → Ziel"
                   className={cn(formErrors.has("relation") && "border-red-400 ring-1 ring-red-400")}
                 />
@@ -497,7 +504,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">Telefon Fahrer</Label>
-                <Input value={form.telefon} onChange={e => setForm(f => ({ ...f, telefon: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} placeholder="+49 ..." />
+                <Input value={form.telefon} onChange={e => setForm(f => ({ ...f, telefon: e.target.value }))} disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))} placeholder="+49 ..." />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -507,7 +514,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                     type="date"
                     value={form.etaDate}
                     onChange={e => { setForm(f => ({ ...f, etaDate: e.target.value })); if (e.target.value) setFormErrors(prev => { if (!prev.has("etaDate")) return prev; const next = new Set(prev); next.delete("etaDate"); return next; }); }}
-                    disabled={!canEdit || (isSpedUser && isLocked)}
+                    disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}
                     className={cn(formErrors.has("etaDate") && "border-red-400 ring-1 ring-red-400")}
                   />
                 </div>
@@ -517,7 +524,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                     type="time"
                     value={form.etaTime}
                     onChange={e => { setForm(f => ({ ...f, etaTime: e.target.value })); if (e.target.value) setFormErrors(prev => { if (!prev.has("etaTime")) return prev; const next = new Set(prev); next.delete("etaTime"); return next; }); }}
-                    disabled={!canEdit || (isSpedUser && isLocked)}
+                    disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}
                     className={cn(formErrors.has("etaTime") && "border-red-400 ring-1 ring-red-400")}
                   />
                 </div>
@@ -605,7 +612,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                 <Select
                   value={form.wareStatus || "__none__"}
                   onValueChange={v => setForm(f => ({ ...f, wareStatus: v === "__none__" ? "" : v }))}
-                  disabled={!canEdit || (isSpedUser && isLocked)}
+                  disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}
                 >
                   <SelectTrigger className="h-9"><SelectValue placeholder="—" /></SelectTrigger>
                   <SelectContent>
@@ -620,10 +627,10 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">Bemerkungen</Label>
-                <Input value={form.bemerkungen} onChange={e => setForm(f => ({ ...f, bemerkungen: e.target.value }))} disabled={!canEdit || (isSpedUser && isLocked)} placeholder="Optional" />
+                <Input value={form.bemerkungen} onChange={e => setForm(f => ({ ...f, bemerkungen: e.target.value }))} disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))} placeholder="Optional" />
               </div>
 
-              {canEdit && (!isSpedUser || !isLocked) && (
+              {canEdit && (!isSpedUser || (!isLocked && !isAusgedruckt)) && (
                 <div className="pt-4 flex justify-end gap-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
                   <Button onClick={handleSave} disabled={isSaving}>
