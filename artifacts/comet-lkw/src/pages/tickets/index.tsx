@@ -45,7 +45,7 @@ import {
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 
-const CATEGORIES = ["Verladung", "System", "Sonstiges"];
+const DEFAULT_CATEGORIES = ["Verladung", "System", "Sonstiges"];
 const PRIORITIES = ["Niedrig", "Mittel", "Hoch", "Kritisch"];
 const STATUSES = ["Offen", "In Bearbeitung", "Geloest", "Geschlossen"];
 const STATUS_LABELS: Record<string, string> = {
@@ -141,6 +141,18 @@ export default function TicketsPage() {
   params.set("status", activeStatus);
   if (filterCategory) params.set("category", filterCategory);
   if (filterPriority) params.set("priority", filterPriority);
+
+  const { data: publicSettings } = useQuery<Record<string, string>>({
+    queryKey: ["settings-public"],
+    queryFn: () => customFetch<Record<string, string>>("/api/settings/public"),
+    staleTime: 60_000,
+  });
+  const categories: string[] = (() => {
+    try {
+      const parsed = JSON.parse(publicSettings?.ticket_categories ?? "");
+      return Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_CATEGORIES;
+    } catch { return DEFAULT_CATEGORIES; }
+  })();
 
   const { data: tickets = [], isLoading, refetch } = useQuery<TicketRow[]>({
     queryKey: ["tickets", activeStatus, filterCategory, filterPriority],
@@ -253,7 +265,7 @@ export default function TicketsPage() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="alle">Alle Kategorien</SelectItem>
-              {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+              {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={filterPriority || "alle"} onValueChange={(v) => setFilterPriority(v === "alle" ? "" : v)}>
@@ -511,7 +523,7 @@ export default function TicketsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                    {categories.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>

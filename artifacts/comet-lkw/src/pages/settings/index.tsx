@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck, Tag, X } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { useAuth } from "@/contexts/auth-context";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -1868,6 +1868,107 @@ function ColorField({ value, onChange, placeholder }: {
   );
 }
 
+const DEFAULT_TICKET_CATEGORIES = ["Verladung", "System", "Sonstiges"];
+
+function TicketCategoriesCard({ settings, onSave, isSaving }: {
+  settings: SettingsMap;
+  onSave: (key: string, value: string) => void;
+  isSaving: (key: string) => boolean;
+}) {
+  const parse = (raw: string | undefined) => {
+    try { const p = JSON.parse(raw ?? ""); return Array.isArray(p) ? p : DEFAULT_TICKET_CATEGORIES; }
+    catch { return DEFAULT_TICKET_CATEGORIES; }
+  };
+  const [categories, setCategories] = useState<string[]>(() => parse(settings.ticket_categories));
+  const [newCat, setNewCat] = useState("");
+
+  useEffect(() => { setCategories(parse(settings.ticket_categories)); }, [settings.ticket_categories]);
+
+  function addCategory() {
+    const t = newCat.trim();
+    if (!t || categories.includes(t)) return;
+    setCategories((prev) => [...prev, t]);
+    setNewCat("");
+  }
+
+  function removeCategory(cat: string) {
+    setCategories((prev) => prev.filter((c) => c !== cat));
+  }
+
+  function moveUp(idx: number) {
+    if (idx === 0) return;
+    setCategories((prev) => { const n = [...prev]; [n[idx - 1], n[idx]] = [n[idx], n[idx - 1]]; return n; });
+  }
+
+  function moveDown(idx: number) {
+    if (idx === categories.length - 1) return;
+    setCategories((prev) => { const n = [...prev]; [n[idx + 1], n[idx]] = [n[idx], n[idx + 1]]; return n; });
+  }
+
+  const saving = isSaving("ticket_categories");
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <Tag className="w-4 h-4 text-primary" />
+          <CardTitle className="text-base">Ticket-Kategorien</CardTitle>
+        </div>
+        <CardDescription className="text-xs">
+          Kategorien, die beim Erstellen eines Tickets zur Auswahl stehen
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="space-y-1.5">
+          {categories.length === 0 && (
+            <p className="text-xs text-slate-400 text-center py-4 border-2 border-dashed border-slate-200 rounded-md">
+              Keine Kategorien — mindestens eine hinzufügen
+            </p>
+          )}
+          {categories.map((cat, idx) => (
+            <div key={cat} className="flex items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5">
+              <span className="flex-1 text-sm text-slate-800">{cat}</span>
+              <div className="flex items-center gap-0.5">
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400" disabled={idx === 0} onClick={() => moveUp(idx)}>
+                  <ChevronUp className="w-3 h-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400" disabled={idx === categories.length - 1} onClick={() => moveDown(idx)}>
+                  <ChevronDown className="w-3 h-3" />
+                </Button>
+                <Button variant="ghost" size="icon" className="h-6 w-6 text-red-400 hover:text-red-600" onClick={() => removeCategory(cat)}>
+                  <X className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <Input
+            placeholder="Neue Kategorie…"
+            className="h-8 text-sm"
+            value={newCat}
+            onChange={(e) => setNewCat(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCategory(); } }}
+          />
+          <Button variant="outline" size="sm" className="h-8 shrink-0" onClick={addCategory} disabled={!newCat.trim() || categories.includes(newCat.trim())}>
+            <Plus className="w-3.5 h-3.5 mr-1" /> Hinzufügen
+          </Button>
+        </div>
+        <div className="flex justify-end pt-1">
+          <Button
+            size="sm" className="h-8 gap-1.5"
+            disabled={saving || categories.length === 0}
+            onClick={() => onSave("ticket_categories", JSON.stringify(categories))}
+          >
+            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+            Speichern
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function DesignSettingsCard({ settings, onSave, isSaving }: {
   settings: SettingsMap;
   onSave: (key: string, val: string) => void;
@@ -2077,6 +2178,9 @@ export default function SettingsPage() {
           <TabsTrigger value="design" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <Palette className="w-3.5 h-3.5 shrink-0" /> Design
           </TabsTrigger>
+          <TabsTrigger value="tickets" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Tag className="w-3.5 h-3.5 shrink-0" /> Tickets
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Allgemein ── */}
@@ -2254,6 +2358,11 @@ export default function SettingsPage() {
         {/* ── Tab: Postausgang ── */}
         <TabsContent value="postausgang" className="mt-0">
           <EmailLogSection />
+        </TabsContent>
+
+        {/* ── Tab: Tickets ── */}
+        <TabsContent value="tickets" className="space-y-5 mt-0">
+          <TicketCategoriesCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
         </TabsContent>
       </Tabs>
     </div>
