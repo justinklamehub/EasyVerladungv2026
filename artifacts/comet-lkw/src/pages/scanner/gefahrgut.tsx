@@ -782,6 +782,15 @@ export default function ScannerGefahrgutPage() {
         return;
       }
 
+      if (shipmentId) {
+        await fetch(`${API}/scanner/shipment/${shipmentId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status: "Verladen" }),
+          credentials: "include",
+        }).catch(() => {});
+      }
+
       setSubmitted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (err: any) {

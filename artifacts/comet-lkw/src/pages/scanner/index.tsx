@@ -314,7 +314,7 @@ export default function ScannerLandingPage() {
         <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
       </div>
 
-      <div style={S.card}>
+      {shipmentList.length === 0 && <div style={S.card}>
         <form onSubmit={handleSearch}>
           <label style={S.label}>LKW-ID oder Bezeichnung</label>
           <input
@@ -347,7 +347,7 @@ export default function ScannerLandingPage() {
             {isSearching ? "SUCHE..." : "VERLADUNG SUCHEN"}
           </button>
         </form>
-      </div>
+      </div>}
 
       {searched && shipmentList.length > 0 && (
         <div style={{ width: "100%", maxWidth: 480 }}>
@@ -479,7 +479,7 @@ export default function ScannerLandingPage() {
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ ...S.label, marginBottom: 6 }}>Status</label>
                     <div style={{ display: "flex", flexWrap: "wrap" as const, gap: 8 }}>
-                      {STATUS_OPTIONS.map(opt => (
+                      {STATUS_OPTIONS.filter(o => o !== "Storniert" && o !== "Abgefertigt").map(opt => (
                         <button
                           key={opt}
                           onClick={() => setEditStatus(opt)}
