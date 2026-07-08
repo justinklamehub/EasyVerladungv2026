@@ -210,6 +210,9 @@ function ShipmentCard({
               <span className="text-slate-400 font-normal italic">Kein Kennzeichen</span>
             )}
           </div>
+          {shipment.bezeichnung && (
+            <div className="text-xs text-slate-600 truncate">{shipment.bezeichnung}</div>
+          )}
           {shipment.speditionName && (
             <div className="text-xs text-slate-500 truncate">{shipment.speditionName}</div>
           )}
@@ -557,6 +560,9 @@ export default function KanbanPage() {
                   <div className="font-semibold text-slate-900 text-sm">
                     {activeShipment.kennzeichen || "Kein Kennzeichen"}
                   </div>
+                  {activeShipment.bezeichnung && (
+                    <div className="text-xs text-slate-600">{activeShipment.bezeichnung}</div>
+                  )}
                   {activeShipment.speditionName && (
                     <div className="text-xs text-slate-500">{activeShipment.speditionName}</div>
                   )}
