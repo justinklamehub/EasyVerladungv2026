@@ -120,8 +120,8 @@ router.patch("/scanner/shipment/:id", async (req, res) => {
     const id = Number(req.params.id);
     if (isNaN(id)) return res.status(400).json({ error: "Ungültige ID" });
 
-    const { status, tor, wareStatus } = req.body as {
-      status?: string; tor?: string; wareStatus?: string;
+    const { status, tor, wareStatus, kennzeichen } = req.body as {
+      status?: string; tor?: string; wareStatus?: string; kennzeichen?: string | null;
     };
 
     const update: Record<string, unknown> = {};
@@ -140,6 +140,7 @@ router.patch("/scanner/shipment/:id", async (req, res) => {
       if (wareStatus && !VALID_WARE_STATUSES.includes(wareStatus)) return res.status(400).json({ error: "Ungültiger Ware-Status" });
       update.wareStatus = wareStatus || null;
     }
+    if (kennzeichen !== undefined) update.kennzeichen = kennzeichen ? String(kennzeichen).toUpperCase().trim() : null;
 
     if (Object.keys(update).length === 0) return res.status(400).json({ error: "Keine Änderungen" });
 

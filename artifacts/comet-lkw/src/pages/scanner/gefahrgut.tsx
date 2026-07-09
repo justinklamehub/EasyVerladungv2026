@@ -786,7 +786,7 @@ export default function ScannerGefahrgutPage() {
         await fetch(`${API}/scanner/shipment/${shipmentId}`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: "Verladen" }),
+          body: JSON.stringify({ status: "Verladen", kennzeichen: localKennzeichen || null }),
           credentials: "include",
         }).catch(() => {});
       }
@@ -949,17 +949,13 @@ export default function ScannerGefahrgutPage() {
 
         <div style={S.fieldRow}>
           <label style={S.fieldLabel}>KFZ Kennzeichen</label>
-          {kennzeichen ? (
-            <FocusInput value={localKennzeichen} readOnly style={{ fontWeight: 700, color: C }} />
-          ) : (
-            <FocusInput
-              value={localKennzeichen}
-              onChange={(e) => setLocalKennzeichen(e.target.value.toUpperCase())}
-              placeholder="z.B. MH-AB 1234"
-              style={{ fontWeight: 700 }}
-              autoCapitalize="characters"
-            />
-          )}
+          <FocusInput
+            value={localKennzeichen}
+            onChange={(e) => setLocalKennzeichen(e.target.value.toUpperCase())}
+            placeholder="z.B. MH-AB 1234"
+            style={{ fontWeight: 700 }}
+            autoCapitalize="characters"
+          />
         </div>
         <div style={S.fieldRow}>
           <label style={S.fieldLabel}>ggf. Anhänger</label>
