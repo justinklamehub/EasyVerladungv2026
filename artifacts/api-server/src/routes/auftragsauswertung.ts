@@ -206,7 +206,7 @@ function buildResults(
       matched:         g.speditionId !== null,
       auftraege:       g.auftraegeSet.size,
       paletten:        g.paletten,
-      punkte:          Math.round(g.punkte * 100) / 100,
+      punkte:          Math.ceil(g.punkte),
       freigegeben:     false,
       liefertermine: Array.from(g.liefertermine.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
@@ -214,20 +214,20 @@ function buildResults(
           lfdat: lfdat === "__kein_termin__" ? "" : lfdat,
           auftraege: lt.auftraegeSet.size,
           paletten:  lt.paletten,
-          punkte:    Math.round(lt.punkte * 100) / 100,
+          punkte:    Math.ceil(lt.punkte),
           leitgebiete: Array.from(lt.leitgebiete.entries())
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([lg, sub]) => ({
               leitgebiet: lg === "__kein_leitgebiet__" ? "" : lg,
               auftraege:  sub.auftraegeSet.size,
               paletten:   sub.paletten,
-              punkte:     Math.round(sub.punkte * 100) / 100,
+              punkte:     Math.ceil(sub.punkte),
               belege: Array.from(sub.belege.entries())
                 .sort((a, b) => a[0].localeCompare(b[0]))
                 .map(([beleg, b]) => ({
                   beleg,
                   paletten: b.paletten,
-                  punkte:   Math.round(b.punkte * 100) / 100,
+                  punkte:   Math.ceil(b.punkte),
                   ntgew:    Math.round(b.ntgew * 100) / 100,
                 })),
             })),
@@ -455,7 +455,7 @@ router.post(
     const results = buildResults(rows, spedByNr, darkMap);
     const totalPaletten  = results.reduce((s, r) => s + r.paletten, 0);
     const totalAuftraege = results.reduce((s, r) => s + r.auftraege, 0);
-    const totalPunkte    = Math.round(results.reduce((s, r) => s + r.punkte, 0) * 100) / 100;
+    const totalPunkte    = Math.ceil(results.reduce((s, r) => s + r.punkte, 0));
 
     // Persist: replace any previous result
     await pool.query("DELETE FROM auftrag_analyse_ergebnisse");

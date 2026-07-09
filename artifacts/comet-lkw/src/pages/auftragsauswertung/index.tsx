@@ -334,7 +334,7 @@ export default function AuftragsauswertungPage() {
   const filteredTotals = useMemo(() => ({
     auftraege: filteredResults.reduce((s, r) => s + r.auftraege, 0),
     paletten:  filteredResults.reduce((s, r) => s + r.paletten, 0),
-    punkte:    Math.round(filteredResults.reduce((s, r) => s + r.punkte, 0) * 100) / 100,
+    punkte:    Math.ceil(filteredResults.reduce((s, r) => s + r.punkte, 0)),
   }), [filteredResults]);
 
   const bothReady = !!(pendingZlthu2 && pendingDark);
