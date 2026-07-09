@@ -125,8 +125,10 @@ function LieferterminBlock({ liefertermine }: { liefertermine: LieferterminRow[]
 export default function AuftragsauswertungPage() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const fileRef = useRef<HTMLInputElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const fileZlthu2Ref = useRef<HTMLInputElement>(null);
+  const fileDarkRef = useRef<HTMLInputElement>(null);
+  const [pendingZlthu2, setPendingZlthu2] = useState<File | null>(null);
+  const [pendingDark, setPendingDark] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
   const [result, setResult] = useState<AnalyseResult | null>(null);
@@ -150,25 +152,23 @@ export default function AuftragsauswertungPage() {
     return () => { cancelled = true; };
   }, []);
 
-  const processFile = useCallback(async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".csv")) {
-      toast({ title: "Bitte eine CSV-Datei auswählen", variant: "destructive" });
-      return;
-    }
+  const processFiles = useCallback(async (zlthu2: File, dark: File) => {
     setIsUploading(true);
     try {
-      const text = await file.text();
+      const [zlthu2Text, darkText] = await Promise.all([zlthu2.text(), dark.text()]);
       const r = await fetch(`${API_BASE}/auftragsauswertung/upload`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv: text, filename: file.name }),
+        body: JSON.stringify({ zlthu2: zlthu2Text, dark: darkText, filename: zlthu2.name }),
       });
       const data = await r.json();
       if (!r.ok) {
         toast({ title: data.error ?? "Fehler bei der Auswertung", variant: "destructive" });
       } else {
         setResult({ ...data, uploadedByUsername: user?.username ?? null });
+        setPendingZlthu2(null);
+        setPendingDark(null);
         toast({
           title: `${data.results.length} Speditionen ausgewertet`,
           description: `${data.totalRows} Zeilen verarbeitet`,
@@ -178,7 +178,8 @@ export default function AuftragsauswertungPage() {
       toast({ title: "Netzwerkfehler", variant: "destructive" });
     } finally {
       setIsUploading(false);
-      if (fileRef.current) fileRef.current.value = "";
+      if (fileZlthu2Ref.current) fileZlthu2Ref.current.value = "";
+      if (fileDarkRef.current) fileDarkRef.current.value = "";
     }
   }, [toast, user?.username]);
 
@@ -263,12 +264,7 @@ export default function AuftragsauswertungPage() {
     punkte:    Math.round(filteredResults.reduce((s, r) => s + r.punkte, 0) * 100) / 100,
   }), [filteredResults]);
 
-  const onDrop = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragging(false);
-    const file = e.dataTransfer.files[0];
-    if (file) processFile(file);
-  }, [processFile]);
+  const bothReady = !!(pendingZlthu2 && pendingDark);
 
   if (isLoadingLatest) {
     return (
@@ -293,57 +289,103 @@ export default function AuftragsauswertungPage() {
             </p>
           </div>
         </div>
-        {!isSpedUser && (
+        {!isSpedUser && result && !isUploading && (
           <Button
             variant="outline" size="sm"
-            onClick={() => fileRef.current?.click()}
-            disabled={isUploading}
+            onClick={() => { setPendingZlthu2(null); setPendingDark(null); setResult(null); }}
             className="gap-2"
           >
-            {isUploading
-              ? <Loader2 className="h-4 w-4 animate-spin" />
-              : <Upload className="h-4 w-4" />}
-            {result ? "Neue CSV hochladen" : "CSV hochladen"}
+            <Upload className="h-4 w-4" />
+            Neue Auswertung
           </Button>
         )}
       </div>
 
-      <input
-        ref={fileRef} type="file" accept=".csv" className="hidden"
-        onChange={(e) => { const f = e.target.files?.[0]; if (f) processFile(f); }}
-      />
+      {/* Hidden file inputs */}
+      <input ref={fileZlthu2Ref} type="file" accept=".csv" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingZlthu2(f); }} />
+      <input ref={fileDarkRef} type="file" accept=".csv" className="hidden"
+        onChange={(e) => { const f = e.target.files?.[0]; if (f) setPendingDark(f); }} />
 
-      {/* Empty states */}
-      {!result && !isUploading && !isSpedUser && (
-        <div
-          className={cn(
-            "border-2 border-dashed rounded-xl p-14 text-center transition-all cursor-pointer select-none",
-            isDragging
-              ? "border-blue-400 bg-blue-50 scale-[1.01]"
-              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/60"
+      {/* Dual-file upload panel (shown when no result yet, or after "Neue Auswertung") */}
+      {!result && !isSpedUser && (
+        <div className="space-y-4">
+          {isUploading ? (
+            <div className="border border-blue-100 bg-blue-50 rounded-xl p-14 text-center">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
+                <p className="text-sm font-medium text-blue-600">Wird ausgewertet…</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-4">
+                {/* ZLTHU2 upload box */}
+                <div
+                  className={cn(
+                    "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer select-none transition-all",
+                    pendingZlthu2
+                      ? "border-green-300 bg-green-50/60"
+                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/60"
+                  )}
+                  onClick={() => fileZlthu2Ref.current?.click()}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className={cn("p-3 rounded-full", pendingZlthu2 ? "bg-green-100" : "bg-slate-100")}>
+                      {pendingZlthu2
+                        ? <CheckCircle2 className="h-6 w-6 text-green-600" />
+                        : <FileSpreadsheet className="h-6 w-6 text-slate-400" />}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-slate-700">ZLTHU2.csv</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Aufträge mit Lieferungsnummern</p>
+                      {pendingZlthu2
+                        ? <p className="text-xs font-medium text-green-600 mt-2 truncate max-w-[200px]">{pendingZlthu2.name}</p>
+                        : <p className="text-xs text-slate-300 mt-2">klicken zum Auswählen</p>}
+                    </div>
+                  </div>
+                </div>
+
+                {/* DownloadDark upload box */}
+                <div
+                  className={cn(
+                    "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer select-none transition-all",
+                    pendingDark
+                      ? "border-green-300 bg-green-50/60"
+                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/60"
+                  )}
+                  onClick={() => fileDarkRef.current?.click()}
+                >
+                  <div className="flex flex-col items-center gap-3">
+                    <div className={cn("p-3 rounded-full", pendingDark ? "bg-green-100" : "bg-slate-100")}>
+                      {pendingDark
+                        ? <CheckCircle2 className="h-6 w-6 text-green-600" />
+                        : <FileSpreadsheet className="h-6 w-6 text-slate-400" />}
+                    </div>
+                    <div>
+                      <p className="font-semibold text-sm text-slate-700">DownloadDark.csv</p>
+                      <p className="text-xs text-slate-400 mt-0.5">Punkte (NTGEW14G) je Lieferung</p>
+                      {pendingDark
+                        ? <p className="text-xs font-medium text-green-600 mt-2 truncate max-w-[200px]">{pendingDark.name}</p>
+                        : <p className="text-xs text-slate-300 mt-2">klicken zum Auswählen</p>}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex justify-center">
+                <Button
+                  size="sm"
+                  disabled={!bothReady}
+                  onClick={() => { if (pendingZlthu2 && pendingDark) processFiles(pendingZlthu2, pendingDark); }}
+                  className="gap-2 px-8"
+                >
+                  <Upload className="h-4 w-4" />
+                  {bothReady ? "Auswertung starten" : "Beide Dateien auswählen"}
+                </Button>
+              </div>
+            </>
           )}
-          onDrop={onDrop}
-          onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
-          onDragLeave={() => setIsDragging(false)}
-          onClick={() => fileRef.current?.click()}
-        >
-          <div className="flex flex-col items-center gap-4">
-            <div className="p-4 rounded-full bg-slate-100">
-              <Upload className="h-7 w-7 text-slate-400" />
-            </div>
-            <div>
-              <p className="font-medium text-slate-600">CSV-Datei hier ablegen</p>
-              <p className="text-sm text-slate-400 mt-1">oder klicken zum Auswählen · SAP-Export, semikolongetrennt</p>
-            </div>
-          </div>
-        </div>
-      )}
-      {!result && isUploading && (
-        <div className="border border-blue-100 bg-blue-50 rounded-xl p-14 text-center">
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-8 w-8 animate-spin text-blue-400" />
-            <p className="text-sm font-medium text-blue-600">Wird ausgewertet…</p>
-          </div>
         </div>
       )}
       {!result && isSpedUser && (
@@ -355,12 +397,7 @@ export default function AuftragsauswertungPage() {
 
       {/* Results */}
       {result && (
-        <div
-          className={cn("space-y-4", !isSpedUser && isUploading && "opacity-40 pointer-events-none transition-opacity")}
-          onDrop={!isSpedUser ? onDrop : undefined}
-          onDragOver={!isSpedUser ? (e) => { e.preventDefault(); setIsDragging(true); } : undefined}
-          onDragLeave={!isSpedUser ? () => setIsDragging(false) : undefined}
-        >
+        <div className={cn("space-y-4", !isSpedUser && isUploading && "opacity-40 pointer-events-none transition-opacity")}>
           {/* Summary cards */}
           {!isSpedUser && (
             <div className="grid grid-cols-4 gap-3">
@@ -596,17 +633,6 @@ export default function AuftragsauswertungPage() {
         </div>
       )}
 
-      {/* Drag overlay */}
-      {!isSpedUser && isDragging && (
-        <div className="fixed inset-0 bg-blue-600/10 backdrop-blur-sm z-50 flex items-center justify-center pointer-events-none">
-          <div className="bg-white rounded-2xl px-10 py-8 shadow-2xl border-2 border-blue-300 flex flex-col items-center gap-4">
-            <div className="p-4 bg-blue-50 rounded-full">
-              <Upload className="h-10 w-10 text-blue-500" />
-            </div>
-            <p className="text-lg font-semibold text-slate-700">CSV ablegen zum Ersetzen</p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

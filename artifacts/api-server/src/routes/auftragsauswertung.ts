@@ -47,7 +47,7 @@ function parseCsv(text: string) {
   const colSpediteur = idx(["spediteur"]);
   const colRelation  = idx(["relation"]);
   const colKarton    = idx(["kartonanz"]);
-  const colNtgew     = idx(["ntgew14g"]);
+  const colBeleg     = idx(["beleg"]);
 
   // "name 1" appears twice: 1st = Kundenname, 2nd = Speditionsname
   let spedNameCol = -1;
@@ -66,7 +66,7 @@ function parseCsv(text: string) {
     spedName: string;
     leitgebiet: string;
     kartons: number;
-    ntgew: number;
+    beleg: string;
   }> = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -81,15 +81,51 @@ function parseCsv(text: string) {
       spedName:   spedNameCol >= 0 ? get(spedNameCol) : "",
       leitgebiet: get(colRelation),
       kartons:    parseInt(get(colKarton)) || 0,
-      ntgew:      parseFloat(get(colNtgew).replace(",", ".")) || 0,
+      beleg:      get(colBeleg),
     });
   }
   return rows;
 }
 
+// Parse DownloadDark CSV: VBELN → NTGEW14G lookup map
+function parseDarkCsv(text: string): Map<string, number> {
+  const map = new Map<string, number>();
+  const lines = text.split(/\r?\n/).filter((l) => l.trim());
+  if (lines.length < 2) return map;
+
+  // Try semicolon first, then comma
+  const sep = lines[0].includes(";") ? ";" : ",";
+  const headers = lines[0]
+    .split(sep)
+    .map((h) => h.trim().replace(/^\uFEFF/, "").toLowerCase());
+
+  const idx = (keywords: string[]) => {
+    for (const kw of keywords) {
+      const i = headers.findIndex((h) => h.includes(kw));
+      if (i >= 0) return i;
+    }
+    return -1;
+  };
+
+  const colVbeln = idx(["vbeln"]);
+  const colNtgew = idx(["ntgew14g"]);
+  if (colVbeln < 0 || colNtgew < 0) return map;
+
+  for (let i = 1; i < lines.length; i++) {
+    const cells = lines[i].split(sep);
+    const get = (col: number) => (col >= 0 ? (cells[col] ?? "").trim() : "");
+    const vbeln = get(colVbeln);
+    if (!vbeln) continue;
+    const ntgew = parseFloat(get(colNtgew).replace(",", ".")) || 0;
+    map.set(vbeln, (map.get(vbeln) ?? 0) + ntgew);
+  }
+  return map;
+}
+
 function buildResults(
   rows: ReturnType<typeof parseCsv>,
-  spedByNr: Map<string, { id: number; name: string }>
+  spedByNr: Map<string, { id: number; name: string }>,
+  darkMap: Map<string, number>
 ) {
   type LgEntry  = { auftraegeSet: Set<string>; paletten: number; punkte: number };
   type LtEntry  = { auftraegeSet: Set<string>; paletten: number; punkte: number; leitgebiete: Map<string, LgEntry> };
@@ -117,7 +153,7 @@ function buildResults(
         liefertermine:  new Map(),
       });
     }
-    const rowPunkte = row.ntgew * 3;
+    const rowPunkte = (darkMap.get(row.beleg) ?? 0) * 3;
     const g = grouped.get(row.spediteurNr)!;
     if (row.auftrag) g.auftraegeSet.add(row.auftrag);
     g.paletten++;
@@ -257,15 +293,28 @@ router.post("/auftragsauswertung/upload", requireAuth, async (req, res) => {
       return res.status(403).json({ error: "Keine Berechtigung für Auftragsauswertung" });
     }
 
-    const { csv, filename } = req.body as { csv?: string; filename?: string };
-    if (!csv?.trim()) {
-      return res.status(400).json({ error: "Keine CSV-Daten übermittelt" });
+    const { zlthu2, dark, csv, filename } = req.body as {
+      zlthu2?: string; dark?: string;
+      csv?: string; filename?: string;
+    };
+
+    // Accept either the new dual-upload format (zlthu2+dark) or the legacy single-csv format
+    const zlthu2Csv = zlthu2 ?? csv ?? "";
+    const darkCsv   = dark ?? "";
+
+    if (!zlthu2Csv.trim()) {
+      return res.status(400).json({ error: "Keine ZLTHU2-Daten übermittelt" });
+    }
+    if (!darkCsv.trim()) {
+      return res.status(400).json({ error: "Keine DownloadDark-Daten übermittelt (NTGEW14G-Datei fehlt)" });
     }
 
-    const rows = parseCsv(csv);
+    const rows = parseCsv(zlthu2Csv);
     if (rows.length === 0) {
       return res.status(400).json({ error: "Keine auswertbaren Zeilen gefunden (Spediteur-Spalte leer?)" });
     }
+
+    const darkMap = parseDarkCsv(darkCsv);
 
     // Load active speditionen for matching by speditionsnummer
     const spedResult = await pool.query(
@@ -278,7 +327,7 @@ router.post("/auftragsauswertung/upload", requireAuth, async (req, res) => {
       }
     }
 
-    const results = buildResults(rows, spedByNr);
+    const results = buildResults(rows, spedByNr, darkMap);
     const totalPaletten  = results.reduce((s, r) => s + r.paletten, 0);
     const totalAuftraege = results.reduce((s, r) => s + r.auftraege, 0);
     const totalPunkte    = Math.round(results.reduce((s, r) => s + r.punkte, 0) * 100) / 100;
