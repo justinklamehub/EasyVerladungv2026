@@ -338,9 +338,11 @@ router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
 
     // Build Auswertung set: key = "speditionId::relation" (only matched entries)
     // Also track meta per key for the "auftragOhneLkw" list
+    type LieferterminDetail = { lfdat: string; paletten: number; punkte: number };
     type AuftragEntry = {
       spediteurNr: string; speditionId: number; speditionName: string;
       leitgebiet: string; paletten: number; punkte: number;
+      liefertermine: LieferterminDetail[];
     };
     const auftragMap = new Map<string, AuftragEntry>();
     for (const sped of results) {
@@ -357,13 +359,30 @@ router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
               leitgebiet: rel,
               paletten: 0,
               punkte: 0,
+              liefertermine: [],
             });
           }
           const entry = auftragMap.get(key)!;
           entry.paletten += lg.paletten ?? 0;
           entry.punkte   += lg.punkte ?? 0;
+          // Accumulate per-Liefertermin detail
+          const existing = entry.liefertermine.find((x) => x.lfdat === lt.lfdat);
+          if (existing) {
+            existing.paletten += lg.paletten ?? 0;
+            existing.punkte   += lg.punkte ?? 0;
+          } else {
+            entry.liefertermine.push({
+              lfdat:    lt.lfdat,
+              paletten: lg.paletten ?? 0,
+              punkte:   lg.punkte ?? 0,
+            });
+          }
         }
       }
+    }
+    // Sort each liefertermine list chronologically
+    for (const entry of auftragMap.values()) {
+      entry.liefertermine.sort((a, b) => a.lfdat.localeCompare(b.lfdat));
     }
 
     // Load open shipments (not Abgefertigt/Storniert)

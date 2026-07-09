@@ -75,6 +75,7 @@ interface AuftragOhneLkwEntry {
   leitgebiet: string;
   paletten: number;
   punkte: number;
+  liefertermine: { lfdat: string; paletten: number; punkte: number }[];
 }
 
 interface KapazitaetAbweichungEntry {
@@ -772,25 +773,45 @@ export default function AuftragsauswertungPage() {
                     <p className="text-xs text-slate-400 mb-3">
                       Diese Speditionen haben Einträge in der Auswertung, aber keine offenen LKWs in der Verladungsverwaltung.
                     </p>
-                    <div className="space-y-1">
+                    <div className="space-y-2">
                       {vergleich.auftragOhneLkw.map((e) => (
                         <div
                           key={`${e.speditionId}-${e.leitgebiet}`}
-                          className="flex items-center gap-3 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg flex-wrap"
+                          className="bg-blue-50 border border-blue-100 rounded-lg overflow-hidden"
                         >
-                          <span className="text-sm font-medium text-slate-700 min-w-[140px]">{e.speditionName}</span>
-                          {e.leitgebiet && (
-                            <span className="text-xs bg-blue-100 text-blue-700 rounded px-2 py-0.5 font-mono">
-                              {e.leitgebiet}
+                          {/* Header row */}
+                          <div className="flex items-center gap-3 px-3 py-2 flex-wrap">
+                            <span className="text-sm font-medium text-slate-700 min-w-[140px]">{e.speditionName}</span>
+                            {e.leitgebiet && (
+                              <span className="text-xs bg-blue-100 text-blue-700 rounded px-2 py-0.5 font-mono">
+                                {e.leitgebiet}
+                              </span>
+                            )}
+                            <span className="text-xs text-slate-500 tabular-nums ml-auto">
+                              Gesamt: <strong>{e.paletten}</strong>&thinsp;Pal.
+                              {(e.punkte ?? 0) > 0 && (
+                                <span className="text-violet-500 ml-2">
+                                  {e.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+                                </span>
+                              )}
                             </span>
-                          )}
-                          <span className="text-xs text-slate-400 tabular-nums">
-                            {e.paletten}&thinsp;Pal.
-                          </span>
-                          {(e.punkte ?? 0) > 0 && (
-                            <span className="text-xs font-medium text-violet-500 tabular-nums">
-                              {e.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
-                            </span>
+                          </div>
+                          {/* Liefertermin breakdown */}
+                          {(e.liefertermine ?? []).length > 0 && (
+                            <div className="border-t border-blue-100 px-3 py-1.5 space-y-0.5">
+                              {(e.liefertermine ?? []).map((lt) => (
+                                <div key={lt.lfdat} className="flex items-center gap-3 text-xs text-slate-500">
+                                  <span className="text-slate-400 w-4 shrink-0">↳</span>
+                                  <span className="font-medium text-slate-600 min-w-[120px]">{formatLfdat(lt.lfdat)}</span>
+                                  <span className="tabular-nums">{lt.paletten}&thinsp;Pal.</span>
+                                  {lt.punkte > 0 && (
+                                    <span className="tabular-nums text-violet-400">
+                                      {lt.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           )}
                         </div>
                       ))}
