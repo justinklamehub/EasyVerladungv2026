@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
   useGetShipment,
   useCreateShipment,
@@ -302,6 +303,51 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     staleTime: 60_000,
   });
 
+  // Unknown-relation confirmation dialog state
+  const [unknownRelDialog, setUnknownRelDialog] = useState<{ relation: string; spedId: number } | null>(null);
+  const [unknownRelOrt, setUnknownRelOrt] = useState("");
+  const [unknownRelCreating, setUnknownRelCreating] = useState(false);
+
+  const createRelationMutation = useMutation({
+    mutationFn: ({ spedId, kuerzel, ort }: { spedId: number; kuerzel: string; ort: string }) =>
+      customFetch(`/api/speditionen/${spedId}/relationen`, {
+        method: "POST",
+        body: JSON.stringify({ kuerzel, ort }),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["spedition-relationen", spedIdForSuggestions] });
+    },
+  });
+
+  const executeSave = () => {
+    const data: any = {
+      bezeichnung: form.bezeichnung || undefined,
+      kennzeichen: form.kennzeichen || undefined,
+      relation: form.relation || undefined,
+      lkwArt: form.lkwArt || undefined,
+      etaDate: form.etaDate || undefined,
+      etaTime: form.etaTime || undefined,
+      bemerkungen: form.bemerkungen || undefined,
+      telefon: form.telefon || undefined,
+    };
+    if (isCometUser) {
+      data.ataDate = form.ataDate || undefined;
+      data.ataTime = form.ataTime || undefined;
+      data.tor = (form.tor && form.tor !== "__none__") ? form.tor : undefined;
+      data.status = form.status;
+    }
+    if (form.wareStatus) data.wareStatus = form.wareStatus;
+    if (isCometUser && canEditPerm) {
+      data.speditionId = form.speditionId ? parseInt(form.speditionId) : undefined;
+      data.subSpedition = form.subSpedition || null;
+    }
+    if (isEditing && shipmentId) {
+      updateMutation.mutate({ id: shipmentId, data });
+    } else {
+      createMutation.mutate({ data: { ...data, status: form.status || "Angemeldet" } });
+    }
+  };
+
   const handleSave = () => {
     if (!isEditing) {
       const missing = new Set<string>();
@@ -317,37 +363,21 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
         return;
       }
       setFormErrors(new Set());
+
+      // Check if relation is known in Stammdaten
+      const enteredRel = form.relation.trim().toLowerCase();
+      const knownRelations = relationenSuggestions ?? [];
+      const isKnown = knownRelations.length === 0 || knownRelations.some(
+        (r) => (r.kuerzel ?? "").toLowerCase() === enteredRel || r.name.toLowerCase() === enteredRel
+      );
+      if (!isKnown && spedIdForSuggestions) {
+        setUnknownRelOrt("");
+        setUnknownRelDialog({ relation: form.relation.trim(), spedId: spedIdForSuggestions });
+        return;
+      }
     }
 
-    const data: any = {
-      bezeichnung: form.bezeichnung || undefined,
-      kennzeichen: form.kennzeichen || undefined,
-      relation: form.relation || undefined,
-      lkwArt: form.lkwArt || undefined,
-      etaDate: form.etaDate || undefined,
-      etaTime: form.etaTime || undefined,
-      bemerkungen: form.bemerkungen || undefined,
-      telefon: form.telefon || undefined,
-    };
-
-    if (isCometUser) {
-      data.ataDate = form.ataDate || undefined;
-      data.ataTime = form.ataTime || undefined;
-      data.tor = (form.tor && form.tor !== "__none__") ? form.tor : undefined;
-      data.status = form.status;
-    }
-    if (form.wareStatus) data.wareStatus = form.wareStatus;
-
-    if (isCometUser && canEditPerm) {
-      data.speditionId = form.speditionId ? parseInt(form.speditionId) : undefined;
-      data.subSpedition = form.subSpedition || null;
-    }
-
-    if (isEditing && shipmentId) {
-      updateMutation.mutate({ id: shipmentId, data });
-    } else {
-      createMutation.mutate({ data: { ...data, status: form.status || "Angemeldet" } });
-    }
+    executeSave();
   };
 
   const isSaving = updateMutation.isPending || createMutation.isPending;
@@ -373,6 +403,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   }
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-4">
@@ -1026,5 +1057,94 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
         )}
       </SheetContent>
     </Sheet>
+
+    {/* Unknown-relation confirmation dialog */}
+    <Dialog
+      open={!!unknownRelDialog}
+      onOpenChange={(o) => { if (!o) { setUnknownRelDialog(null); setUnknownRelCreating(false); } }}
+    >
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <AlertCircle className="w-5 h-5 text-amber-500" />
+            Unbekannte Relation
+          </DialogTitle>
+          <DialogDescription>
+            Die Relation <strong className="text-slate-900 font-mono">{unknownRelDialog?.relation}</strong> ist nicht
+            in den Stammdaten hinterlegt.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-1">
+          <div className="space-y-2">
+            <p className="text-sm font-medium text-slate-700">Soll diese Relation in den Stammdaten angelegt werden?</p>
+            <div className="flex gap-2">
+              <div className="w-24 shrink-0">
+                <Label className="text-xs text-slate-400 mb-1 block">Kürzel</Label>
+                <Input
+                  value={unknownRelDialog?.relation ?? ""}
+                  disabled
+                  className="h-8 text-sm font-mono bg-slate-50"
+                />
+              </div>
+              <div className="flex-1">
+                <Label className="text-xs text-slate-400 mb-1 block">Ort (optional)</Label>
+                <Input
+                  value={unknownRelOrt}
+                  onChange={(e) => setUnknownRelOrt(e.target.value.toUpperCase())}
+                  placeholder="ORT"
+                  className="h-8 text-sm uppercase"
+                  autoFocus
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter className="flex-col sm:flex-col gap-2">
+          <Button
+            className="w-full"
+            disabled={unknownRelCreating}
+            onClick={async () => {
+              if (!unknownRelDialog) return;
+              setUnknownRelCreating(true);
+              try {
+                await createRelationMutation.mutateAsync({
+                  spedId: unknownRelDialog.spedId,
+                  kuerzel: unknownRelDialog.relation,
+                  ort: unknownRelOrt.trim(),
+                });
+                toast({ title: `Relation „${unknownRelDialog.relation}" angelegt` });
+              } catch {
+                toast({ title: "Relation konnte nicht angelegt werden", variant: "destructive" });
+              }
+              setUnknownRelCreating(false);
+              setUnknownRelDialog(null);
+              executeSave();
+            }}
+          >
+            {unknownRelCreating && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Relation anlegen + LKW anlegen
+          </Button>
+          <Button
+            variant="outline"
+            className="w-full"
+            disabled={unknownRelCreating}
+            onClick={() => { setUnknownRelDialog(null); executeSave(); }}
+          >
+            LKW trotzdem anlegen (ohne Stammdaten-Eintrag)
+          </Button>
+          <Button
+            variant="ghost"
+            className="w-full text-slate-500"
+            disabled={unknownRelCreating}
+            onClick={() => setUnknownRelDialog(null)}
+          >
+            Abbrechen
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }

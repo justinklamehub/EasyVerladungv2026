@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Plus, Trash2, AlertCircle, Upload, Download } from "lucide-react";
+import { Loader2, Plus, Trash2, AlertCircle, Upload, Download, TriangleAlert } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
@@ -213,7 +213,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   });
 
   const relationenBySpedId = useMemo(() => {
-    const map = new Map<number, { id: number; name: string }[]>();
+    const map = new Map<number, { id: number; name: string; kuerzel: string | null }[]>();
     uniqueSpedIds.forEach((spedId, i) => {
       const data = relationenQueries[i]?.data;
       if (data) map.set(spedId, data);
@@ -279,6 +279,10 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
     reader.readAsText(file, "utf-8");
   };
 
+  const [unknownRelWarning, setUnknownRelWarning] = useState<
+    { rowNum: number; relation: string }[] | null
+  >(null);
+
   const handleSubmit = () => {
     const invalid = new Map<number, Set<keyof RowData>>();
     for (const row of rows) {
@@ -300,6 +304,36 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
       return;
     }
     setFieldErrors(new Map());
+
+    // Check for unknown relations
+    const unknownRows: { rowNum: number; relation: string }[] = [];
+    rows.forEach((row, idx) => {
+      const rel = row.relation.trim();
+      if (!rel) return;
+      const spedId = row.speditionId
+        ? parseInt(row.speditionId, 10)
+        : isSpedUser && user?.speditionId
+        ? user.speditionId
+        : null;
+      if (!spedId) return;
+      const known = relationenBySpedId.get(spedId);
+      if (!known || known.length === 0) return; // no data loaded yet — skip check
+      const relLower = rel.toLowerCase();
+      const isKnown = known.some(
+        (r) => (r.kuerzel ?? "").toLowerCase() === relLower || r.name.toLowerCase() === relLower
+      );
+      if (!isKnown) unknownRows.push({ rowNum: idx + 1, relation: rel });
+    });
+
+    if (unknownRows.length > 0) {
+      setUnknownRelWarning(unknownRows);
+      return;
+    }
+
+    doSubmit();
+  };
+
+  const doSubmit = () => {
 
     const shipments = rows.map((r) => ({
       kennzeichen:  r.kennzeichen.trim(),
@@ -328,6 +362,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[95vw] w-[1200px] max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -567,5 +602,40 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    {/* Unbekannte-Relation WarnDialog */}
+    <Dialog open={!!unknownRelWarning} onOpenChange={(o) => { if (!o) setUnknownRelWarning(null); }}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <TriangleAlert className="w-5 h-5 text-amber-500" />
+            Unbekannte Relationen
+          </DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-1">
+          <p className="text-sm text-slate-600">
+            Folgende Zeilen enthalten Relationen, die nicht in den Stammdaten hinterlegt sind:
+          </p>
+          <ul className="text-sm space-y-1">
+            {unknownRelWarning?.map((r) => (
+              <li key={r.rowNum} className="flex items-center gap-2">
+                <span className="text-slate-400 w-16 shrink-0">Zeile {r.rowNum}:</span>
+                <span className="font-mono font-medium text-slate-800">{r.relation}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-sm text-slate-500">Sollen die Verladungen trotzdem angelegt werden?</p>
+        </div>
+        <DialogFooter className="flex-col sm:flex-col gap-2">
+          <Button className="w-full" onClick={() => { setUnknownRelWarning(null); doSubmit(); }}>
+            Trotzdem anlegen
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => setUnknownRelWarning(null)}>
+            Abbrechen
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   );
 }
