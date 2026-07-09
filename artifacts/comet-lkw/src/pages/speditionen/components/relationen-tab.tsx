@@ -75,7 +75,7 @@ export function RelationenTab({ speditionId }: Props) {
           <p className="text-sm">Noch keine Relationen definiert.</p>
         </div>
       ) : (
-        <div className="space-y-1.5">
+        <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
           {relationen.map((r) => (
             <div
               key={r.id}
