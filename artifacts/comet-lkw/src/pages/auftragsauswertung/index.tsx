@@ -202,14 +202,28 @@ export default function AuftragsauswertungPage() {
   );
   const allLfdat = useMemo(() => {
     const set = new Set<string>();
-    (result?.results ?? []).forEach(s => s.liefertermine.forEach(lt => { if (lt.lfdat) set.add(lt.lfdat); }));
+    (result?.results ?? [])
+      .filter(s => !filterSpedition || (s.speditionDbName ?? s.csvName) === filterSpedition)
+      .forEach(s => s.liefertermine.forEach(lt => { if (lt.lfdat) set.add(lt.lfdat); }));
     return Array.from(set).sort();
-  }, [result]);
+  }, [result, filterSpedition]);
   const allRelationen = useMemo(() => {
     const set = new Set<string>();
-    (result?.results ?? []).forEach(s => s.liefertermine.forEach(lt => lt.leitgebiete.forEach(lg => { if (lg.leitgebiet) set.add(lg.leitgebiet); })));
+    (result?.results ?? [])
+      .filter(s => !filterSpedition || (s.speditionDbName ?? s.csvName) === filterSpedition)
+      .forEach(s => s.liefertermine
+        .filter(lt => !filterLiefertermin || lt.lfdat === filterLiefertermin)
+        .forEach(lt => lt.leitgebiete.forEach(lg => { if (lg.leitgebiet) set.add(lg.leitgebiet); })));
     return Array.from(set).sort();
-  }, [result]);
+  }, [result, filterSpedition, filterLiefertermin]);
+
+  // Auto-reset dependent filters when parent filter changes and value no longer exists
+  useEffect(() => {
+    if (filterLiefertermin && !allLfdat.includes(filterLiefertermin)) setFilterLiefertermin("");
+  }, [allLfdat, filterLiefertermin]);
+  useEffect(() => {
+    if (filterRelation && !allRelationen.includes(filterRelation)) setFilterRelation("");
+  }, [allRelationen, filterRelation]);
 
   const hasActiveFilter = !!(filterSpedition || filterLiefertermin || filterRelation);
 
