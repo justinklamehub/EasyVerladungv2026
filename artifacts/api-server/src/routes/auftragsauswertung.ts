@@ -409,6 +409,8 @@ router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
       }
     }
 
+    const PALETTEN_PRO_LKW = 32;
+
     // Case A: LKW ohne Auftrag — shipment key NOT in auftragMap
     const lkwOhneAuftrag = Array.from(shipmentMap.values())
       .filter((g) => !auftragMap.has(`${g.speditionId}::${g.relation.toLowerCase()}`))
@@ -419,7 +421,37 @@ router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
       .filter((e) => !shipmentMap.has(`${e.speditionId}::${e.leitgebiet.toLowerCase()}`))
       .sort((a, b) => a.speditionName.localeCompare(b.speditionName) || a.leitgebiet.localeCompare(b.leitgebiet));
 
-    return res.json({ lkwOhneAuftrag, auftragOhneLkw });
+    // Case C: Both present but capacity doesn't match
+    // fehlendeLkw > 0 → need more LKWs; < 0 → surplus LKWs
+    type KapazitaetEntry = {
+      speditionId: number; speditionName: string; leitgebiet: string;
+      paletten: number; punkte: number;
+      lkwCount: number; lkwKapazitaet: number; fehlendeLkw: number;
+    };
+    const kapazitaetAbweichung: KapazitaetEntry[] = [];
+    for (const [key, auftrag] of auftragMap.entries()) {
+      const sGroup = shipmentMap.get(key);
+      if (!sGroup) continue; // handled by Case B
+      const lkwKapazitaet = sGroup.count * PALETTEN_PRO_LKW;
+      const fehlendeLkw = Math.ceil(auftrag.paletten / PALETTEN_PRO_LKW) - sGroup.count;
+      if (fehlendeLkw !== 0) {
+        kapazitaetAbweichung.push({
+          speditionId:   auftrag.speditionId,
+          speditionName: auftrag.speditionName,
+          leitgebiet:    auftrag.leitgebiet,
+          paletten:      auftrag.paletten,
+          punkte:        auftrag.punkte,
+          lkwCount:      sGroup.count,
+          lkwKapazitaet,
+          fehlendeLkw,
+        });
+      }
+    }
+    kapazitaetAbweichung.sort((a, b) =>
+      a.speditionName.localeCompare(b.speditionName) || a.leitgebiet.localeCompare(b.leitgebiet)
+    );
+
+    return res.json({ lkwOhneAuftrag, auftragOhneLkw, kapazitaetAbweichung });
   } catch (err) {
     console.error("[auftragsauswertung] vergleich", err);
     return res.status(500).json({ error: "Interner Fehler" });

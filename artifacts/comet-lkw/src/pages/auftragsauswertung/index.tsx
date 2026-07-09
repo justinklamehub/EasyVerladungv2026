@@ -77,9 +77,21 @@ interface AuftragOhneLkwEntry {
   punkte: number;
 }
 
+interface KapazitaetAbweichungEntry {
+  speditionId: number;
+  speditionName: string;
+  leitgebiet: string;
+  paletten: number;
+  punkte: number;
+  lkwCount: number;
+  lkwKapazitaet: number;
+  fehlendeLkw: number; // positive = need more, negative = surplus
+}
+
 interface VergleichResult {
   lkwOhneAuftrag: LkwOhneAuftragEntry[];
   auftragOhneLkw: AuftragOhneLkwEntry[];
+  kapazitaetAbweichung: KapazitaetAbweichungEntry[];
 }
 
 function formatLfdat(s: string): string {
@@ -705,13 +717,13 @@ export default function AuftragsauswertungPage() {
           )}
 
           {/* Abgleich mit offenen Verladungen */}
-          {vergleich && (vergleich.lkwOhneAuftrag.length > 0 || vergleich.auftragOhneLkw.length > 0) && (
+          {vergleich && (vergleich.lkwOhneAuftrag.length > 0 || vergleich.auftragOhneLkw.length > 0 || (vergleich.kapazitaetAbweichung ?? []).length > 0) && (
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
               <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
                 <span className="text-sm font-semibold text-slate-700">Abgleich mit offenen Verladungen</span>
                 <span className="ml-auto text-xs text-slate-400">
-                  {vergleich.lkwOhneAuftrag.length + vergleich.auftragOhneLkw.length} Abweichung{vergleich.lkwOhneAuftrag.length + vergleich.auftragOhneLkw.length !== 1 ? "en" : ""}
+                  {vergleich.lkwOhneAuftrag.length + vergleich.auftragOhneLkw.length + (vergleich.kapazitaetAbweichung ?? []).length} Abweichung{vergleich.lkwOhneAuftrag.length + vergleich.auftragOhneLkw.length + (vergleich.kapazitaetAbweichung ?? []).length !== 1 ? "en" : ""}
                 </span>
               </div>
               <div className="divide-y divide-slate-100">
@@ -785,12 +797,69 @@ export default function AuftragsauswertungPage() {
                     </div>
                   </div>
                 )}
+
+                {/* Case C: LKW-Kapazität passt nicht zur Auswertung */}
+                {(vergleich.kapazitaetAbweichung ?? []).length > 0 && (
+                  <div className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-rose-600 mb-2">
+                      LKW-Kapazität stimmt nicht ({(vergleich.kapazitaetAbweichung ?? []).length})
+                    </p>
+                    <p className="text-xs text-slate-400 mb-3">
+                      LKW sind angemeldet, aber die Kapazität (32 Pal./LKW) weicht von der Auswertung ab.
+                    </p>
+                    <div className="space-y-1.5">
+                      {(vergleich.kapazitaetAbweichung ?? []).map((e) => {
+                        const fehlt = e.fehlendeLkw > 0;
+                        return (
+                          <div
+                            key={`${e.speditionId}-${e.leitgebiet}`}
+                            className={cn(
+                              "px-3 py-2 border rounded-lg",
+                              fehlt
+                                ? "bg-rose-50 border-rose-100"
+                                : "bg-emerald-50 border-emerald-100"
+                            )}
+                          >
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="text-sm font-medium text-slate-700 min-w-[140px]">{e.speditionName}</span>
+                              {e.leitgebiet && (
+                                <span className={cn(
+                                  "text-xs rounded px-2 py-0.5 font-mono",
+                                  fehlt ? "bg-rose-100 text-rose-700" : "bg-emerald-100 text-emerald-700"
+                                )}>
+                                  {e.leitgebiet}
+                                </span>
+                              )}
+                              {/* LKW count */}
+                              <span className="text-xs text-slate-500 tabular-nums">
+                                {e.lkwCount}&thinsp;LKW × 32 = <strong>{e.lkwKapazitaet}</strong>&thinsp;Pal.
+                              </span>
+                              {/* Auswertung paletten */}
+                              <span className="text-xs text-slate-500 tabular-nums">
+                                Auswertung: <strong>{e.paletten}</strong>&thinsp;Pal.
+                              </span>
+                              {/* Delta */}
+                              <span className={cn(
+                                "ml-auto text-xs font-semibold tabular-nums px-2 py-0.5 rounded",
+                                fehlt
+                                  ? "bg-rose-100 text-rose-700"
+                                  : "bg-emerald-100 text-emerald-700"
+                              )}>
+                                {fehlt ? `+${e.fehlendeLkw} LKW fehlt${Math.abs(e.fehlendeLkw) !== 1 ? "en" : ""}` : `${e.fehlendeLkw} LKW überschuss`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {/* All-clear: no mismatches */}
-          {vergleich && vergleich.lkwOhneAuftrag.length === 0 && vergleich.auftragOhneLkw.length === 0 && (
+          {vergleich && vergleich.lkwOhneAuftrag.length === 0 && vergleich.auftragOhneLkw.length === 0 && (vergleich.kapazitaetAbweichung ?? []).length === 0 && (
             <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
               <span>Alle offenen Verladungen und Aufträge stimmen überein — kein Abweichung gefunden.</span>
