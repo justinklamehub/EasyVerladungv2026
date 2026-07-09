@@ -140,6 +140,8 @@ function buildResults(
   };
 
   const grouped = new Map<string, SpedEntry>();
+  // Track which Belege have already had their Punkte counted (count once per unique delivery)
+  const countedBelege = new Set<string>();
 
   for (const row of rows) {
     if (!grouped.has(row.spediteurNr)) {
@@ -156,7 +158,10 @@ function buildResults(
         liefertermine:  new Map(),
       });
     }
-    const rowPunkte = (darkMap.get(row.beleg) ?? 0) * 3;
+    // Punkte only counted once per unique Beleg (delivery number)
+    const isNewBeleg = !!row.beleg && !countedBelege.has(row.beleg);
+    if (row.beleg) countedBelege.add(row.beleg);
+    const rowPunkte = isNewBeleg ? (darkMap.get(row.beleg) ?? 0) * 3 : 0;
     const g = grouped.get(row.spediteurNr)!;
     if (row.auftrag) g.auftraegeSet.add(row.auftrag);
     g.paletten++;
