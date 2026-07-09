@@ -337,6 +337,13 @@ router.post("/push/send-custom", requireAuth, async (req: any, res) => {
       return res.status(400).json({ error: "Titel ist erforderlich" });
     }
 
+    const senderRows = await db
+      .select({ username: usersTable.username, email: usersTable.email })
+      .from(usersTable)
+      .where(eq(usersTable.id, req.session.userId!))
+      .limit(1);
+    const senderName = senderRows[0]?.username || senderRows[0]?.email || "Unbekannt";
+
     let userIds: number[] = [];
     if (target === "user") {
       if (!userId) return res.status(400).json({ error: "Benutzer erforderlich" });
@@ -356,6 +363,9 @@ router.post("/push/send-custom", requireAuth, async (req: any, res) => {
     }
 
     const trimmedMessage = (message ?? "").trim() || null;
+    const messageWithSender = trimmedMessage
+      ? `${trimmedMessage}\n\nVon: ${senderName}`
+      : `Von: ${senderName}`;
 
     const created = await db
       .insert(notifications)
@@ -363,7 +373,7 @@ router.post("/push/send-custom", requireAuth, async (req: any, res) => {
         userIds.map((uid) => ({
           userId: uid,
           title: trimmedTitle,
-          message: trimmedMessage,
+          message: messageWithSender,
           type: "info" as const,
         }))
       )
@@ -378,7 +388,7 @@ router.post("/push/send-custom", requireAuth, async (req: any, res) => {
 
     sendPushToUsers(userIds, {
       title: trimmedTitle,
-      message: trimmedMessage ?? undefined,
+      message: messageWithSender,
       tag: "comet-custom",
     }).catch((err) => {
       console.warn("Custom Push Fehler:", err?.message ?? err);
