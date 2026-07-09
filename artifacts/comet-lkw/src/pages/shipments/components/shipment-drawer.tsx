@@ -295,7 +295,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   });
 
   const spedIdForSuggestions = parseInt(form.speditionId || "0", 10) || null;
-  const { data: relationenSuggestions } = useQuery<{ id: number; name: string }[]>({
+  const { data: relationenSuggestions } = useQuery<{ id: number; name: string; kuerzel: string | null }[]>({
     queryKey: ["spedition-relationen", spedIdForSuggestions],
     queryFn: () => customFetch(`/api/speditionen/${spedIdForSuggestions}/relationen`),
     enabled: !!spedIdForSuggestions && open,
@@ -512,7 +512,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                 />
                 {relationenSuggestions && relationenSuggestions.length > 0 && (
                   <datalist id="relation-datalist">
-                    {relationenSuggestions.map(r => <option key={r.id} value={r.name} />)}
+                    {relationenSuggestions.map(r => <option key={r.id} value={r.kuerzel ?? r.name} />)}
                   </datalist>
                 )}
               </div>

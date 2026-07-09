@@ -206,7 +206,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   const relationenQueries = useQueries({
     queries: uniqueSpedIds.map((spedId) => ({
       queryKey: ["spedition-relationen", spedId],
-      queryFn: () => customFetch(`/api/speditionen/${spedId}/relationen`) as Promise<{ id: number; name: string }[]>,
+      queryFn: () => customFetch(`/api/speditionen/${spedId}/relationen`) as Promise<{ id: number; name: string; kuerzel: string | null }[]>,
       enabled: open,
       staleTime: 60_000,
     })),
@@ -362,7 +362,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
         {[...relationenBySpedId.entries()].map(([spedId, rels]) =>
           rels.length > 0 ? (
             <datalist key={spedId} id={`relation-datalist-${spedId}`}>
-              {rels.map((r) => <option key={r.id} value={r.name} />)}
+              {rels.map((r) => <option key={r.id} value={r.kuerzel ?? r.name} />)}
             </datalist>
           ) : null
         )}
