@@ -4,7 +4,8 @@
 - [Wouter catch-all routing](wouter-catchall-routing.md) — use path="*" not path="/:path*" for multi-segment catch-all routes; regexparam treats /:path* as single-segment only.
 - [Production deployment gotchas](production-deployment.md) — roles/role_permissions tables missing from Drizzle schema; COOKIE_SECURE required for HTTPS; PM2 env not refreshed without --update-env.
 - [COMET LKW permission refactor pattern](comet-lkw-permissions-pattern.md) — shared usePermissions hook; role checks stay only for data-scope; actions use permissions API.
-- [Auftragsauswertung CSV schema](auftragsauswertung-csv.md) — SAP export, semicolon-delimited; "Name 1" appears twice (col5=Kunde, col17=Spedition); Spediteur=col16; matched via speditionsnummer in speditionen table.
+- [Auftragsauswertung CSV schema](auftragsauswertung-csv.md) — dual-file upload: ZLTHU2 (col "Beleg"=Liefernr, join key) + DownloadDark (VBELN+NTGEW14G); punkte=NTGEW14G*3 joined on Beleg=VBELN.
+- [API server body size limit](api-body-limit.md) — global json/urlencoded limit is 50mb in app.ts; dual-CSV upload previously hit 10mb cap with PayloadTooLargeError (413).
 - [COMET LKW object storage image URLs](comet-lkw-object-storage-urls.md) — strip leading /objects from stored objectPath before appending to /storage/objects route, or the URL doubles the segment.
 - [SOTI Surf kiosk camera access](soti-surf-kiosk-camera.md) — 3-layer checklist (HTTPS, Android app permission, MobiControl WebView permission) for getUserMedia in kiosk WebViews.
 - [Silent fetch .catch(() => null)](silent-fetch-catch-antipattern.md) — swallowing failed fetch results in submit flows causes silent data loss (e.g. photos "not saving") with no user-visible error; surface failures instead.
