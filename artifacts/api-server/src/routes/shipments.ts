@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
 import {
   shipmentsTable,
   speditionenTable,
@@ -18,6 +18,28 @@ import { sendEventEmail, buildShipmentTableHtml, buildShipmentTableText, buildBu
 import type { Server as IOServer } from "socket.io";
 
 const router = Router();
+
+async function getEffectiveDailyLimit(speditionId: number): Promise<number | null> {
+  const [spedRow] = await db
+    .select({ dailyShipmentLimit: speditionenTable.dailyShipmentLimit })
+    .from(speditionenTable)
+    .where(eq(speditionenTable.id, speditionId))
+    .limit(1);
+  const staticLimit = spedRow?.dailyShipmentLimit ?? null;
+  try {
+    const result = await pool.query(
+      `SELECT MIN(max_verladungen)::int AS lim FROM spedition_shipment_limits
+       WHERE spedition_id = $1 AND von <= NOW() AND bis >= NOW()`,
+      [speditionId],
+    );
+    const periodLimit: number | null = result.rows[0]?.lim ?? null;
+    const candidates = [staticLimit, periodLimit].filter((l): l is number => l != null);
+    if (candidates.length === 0) return null;
+    return Math.min(...candidates);
+  } catch {
+    return staticLimit;
+  }
+}
 
 function getIO(req: any): IOServer | null {
   return req.app.get("io") || null;
@@ -152,12 +174,8 @@ router.post("/shipments", requireAuth, async (req, res) => {
     }
 
     if (targetSpeditionId) {
-      const [spedRow] = await db
-        .select({ dailyShipmentLimit: speditionenTable.dailyShipmentLimit })
-        .from(speditionenTable)
-        .where(eq(speditionenTable.id, targetSpeditionId))
-        .limit(1);
-      if (spedRow?.dailyShipmentLimit != null) {
+      const effectiveLimit = await getEffectiveDailyLimit(targetSpeditionId);
+      if (effectiveLimit != null) {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         const [countRow] = await db
@@ -165,9 +183,9 @@ router.post("/shipments", requireAuth, async (req, res) => {
           .from(shipmentsTable)
           .where(and(eq(shipmentsTable.speditionId, targetSpeditionId), gte(shipmentsTable.createdAt, todayStart)));
         const todayCount = Number(countRow?.count ?? 0);
-        if (todayCount >= spedRow.dailyShipmentLimit) {
+        if (todayCount >= effectiveLimit) {
           return res.status(429).json({
-            error: `Tageslimit erreicht: Diese Spedition darf maximal ${spedRow.dailyShipmentLimit} Verladung${spedRow.dailyShipmentLimit !== 1 ? "en" : ""} pro Tag anlegen.`,
+            error: `Tageslimit erreicht: Diese Spedition darf maximal ${effectiveLimit} Verladung${effectiveLimit !== 1 ? "en" : ""} pro Tag anlegen.`,
           });
         }
       }
@@ -310,12 +328,8 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
 
     const bulkSpeditionId = shipments[0]?.speditionId || sessionSpeditionId || null;
     if (bulkSpeditionId) {
-      const [spedRow] = await db
-        .select({ dailyShipmentLimit: speditionenTable.dailyShipmentLimit })
-        .from(speditionenTable)
-        .where(eq(speditionenTable.id, bulkSpeditionId))
-        .limit(1);
-      if (spedRow?.dailyShipmentLimit != null) {
+      const effectiveLimit = await getEffectiveDailyLimit(bulkSpeditionId);
+      if (effectiveLimit != null) {
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
         const [countRow] = await db
@@ -323,15 +337,15 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
           .from(shipmentsTable)
           .where(and(eq(shipmentsTable.speditionId, bulkSpeditionId), gte(shipmentsTable.createdAt, todayStart)));
         const todayCount = Number(countRow?.count ?? 0);
-        const remaining = spedRow.dailyShipmentLimit - todayCount;
+        const remaining = effectiveLimit - todayCount;
         if (remaining <= 0) {
           return res.status(429).json({
-            error: `Tageslimit erreicht: Diese Spedition darf maximal ${spedRow.dailyShipmentLimit} Verladung${spedRow.dailyShipmentLimit !== 1 ? "en" : ""} pro Tag anlegen.`,
+            error: `Tageslimit erreicht: Diese Spedition darf maximal ${effectiveLimit} Verladung${effectiveLimit !== 1 ? "en" : ""} pro Tag anlegen.`,
           });
         }
         if (shipments.length > remaining) {
           return res.status(429).json({
-            error: `Tageslimit überschritten: Noch ${remaining} von ${spedRow.dailyShipmentLimit} Verladung${spedRow.dailyShipmentLimit !== 1 ? "en" : ""} heute möglich, aber ${shipments.length} angefordert.`,
+            error: `Tageslimit überschritten: Noch ${remaining} von ${effectiveLimit} Verladung${effectiveLimit !== 1 ? "en" : ""} heute möglich, aber ${shipments.length} angefordert.`,
           });
         }
       }

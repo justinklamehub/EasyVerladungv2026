@@ -372,4 +372,79 @@ router.delete("/speditionen/:id/contacts/:contactId", requireAuth, async (req, r
   }
 });
 
+// ── Zeitraum-Tageslimits ──────────────────────────────────────────────────────
+
+router.get("/speditionen/:id/limits", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const result = await pool.query(
+      "SELECT id, spedition_id AS \"speditionId\", von, bis, max_verladungen AS \"maxVerladungen\", created_at AS \"createdAt\" FROM spedition_shipment_limits WHERE spedition_id = $1 ORDER BY von",
+      [id],
+    );
+    return res.json(result.rows);
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/speditionen/:id/limits", requireAuth, async (req, res) => {
+  try {
+    if (req.session.role !== "comet_admin") {
+      return res.status(403).json({ error: "Nur COMET Admin kann Limits anlegen" });
+    }
+    const speditionId = Number(req.params.id);
+    const { von, bis, maxVerladungen } = req.body;
+    if (!von || !bis || !maxVerladungen) {
+      return res.status(400).json({ error: "von, bis und maxVerladungen sind erforderlich" });
+    }
+    if (new Date(von) >= new Date(bis)) {
+      return res.status(400).json({ error: "von muss vor bis liegen" });
+    }
+    const result = await pool.query(
+      `INSERT INTO spedition_shipment_limits (spedition_id, von, bis, max_verladungen)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id, spedition_id AS "speditionId", von, bis, max_verladungen AS "maxVerladungen", created_at AS "createdAt"`,
+      [speditionId, von, bis, Number(maxVerladungen)],
+    );
+    await logAudit(req.session.userId!, "spedition", speditionId, "limit_created", null, `${von} - ${bis}: ${maxVerladungen}/Tag`);
+    return res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/speditionen/:id/limits/:limitId", requireAuth, async (req, res) => {
+  try {
+    if (req.session.role !== "comet_admin") {
+      return res.status(403).json({ error: "Nur COMET Admin kann Limits löschen" });
+    }
+    const speditionId = Number(req.params.id);
+    const limitId = Number(req.params.limitId);
+    await pool.query(
+      "DELETE FROM spedition_shipment_limits WHERE id = $1 AND spedition_id = $2",
+      [limitId, speditionId],
+    );
+    await logAudit(req.session.userId!, "spedition", speditionId, "limit_deleted", null, String(limitId));
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Startup: Tabellen sicherstellen ──────────────────────────────────────────
+
+export async function ensureSpeditionLimitsTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS spedition_shipment_limits (
+      id SERIAL PRIMARY KEY,
+      spedition_id INTEGER NOT NULL REFERENCES speditionen(id) ON DELETE CASCADE,
+      von TIMESTAMPTZ NOT NULL,
+      bis TIMESTAMPTZ NOT NULL,
+      max_verladungen INTEGER NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
 export default router;

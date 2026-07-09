@@ -20,6 +20,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2, Plus } from "lucide-react";
 import { ContactsTab } from "./contacts-tab";
+import { LimitsTab } from "./limits-tab";
 
 interface Spedition {
   id: number;
@@ -333,6 +334,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
             <TabsTrigger value="stamm" className="flex-1">Stammdaten</TabsTrigger>
             <TabsTrigger value="tarife" className="flex-1">Tarife</TabsTrigger>
             {isEditing && <TabsTrigger value="kontakte" className="flex-1">Ansprechpartner</TabsTrigger>}
+            {isEditing && <TabsTrigger value="tageslimits" className="flex-1">Tageslimits</TabsTrigger>}
             {isEditing && <TabsTrigger value="rechte" className="flex-1">Zugriffsrechte</TabsTrigger>}
           </TabsList>
 
@@ -457,6 +459,15 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
                 Hinterlegen Sie Ansprechpartner für verschiedene Bereiche (Paletten, Verladungen, Buchhaltung …).
               </p>
               <ContactsTab speditionId={editSpedition!.id} />
+            </TabsContent>
+          )}
+
+          {isEditing && (
+            <TabsContent value="tageslimits" className="min-h-[200px]">
+              <p className="text-sm text-slate-500 mb-3">
+                Begrenzen Sie die Anzahl der Verladungen, die diese Spedition in einem bestimmten Zeitraum pro Tag anlegen darf. Mehrere Limits sind möglich. Abgelaufene Limits werden automatisch gelöscht.
+              </p>
+              <LimitsTab speditionId={editSpedition!.id} />
             </TabsContent>
           )}
 

@@ -262,6 +262,17 @@ async function runReconciliationReminderCheck() {
   }
 }
 
+// ── Abgelaufene Zeitraum-Limits aufräumen ────────────────────────────────────
+
+async function runExpiredLimitsCleanup() {
+  const result = await pool.query(
+    "DELETE FROM spedition_shipment_limits WHERE bis < NOW() RETURNING id",
+  );
+  if (result.rowCount && result.rowCount > 0) {
+    logger.info({ count: result.rowCount }, "Abgelaufene Speditions-Limits gelöscht");
+  }
+}
+
 // ── Scheduler starten ─────────────────────────────────────────────────────────
 
 async function runAllChecks(io: SocketIOServer) {
@@ -280,6 +291,9 @@ async function runAllChecks(io: SocketIOServer) {
   );
   await runReconciliationReminderCheck().catch((e) =>
     logger.warn({ err: e }, "Reconciliation reminder check failed — non-fatal")
+  );
+  await runExpiredLimitsCleanup().catch((e) =>
+    logger.warn({ err: e }, "Expired limits cleanup failed — non-fatal")
   );
 }
 
