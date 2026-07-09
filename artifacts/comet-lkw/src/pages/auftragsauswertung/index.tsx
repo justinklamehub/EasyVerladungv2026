@@ -381,7 +381,7 @@ export default function AuftragsauswertungPage() {
                   <SelectTrigger className="h-8 text-xs w-[180px]">
                     <SelectValue placeholder="Spedition…" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-60 overflow-y-auto">
                     {allSpeditionen.map(s => (
                       <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
                     ))}
@@ -392,7 +392,7 @@ export default function AuftragsauswertungPage() {
                 <SelectTrigger className="h-8 text-xs w-[160px]">
                   <SelectValue placeholder="Liefertermin…" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60 overflow-y-auto">
                   {allLfdat.map(d => (
                     <SelectItem key={d} value={d} className="text-xs">{formatLfdat(d)}</SelectItem>
                   ))}
@@ -402,7 +402,7 @@ export default function AuftragsauswertungPage() {
                 <SelectTrigger className="h-8 text-xs w-[180px]">
                   <SelectValue placeholder="Relation…" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="max-h-60 overflow-y-auto">
                   {allRelationen.map(r => (
                     <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
                   ))}
