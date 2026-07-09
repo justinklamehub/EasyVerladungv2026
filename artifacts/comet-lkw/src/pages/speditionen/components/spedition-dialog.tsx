@@ -16,7 +16,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useMutation } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2, Plus } from "lucide-react";
 import { ContactsTab } from "./contacts-tab";
@@ -98,7 +99,6 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
   });
 
   const [newReceivingId, setNewReceivingId] = useState("__none__");
-  const [newLevel, setNewLevel] = useState("view");
 
   const createMutation = useCreateSpedition({
     mutation: {
@@ -168,11 +168,25 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
     }
   };
 
+  const setLevelMutation = useMutation({
+    mutationFn: ({ spedId, receivingId, level }: { spedId: number; receivingId: number; level: "view" | "edit" | "pending" }) =>
+      customFetch(`/api/speditionen/${spedId}/permissions/${receivingId}`, {
+        method: "PUT",
+        body: JSON.stringify({ permissionLevel: level }),
+        headers: { "Content-Type": "application/json" },
+      }),
+    onSuccess: () => {
+      if (editSpedition) queryClient.invalidateQueries({ queryKey: getListSpeditionPermissionsQueryKey(editSpedition.id) });
+      toast({ title: "Berechtigung aktualisiert" });
+    },
+    onError: (e: any) => toast({ title: e?.message ?? "Fehler", variant: "destructive" }),
+  });
+
   const handleAddPermission = () => {
     if (!editSpedition || newReceivingId === "__none__") return;
     setPermMutation.mutate({
       id: editSpedition.id,
-      data: { receivingSpeditionId: parseInt(newReceivingId), permissionLevel: newLevel as any },
+      data: { receivingSpeditionId: parseInt(newReceivingId), permissionLevel: "pending" as any },
     });
   };
 
@@ -182,22 +196,27 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
     s.id !== editSpedition?.id && !(permissions ?? []).some(p => p.receivingSpeditionId === s.id)
   );
 
+  const permLevelBadge = (level: string) => {
+    if (level === "edit") return <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">Bearbeiten</Badge>;
+    if (level === "view") return <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">Lesen</Badge>;
+    return <Badge variant="outline" className="bg-slate-100 text-slate-500 border-slate-200">Ausstehend</Badge>;
+  };
+
   const permissionsTab = (
     <TabsContent value="rechte" className="space-y-4">
       <p className="text-sm text-slate-500">
-        Legen Sie fest, welche anderen Speditionen die Sendungen dieser Spedition einsehen oder bearbeiten dürfen.
+        Definieren Sie vorab, welche Partner-Speditionen Zugang zu den Verladungen dieser Spedition erhalten dürfen.
+        Die Speditionsadmins legen dann selbst fest, ob Lesen, Bearbeiten oder garnicht.
       </p>
 
       <div className="space-y-2">
         {!permissions || permissions.length === 0 ? (
-          <p className="text-sm text-slate-400 text-center py-3">Keine Berechtigungen vergeben.</p>
+          <p className="text-sm text-slate-400 text-center py-3">Keine Speditionen freigegeben.</p>
         ) : permissions.map(p => (
           <div key={p.receivingSpeditionId} className="flex items-center justify-between border border-slate-200 rounded-md px-3 py-2 bg-slate-50">
             <span className="text-sm font-medium text-slate-700">{p.receivingSpeditionName}</span>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={p.permissionLevel === "edit" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-slate-100 text-slate-600"}>
-                {p.permissionLevel === "edit" ? "Bearbeiten" : "Ansehen"}
-              </Badge>
+              {permLevelBadge(p.permissionLevel)}
               <Button
                 variant="ghost"
                 size="icon"
@@ -214,7 +233,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
       {otherSpeditionen && otherSpeditionen.length > 0 && (
         <div className="flex gap-2 items-end pt-2 border-t border-slate-100">
           <div className="flex-1 space-y-1">
-            <Label className="text-xs">Spedition</Label>
+            <Label className="text-xs">Spedition zur Whitelist hinzufügen</Label>
             <Select value={newReceivingId} onValueChange={setNewReceivingId}>
               <SelectTrigger className="h-9"><SelectValue placeholder="Wählen..." /></SelectTrigger>
               <SelectContent>
@@ -223,23 +242,14 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
               </SelectContent>
             </Select>
           </div>
-          <div className="w-36 space-y-1">
-            <Label className="text-xs">Niveau</Label>
-            <Select value={newLevel} onValueChange={setNewLevel}>
-              <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="view">Ansehen</SelectItem>
-                <SelectItem value="edit">Bearbeiten</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
           <Button
             size="sm"
-            className="h-9"
+            className="h-9 gap-1"
             onClick={handleAddPermission}
             disabled={newReceivingId === "__none__" || setPermMutation.isPending}
           >
             {setPermMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Freigeben
           </Button>
         </div>
       )}
@@ -254,64 +264,51 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
             <DialogTitle>Zugriffsrechte — {editSpedition.name}</DialogTitle>
           </DialogHeader>
           <Tabs defaultValue="rechte">
-            <TabsContent value="rechte" className="space-y-4 mt-0">
+            <TabsContent value="rechte" className="space-y-3 mt-0">
               <p className="text-sm text-slate-500">
-                Legen Sie fest, welche anderen Speditionen Ihre Verladungen anlegen oder bearbeiten dürfen.
+                COMET hat folgende Partner-Speditionen für den Zugriff auf Ihre Verladungen vorgemerkt.
+                Legen Sie für jeden Eintrag fest, welchen Zugang diese Spedition erhält.
               </p>
               <div className="space-y-2">
                 {!permissions || permissions.length === 0 ? (
-                  <p className="text-sm text-slate-400 text-center py-3">Keine Berechtigungen vergeben.</p>
-                ) : permissions.map(p => (
-                  <div key={p.receivingSpeditionId} className="flex items-center justify-between border border-slate-200 rounded-md px-3 py-2 bg-slate-50">
-                    <span className="text-sm font-medium text-slate-700">{p.receivingSpeditionName}</span>
-                    <div className="flex items-center gap-2">
-                      <Badge variant="outline" className={p.permissionLevel === "edit" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-slate-100 text-slate-600"}>
-                        {p.permissionLevel === "edit" ? "Bearbeiten" : "Ansehen"}
-                      </Badge>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
-                        onClick={() => delPermMutation.mutate({ id: editSpedition.id, receivingId: p.receivingSpeditionId })}
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </Button>
+                  <p className="text-sm text-slate-400 text-center py-4">
+                    Keine Speditionen von COMET vorgemerkt.
+                  </p>
+                ) : permissions.map(p => {
+                  const level = p.permissionLevel as string;
+                  const busy = setLevelMutation.isPending;
+                  return (
+                    <div key={p.receivingSpeditionId} className="flex items-center justify-between border border-slate-200 rounded-lg px-3 py-2.5 bg-slate-50 gap-3">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <span className="text-sm font-medium text-slate-700 truncate">{p.receivingSpeditionName}</span>
+                        {permLevelBadge(level)}
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Button size="sm" variant={level === "view" ? "default" : "outline"}
+                          className="h-7 px-2 text-xs gap-1"
+                          disabled={busy || level === "view"}
+                          onClick={() => setLevelMutation.mutate({ spedId: editSpedition.id, receivingId: p.receivingSpeditionId, level: "view" })}>
+                          Lesen
+                        </Button>
+                        <Button size="sm" variant={level === "edit" ? "default" : "outline"}
+                          className="h-7 px-2 text-xs gap-1"
+                          disabled={busy || level === "edit"}
+                          onClick={() => setLevelMutation.mutate({ spedId: editSpedition.id, receivingId: p.receivingSpeditionId, level: "edit" })}>
+                          Bearbeiten
+                        </Button>
+                        {level !== "pending" && (
+                          <Button size="sm" variant="outline"
+                            className="h-7 px-2 text-xs text-red-500 hover:text-red-700 hover:bg-red-50 border-red-200"
+                            disabled={busy}
+                            onClick={() => setLevelMutation.mutate({ spedId: editSpedition.id, receivingId: p.receivingSpeditionId, level: "pending" })}>
+                            Garnicht
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-              {otherSpeditionen && otherSpeditionen.length > 0 && (
-                <div className="flex gap-2 items-end pt-2 border-t border-slate-100">
-                  <div className="flex-1 space-y-1">
-                    <Label className="text-xs">Spedition</Label>
-                    <Select value={newReceivingId} onValueChange={setNewReceivingId}>
-                      <SelectTrigger className="h-9"><SelectValue placeholder="Wählen..." /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Wählen —</SelectItem>
-                        {otherSpeditionen.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="w-36 space-y-1">
-                    <Label className="text-xs">Niveau</Label>
-                    <Select value={newLevel} onValueChange={setNewLevel}>
-                      <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="view">Ansehen</SelectItem>
-                        <SelectItem value="edit">Bearbeiten</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    size="sm"
-                    className="h-9"
-                    onClick={handleAddPermission}
-                    disabled={newReceivingId === "__none__" || setPermMutation.isPending}
-                  >
-                    {setPermMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  </Button>
-                </div>
-              )}
             </TabsContent>
           </Tabs>
           <DialogFooter>

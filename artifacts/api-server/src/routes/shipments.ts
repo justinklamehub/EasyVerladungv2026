@@ -74,8 +74,9 @@ async function getSpeditionAccess(sessionSpeditionId: number | null): Promise<Sp
     .select()
     .from(speditionPermissionsTable)
     .where(eq(speditionPermissionsTable.receivingSpeditionId, sessionSpeditionId));
-  const readIds = [sessionSpeditionId, ...permissions.map((p) => p.grantingSpeditionId)];
-  const writeIds = [sessionSpeditionId, ...permissions.filter((p) => p.permissionLevel === "edit").map((p) => p.grantingSpeditionId)];
+  const active = permissions.filter((p) => p.permissionLevel === "view" || p.permissionLevel === "edit");
+  const readIds = [sessionSpeditionId, ...active.map((p) => p.grantingSpeditionId)];
+  const writeIds = [sessionSpeditionId, ...active.filter((p) => p.permissionLevel === "edit").map((p) => p.grantingSpeditionId)];
   return { readIds, writeIds };
 }
 

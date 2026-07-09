@@ -201,15 +201,18 @@ router.get("/speditionen/:id/permissions", requireAuth, async (req, res) => {
   }
 });
 
+// COMET Admin: Spedition zur Whitelist hinzufügen (level = 'pending')
 router.post("/speditionen/:id/permissions", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;
     const grantingId = Number(req.params.id);
-    const isOwnSped = role === "speditions_admin" && req.session.speditionId === grantingId;
-    if (role !== "comet_admin" && !isOwnSped) {
-      return res.status(403).json({ error: "Nur COMET Admin oder eigene Spedition kann Zugriffsrechte verwalten" });
+    if (role !== "comet_admin") {
+      return res.status(403).json({ error: "Nur COMET Admin kann die Freigabe-Whitelist verwalten" });
     }
-    const { receivingSpeditionId, permissionLevel } = req.body;
+    const { receivingSpeditionId } = req.body;
+    if (!receivingSpeditionId) {
+      return res.status(400).json({ error: "receivingSpeditionId erforderlich" });
+    }
 
     const existing = await db
       .select()
@@ -222,26 +225,16 @@ router.post("/speditionen/:id/permissions", requireAuth, async (req, res) => {
       )
       .limit(1);
 
-    let perm;
     if (existing.length > 0) {
-      [perm] = await db
-        .update(speditionPermissionsTable)
-        .set({ permissionLevel })
-        .where(
-          and(
-            eq(speditionPermissionsTable.grantingSpeditionId, grantingId),
-            eq(speditionPermissionsTable.receivingSpeditionId, receivingSpeditionId),
-          ),
-        )
-        .returning();
-    } else {
-      [perm] = await db
-        .insert(speditionPermissionsTable)
-        .values({ grantingSpeditionId: grantingId, receivingSpeditionId, permissionLevel })
-        .returning();
+      return res.status(409).json({ error: "Diese Spedition ist bereits freigegeben" });
     }
 
-    await logAudit(req.session.userId!, "spedition", grantingId, "permission_set", null, `${receivingSpeditionId}:${permissionLevel}`);
+    const [perm] = await db
+      .insert(speditionPermissionsTable)
+      .values({ grantingSpeditionId: grantingId, receivingSpeditionId, permissionLevel: "pending" })
+      .returning();
+
+    await logAudit(req.session.userId!, "spedition", grantingId, "permission_whitelisted", null, `${receivingSpeditionId}`);
 
     const [receivingSped] = await db
       .select({ name: speditionenTable.name })
@@ -249,9 +242,9 @@ router.post("/speditionen/:id/permissions", requireAuth, async (req, res) => {
       .where(eq(speditionenTable.id, receivingSpeditionId))
       .limit(1);
 
-    emit(req, "permission.updated", { grantingSpeditionId: grantingId, receivingSpeditionId, permissionLevel }, grantingId, [receivingSpeditionId]);
+    emit(req, "permission.updated", { grantingSpeditionId: grantingId, receivingSpeditionId, permissionLevel: "pending" }, grantingId, [receivingSpeditionId]);
 
-    return res.json({
+    return res.status(201).json({
       grantingSpeditionId: perm.grantingSpeditionId,
       receivingSpeditionId: perm.receivingSpeditionId,
       receivingSpeditionName: receivingSped?.name ?? null,
@@ -263,13 +256,52 @@ router.post("/speditionen/:id/permissions", requireAuth, async (req, res) => {
   }
 });
 
+// Speditionsadmin: Level für einen COMET-freigegebenen Eintrag setzen (view/edit/pending)
+router.put("/speditionen/:id/permissions/:receivingId", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const grantingId = Number(req.params.id);
+    const receivingId = Number(req.params.receivingId);
+    const isOwnSped = role === "speditions_admin" && req.session.speditionId === grantingId;
+    if (role !== "comet_admin" && !isOwnSped) {
+      return res.status(403).json({ error: "Nur COMET Admin oder eigener Speditionsadmin kann das Level setzen" });
+    }
+    const { permissionLevel } = req.body;
+    if (!["view", "edit", "pending"].includes(permissionLevel)) {
+      return res.status(400).json({ error: "Ungültiges Level (view / edit / pending)" });
+    }
+
+    const [perm] = await db
+      .update(speditionPermissionsTable)
+      .set({ permissionLevel })
+      .where(
+        and(
+          eq(speditionPermissionsTable.grantingSpeditionId, grantingId),
+          eq(speditionPermissionsTable.receivingSpeditionId, receivingId),
+        ),
+      )
+      .returning();
+
+    if (!perm) {
+      return res.status(404).json({ error: "Freigabe nicht gefunden" });
+    }
+
+    await logAudit(req.session.userId!, "spedition", grantingId, "permission_level_set", null, `${receivingId}:${permissionLevel}`);
+    emit(req, "permission.updated", { grantingSpeditionId: grantingId, receivingSpeditionId: receivingId, permissionLevel }, grantingId, [receivingId]);
+
+    return res.json({ ok: true, permissionLevel });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// COMET Admin: Spedition aus der Whitelist entfernen
 router.delete("/speditionen/:id/permissions/:receivingId", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;
     const grantingId = Number(req.params.id);
-    const isOwnSped = role === "speditions_admin" && req.session.speditionId === grantingId;
-    if (role !== "comet_admin" && !isOwnSped) {
-      return res.status(403).json({ error: "Nur COMET Admin oder eigene Spedition kann Zugriffsrechte entfernen" });
+    if (role !== "comet_admin") {
+      return res.status(403).json({ error: "Nur COMET Admin kann Einträge aus der Whitelist entfernen" });
     }
     const receivingId = Number(req.params.receivingId);
 
