@@ -215,7 +215,7 @@ export default function AuftragsauswertungPage() {
       .then((data) => {
         if (!cancelled) {
           setResult(data ?? null);
-          if (data && !SPED_ROLES.includes(user?.role ?? "")) fetchVergleich();
+          if (data) fetchVergleich();
         }
       })
       .catch(() => {})
@@ -705,7 +705,7 @@ export default function AuftragsauswertungPage() {
           )}
 
           {/* Abgleich mit offenen Verladungen */}
-          {!isSpedUser && vergleich && (vergleich.lkwOhneAuftrag.length > 0 || vergleich.auftragOhneLkw.length > 0) && (
+          {vergleich && (vergleich.lkwOhneAuftrag.length > 0 || vergleich.auftragOhneLkw.length > 0) && (
             <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
               <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
                 <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
@@ -790,7 +790,7 @@ export default function AuftragsauswertungPage() {
           )}
 
           {/* All-clear: no mismatches */}
-          {!isSpedUser && vergleich && vergleich.lkwOhneAuftrag.length === 0 && vergleich.auftragOhneLkw.length === 0 && (
+          {vergleich && vergleich.lkwOhneAuftrag.length === 0 && vergleich.auftragOhneLkw.length === 0 && (
             <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
               <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
               <span>Alle offenen Verladungen und Aufträge stimmen überein — kein Abweichung gefunden.</span>

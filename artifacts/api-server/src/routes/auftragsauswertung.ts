@@ -315,7 +315,10 @@ router.patch("/auftragsauswertung/freigaben", requireAuth, async (req, res) => {
 router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;
-    if (!(await can(role, "auftrag.analyse"))) {
+    const sessionSpeditionId = req.session.speditionId ?? null;
+    const canFull = await can(role, "auftrag.analyse");
+    const canSped = await can(role, "auftrag.analyse.spedition");
+    if (!canFull && !canSped) {
       return res.status(403).json({ error: "Keine Berechtigung" });
     }
 
@@ -324,7 +327,14 @@ router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
       "SELECT results FROM auftrag_analyse_ergebnisse ORDER BY uploaded_at DESC LIMIT 1"
     );
     if (aRow.rows.length === 0) return res.json({ lkwOhneAuftrag: [], auftragOhneLkw: [] });
-    const results: any[] = aRow.rows[0].results ?? [];
+    let results: any[] = aRow.rows[0].results ?? [];
+
+    // Spedition users: only see their own row if it is freigegeben
+    if (!canFull && canSped && sessionSpeditionId) {
+      const myRow = results.find((e: any) => e.speditionId === sessionSpeditionId && e.freigegeben === true);
+      if (!myRow) return res.json({ lkwOhneAuftrag: [], auftragOhneLkw: [] });
+      results = [myRow];
+    }
 
     // Build Auswertung set: key = "speditionId::relation" (only matched entries)
     // Also track meta per key for the "auftragOhneLkw" list
@@ -357,13 +367,22 @@ router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
     }
 
     // Load open shipments (not Abgefertigt/Storniert)
-    const sRows = await pool.query(`
-      SELECT s.id, s.spedition_id, s.relation, s.eta_date, s.status, s.bezeichnung, sp.name AS spedition_name
-      FROM shipments s
-      LEFT JOIN speditionen sp ON sp.id = s.spedition_id
-      WHERE s.status NOT IN ('Abgefertigt', 'Storniert')
-        AND s.spedition_id IS NOT NULL
-    `);
+    // For sped users: restrict to their own speditionId
+    const sRows = (!canFull && canSped && sessionSpeditionId)
+      ? await pool.query(`
+          SELECT s.id, s.spedition_id, s.relation, s.eta_date, s.status, s.bezeichnung, sp.name AS spedition_name
+          FROM shipments s
+          LEFT JOIN speditionen sp ON sp.id = s.spedition_id
+          WHERE s.status NOT IN ('Abgefertigt', 'Storniert')
+            AND s.spedition_id = $1
+        `, [sessionSpeditionId])
+      : await pool.query(`
+          SELECT s.id, s.spedition_id, s.relation, s.eta_date, s.status, s.bezeichnung, sp.name AS spedition_name
+          FROM shipments s
+          LEFT JOIN speditionen sp ON sp.id = s.spedition_id
+          WHERE s.status NOT IN ('Abgefertigt', 'Storniert')
+            AND s.spedition_id IS NOT NULL
+        `);
 
     // Build shipment set: key = "speditionId::relation"
     type ShipmentGroup = {
