@@ -155,12 +155,13 @@ export default function AuftragsauswertungPage() {
   const processFiles = useCallback(async (zlthu2: File, dark: File) => {
     setIsUploading(true);
     try {
-      const [zlthu2Text, darkText] = await Promise.all([zlthu2.text(), dark.text()]);
+      const formData = new FormData();
+      formData.append("zlthu2", zlthu2, zlthu2.name);
+      formData.append("dark", dark, dark.name);
       const r = await fetch(`${API_BASE}/auftragsauswertung/upload`, {
         method: "POST",
         credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ zlthu2: zlthu2Text, dark: darkText, filename: zlthu2.name }),
+        body: formData,
       });
       const data = await r.json();
       if (!r.ok) {

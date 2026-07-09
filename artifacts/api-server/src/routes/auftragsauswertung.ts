@@ -1,7 +1,10 @@
 import { Router } from "express";
+import multer from "multer";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import { can } from "../lib/permissions";
+
+const upload = multer({ storage: multer.memoryStorage() });
 
 const router = Router();
 
@@ -286,28 +289,31 @@ router.patch("/auftragsauswertung/freigaben", requireAuth, async (req, res) => {
 });
 
 // POST /api/auftragsauswertung/upload — parse CSV, persist, return result
-router.post("/auftragsauswertung/upload", requireAuth, async (req, res) => {
+router.post(
+  "/auftragsauswertung/upload",
+  requireAuth,
+  upload.fields([{ name: "zlthu2", maxCount: 1 }, { name: "dark", maxCount: 1 }]),
+  async (req, res) => {
   try {
     const role = req.session.role!;
     if (!(await can(role, "auftrag.analyse"))) {
       return res.status(403).json({ error: "Keine Berechtigung für Auftragsauswertung" });
     }
 
-    const { zlthu2, dark, csv, filename } = req.body as {
-      zlthu2?: string; dark?: string;
-      csv?: string; filename?: string;
-    };
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const zlthu2File = files?.["zlthu2"]?.[0];
+    const darkFile   = files?.["dark"]?.[0];
 
-    // Accept either the new dual-upload format (zlthu2+dark) or the legacy single-csv format
-    const zlthu2Csv = zlthu2 ?? csv ?? "";
-    const darkCsv   = dark ?? "";
+    if (!zlthu2File) {
+      return res.status(400).json({ error: "Keine ZLTHU2-Datei hochgeladen" });
+    }
+    if (!darkFile) {
+      return res.status(400).json({ error: "Keine DownloadDark-Datei hochgeladen (NTGEW14G-Datei fehlt)" });
+    }
 
-    if (!zlthu2Csv.trim()) {
-      return res.status(400).json({ error: "Keine ZLTHU2-Daten übermittelt" });
-    }
-    if (!darkCsv.trim()) {
-      return res.status(400).json({ error: "Keine DownloadDark-Daten übermittelt (NTGEW14G-Datei fehlt)" });
-    }
+    const zlthu2Csv = zlthu2File.buffer.toString("utf-8");
+    const darkCsv   = darkFile.buffer.toString("utf-8");
+    const filename  = zlthu2File.originalname;
 
     const rows = parseCsv(zlthu2Csv);
     if (rows.length === 0) {
