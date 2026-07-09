@@ -512,11 +512,22 @@ router.post("/speditionen/:id/relationen", requireAuth, async (req, res) => {
     if (role !== "comet_admin" && !isOwnSped) {
       return res.status(403).json({ error: "Kein Zugriff" });
     }
-    const { name } = req.body;
-    if (!name?.trim()) return res.status(400).json({ error: "Name erforderlich" });
+    const { name, kuerzel, ort } = req.body;
+    const kuerzelTrimmed = kuerzel?.trim() ?? "";
+    const ortTrimmed     = ort?.trim() ?? "";
+    // Accept either {kuerzel, ort} or legacy {name}
+    const combinedName = kuerzelTrimmed && ortTrimmed
+      ? `${kuerzelTrimmed} - ${ortTrimmed}`
+      : (name?.trim() ?? "");
+    if (!combinedName) return res.status(400).json({ error: "Kürzel und Ort erforderlich" });
     const [row] = await db
       .insert(speditionRelationenTable)
-      .values({ speditionId: spedId, name: name.trim() })
+      .values({
+        speditionId: spedId,
+        name: combinedName,
+        kuerzel: kuerzelTrimmed || null,
+        ort: ortTrimmed || null,
+      })
       .returning();
     return res.status(201).json(row);
   } catch (err) {
@@ -565,6 +576,17 @@ export async function ensureSpeditionRelationenTable(): Promise<void> {
       name TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+  // Add kuerzel / ort columns if not yet present
+  await pool.query(`ALTER TABLE spedition_relationen ADD COLUMN IF NOT EXISTS kuerzel TEXT`);
+  await pool.query(`ALTER TABLE spedition_relationen ADD COLUMN IF NOT EXISTS ort TEXT`);
+  // Migrate existing rows: split "AGB - Graben" → kuerzel="AGB", ort="Graben"
+  await pool.query(`
+    UPDATE spedition_relationen
+    SET
+      kuerzel = TRIM(SPLIT_PART(name, ' - ', 1)),
+      ort     = TRIM(SUBSTRING(name FROM POSITION(' - ' IN name) + 3))
+    WHERE kuerzel IS NULL AND name LIKE '% - %'
   `);
 }
 

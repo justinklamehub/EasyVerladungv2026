@@ -46,6 +46,8 @@ export const speditionRelationenTable = pgTable("spedition_relationen", {
   id: serial("id").primaryKey(),
   speditionId: integer("spedition_id").notNull().references(() => speditionenTable.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  kuerzel: text("kuerzel"),
+  ort: text("ort"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

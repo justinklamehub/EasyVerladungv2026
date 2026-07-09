@@ -11,6 +11,8 @@ interface Relation {
   id: number;
   speditionId: number;
   name: string;
+  kuerzel: string | null;
+  ort: string | null;
   createdAt: string;
 }
 
@@ -25,7 +27,8 @@ export function getRelationenQueryKey(speditionId: number) {
 export function RelationenTab({ speditionId }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [newName, setNewName] = useState("");
+  const [newKuerzel, setNewKuerzel] = useState("");
+  const [newOrt, setNewOrt] = useState("");
 
   const { data: relationen, isLoading } = useQuery<Relation[]>({
     queryKey: getRelationenQueryKey(speditionId),
@@ -34,15 +37,16 @@ export function RelationenTab({ speditionId }: Props) {
   });
 
   const addMutation = useMutation({
-    mutationFn: (name: string) =>
+    mutationFn: ({ kuerzel, ort }: { kuerzel: string; ort: string }) =>
       customFetch(`/api/speditionen/${speditionId}/relationen`, {
         method: "POST",
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ kuerzel, ort }),
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: getRelationenQueryKey(speditionId) });
       toast({ title: "Relation hinzugefügt" });
-      setNewName("");
+      setNewKuerzel("");
+      setNewOrt("");
     },
     onError: (e: any) => toast({ title: e?.message ?? "Fehler", variant: "destructive" }),
   });
@@ -58,9 +62,10 @@ export function RelationenTab({ speditionId }: Props) {
   });
 
   const handleAdd = () => {
-    const trimmed = newName.trim();
-    if (!trimmed) return;
-    addMutation.mutate(trimmed);
+    const k = newKuerzel.trim();
+    const o = newOrt.trim();
+    if (!k || !o) return;
+    addMutation.mutate({ kuerzel: k, ort: o });
   };
 
   return (
@@ -81,11 +86,18 @@ export function RelationenTab({ speditionId }: Props) {
               key={r.id}
               className="flex items-center justify-between border border-slate-200 rounded-md px-3 py-2 bg-slate-50 group"
             >
-              <span className="text-sm text-slate-700 font-medium">{r.name}</span>
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-xs font-mono font-semibold text-slate-500 bg-slate-200 rounded px-1.5 py-0.5 shrink-0">
+                  {r.kuerzel ?? r.name.split(" - ")[0]}
+                </span>
+                <span className="text-sm text-slate-700 truncate">
+                  {r.ort ?? r.name.split(" - ").slice(1).join(" - ")}
+                </span>
+              </div>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
                 onClick={() => deleteMutation.mutate(r.id)}
                 disabled={deleteMutation.isPending}
               >
@@ -96,30 +108,46 @@ export function RelationenTab({ speditionId }: Props) {
         </div>
       )}
 
-      <div className="flex gap-2 items-end pt-2 border-t border-slate-100">
-        <div className="flex-1 space-y-1">
-          <Label className="text-xs">Neue Relation</Label>
-          <Input
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Werk A → Lager B"
-            onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-            className="h-9"
-          />
+      <div className="pt-2 border-t border-slate-100 space-y-2">
+        <p className="text-xs font-medium text-slate-500">Neue Relation</p>
+        <div className="flex gap-2">
+          <div className="w-24 space-y-1 shrink-0">
+            <Label className="text-xs text-slate-400">Kürzel</Label>
+            <Input
+              value={newKuerzel}
+              onChange={(e) => setNewKuerzel(e.target.value.toUpperCase())}
+              placeholder="AGB"
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              className="h-9 font-mono uppercase"
+              maxLength={10}
+            />
+          </div>
+          <div className="flex-1 space-y-1">
+            <Label className="text-xs text-slate-400">Ort</Label>
+            <Input
+              value={newOrt}
+              onChange={(e) => setNewOrt(e.target.value)}
+              placeholder="Graben"
+              onKeyDown={(e) => e.key === "Enter" && handleAdd()}
+              className="h-9"
+            />
+          </div>
+          <div className="flex items-end">
+            <Button
+              size="sm"
+              className="h-9 gap-1"
+              onClick={handleAdd}
+              disabled={!newKuerzel.trim() || !newOrt.trim() || addMutation.isPending}
+            >
+              {addMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Plus className="w-4 h-4" />
+              )}
+              Hinzufügen
+            </Button>
+          </div>
         </div>
-        <Button
-          size="sm"
-          className="h-9 gap-1"
-          onClick={handleAdd}
-          disabled={!newName.trim() || addMutation.isPending}
-        >
-          {addMutation.isPending ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Plus className="w-4 h-4" />
-          )}
-          Hinzufügen
-        </Button>
       </div>
     </div>
   );
