@@ -130,7 +130,8 @@ function buildResults(
   spedByNr: Map<string, { id: number; name: string }>,
   darkMap: Map<string, number>
 ) {
-  type LgEntry  = { auftraegeSet: Set<string>; paletten: number; punkte: number };
+  type BelegEntry = { paletten: number; punkte: number; ntgew: number };
+  type LgEntry  = { auftraegeSet: Set<string>; paletten: number; punkte: number; belege: Map<string, BelegEntry> };
   type LtEntry  = { auftraegeSet: Set<string>; paletten: number; punkte: number; leitgebiete: Map<string, LgEntry> };
   type SpedEntry = {
     spediteurNr: string; csvName: string;
@@ -179,12 +180,21 @@ function buildResults(
 
     const lgKey = row.leitgebiet || "__kein_leitgebiet__";
     if (!lt.leitgebiete.has(lgKey)) {
-      lt.leitgebiete.set(lgKey, { auftraegeSet: new Set(), paletten: 0, punkte: 0 });
+      lt.leitgebiete.set(lgKey, { auftraegeSet: new Set(), paletten: 0, punkte: 0, belege: new Map() });
     }
     const lg = lt.leitgebiete.get(lgKey)!;
     if (row.auftrag) lg.auftraegeSet.add(row.auftrag);
     lg.paletten++;
     lg.punkte += rowPunkte;
+
+    // Accumulate per-Beleg data within this Leitgebiet
+    if (row.beleg) {
+      const ntgew = darkMap.get(row.beleg) ?? 0;
+      if (!lg.belege.has(row.beleg)) {
+        lg.belege.set(row.beleg, { paletten: 0, punkte: isNewBeleg ? ntgew * 3 : 0, ntgew });
+      }
+      lg.belege.get(row.beleg)!.paletten++;
+    }
   }
 
   return Array.from(grouped.values())
@@ -212,6 +222,14 @@ function buildResults(
               auftraege:  sub.auftraegeSet.size,
               paletten:   sub.paletten,
               punkte:     Math.round(sub.punkte * 100) / 100,
+              belege: Array.from(sub.belege.entries())
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([beleg, b]) => ({
+                  beleg,
+                  paletten: b.paletten,
+                  punkte:   Math.round(b.punkte * 100) / 100,
+                  ntgew:    Math.round(b.ntgew * 100) / 100,
+                })),
             })),
         })),
     }))

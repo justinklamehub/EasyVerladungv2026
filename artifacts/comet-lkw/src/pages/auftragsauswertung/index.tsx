@@ -13,11 +13,19 @@ import { cn } from "@/lib/utils";
 
 const API_BASE = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "") + "/api";
 
+interface BelegRow {
+  beleg: string;
+  paletten: number;
+  punkte: number;
+  ntgew: number;
+}
+
 interface LeitgebietRow {
   leitgebiet: string;
   auftraege: number;
   paletten: number;
   punkte: number;
+  belege: BelegRow[];
 }
 
 interface LieferterminRow {
@@ -73,8 +81,8 @@ function formatDate(iso?: string): string {
 
 const SPED_ROLES = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"];
 
-/** Renders the nested Liefertermin → Leitgebiet hierarchy */
-function LieferterminBlock({ liefertermine }: { liefertermine: LieferterminRow[] }) {
+/** Renders the nested Liefertermin → Leitgebiet → (Belege for COMET) hierarchy */
+function LieferterminBlock({ liefertermine, isComet }: { liefertermine: LieferterminRow[]; isComet: boolean }) {
   if (liefertermine.length === 0) return <span className="text-slate-300 text-xs">—</span>;
 
   return (
@@ -98,19 +106,47 @@ function LieferterminBlock({ liefertermine }: { liefertermine: LieferterminRow[]
 
           {/* Leitgebiet sub-rows */}
           {(lt.leitgebiete ?? []).length > 0 && (
-            <div className="pl-3 border-l-2 border-slate-100 space-y-0.5">
+            <div className="pl-3 border-l-2 border-slate-100 space-y-1.5">
               {(lt.leitgebiete ?? []).map((lg, j) => (
-                <div key={lg.leitgebiet || j} className="flex items-baseline gap-2 flex-wrap">
-                  <span className="text-[11px] text-slate-600 whitespace-nowrap min-w-[100px]">
-                    {lg.leitgebiet || "—"}
-                  </span>
-                  <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
-                    {lg.auftraege}&thinsp;A&thinsp;/&thinsp;{lg.paletten}&thinsp;Pal.
-                  </span>
-                  {(lg.punkte ?? 0) > 0 && (
-                    <span className="text-[11px] font-medium text-violet-500 tabular-nums whitespace-nowrap">
-                      {lg.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+                <div key={lg.leitgebiet || j}>
+                  <div className="flex items-baseline gap-2 flex-wrap">
+                    <span className="text-[11px] text-slate-600 whitespace-nowrap min-w-[100px]">
+                      {lg.leitgebiet || "—"}
                     </span>
+                    <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
+                      {lg.auftraege}&thinsp;A&thinsp;/&thinsp;{lg.paletten}&thinsp;Pal.
+                    </span>
+                    {(lg.punkte ?? 0) > 0 && (
+                      <span className="text-[11px] font-medium text-violet-500 tabular-nums whitespace-nowrap">
+                        {lg.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Belege — only for COMET users */}
+                  {isComet && (lg.belege ?? []).length > 0 && (
+                    <div className="pl-3 border-l-2 border-slate-50 mt-0.5 space-y-0.5">
+                      {(lg.belege ?? []).map((b) => (
+                        <div key={b.beleg} className="flex items-baseline gap-2 flex-wrap">
+                          <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap min-w-[90px]">
+                            {b.beleg}
+                          </span>
+                          <span className="text-[10px] text-slate-400 tabular-nums whitespace-nowrap">
+                            {b.paletten}&thinsp;Pal.
+                          </span>
+                          {b.ntgew > 0 && (
+                            <span className="text-[10px] text-slate-400 tabular-nums whitespace-nowrap">
+                              {b.ntgew.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;kg
+                            </span>
+                          )}
+                          {b.punkte > 0 && (
+                            <span className="text-[10px] font-medium text-violet-400 tabular-nums whitespace-nowrap">
+                              {b.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   )}
                 </div>
               ))}
@@ -590,7 +626,7 @@ export default function AuftragsauswertungPage() {
 
                         {/* Liefertermin → Leitgebiet (nested) */}
                         <td className="px-5 py-4 min-w-[280px]">
-                          <LieferterminBlock liefertermine={displayedLiefertermine} />
+                          <LieferterminBlock liefertermine={displayedLiefertermine} isComet={isCometUser} />
                         </td>
 
                         {/* Freigabe toggle */}
