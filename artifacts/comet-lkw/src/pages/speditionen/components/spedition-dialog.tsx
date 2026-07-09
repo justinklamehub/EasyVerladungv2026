@@ -370,7 +370,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
                 <Label>Telefon</Label>
                 <Input value={form.telefon} onChange={e => setForm(f => ({ ...f, telefon: e.target.value }))} />
               </div>
-              <div className="space-y-1 col-span-2">
+              <div className="space-y-1">
                 <Label>E-Mail</Label>
                 <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
               </div>
