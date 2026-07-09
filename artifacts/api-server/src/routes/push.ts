@@ -59,6 +59,12 @@ export const DEFAULT_PUSH_EVENTS = [
     description: "Wenn ein neues Ticket erstellt wird",
     target_roles: ["comet_admin", "comet_leitstand"],
   },
+  {
+    event_key: "shipment.loaded",
+    label: "Verladung fertig (Verladen)",
+    description: "Wenn eine Verladung auf den Status 'Verladen' gesetzt wird",
+    target_roles: ["comet_admin", "comet_leitstand", "speditions_admin"],
+  },
 ];
 
 export async function seedPushEventSettings() {
@@ -78,6 +84,7 @@ export const PUSH_TEMPLATE_PLACEHOLDERS: Record<string, string[]> = {
   "shipment.created":       ["id", "bezeichnung", "kennzeichen", "spedition", "relation", "etaDate", "etaTime", "lkwArt", "telefon", "tor", "status", "wareStatus"],
   "shipment.arrived":       ["id", "bezeichnung", "kennzeichen", "spedition", "relation", "ataDate", "ataTime", "tor", "status"],
   "shipment.dispatched":    ["id", "bezeichnung", "kennzeichen", "spedition", "relation", "status", "tor"],
+  "shipment.loaded":        ["id", "bezeichnung", "kennzeichen", "spedition", "relation", "tor", "status"],
   "reconciliation.started": ["spedition"],
   "ticket.created":         ["titel", "nachricht"],
 };
@@ -86,6 +93,7 @@ const DEFAULT_PUSH_TEMPLATES: Record<string, { title: string; message: string }>
   "shipment.created":       { title: "Neue Verladung angemeldet",   message: "{spedition}: {bezeichnung}" },
   "shipment.arrived":       { title: "LKW angekommen",               message: "{bezeichnung} ist eingetroffen – {tor}" },
   "shipment.dispatched":    { title: "Verladung abgefertigt",        message: "{bezeichnung} wurde abgefertigt." },
+  "shipment.loaded":        { title: "Verladung fertig",             message: "{bezeichnung} wurde verladen – {relation}" },
   "reconciliation.started": { title: "Abstimmung gestartet",         message: "Paletten-Abstimmung wurde eröffnet." },
   "ticket.created":         { title: "Neues Ticket",                 message: "{titel}" },
 };

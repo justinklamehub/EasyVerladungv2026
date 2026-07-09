@@ -552,6 +552,16 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
             pushEventKey: "shipment.arrived",
             pushVars: { ...basePushVars, ataDate: shipment.ataDate ?? "", ataTime: shipment.ataTime ?? "" },
           });
+        } else if (updates.status === "Verladen") {
+          await notify(io, {
+            targetRoles: ["comet_admin", "comet_leitstand", "speditions_admin"],
+            title: "Verladung fertig",
+            message: `${label} wurde verladen${shipment.relation ? " – " + shipment.relation : ""}.`,
+            type: "success",
+            linkTo: "/shipments",
+            pushEventKey: "shipment.loaded",
+            pushVars: basePushVars,
+          });
         } else if (updates.status === "Abgefertigt") {
           await notify(io, {
             targetRoles: ["comet_admin", "comet_leitstand"],
