@@ -15,8 +15,13 @@ export async function ensureAuftragAnalyseTable(): Promise<void> {
       total_rows INTEGER NOT NULL DEFAULT 0,
       total_paletten INTEGER NOT NULL DEFAULT 0,
       total_auftraege INTEGER NOT NULL DEFAULT 0,
+      total_punkte NUMERIC NOT NULL DEFAULT 0,
       results JSONB NOT NULL DEFAULT '[]'
     )
+  `);
+  await pool.query(`
+    ALTER TABLE auftrag_analyse_ergebnisse
+    ADD COLUMN IF NOT EXISTS total_punkte NUMERIC NOT NULL DEFAULT 0
   `);
 }
 
@@ -42,6 +47,7 @@ function parseCsv(text: string) {
   const colSpediteur = idx(["spediteur"]);
   const colRelation  = idx(["relation"]);
   const colKarton    = idx(["kartonanz"]);
+  const colNtgew     = idx(["ntgew14g"]);
 
   // "name 1" appears twice: 1st = Kundenname, 2nd = Speditionsname
   let spedNameCol = -1;
@@ -60,6 +66,7 @@ function parseCsv(text: string) {
     spedName: string;
     leitgebiet: string;
     kartons: number;
+    ntgew: number;
   }> = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -74,6 +81,7 @@ function parseCsv(text: string) {
       spedName:   spedNameCol >= 0 ? get(spedNameCol) : "",
       leitgebiet: get(colRelation),
       kartons:    parseInt(get(colKarton)) || 0,
+      ntgew:      parseFloat(get(colNtgew).replace(",", ".")) || 0,
     });
   }
   return rows;
@@ -83,12 +91,12 @@ function buildResults(
   rows: ReturnType<typeof parseCsv>,
   spedByNr: Map<string, { id: number; name: string }>
 ) {
-  type LgEntry  = { auftraegeSet: Set<string>; paletten: number };
-  type LtEntry  = { auftraegeSet: Set<string>; paletten: number; leitgebiete: Map<string, LgEntry> };
+  type LgEntry  = { auftraegeSet: Set<string>; paletten: number; punkte: number };
+  type LtEntry  = { auftraegeSet: Set<string>; paletten: number; punkte: number; leitgebiete: Map<string, LgEntry> };
   type SpedEntry = {
     spediteurNr: string; csvName: string;
     speditionId: number | null; speditionDbName: string | null;
-    auftraegeSet: Set<string>; paletten: number;
+    auftraegeSet: Set<string>; paletten: number; punkte: number;
     liefertermine: Map<string, LtEntry>;
   };
 
@@ -105,29 +113,34 @@ function buildResults(
         speditionDbName: dbMatch?.name ?? null,
         auftraegeSet:   new Set(),
         paletten:       0,
+        punkte:         0,
         liefertermine:  new Map(),
       });
     }
+    const rowPunkte = row.ntgew * 3;
     const g = grouped.get(row.spediteurNr)!;
     if (row.auftrag) g.auftraegeSet.add(row.auftrag);
     g.paletten++;
+    g.punkte += rowPunkte;
 
     // Nest: Liefertermin → Leitgebiet
     const lfdatKey = row.lfdat || "__kein_termin__";
     if (!g.liefertermine.has(lfdatKey)) {
-      g.liefertermine.set(lfdatKey, { auftraegeSet: new Set(), paletten: 0, leitgebiete: new Map() });
+      g.liefertermine.set(lfdatKey, { auftraegeSet: new Set(), paletten: 0, punkte: 0, leitgebiete: new Map() });
     }
     const lt = g.liefertermine.get(lfdatKey)!;
     if (row.auftrag) lt.auftraegeSet.add(row.auftrag);
     lt.paletten++;
+    lt.punkte += rowPunkte;
 
     const lgKey = row.leitgebiet || "__kein_leitgebiet__";
     if (!lt.leitgebiete.has(lgKey)) {
-      lt.leitgebiete.set(lgKey, { auftraegeSet: new Set(), paletten: 0 });
+      lt.leitgebiete.set(lgKey, { auftraegeSet: new Set(), paletten: 0, punkte: 0 });
     }
     const lg = lt.leitgebiete.get(lgKey)!;
     if (row.auftrag) lg.auftraegeSet.add(row.auftrag);
     lg.paletten++;
+    lg.punkte += rowPunkte;
   }
 
   return Array.from(grouped.values())
@@ -139,6 +152,7 @@ function buildResults(
       matched:         g.speditionId !== null,
       auftraege:       g.auftraegeSet.size,
       paletten:        g.paletten,
+      punkte:          Math.round(g.punkte * 100) / 100,
       freigegeben:     false,
       liefertermine: Array.from(g.liefertermine.entries())
         .sort((a, b) => a[0].localeCompare(b[0]))
@@ -146,12 +160,14 @@ function buildResults(
           lfdat: lfdat === "__kein_termin__" ? "" : lfdat,
           auftraege: lt.auftraegeSet.size,
           paletten:  lt.paletten,
+          punkte:    Math.round(lt.punkte * 100) / 100,
           leitgebiete: Array.from(lt.leitgebiete.entries())
             .sort((a, b) => a[0].localeCompare(b[0]))
             .map(([lg, sub]) => ({
               leitgebiet: lg === "__kein_leitgebiet__" ? "" : lg,
               auftraege:  sub.auftraegeSet.size,
               paletten:   sub.paletten,
+              punkte:     Math.round(sub.punkte * 100) / 100,
             })),
         })),
     }))
@@ -192,6 +208,7 @@ router.get("/auftragsauswertung/latest", requireAuth, async (req, res) => {
       totalRows:           row.total_rows,
       totalPaletten:       row.total_paletten,
       totalAuftraege:      row.total_auftraege,
+      totalPunkte:         parseFloat(row.total_punkte) || 0,
       results,
     });
   } catch (err) {
@@ -264,13 +281,14 @@ router.post("/auftragsauswertung/upload", requireAuth, async (req, res) => {
     const results = buildResults(rows, spedByNr);
     const totalPaletten  = results.reduce((s, r) => s + r.paletten, 0);
     const totalAuftraege = results.reduce((s, r) => s + r.auftraege, 0);
+    const totalPunkte    = Math.round(results.reduce((s, r) => s + r.punkte, 0) * 100) / 100;
 
     // Persist: replace any previous result
     await pool.query("DELETE FROM auftrag_analyse_ergebnisse");
     const inserted = await pool.query(
       `INSERT INTO auftrag_analyse_ergebnisse
-         (filename, uploaded_by_id, total_rows, total_paletten, total_auftraege, results)
-       VALUES ($1, $2, $3, $4, $5, $6)
+         (filename, uploaded_by_id, total_rows, total_paletten, total_auftraege, total_punkte, results)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING uploaded_at`,
       [
         filename ?? null,
@@ -278,6 +296,7 @@ router.post("/auftragsauswertung/upload", requireAuth, async (req, res) => {
         rows.length,
         totalPaletten,
         totalAuftraege,
+        totalPunkte,
         JSON.stringify(results),
       ]
     );
@@ -288,6 +307,7 @@ router.post("/auftragsauswertung/upload", requireAuth, async (req, res) => {
       totalRows:      rows.length,
       totalPaletten,
       totalAuftraege,
+      totalPunkte,
       results,
     });
   } catch (err) {

@@ -17,12 +17,14 @@ interface LeitgebietRow {
   leitgebiet: string;
   auftraege: number;
   paletten: number;
+  punkte: number;
 }
 
 interface LieferterminRow {
   lfdat: string;
   auftraege: number;
   paletten: number;
+  punkte: number;
   leitgebiete: LeitgebietRow[];
 }
 
@@ -34,6 +36,7 @@ interface SpedResult {
   matched: boolean;
   auftraege: number;
   paletten: number;
+  punkte: number;
   freigegeben: boolean;
   liefertermine: LieferterminRow[];
 }
@@ -45,6 +48,7 @@ interface AnalyseResult {
   totalRows: number;
   totalPaletten: number;
   totalAuftraege: number;
+  totalPunkte: number;
   results: SpedResult[];
 }
 
@@ -78,26 +82,36 @@ function LieferterminBlock({ liefertermine }: { liefertermine: LieferterminRow[]
       {liefertermine.map((lt, i) => (
         <div key={lt.lfdat || i}>
           {/* Liefertermin header row */}
-          <div className="flex items-baseline gap-2 mb-1">
+          <div className="flex items-baseline gap-2 mb-1 flex-wrap">
             <span className="text-xs font-semibold text-slate-700 whitespace-nowrap">
               {formatLfdat(lt.lfdat)}
             </span>
             <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
               {lt.auftraege}&thinsp;A&thinsp;/&thinsp;{lt.paletten}&thinsp;Pal.
             </span>
+            {(lt.punkte ?? 0) > 0 && (
+              <span className="text-[11px] font-medium text-violet-600 tabular-nums whitespace-nowrap">
+                {lt.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+              </span>
+            )}
           </div>
 
           {/* Leitgebiet sub-rows */}
           {(lt.leitgebiete ?? []).length > 0 && (
             <div className="pl-3 border-l-2 border-slate-100 space-y-0.5">
               {(lt.leitgebiete ?? []).map((lg, j) => (
-                <div key={lg.leitgebiet || j} className="flex items-baseline gap-2">
+                <div key={lg.leitgebiet || j} className="flex items-baseline gap-2 flex-wrap">
                   <span className="text-[11px] text-slate-600 whitespace-nowrap min-w-[100px]">
                     {lg.leitgebiet || "—"}
                   </span>
                   <span className="text-[11px] text-slate-400 tabular-nums whitespace-nowrap">
                     {lg.auftraege}&thinsp;A&thinsp;/&thinsp;{lg.paletten}&thinsp;Pal.
                   </span>
+                  {(lg.punkte ?? 0) > 0 && (
+                    <span className="text-[11px] font-medium text-violet-500 tabular-nums whitespace-nowrap">
+                      {lg.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -245,7 +259,8 @@ export default function AuftragsauswertungPage() {
 
   const filteredTotals = useMemo(() => ({
     auftraege: filteredResults.reduce((s, r) => s + r.auftraege, 0),
-    paletten: filteredResults.reduce((s, r) => s + r.paletten, 0),
+    paletten:  filteredResults.reduce((s, r) => s + r.paletten, 0),
+    punkte:    Math.round(filteredResults.reduce((s, r) => s + r.punkte, 0) * 100) / 100,
   }), [filteredResults]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
@@ -348,15 +363,16 @@ export default function AuftragsauswertungPage() {
         >
           {/* Summary cards */}
           {!isSpedUser && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               {[
-                { label: "Speditionen",          value: hasActiveFilter ? filteredResults.length : result.results.length },
-                { label: "Aufträge gesamt",      value: (hasActiveFilter ? filteredTotals.auftraege : result.totalAuftraege).toLocaleString("de-DE") },
-                { label: "Paletten (HU) gesamt", value: (hasActiveFilter ? filteredTotals.paletten  : result.totalPaletten).toLocaleString("de-DE") },
-              ].map(({ label, value }) => (
-                <div key={label} className="bg-white border border-slate-200 rounded-lg px-5 py-4">
-                  <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{label}</p>
-                  <p className="text-2xl font-bold text-slate-800 tabular-nums">{value}</p>
+                { label: "Speditionen",          value: (hasActiveFilter ? filteredResults.length : result.results.length).toLocaleString("de-DE"), accent: false },
+                { label: "Aufträge gesamt",      value: (hasActiveFilter ? filteredTotals.auftraege : result.totalAuftraege).toLocaleString("de-DE"), accent: false },
+                { label: "Paletten (HU) gesamt", value: (hasActiveFilter ? filteredTotals.paletten  : result.totalPaletten).toLocaleString("de-DE"),  accent: false },
+                { label: "Punkte gesamt",        value: (hasActiveFilter ? filteredTotals.punkte    : result.totalPunkte ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 2 }), accent: true },
+              ].map(({ label, value, accent }) => (
+                <div key={label} className={cn("bg-white border rounded-lg px-5 py-4", accent ? "border-violet-200 bg-violet-50/40" : "border-slate-200")}>
+                  <p className={cn("text-xs font-medium uppercase tracking-wide mb-1", accent ? "text-violet-500" : "text-slate-400")}>{label}</p>
+                  <p className={cn("text-2xl font-bold tabular-nums", accent ? "text-violet-700" : "text-slate-800")}>{value}</p>
                   {hasActiveFilter && <p className="text-[11px] text-slate-400 mt-0.5">gefiltert</p>}
                 </div>
               ))}
@@ -453,6 +469,9 @@ export default function AuftragsauswertungPage() {
                     <th className="px-4 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wide whitespace-nowrap">
                       Paletten
                     </th>
+                    <th className="px-4 py-3 text-center text-xs font-semibold text-violet-500 uppercase tracking-wide whitespace-nowrap">
+                      Punkte
+                    </th>
                     <th className="px-5 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wide">
                       Liefertermin / Leitgebiet
                     </th>
@@ -521,6 +540,13 @@ export default function AuftragsauswertungPage() {
                         <td className="px-4 py-4 text-center">
                           <span className="font-bold text-slate-700 tabular-nums text-base">
                             {s.paletten.toLocaleString("de-DE")}
+                          </span>
+                        </td>
+
+                        {/* Punkte total */}
+                        <td className="px-4 py-4 text-center">
+                          <span className="inline-flex items-center justify-center rounded-full bg-violet-50 text-violet-700 font-bold text-sm tabular-nums min-w-[3rem] h-9 px-2">
+                            {(s.punkte ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 2 })}
                           </span>
                         </td>
 
