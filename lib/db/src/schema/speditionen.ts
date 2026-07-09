@@ -42,6 +42,13 @@ export const speditionContactsTable = pgTable("spedition_contacts", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const speditionRelationenTable = pgTable("spedition_relationen", {
+  id: serial("id").primaryKey(),
+  speditionId: integer("spedition_id").notNull().references(() => speditionenTable.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
 export const insertSpeditionSchema = createInsertSchema(speditionenTable).omit({ id: true, createdAt: true, updatedAt: true });
 export type InsertSpedition = z.infer<typeof insertSpeditionSchema>;
 export type Spedition = typeof speditionenTable.$inferSelect;

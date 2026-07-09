@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2, Plus } from "lucide-react";
 import { ContactsTab } from "./contacts-tab";
 import { LimitsTab } from "./limits-tab";
+import { RelationenTab } from "./relationen-tab";
 
 interface Spedition {
   id: number;
@@ -261,9 +262,19 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Zugriffsrechte — {editSpedition.name}</DialogTitle>
+            <DialogTitle>{editSpedition.name}</DialogTitle>
           </DialogHeader>
           <Tabs defaultValue="rechte">
+            <TabsList className="w-full mb-3">
+              <TabsTrigger value="rechte" className="flex-1">Zugriffsrechte</TabsTrigger>
+              <TabsTrigger value="relationen" className="flex-1">Relationen</TabsTrigger>
+            </TabsList>
+            <TabsContent value="relationen" className="space-y-3 mt-0">
+              <p className="text-sm text-slate-500">
+                Definieren Sie typische Relationen Ihrer Spedition. Diese werden beim Anlegen von Verladungen als Vorschläge angezeigt.
+              </p>
+              <RelationenTab speditionId={editSpedition.id} />
+            </TabsContent>
             <TabsContent value="rechte" className="space-y-3 mt-0">
               <p className="text-sm text-slate-500">
                 COMET hat folgende Partner-Speditionen für den Zugriff auf Ihre Verladungen vorgemerkt.
@@ -332,6 +343,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
             <TabsTrigger value="tarife" className="flex-1">Tarife</TabsTrigger>
             {isEditing && <TabsTrigger value="kontakte" className="flex-1">Ansprechpartner</TabsTrigger>}
             {isEditing && <TabsTrigger value="tageslimits" className="flex-1">Tageslimits</TabsTrigger>}
+            {isEditing && <TabsTrigger value="relationen" className="flex-1">Relationen</TabsTrigger>}
             {isEditing && <TabsTrigger value="rechte" className="flex-1">Zugriffsrechte</TabsTrigger>}
           </TabsList>
 
@@ -453,6 +465,15 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
               <div className="overflow-y-auto max-h-[340px] pr-1">
                 <LimitsTab speditionId={editSpedition!.id} />
               </div>
+            </TabsContent>
+          )}
+
+          {isEditing && (
+            <TabsContent value="relationen" className="space-y-3 min-h-[200px]">
+              <p className="text-sm text-slate-500">
+                Definieren Sie typische Relationen dieser Spedition. Diese werden beim Anlegen von Verladungen als Vorschläge angezeigt.
+              </p>
+              <RelationenTab speditionId={editSpedition!.id} />
             </TabsContent>
           )}
 

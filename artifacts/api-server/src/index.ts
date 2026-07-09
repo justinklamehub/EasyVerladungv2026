@@ -8,7 +8,7 @@ import { ensurePasswordExpiryRemindersTable } from "./lib/password-policy";
 import { ensureTicketsTables } from "./routes/tickets";
 import { ensureUserPreferencesTable } from "./routes/user-preferences";
 import { startScheduler, ensureReportWeeklyLogTable, ensureReconciliationReminderSentTable } from "./lib/scheduler";
-import { ensureSpeditionLimitsTable } from "./routes/speditionen";
+import { ensureSpeditionLimitsTable, ensureSpeditionRelationenTable } from "./routes/speditionen";
 import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
 import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
 import { initWebPush, seedPushEventSettings, seedPushMessageTemplates } from "./routes/push";
@@ -287,6 +287,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("spedition_shipment_limits table ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureSpeditionLimitsTable failed — non-fatal");
+  }
+  try {
+    await ensureSpeditionRelationenTable();
+    logger.info("spedition_relationen table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureSpeditionRelationenTable failed — non-fatal");
   }
   try {
     await ensureShipmentTemplatesTable();

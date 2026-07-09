@@ -16,6 +16,7 @@ import {
   useCreateLkwAustrag,
   useDeleteLkwAustrag,
   getListLkwAustraegeQueryKey,
+  customFetch,
   type LkwAustragInput,
 } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -293,6 +294,14 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     }
   });
 
+  const spedIdForSuggestions = parseInt(form.speditionId || "0", 10) || null;
+  const { data: relationenSuggestions } = useQuery<{ id: number; name: string }[]>({
+    queryKey: ["spedition-relationen", spedIdForSuggestions],
+    queryFn: () => customFetch(`/api/speditionen/${spedIdForSuggestions}/relationen`),
+    enabled: !!spedIdForSuggestions && open,
+    staleTime: 60_000,
+  });
+
   const handleSave = () => {
     if (!isEditing) {
       const missing = new Set<string>();
@@ -499,7 +508,13 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                   disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}
                   placeholder="Start → Ziel"
                   className={cn(formErrors.has("relation") && "border-red-400 ring-1 ring-red-400")}
+                  list="relation-datalist"
                 />
+                {relationenSuggestions && relationenSuggestions.length > 0 && (
+                  <datalist id="relation-datalist">
+                    {relationenSuggestions.map(r => <option key={r.id} value={r.name} />)}
+                  </datalist>
+                )}
               </div>
 
               <div className="space-y-1">

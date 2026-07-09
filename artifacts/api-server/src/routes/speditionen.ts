@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
-import { speditionenTable, speditionPermissionsTable, speditionContactsTable } from "@workspace/db";
+import { speditionenTable, speditionPermissionsTable, speditionContactsTable, speditionRelationenTable } from "@workspace/db";
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
@@ -464,6 +464,84 @@ router.delete("/speditionen/:id/limits/:limitId", requireAuth, async (req, res) 
   }
 });
 
+// ── Relationen ───────────────────────────────────────────────────────────────
+
+router.get("/speditionen/:id/relationen", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const spedId = Number(req.params.id);
+    const sessionSpedId = req.session.speditionId;
+    const isOwnSped = role === "speditions_admin" && sessionSpedId === spedId;
+
+    if (role !== "comet_admin" && !isOwnSped) {
+      // Check if speditions_admin has an active permission to this spedition
+      if (role === "speditions_admin" && sessionSpedId) {
+        const [perm] = await db
+          .select()
+          .from(speditionPermissionsTable)
+          .where(
+            and(
+              eq(speditionPermissionsTable.grantingSpeditionId, spedId),
+              eq(speditionPermissionsTable.receivingSpeditionId, sessionSpedId),
+            ),
+          )
+          .limit(1);
+        if (!perm || (perm.permissionLevel !== "view" && perm.permissionLevel !== "edit")) {
+          return res.status(403).json({ error: "Kein Zugriff" });
+        }
+      } else {
+        return res.status(403).json({ error: "Kein Zugriff" });
+      }
+    }
+
+    const rows = await db
+      .select()
+      .from(speditionRelationenTable)
+      .where(eq(speditionRelationenTable.speditionId, spedId));
+    return res.json(rows);
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/speditionen/:id/relationen", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const spedId = Number(req.params.id);
+    const isOwnSped = role === "speditions_admin" && req.session.speditionId === spedId;
+    if (role !== "comet_admin" && !isOwnSped) {
+      return res.status(403).json({ error: "Kein Zugriff" });
+    }
+    const { name } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: "Name erforderlich" });
+    const [row] = await db
+      .insert(speditionRelationenTable)
+      .values({ speditionId: spedId, name: name.trim() })
+      .returning();
+    return res.status(201).json(row);
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/speditionen/:id/relationen/:relId", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const spedId = Number(req.params.id);
+    const relId = Number(req.params.relId);
+    const isOwnSped = role === "speditions_admin" && req.session.speditionId === spedId;
+    if (role !== "comet_admin" && !isOwnSped) {
+      return res.status(403).json({ error: "Kein Zugriff" });
+    }
+    await db
+      .delete(speditionRelationenTable)
+      .where(and(eq(speditionRelationenTable.id, relId), eq(speditionRelationenTable.speditionId, spedId)));
+    return res.json({ ok: true });
+  } catch (err) {
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Startup: Tabellen sicherstellen ──────────────────────────────────────────
 
 export async function ensureSpeditionLimitsTable(): Promise<void> {
@@ -474,6 +552,17 @@ export async function ensureSpeditionLimitsTable(): Promise<void> {
       von TIMESTAMPTZ NOT NULL,
       bis TIMESTAMPTZ NOT NULL,
       max_verladungen INTEGER NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+export async function ensureSpeditionRelationenTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS spedition_relationen (
+      id SERIAL PRIMARY KEY,
+      spedition_id INTEGER NOT NULL REFERENCES speditionen(id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `);
