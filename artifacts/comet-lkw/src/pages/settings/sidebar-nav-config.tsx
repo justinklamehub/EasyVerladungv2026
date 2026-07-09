@@ -60,6 +60,7 @@ const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
   "/auftragsauswertung": null,  // dynamic: comet roles + auftrag.analyse.spedition permission
   "/auditlog":           ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
   "/speditionsfreigabe": ["speditions_admin"],
+  "/relationen":         ["speditions_admin"],
   "/fotos":              null,  // dynamic: comet roles + foto.view permission
   "/settings":           ["comet_admin"],
   "/berechtigungen":     ["comet_admin"],
@@ -107,6 +108,7 @@ const DEFAULT_NAV_ITEMS: { href: string; defaultLabel: string; defaultIconName: 
   { href: "/auftragsauswertung", defaultLabel: "Auftragsauswertung", defaultIconName: "ClipboardList" },
   { href: "/auditlog", defaultLabel: "Änderungslog", defaultIconName: "History" },
   { href: "/speditionsfreigabe", defaultLabel: "Speditionsfreigabe", defaultIconName: "Share2" },
+  { href: "/relationen", defaultLabel: "Relationen", defaultIconName: "Route" },
   { href: "/fotos", defaultLabel: "Fotos", defaultIconName: "Image" },
   { href: "/settings", defaultLabel: "Einstellungen", defaultIconName: "Settings" },
   { href: "/berechtigungen", defaultLabel: "Berechtigungen", defaultIconName: "ShieldCheck" },
