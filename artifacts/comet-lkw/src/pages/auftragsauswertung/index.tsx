@@ -1,11 +1,13 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import {
   Upload, FileSpreadsheet, CheckCircle2, AlertCircle, Loader2,
-  ClipboardList, Eye, EyeOff, User
+  ClipboardList, Eye, EyeOff, User, Filter, X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -115,8 +117,12 @@ export default function AuftragsauswertungPage() {
   const [isLoadingLatest, setIsLoadingLatest] = useState(true);
   const [result, setResult] = useState<AnalyseResult | null>(null);
   const [togglingNr, setTogglingNr] = useState<string | null>(null);
+  const [filterSpedition, setFilterSpedition] = useState("");
+  const [filterLiefertermin, setFilterLiefertermin] = useState("");
+  const [filterRelation, setFilterRelation] = useState("");
 
   const isSpedUser = SPED_ROLES.includes(user?.role ?? "");
+  const isCometUser = !isSpedUser;
   const mySpeditionId = user?.speditionId ?? null;
 
   useEffect(() => {
@@ -188,6 +194,45 @@ export default function AuftragsauswertungPage() {
       setTogglingNr(null);
     }
   }, [toast]);
+
+  // ── Derived filter data ────────────────────────────────────────────────────
+  const allSpeditionen = useMemo(() =>
+    Array.from(new Set((result?.results ?? []).map(s => s.speditionDbName ?? s.csvName))).sort(),
+    [result]
+  );
+  const allLfdat = useMemo(() => {
+    const set = new Set<string>();
+    (result?.results ?? []).forEach(s => s.liefertermine.forEach(lt => { if (lt.lfdat) set.add(lt.lfdat); }));
+    return Array.from(set).sort();
+  }, [result]);
+  const allRelationen = useMemo(() => {
+    const set = new Set<string>();
+    (result?.results ?? []).forEach(s => s.liefertermine.forEach(lt => lt.leitgebiete.forEach(lg => { if (lg.leitgebiet) set.add(lg.leitgebiet); })));
+    return Array.from(set).sort();
+  }, [result]);
+
+  const hasActiveFilter = !!(filterSpedition || filterLiefertermin || filterRelation);
+
+  const filteredResults = useMemo(() => {
+    if (!result) return [];
+    return result.results.filter(s => {
+      if (isCometUser && filterSpedition && (s.speditionDbName ?? s.csvName) !== filterSpedition) return false;
+      if (filterLiefertermin || filterRelation) {
+        const hasMatch = s.liefertermine.some(lt => {
+          if (filterLiefertermin && lt.lfdat !== filterLiefertermin) return false;
+          if (filterRelation) return lt.leitgebiete.some(lg => (lg.leitgebiet ?? "").toLowerCase().includes(filterRelation.toLowerCase()));
+          return true;
+        });
+        if (!hasMatch) return false;
+      }
+      return true;
+    });
+  }, [result, filterSpedition, filterLiefertermin, filterRelation, isCometUser]);
+
+  const filteredTotals = useMemo(() => ({
+    auftraege: filteredResults.reduce((s, r) => s + r.auftraege, 0),
+    paletten: filteredResults.reduce((s, r) => s + r.paletten, 0),
+  }), [filteredResults]);
 
   const onDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -291,13 +336,14 @@ export default function AuftragsauswertungPage() {
           {!isSpedUser && (
             <div className="grid grid-cols-3 gap-3">
               {[
-                { label: "Speditionen",       value: result.results.length },
-                { label: "Aufträge gesamt",   value: result.totalAuftraege.toLocaleString("de-DE") },
-                { label: "Paletten (HU) gesamt", value: result.totalPaletten.toLocaleString("de-DE") },
+                { label: "Speditionen",          value: hasActiveFilter ? filteredResults.length : result.results.length },
+                { label: "Aufträge gesamt",      value: (hasActiveFilter ? filteredTotals.auftraege : result.totalAuftraege).toLocaleString("de-DE") },
+                { label: "Paletten (HU) gesamt", value: (hasActiveFilter ? filteredTotals.paletten  : result.totalPaletten).toLocaleString("de-DE") },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-white border border-slate-200 rounded-lg px-5 py-4">
                   <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{label}</p>
                   <p className="text-2xl font-bold text-slate-800 tabular-nums">{value}</p>
+                  {hasActiveFilter && <p className="text-[11px] text-slate-400 mt-0.5">gefiltert</p>}
                 </div>
               ))}
             </div>
@@ -327,6 +373,58 @@ export default function AuftragsauswertungPage() {
               </div>
             </div>
 
+            {/* Filter bar */}
+            <div className="px-5 py-3 border-b border-slate-100 flex items-center gap-3 flex-wrap bg-white">
+              <Filter className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              {isCometUser && (
+                <Select value={filterSpedition} onValueChange={setFilterSpedition}>
+                  <SelectTrigger className="h-8 text-xs w-[180px]">
+                    <SelectValue placeholder="Spedition…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allSpeditionen.map(s => (
+                      <SelectItem key={s} value={s} className="text-xs">{s}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+              <Select value={filterLiefertermin} onValueChange={setFilterLiefertermin}>
+                <SelectTrigger className="h-8 text-xs w-[160px]">
+                  <SelectValue placeholder="Liefertermin…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allLfdat.map(d => (
+                    <SelectItem key={d} value={d} className="text-xs">{formatLfdat(d)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={filterRelation} onValueChange={setFilterRelation}>
+                <SelectTrigger className="h-8 text-xs w-[180px]">
+                  <SelectValue placeholder="Relation…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {allRelationen.map(r => (
+                    <SelectItem key={r} value={r} className="text-xs">{r}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {hasActiveFilter && (
+                <Button
+                  variant="ghost" size="sm"
+                  className="h-8 gap-1.5 text-xs text-slate-500 hover:text-slate-800"
+                  onClick={() => { setFilterSpedition(""); setFilterLiefertermin(""); setFilterRelation(""); }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Filter zurücksetzen
+                </Button>
+              )}
+              {hasActiveFilter && (
+                <span className="ml-auto text-xs text-slate-400">
+                  {filteredResults.length} von {result.results.length} Speditionen
+                </span>
+              )}
+            </div>
+
             {/* Table */}
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -352,8 +450,19 @@ export default function AuftragsauswertungPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {result.results.map((s) => {
+                  {filteredResults.map((s) => {
                     const isOwn = s.speditionId === mySpeditionId;
+                    const displayedLiefertermine = (filterLiefertermin || filterRelation)
+                      ? s.liefertermine
+                          .filter(lt => !filterLiefertermin || lt.lfdat === filterLiefertermin)
+                          .map(lt => ({
+                            ...lt,
+                            leitgebiete: filterRelation
+                              ? lt.leitgebiete.filter(lg => (lg.leitgebiet ?? "").toLowerCase().includes(filterRelation.toLowerCase()))
+                              : lt.leitgebiete,
+                          }))
+                          .filter(lt => !filterRelation || lt.leitgebiete.length > 0)
+                      : s.liefertermine;
                     return (
                       <tr
                         key={s.spediteurNr}
@@ -403,7 +512,7 @@ export default function AuftragsauswertungPage() {
 
                         {/* Liefertermin → Leitgebiet (nested) */}
                         <td className="px-5 py-4 min-w-[280px]">
-                          <LieferterminBlock liefertermine={s.liefertermine} />
+                          <LieferterminBlock liefertermine={displayedLiefertermine} />
                         </td>
 
                         {/* Freigabe toggle */}
