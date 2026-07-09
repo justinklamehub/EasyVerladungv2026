@@ -126,10 +126,10 @@ export function RelationenTab({ speditionId }: Props) {
             <Label className="text-xs text-slate-400">Ort</Label>
             <Input
               value={newOrt}
-              onChange={(e) => setNewOrt(e.target.value)}
-              placeholder="Graben"
+              onChange={(e) => setNewOrt(e.target.value.toUpperCase())}
+              placeholder="GRABEN"
               onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-              className="h-9"
+              className="h-9 uppercase"
             />
           </div>
           <div className="flex items-end">
