@@ -1,6 +1,7 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { useBulkCreateShipments, useListSpeditionen, getListShipmentsQueryKey, ShipmentInputLkwArt, ShipmentInputStatus } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQueries } from "@tanstack/react-query";
+import { customFetch } from "@workspace/api-client-react";
 import { useAuth } from "@/contexts/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -192,6 +193,34 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
     }
   }, [open, initialRows]);
 
+  // ── Relationen-Vorschläge ────────────────────────────────────────────────────
+  const uniqueSpedIds = useMemo(() => {
+    const ids = new Set<number>();
+    if (isSpedUser && user?.speditionId) ids.add(user.speditionId);
+    if (isCometUser) {
+      rows.forEach((r) => { if (r.speditionId) ids.add(parseInt(r.speditionId, 10)); });
+    }
+    return [...ids];
+  }, [rows, isSpedUser, isCometUser, user?.speditionId]);
+
+  const relationenQueries = useQueries({
+    queries: uniqueSpedIds.map((spedId) => ({
+      queryKey: ["spedition-relationen", spedId],
+      queryFn: () => customFetch(`/api/speditionen/${spedId}/relationen`) as Promise<{ id: number; name: string }[]>,
+      enabled: open,
+      staleTime: 60_000,
+    })),
+  });
+
+  const relationenBySpedId = useMemo(() => {
+    const map = new Map<number, { id: number; name: string }[]>();
+    uniqueSpedIds.forEach((spedId, i) => {
+      const data = relationenQueries[i]?.data;
+      if (data) map.set(spedId, data);
+    });
+    return map;
+  }, [uniqueSpedIds, relationenQueries]);
+
   const bulkMutation = useBulkCreateShipments({
     mutation: {
       onSuccess: (created) => {
@@ -329,6 +358,15 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
           </div>
         </DialogHeader>
 
+        {/* Datalists for relation suggestions, one per unique speditionId */}
+        {[...relationenBySpedId.entries()].map(([spedId, rels]) =>
+          rels.length > 0 ? (
+            <datalist key={spedId} id={`relation-datalist-${spedId}`}>
+              {rels.map((r) => <option key={r.id} value={r.name} />)}
+            </datalist>
+          ) : null
+        )}
+
         <div className="flex-1 overflow-auto">
           <div className="min-w-max">
             <table className="w-full text-sm border-separate border-spacing-0">
@@ -457,12 +495,21 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                         </td>
                       )}
                       <td className="px-1 py-1.5 border-b border-slate-100">
-                        <Input
-                          value={row.relation}
-                          onChange={(e) => updateRow(row.id, "relation", e.target.value)}
-                          placeholder="Start → Ziel"
-                          className={cn("h-8 text-sm", rowErrors?.has("relation") && "border-red-400 ring-1 ring-red-400")}
-                        />
+                        {(() => {
+                          const spedId = isCometUser
+                            ? (row.speditionId ? parseInt(row.speditionId, 10) : null)
+                            : (user?.speditionId ?? null);
+                          const listId = spedId ? `relation-datalist-${spedId}` : undefined;
+                          return (
+                            <Input
+                              value={row.relation}
+                              onChange={(e) => updateRow(row.id, "relation", e.target.value)}
+                              placeholder="Start → Ziel"
+                              className={cn("h-8 text-sm", rowErrors?.has("relation") && "border-red-400 ring-1 ring-red-400")}
+                              list={listId}
+                            />
+                          );
+                        })()}
                       </td>
                       <td className="px-1 py-1.5 border-b border-slate-100">
                         <Input
