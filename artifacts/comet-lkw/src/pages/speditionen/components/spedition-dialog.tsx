@@ -379,20 +379,6 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
                 <Input value={form.bemerkungen} onChange={e => setForm(f => ({ ...f, bemerkungen: e.target.value }))} />
               </div>
               <div className="space-y-1 col-span-2">
-                <Label>Tageslimit Verladungen</Label>
-                <Input
-                  type="number"
-                  min="1"
-                  step="1"
-                  placeholder="unbegrenzt"
-                  value={form.dailyShipmentLimit}
-                  onChange={e => setForm(f => ({ ...f, dailyShipmentLimit: e.target.value }))}
-                />
-                <p className="text-xs text-slate-400 mt-1">
-                  Maximale Anzahl Verladungen, die diese Spedition pro Tag anlegen darf. Leer lassen = unbegrenzt.
-                </p>
-              </div>
-              <div className="space-y-1 col-span-2">
                 <Label>Paletten-Tauschfaktor</Label>
                 <Select
                   value={String(form.palletFaktor)}
@@ -463,11 +449,13 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
           )}
 
           {isEditing && (
-            <TabsContent value="tageslimits" className="min-h-[200px]">
+            <TabsContent value="tageslimits">
               <p className="text-sm text-slate-500 mb-3">
-                Begrenzen Sie die Anzahl der Verladungen, die diese Spedition in einem bestimmten Zeitraum pro Tag anlegen darf. Mehrere Limits sind möglich. Abgelaufene Limits werden automatisch gelöscht.
+                Begrenzen Sie die Anzahl der Verladungen in einem bestimmten Zeitraum pro Tag. Mehrere Limits möglich — es gilt stets das restriktivste. Abgelaufene Limits werden automatisch gelöscht.
               </p>
-              <LimitsTab speditionId={editSpedition!.id} />
+              <div className="overflow-y-auto max-h-[340px] pr-1">
+                <LimitsTab speditionId={editSpedition!.id} />
+              </div>
             </TabsContent>
           )}
 
