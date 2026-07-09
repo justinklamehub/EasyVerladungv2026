@@ -311,6 +311,102 @@ router.patch("/auftragsauswertung/freigaben", requireAuth, async (req, res) => {
   }
 });
 
+// GET /api/auftragsauswertung/vergleich — compare latest Auswertung with open shipments
+router.get("/auftragsauswertung/vergleich", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    if (!(await can(role, "auftrag.analyse"))) {
+      return res.status(403).json({ error: "Keine Berechtigung" });
+    }
+
+    // Load latest Auswertung
+    const aRow = await pool.query(
+      "SELECT results FROM auftrag_analyse_ergebnisse ORDER BY uploaded_at DESC LIMIT 1"
+    );
+    if (aRow.rows.length === 0) return res.json({ lkwOhneAuftrag: [], auftragOhneLkw: [] });
+    const results: any[] = aRow.rows[0].results ?? [];
+
+    // Build Auswertung set: key = "speditionId::relation" (only matched entries)
+    // Also track meta per key for the "auftragOhneLkw" list
+    type AuftragEntry = {
+      spediteurNr: string; speditionId: number; speditionName: string;
+      leitgebiet: string; paletten: number; punkte: number;
+    };
+    const auftragMap = new Map<string, AuftragEntry>();
+    for (const sped of results) {
+      if (!sped.speditionId) continue;
+      for (const lt of sped.liefertermine ?? []) {
+        for (const lg of lt.leitgebiete ?? []) {
+          const rel = (lg.leitgebiet ?? "").trim();
+          const key = `${sped.speditionId}::${rel.toLowerCase()}`;
+          if (!auftragMap.has(key)) {
+            auftragMap.set(key, {
+              spediteurNr: sped.spediteurNr,
+              speditionId: sped.speditionId,
+              speditionName: sped.speditionDbName ?? sped.csvName,
+              leitgebiet: rel,
+              paletten: 0,
+              punkte: 0,
+            });
+          }
+          const entry = auftragMap.get(key)!;
+          entry.paletten += lg.paletten ?? 0;
+          entry.punkte   += lg.punkte ?? 0;
+        }
+      }
+    }
+
+    // Load open shipments (not Abgefertigt/Storniert)
+    const sRows = await pool.query(`
+      SELECT s.id, s.spedition_id, s.relation, s.eta_date, s.status, s.bezeichnung, sp.name AS spedition_name
+      FROM shipments s
+      LEFT JOIN speditionen sp ON sp.id = s.spedition_id
+      WHERE s.status NOT IN ('Abgefertigt', 'Storniert')
+        AND s.spedition_id IS NOT NULL
+    `);
+
+    // Build shipment set: key = "speditionId::relation"
+    type ShipmentGroup = {
+      speditionId: number; speditionName: string; relation: string;
+      count: number; earliestEta: string | null;
+    };
+    const shipmentMap = new Map<string, ShipmentGroup>();
+    for (const row of sRows.rows) {
+      const rel = (row.relation ?? "").trim();
+      const key = `${row.spedition_id}::${rel.toLowerCase()}`;
+      if (!shipmentMap.has(key)) {
+        shipmentMap.set(key, {
+          speditionId:   row.spedition_id,
+          speditionName: row.spedition_name ?? `#${row.spedition_id}`,
+          relation:      rel,
+          count:         0,
+          earliestEta:   null,
+        });
+      }
+      const g = shipmentMap.get(key)!;
+      g.count++;
+      if (row.eta_date && (!g.earliestEta || row.eta_date < g.earliestEta)) {
+        g.earliestEta = row.eta_date;
+      }
+    }
+
+    // Case A: LKW ohne Auftrag — shipment key NOT in auftragMap
+    const lkwOhneAuftrag = Array.from(shipmentMap.values())
+      .filter((g) => !auftragMap.has(`${g.speditionId}::${g.relation.toLowerCase()}`))
+      .sort((a, b) => a.speditionName.localeCompare(b.speditionName) || a.relation.localeCompare(b.relation));
+
+    // Case B: Auftrag ohne LKW — auftrag key NOT in shipmentMap
+    const auftragOhneLkw = Array.from(auftragMap.values())
+      .filter((e) => !shipmentMap.has(`${e.speditionId}::${e.leitgebiet.toLowerCase()}`))
+      .sort((a, b) => a.speditionName.localeCompare(b.speditionName) || a.leitgebiet.localeCompare(b.leitgebiet));
+
+    return res.json({ lkwOhneAuftrag, auftragOhneLkw });
+  } catch (err) {
+    console.error("[auftragsauswertung] vergleich", err);
+    return res.status(500).json({ error: "Interner Fehler" });
+  }
+});
+
 // POST /api/auftragsauswertung/upload — parse CSV, persist, return result
 router.post(
   "/auftragsauswertung/upload",

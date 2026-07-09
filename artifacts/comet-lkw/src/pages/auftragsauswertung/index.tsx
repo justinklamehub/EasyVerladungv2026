@@ -60,6 +60,28 @@ interface AnalyseResult {
   results: SpedResult[];
 }
 
+interface LkwOhneAuftragEntry {
+  speditionId: number;
+  speditionName: string;
+  relation: string;
+  count: number;
+  earliestEta: string | null;
+}
+
+interface AuftragOhneLkwEntry {
+  spediteurNr: string;
+  speditionId: number;
+  speditionName: string;
+  leitgebiet: string;
+  paletten: number;
+  punkte: number;
+}
+
+interface VergleichResult {
+  lkwOhneAuftrag: LkwOhneAuftragEntry[];
+  auftragOhneLkw: AuftragOhneLkwEntry[];
+}
+
 function formatLfdat(s: string): string {
   if (!s) return "—";
   const m = s.match(/^(\d+)\.(\d{4})$/);
@@ -172,21 +194,34 @@ export default function AuftragsauswertungPage() {
   const [filterSpedition, setFilterSpedition] = useState("");
   const [filterLiefertermin, setFilterLiefertermin] = useState("");
   const [filterRelation, setFilterRelation] = useState("");
+  const [vergleich, setVergleich] = useState<VergleichResult | null>(null);
 
   const isSpedUser = SPED_ROLES.includes(user?.role ?? "");
   const isCometUser = !isSpedUser;
   const mySpeditionId = user?.speditionId ?? null;
+
+  const fetchVergleich = useCallback(() => {
+    fetch(`${API_BASE}/auftragsauswertung/vergleich`, { credentials: "include" })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setVergleich(data); })
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     setIsLoadingLatest(true);
     fetch(`${API_BASE}/auftragsauswertung/latest`, { credentials: "include" })
       .then((r) => r.json())
-      .then((data) => { if (!cancelled) setResult(data ?? null); })
+      .then((data) => {
+        if (!cancelled) {
+          setResult(data ?? null);
+          if (data && !SPED_ROLES.includes(user?.role ?? "")) fetchVergleich();
+        }
+      })
       .catch(() => {})
       .finally(() => { if (!cancelled) setIsLoadingLatest(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [fetchVergleich, user?.role]);
 
   const processFiles = useCallback(async (zlthu2: File, dark: File) => {
     setIsUploading(true);
@@ -206,6 +241,7 @@ export default function AuftragsauswertungPage() {
         setResult({ ...data, uploadedByUsername: user?.username ?? null });
         setPendingZlthu2(null);
         setPendingDark(null);
+        fetchVergleich();
         toast({
           title: `${data.results.length} Speditionen ausgewertet`,
           description: `${data.totalRows} Zeilen verarbeitet`,
@@ -665,6 +701,99 @@ export default function AuftragsauswertungPage() {
                 Einige Speditionen konnten nicht zugeordnet werden. Bitte die{" "}
                 <strong>Speditionsnummer (SAP)</strong> in den Stammdaten hinterlegen.
               </span>
+            </div>
+          )}
+
+          {/* Abgleich mit offenen Verladungen */}
+          {!isSpedUser && vergleich && (vergleich.lkwOhneAuftrag.length > 0 || vergleich.auftragOhneLkw.length > 0) && (
+            <div className="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+              <div className="px-5 py-3 bg-slate-50 border-b border-slate-200 flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 text-amber-500 shrink-0" />
+                <span className="text-sm font-semibold text-slate-700">Abgleich mit offenen Verladungen</span>
+                <span className="ml-auto text-xs text-slate-400">
+                  {vergleich.lkwOhneAuftrag.length + vergleich.auftragOhneLkw.length} Abweichung{vergleich.lkwOhneAuftrag.length + vergleich.auftragOhneLkw.length !== 1 ? "en" : ""}
+                </span>
+              </div>
+              <div className="divide-y divide-slate-100">
+
+                {/* Case A: LKW ohne Aufträge in Auswertung */}
+                {vergleich.lkwOhneAuftrag.length > 0 && (
+                  <div className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-orange-600 mb-2">
+                      LKW ohne Aufträge in der Auswertung ({vergleich.lkwOhneAuftrag.length})
+                    </p>
+                    <p className="text-xs text-slate-400 mb-3">
+                      Diese Speditionen haben offene LKWs, aber keine Einträge in der aktuellen Auftragsauswertung.
+                    </p>
+                    <div className="space-y-1">
+                      {vergleich.lkwOhneAuftrag.map((e) => (
+                        <div
+                          key={`${e.speditionId}-${e.relation}`}
+                          className="flex items-center gap-3 px-3 py-2 bg-orange-50 border border-orange-100 rounded-lg flex-wrap"
+                        >
+                          <span className="text-sm font-medium text-slate-700 min-w-[140px]">{e.speditionName}</span>
+                          {e.relation && (
+                            <span className="text-xs bg-orange-100 text-orange-700 rounded px-2 py-0.5 font-mono">
+                              {e.relation}
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-400 tabular-nums">
+                            {e.count}&thinsp;LKW
+                          </span>
+                          {e.earliestEta && (
+                            <span className="text-xs text-slate-400">
+                              ETA: {e.earliestEta}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Case B: Aufträge in Auswertung ohne offene LKWs */}
+                {vergleich.auftragOhneLkw.length > 0 && (
+                  <div className="p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-blue-600 mb-2">
+                      Aufträge ohne offene LKWs ({vergleich.auftragOhneLkw.length})
+                    </p>
+                    <p className="text-xs text-slate-400 mb-3">
+                      Diese Speditionen haben Einträge in der Auswertung, aber keine offenen LKWs in der Verladungsverwaltung.
+                    </p>
+                    <div className="space-y-1">
+                      {vergleich.auftragOhneLkw.map((e) => (
+                        <div
+                          key={`${e.speditionId}-${e.leitgebiet}`}
+                          className="flex items-center gap-3 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg flex-wrap"
+                        >
+                          <span className="text-sm font-medium text-slate-700 min-w-[140px]">{e.speditionName}</span>
+                          {e.leitgebiet && (
+                            <span className="text-xs bg-blue-100 text-blue-700 rounded px-2 py-0.5 font-mono">
+                              {e.leitgebiet}
+                            </span>
+                          )}
+                          <span className="text-xs text-slate-400 tabular-nums">
+                            {e.paletten}&thinsp;Pal.
+                          </span>
+                          {(e.punkte ?? 0) > 0 && (
+                            <span className="text-xs font-medium text-violet-500 tabular-nums">
+                              {e.punkte.toLocaleString("de-DE", { maximumFractionDigits: 2 })}&thinsp;Pkt.
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* All-clear: no mismatches */}
+          {!isSpedUser && vergleich && vergleich.lkwOhneAuftrag.length === 0 && vergleich.auftragOhneLkw.length === 0 && (
+            <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
+              <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-500" />
+              <span>Alle offenen Verladungen und Aufträge stimmen überein — kein Abweichung gefunden.</span>
             </div>
           )}
         </div>
