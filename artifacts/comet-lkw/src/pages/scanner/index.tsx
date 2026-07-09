@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useLocation } from "wouter";
-import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, Hash, ClipboardCheck, ChevronDown, ChevronUp, Save } from "lucide-react";
+import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, ClipboardCheck, ChevronDown, ChevronUp, Save } from "lucide-react";
 
 const API = "/api";
 
@@ -314,7 +314,7 @@ export default function ScannerLandingPage() {
         <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
       </div>
 
-      {shipmentList.length === 0 && <div style={S.card}>
+      <div style={S.card}>
         <form onSubmit={handleSearch}>
           <label style={S.label}>LKW-ID oder Bezeichnung</label>
           <input
@@ -347,7 +347,7 @@ export default function ScannerLandingPage() {
             {isSearching ? "SUCHE..." : "VERLADUNG SUCHEN"}
           </button>
         </form>
-      </div>}
+      </div>
 
       {searched && shipmentList.length > 0 && (
         <div style={{ width: "100%", maxWidth: 480 }}>
@@ -410,52 +410,6 @@ export default function ScannerLandingPage() {
                 <CheckCircle2 size={13} />
                 Verladung gefunden
               </div>
-              <div style={S.infoRow}>
-                <span style={S.infoLabel}>ID</span>
-                <span style={{ ...S.infoValue, display: "flex", alignItems: "center", gap: 4 }}>
-                  <Hash size={12} color="#64748b" />{shipment.id}
-                </span>
-              </div>
-              {shipment.kennzeichen && (
-                <div style={S.infoRow}>
-                  <span style={S.infoLabel}>Kennzeichen</span>
-                  <span style={S.infoValue}>{shipment.kennzeichen}</span>
-                </div>
-              )}
-              {shipment.bezeichnung && (
-                <div style={S.infoRow}>
-                  <span style={S.infoLabel}>Bezeichnung</span>
-                  <span style={S.infoValue}>{shipment.bezeichnung}</span>
-                </div>
-              )}
-              {shipment.relation && (
-                <div style={S.infoRow}>
-                  <span style={S.infoLabel}>Relation</span>
-                  <span style={S.infoValue}>{shipment.relation}</span>
-                </div>
-              )}
-              {spedition && (
-                <div style={S.infoRow}>
-                  <span style={S.infoLabel}>Spedition</span>
-                  <span style={S.infoValue}>{spedition}</span>
-                </div>
-              )}
-              <div style={{ ...S.infoRow, borderBottom: "none" }}>
-                <span style={S.infoLabel}>Status</span>
-                <span style={S.infoValue}>{shipment.status}</span>
-              </div>
-              {shipment.tor && (
-                <div style={{ ...S.infoRow, borderBottom: "none", marginTop: -8 }}>
-                  <span style={S.infoLabel}>Tor</span>
-                  <span style={S.infoValue}>{shipment.tor}</span>
-                </div>
-              )}
-              {shipment.wareStatus && (
-                <div style={{ ...S.infoRow, borderBottom: "none", marginTop: -8 }}>
-                  <span style={S.infoLabel}>Ware</span>
-                  <span style={S.infoValue}>{shipment.wareStatus}</span>
-                </div>
-              )}
 
               {/* Save-Feedback */}
               {saveOk && (
