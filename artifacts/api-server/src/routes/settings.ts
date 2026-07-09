@@ -95,6 +95,15 @@ router.put("/settings/:key", requireAuth, async (req, res) => {
       "storage_local_path",
       "custom_design",
       "ticket_categories",
+      "email_tpl_reconciliation_opened_enabled",
+      "email_tpl_reconciliation_opened_subject",
+      "email_tpl_reconciliation_opened_body",
+      "email_tpl_reconciliation_opened_to",
+      "email_tpl_reconciliation_reminder_enabled",
+      "email_tpl_reconciliation_reminder_subject",
+      "email_tpl_reconciliation_reminder_body",
+      "email_tpl_reconciliation_reminder_to",
+      "reconciliation_reminder_days",
     ];
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: "Unbekannter Einstellungsschlüssel" });

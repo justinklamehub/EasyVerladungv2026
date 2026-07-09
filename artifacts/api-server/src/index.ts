@@ -7,7 +7,7 @@ import { seedEmailTemplates, ensureEmailLogTable, ensurePasswordResetTable } fro
 import { ensurePasswordExpiryRemindersTable } from "./lib/password-policy";
 import { ensureTicketsTables } from "./routes/tickets";
 import { ensureUserPreferencesTable } from "./routes/user-preferences";
-import { startScheduler, ensureReportWeeklyLogTable } from "./lib/scheduler";
+import { startScheduler, ensureReportWeeklyLogTable, ensureReconciliationReminderSentTable } from "./lib/scheduler";
 import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
 import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
 import { initWebPush, seedPushEventSettings, seedPushMessageTemplates } from "./routes/push";
@@ -274,6 +274,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("report_weekly_log table ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureReportWeeklyLogTable failed — non-fatal");
+  }
+  try {
+    await ensureReconciliationReminderSentTable();
+    logger.info("reconciliation_reminder_sent table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureReconciliationReminderSentTable failed — non-fatal");
   }
   try {
     await ensureShipmentTemplatesTable();

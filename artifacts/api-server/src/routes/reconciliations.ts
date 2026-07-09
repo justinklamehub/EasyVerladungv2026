@@ -5,6 +5,7 @@ import {
   palletMovementsTable,
   reconciliationCommentsTable,
   speditionenTable,
+  speditionContactsTable,
   usersTable,
 } from "@workspace/db";
 import { eq } from "drizzle-orm";
@@ -12,6 +13,7 @@ import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
 import { can } from "../lib/permissions";
+import { sendEventEmail } from "../lib/email";
 import type { Server as IOServer } from "socket.io";
 
 const router = Router();
@@ -103,10 +105,26 @@ router.post("/reconciliations", requireAuth, async (req, res) => {
     emit(req, "reconciliation.created", { id: rec.id }, speditionId);
 
     const [sped] = await db.select().from(speditionenTable).where(eq(speditionenTable.id, speditionId)).limit(1);
-
-    // Nachrichten für Palettenabstimmung vorerst deaktiviert
-
     const [creator] = await db.select().from(usersTable).where(eq(usersTable.id, req.session.userId!)).limit(1);
+
+    // E-Mail bei Abstimmungseröffnung senden
+    const spedEmails: string[] = [];
+    if (sped?.email) spedEmails.push(sped.email);
+    const contacts = await db.select().from(speditionContactsTable).where(eq(speditionContactsTable.speditionId, speditionId));
+    for (const c of contacts) { if (c.email) spedEmails.push(c.email); }
+    if (creator?.email) spedEmails.push(creator.email);
+
+    sendEventEmail(
+      "reconciliation_opened",
+      {
+        spedition: sped?.name ?? "",
+        zeitraum_von: dateFrom ?? "",
+        zeitraum_bis: dateTo ?? "",
+        erstellt_von: creator?.username ?? "",
+        datum: new Date().toLocaleDateString("de-DE"),
+      },
+      spedEmails.join(", ") || undefined,
+    ).catch(() => {});
 
     return res.status(201).json({
       ...rec,

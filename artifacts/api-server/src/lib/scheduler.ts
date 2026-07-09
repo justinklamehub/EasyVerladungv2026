@@ -1,5 +1,5 @@
-import { db, pool, notifications, shipmentsTable, settingsTable, usersTable } from "@workspace/db";
-import { and, gte, eq, lt, notInArray, isNotNull, count } from "drizzle-orm";
+import { db, pool, notifications, shipmentsTable, settingsTable, usersTable, palletReconciliationsTable, speditionenTable, speditionContactsTable } from "@workspace/db";
+import { and, gte, eq, lt, notInArray, isNotNull, isNull, count } from "drizzle-orm";
 import { sendWeeklyReport } from "./weekly-report";
 import type { Server as SocketIOServer } from "socket.io";
 import { notify } from "./notify";
@@ -188,6 +188,80 @@ async function runPasswordExpiryReminderCheck() {
   }
 }
 
+// ── Abstimmungs-Erinnerungs-E-Mail ───────────────────────────────────────────
+
+async function ensureReconciliationReminderSentTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reconciliation_reminder_sent (
+      reconciliation_id INTEGER NOT NULL PRIMARY KEY,
+      sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+}
+
+async function runReconciliationReminderCheck() {
+  const rows = await db.select().from(settingsTable);
+  const s = Object.fromEntries(rows.map((r) => [r.key, r.value ?? ""]));
+
+  if (s.email_tpl_reconciliation_reminder_enabled !== "1") return;
+
+  const reminderDays = parseInt(s.reconciliation_reminder_days || "3", 10);
+  if (!Number.isFinite(reminderDays) || reminderDays <= 0) return;
+
+  const cutoff = new Date(Date.now() - reminderDays * 24 * 60 * 60 * 1000);
+
+  const openRecs = await db
+    .select()
+    .from(palletReconciliationsTable)
+    .where(
+      and(
+        eq(palletReconciliationsTable.status, "offen"),
+        isNull(palletReconciliationsTable.speditionBalance),
+        lt(palletReconciliationsTable.createdAt, cutoff),
+      ),
+    );
+
+  for (const rec of openRecs) {
+    const alreadySent = await pool.query(
+      "SELECT 1 FROM reconciliation_reminder_sent WHERE reconciliation_id = $1",
+      [rec.id],
+    );
+    if (alreadySent.rows.length > 0) continue;
+
+    const [sped] = await db.select().from(speditionenTable).where(eq(speditionenTable.id, rec.speditionId)).limit(1);
+    const creator = rec.createdBy
+      ? (await db.select().from(usersTable).where(eq(usersTable.id, rec.createdBy)).limit(1))[0]
+      : null;
+
+    const spedEmails: string[] = [];
+    if (sped?.email) spedEmails.push(sped.email);
+    const contacts = await db.select().from(speditionContactsTable).where(eq(speditionContactsTable.speditionId, rec.speditionId));
+    for (const c of contacts) { if (c.email) spedEmails.push(c.email); }
+    if (creator?.email) spedEmails.push(creator.email);
+
+    const tage = Math.floor((Date.now() - new Date(rec.createdAt).getTime()) / (24 * 60 * 60 * 1000));
+
+    const { sendEventEmail } = await import("./email");
+    await sendEventEmail(
+      "reconciliation_reminder",
+      {
+        spedition: sped?.name ?? "",
+        zeitraum_von: rec.dateFrom ?? "",
+        zeitraum_bis: rec.dateTo ?? "",
+        tage: String(tage),
+        datum: new Date().toLocaleDateString("de-DE"),
+      },
+      spedEmails.join(", ") || undefined,
+    ).catch(() => {});
+
+    await pool.query(
+      "INSERT INTO reconciliation_reminder_sent (reconciliation_id) VALUES ($1) ON CONFLICT DO NOTHING",
+      [rec.id],
+    );
+    logger.info({ reconciliationId: rec.id, tage }, "Reconciliation Erinnerungs-E-Mail versendet");
+  }
+}
+
 // ── Scheduler starten ─────────────────────────────────────────────────────────
 
 async function runAllChecks(io: SocketIOServer) {
@@ -204,9 +278,12 @@ async function runAllChecks(io: SocketIOServer) {
   await runPasswordExpiryReminderCheck().catch((e) =>
     logger.warn({ err: e }, "Password expiry reminder check failed — non-fatal")
   );
+  await runReconciliationReminderCheck().catch((e) =>
+    logger.warn({ err: e }, "Reconciliation reminder check failed — non-fatal")
+  );
 }
 
-export { ensureReportWeeklyLogTable, runPasswordExpiryReminderCheck };
+export { ensureReportWeeklyLogTable, runPasswordExpiryReminderCheck, ensureReconciliationReminderSentTable };
 
 export function startScheduler(io: SocketIOServer) {
   runAllChecks(io);

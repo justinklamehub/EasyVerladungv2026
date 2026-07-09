@@ -3,7 +3,7 @@ import { db, pool } from "@workspace/db";
 import { settingsTable, emailLogTable } from "@workspace/db";
 import { eq, notLike, and } from "drizzle-orm";
 
-export type EmailEvent = "shipment" | "bulk" | "user" | "password_expiry";
+export type EmailEvent = "shipment" | "bulk" | "user" | "password_expiry" | "reconciliation_opened" | "reconciliation_reminder";
 
 export interface ShipmentRow { label: string; value: string }
 export interface BulkShipmentRow {

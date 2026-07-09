@@ -134,6 +134,26 @@ const EMAIL_EVENTS = [
     availableFields: null as { key: string; label: string }[] | null,
     defaultEnabledKeys: null as string[] | null,
   },
+  {
+    key: "reconciliation_opened",
+    label: "Abstimmung eröffnet",
+    description: "Wird gesendet, wenn eine neue Paletten-Abstimmung eröffnet wird",
+    placeholders: ["{{spedition}}", "{{zeitraum_von}}", "{{zeitraum_bis}}", "{{erstellt_von}}", "{{datum}}"],
+    recipientNote: "E-Mail-Adressen der Spedition und ihrer Kontakte sowie des Erstellers werden automatisch als Empfänger hinzugefügt.",
+    tableFieldsKey: null as string | null,
+    availableFields: null as { key: string; label: string }[] | null,
+    defaultEnabledKeys: null as string[] | null,
+  },
+  {
+    key: "reconciliation_reminder",
+    label: "Abstimmungs-Erinnerung",
+    description: "Wird gesendet, wenn innerhalb des konfigurierten Zeitraums kein Salden-Eintrag durch die Spedition erfolgte",
+    placeholders: ["{{spedition}}", "{{zeitraum_von}}", "{{zeitraum_bis}}", "{{tage}}", "{{datum}}"],
+    recipientNote: "E-Mail-Adressen der Spedition und ihrer Kontakte sowie des Erstellers werden automatisch als Empfänger hinzugefügt.",
+    tableFieldsKey: null as string | null,
+    availableFields: null as { key: string; label: string }[] | null,
+    defaultEnabledKeys: null as string[] | null,
+  },
 ];
 
 const EVENT_LABELS: Record<string, string> = {
@@ -141,6 +161,8 @@ const EVENT_LABELS: Record<string, string> = {
   bulk: "Massen-Verladung",
   user: "Benutzer angelegt",
   password_expiry: "Passwort läuft ab",
+  reconciliation_opened: "Abstimmung eröffnet",
+  reconciliation_reminder: "Abstimmungs-Erinnerung",
 };
 
 // ── SettingField ──────────────────────────────────────────────────────────────
@@ -413,6 +435,54 @@ function EmailFromField({ value, onSave, isSaving }: { value: string; onSave: (k
         )}
       </div>
       <Input value={local} onChange={e => setLocal(e.target.value)} placeholder="noreply-easy-verladung@comet-seasonal.de" className="text-sm" />
+    </div>
+  );
+}
+
+// ── ReconciliationReminderDaysSetting ─────────────────────────────────────────
+
+function ReconciliationReminderDaysSetting({
+  settings,
+  onSave,
+  isSaving,
+}: {
+  settings: SettingsMap;
+  onSave: (k: string, v: string) => void;
+  isSaving: (k: string) => boolean;
+}) {
+  const stored = settings["reconciliation_reminder_days"] ?? "3";
+  const [local, setLocal] = useState(stored);
+  useEffect(() => { setLocal(settings["reconciliation_reminder_days"] ?? "3"); }, [settings]);
+  const dirty = local !== stored;
+  return (
+    <div className="mt-4 space-y-1.5 border rounded-md p-3 bg-slate-50">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <Label className="text-sm font-medium text-slate-700">Erinnerung nach (Tage)</Label>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Wie viele Tage nach Eröffnung der Abstimmung ohne Salden-Eintrag eine Erinnerung gesendet wird (Standard: 3)
+          </p>
+        </div>
+        {dirty && (
+          <Button
+            size="sm"
+            className="h-7 px-3 text-xs shrink-0"
+            onClick={() => onSave("reconciliation_reminder_days", local)}
+            disabled={isSaving("reconciliation_reminder_days")}
+          >
+            {isSaving("reconciliation_reminder_days") ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3 mr-1" />}
+            Speichern
+          </Button>
+        )}
+      </div>
+      <Input
+        type="number"
+        min={1}
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        placeholder="3"
+        className="text-sm w-32"
+      />
     </div>
   );
 }
@@ -2281,6 +2351,9 @@ export default function SettingsPage() {
                     onSave={handleSave}
                     isSaving={isSavingKey}
                   />
+                  {ev.key === "reconciliation_reminder" && (
+                    <ReconciliationReminderDaysSetting settings={s} onSave={handleSave} isSaving={isSavingKey} />
+                  )}
                 </div>
               ))}
             </CardContent>
