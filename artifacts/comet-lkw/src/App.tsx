@@ -57,6 +57,7 @@ import ImpressumPage from "@/pages/impressum";
 import DatenschutzPage from "@/pages/datenschutz";
 import ChangelogPage from "@/pages/changelog";
 import FotosPage from "@/pages/fotos/index";
+import TorbelegungPage from "@/pages/torbelegung";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -119,6 +120,7 @@ function Router() {
             <Route path="/settings"><ProtectedRoute component={SettingsPage} roles={["comet_admin"]} /></Route>
             <Route path="/berechtigungen"><ProtectedRoute component={BerechtigungenPage} roles={["comet_admin"]} /></Route>
             <Route path="/wochenansicht"><ProtectedRoute component={WochenansichtPage} /></Route>
+            <Route path="/torbelegung"><ProtectedRoute component={TorbelegungPage} /></Route>
             <Route path="/auswertung"><ProtectedRoute component={AuswertungPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
             <Route path="/auftragsauswertung"><ProtectedRoute component={AuftragsauswertungPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} permission="auftrag.analyse.spedition" /></Route>
             <Route path="/profil"><ProtectedRoute component={ProfilPage} /></Route>

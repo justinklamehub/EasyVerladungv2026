@@ -16,6 +16,7 @@ export const PAGE_NAMES: Record<string, string> = {
   "/dashboard": "Dashboard",
   "/shipments": "Verladungen",
   "/wochenansicht": "Wochenplan",
+  "/torbelegung": "Tor-Belegungsplan",
   "/speditionen": "Speditionen",
   "/users": "Benutzer",
   "/paletten": "Palettenkonto",

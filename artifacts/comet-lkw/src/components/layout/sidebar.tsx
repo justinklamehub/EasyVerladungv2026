@@ -46,6 +46,7 @@ import {
   Send,
   ImageIcon,
   Route,
+  GanttChart,
   type LucideProps,
 } from "lucide-react";
 import { NAV_ICONS } from "@/lib/nav-icons";
@@ -360,6 +361,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     { name: "Verladungen", href: "/shipments", icon: Truck, show: true },
     { name: "Kanban-Board", href: "/shipments/kanban", icon: LayoutGrid, show: user.role === "comet_admin" || !!permissions["kanban.use"] },
     { name: "Wochenplan", href: "/wochenansicht", icon: CalendarDays, show: true },
+    { name: "Tor-Belegungsplan", href: "/torbelegung", icon: GanttChart, show: true },
     { name: "Speditionen", href: "/speditionen", icon: Building2, show: canManageSpeditionen },
     { name: "Benutzer", href: "/users", icon: Users, show: canManageUsers },
     { name: "Palettenkonto", href: "/paletten", icon: PackageSearch, show: true },
