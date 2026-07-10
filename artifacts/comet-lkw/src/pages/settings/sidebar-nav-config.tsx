@@ -50,6 +50,7 @@ const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
   "/shipments":          null,  // all roles
   "/shipments/kanban":   null,  // dynamic: kanban.use permission controls access
   "/wochenansicht":      null,  // all roles
+  "/torbelegung":        null,  // all roles
   "/speditionen":        ["comet_admin", "comet_leitstand"],
   "/users":              ["comet_admin", "comet_leitstand", "speditions_admin"],
   "/paletten":           null,  // all roles
@@ -98,6 +99,7 @@ const DEFAULT_NAV_ITEMS: { href: string; defaultLabel: string; defaultIconName: 
   { href: "/shipments", defaultLabel: "Verladungen", defaultIconName: "Truck" },
   { href: "/shipments/kanban", defaultLabel: "Kanban-Board", defaultIconName: "LayoutGrid" },
   { href: "/wochenansicht", defaultLabel: "Wochenplan", defaultIconName: "CalendarDays" },
+  { href: "/torbelegung", defaultLabel: "Tor-Belegungsplan", defaultIconName: "GanttChart" },
   { href: "/speditionen", defaultLabel: "Speditionen", defaultIconName: "Building2" },
   { href: "/users", defaultLabel: "Benutzer", defaultIconName: "Users" },
   { href: "/paletten", defaultLabel: "Palettenkonto", defaultIconName: "PackageSearch" },
