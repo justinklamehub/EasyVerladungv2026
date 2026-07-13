@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, KeyboardEvent } from "react";
+import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
 import { useChatContext, AI_SENDER_ID } from "./chat-context";
 import { useAuth } from "@/contexts/auth-context";
 import { getSocket } from "@/lib/socket";
@@ -19,6 +19,34 @@ import {
   Headphones,
   Sparkles,
 } from "lucide-react";
+
+function renderMessageContent(content: string, isAi: boolean) {
+  if (!isAi) {
+    return (
+      <span className="whitespace-pre-wrap break-words leading-snug text-sm">
+        {content}
+      </span>
+    );
+  }
+  // AI messages: render **bold** and newlines
+  const lines = content.split("\n");
+  const rendered = lines.reduce<React.ReactNode[]>((acc, line, i) => {
+    if (i > 0) acc.push(<br key={`br-${i}`} />);
+    if (!line) return acc;
+    const parts = line.split(/(\*\*[^*]+\*\*)/g);
+    acc.push(
+      ...parts.map((part, j) =>
+        part.startsWith("**") && part.endsWith("**") ? (
+          <strong key={`${i}-${j}`}>{part.slice(2, -2)}</strong>
+        ) : (
+          <span key={`${i}-${j}`}>{part}</span>
+        ),
+      ),
+    );
+    return acc;
+  }, []);
+  return <span className="break-words leading-snug text-sm">{rendered}</span>;
+}
 
 function statusBar(session: ReturnType<typeof useChatContext>["activeSession"]) {
   if (!session) return null;
@@ -218,15 +246,15 @@ export function ChatPanel() {
                 }`}
               >
                 {!isOwn && (
-                  <p className={`text-[10px] font-semibold mb-0.5 ${isAi ? "text-blue-600" : "text-slate-500"}`}>
+                  <div className={`text-[10px] font-semibold mb-0.5 ${isAi ? "text-blue-600" : "text-slate-500"}`}>
                     {isAi && <Bot className="w-2.5 h-2.5 inline mr-0.5 -mt-0.5" />}
                     {msg.sender_name}
-                  </p>
+                  </div>
                 )}
-                <p className="whitespace-pre-wrap break-words leading-snug">{msg.content}</p>
-                <p className={`text-[10px] mt-1 text-right ${isOwn ? "text-slate-400" : "text-slate-400"}`}>
+                <div className="break-words">{renderMessageContent(msg.content, isAi)}</div>
+                <div className={`text-[10px] mt-1 text-right ${isOwn ? "text-slate-400" : "text-slate-400"}`}>
                   {format(new Date(msg.sent_at), "HH:mm", { locale: de })}
-                </p>
+                </div>
               </div>
             </div>
           );
