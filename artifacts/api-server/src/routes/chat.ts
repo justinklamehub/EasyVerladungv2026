@@ -268,7 +268,7 @@ async function generateAiReply(
     if (!lastUser) return;
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-5.4-mini",
+      model: "gpt-4o-mini",
       max_completion_tokens: 512,
       messages: chatMessages,
     });
@@ -279,6 +279,8 @@ async function generateAiReply(
     await saveBotMessage(sessionId, aiContent.trim(), io);
   } catch (err) {
     console.error("AI reply error for session", sessionId, err);
+    // Fallback: lokaler Bot wenn OpenAI fehlschlägt
+    return generateLocalBotReply(sessionId, io);
   }
 }
 
@@ -600,8 +602,9 @@ export function setupChatSocket(
           [sessionId],
         );
 
-        // AI responds if ai_active and sender is not staff
-        if (session.ai_active && !isStaff) {
+        // AI responds if ai_active and the message is from the session owner
+        // (staff responding to someone else's session should not trigger the bot)
+        if (session.ai_active && session.created_by_user_id === userId) {
           // Small delay so the user message renders first
           setTimeout(() => generateAiReply(sessionId, io), 600);
         }

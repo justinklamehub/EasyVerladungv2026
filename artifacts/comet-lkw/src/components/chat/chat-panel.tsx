@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, KeyboardEvent } from "react";
+import React, { useState, useEffect, useRef, KeyboardEvent, useCallback } from "react";
 import { useChatContext, AI_SENDER_ID } from "./chat-context";
 import { useAuth } from "@/contexts/auth-context";
 import { getSocket } from "@/lib/socket";
@@ -79,6 +79,8 @@ export function ChatPanel() {
   } = useChatContext();
 
   const [inputValue, setInputValue] = useState("");
+  const [isEscalating, setIsEscalating] = useState(false);
+  const [escalateError, setEscalateError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSessionIdRef = useRef<number | null>(null);
@@ -142,9 +144,17 @@ export function ChatPanel() {
     }
   };
 
-  const handleEscalate = async () => {
-    await escalateSession();
-  };
+  const handleEscalate = useCallback(async () => {
+    setIsEscalating(true);
+    setEscalateError(null);
+    try {
+      await escalateSession();
+    } catch {
+      setEscalateError("Fehler beim Verbinden. Bitte erneut versuchen.");
+    } finally {
+      setIsEscalating(false);
+    }
+  }, [escalateSession]);
 
   if (!isPanelOpen || !activeSession) return null;
 
@@ -302,17 +312,24 @@ export function ChatPanel() {
         <div className="px-3 py-2 bg-blue-50 border-t border-blue-100 shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-            <p className="text-xs text-blue-700 flex-1">KI kann nicht helfen?</p>
+            <span className="text-xs text-blue-700 flex-1">KI kann nicht helfen?</span>
             <Button
               size="sm"
               variant="outline"
               className="h-7 text-xs border-blue-200 text-blue-700 hover:bg-blue-100 hover:text-blue-800 shrink-0"
               onClick={handleEscalate}
+              disabled={isEscalating}
             >
               <Headphones className="w-3 h-3 mr-1" />
-              Mitarbeiter hinzuziehen
+              {isEscalating ? "Verbinde…" : "Mitarbeiter hinzuziehen"}
             </Button>
           </div>
+          {escalateError && (
+            <div className="mt-1 text-[11px] text-red-600 flex items-center gap-1">
+              <AlertCircle className="w-3 h-3 shrink-0" />
+              {escalateError}
+            </div>
+          )}
         </div>
       )}
 

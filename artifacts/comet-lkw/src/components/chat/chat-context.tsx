@@ -126,19 +126,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     const onSessionNew = (session: ChatSession) => {
       if (isStaff) {
-        // Only add to inbox if it's someone else's session
-        if (session.created_by_user_id !== user!.id) {
-          setOpenSessions((prev) => {
-            if (prev.find((s) => s.id === session.id)) return prev;
-            return [session, ...prev];
-          });
-        }
+        // Add escalated session to inbox for all staff (including own sessions for testing)
+        setOpenSessions((prev) => {
+          if (prev.find((s) => s.id === session.id)) return prev;
+          return [session, ...prev];
+        });
       }
     };
 
     const onSessionUpdated = (session: ChatSession) => {
-      if (isStaff && session.created_by_user_id !== user!.id) {
+      if (isStaff) {
         setOpenSessions((prev) => {
+          if (!prev.find((s) => s.id === session.id)) return prev;
           if (session.status === "closed") return prev.filter((s) => s.id !== session.id);
           return prev.map((s) => (s.id === session.id ? session : s));
         });
