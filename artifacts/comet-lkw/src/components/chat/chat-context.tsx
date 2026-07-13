@@ -18,7 +18,8 @@ export interface ChatSession {
   claimed_by_user_id: number | null;
   claimed_by_name: string | null;
   target_role: "leitstand" | "admin";
-  status: "open" | "active" | "closed";
+  status: "bot" | "open" | "active" | "closed";
+  ai_active: boolean;
   subject: string | null;
   created_at: string;
   updated_at: string;
@@ -47,6 +48,7 @@ interface ChatContextType {
   isPanelOpen: boolean;
   isInboxOpen: boolean;
   isLoading: boolean;
+  isAiTyping: boolean;
   typingInfo: TypingInfo | null;
   setIsPanelOpen: (open: boolean) => void;
   setIsInboxOpen: (open: boolean) => void;
@@ -54,12 +56,14 @@ interface ChatContextType {
   openExistingSession: (session: ChatSession) => Promise<void>;
   claimSession: (sessionId: number) => Promise<void>;
   closeSession: (sessionId?: number) => Promise<void>;
+  escalateSession: () => Promise<void>;
   sendMessage: (content: string) => void;
 }
 
 const ChatContext = createContext<ChatContextType | null>(null);
 
 const STAFF_ROLES = new Set(["comet_admin", "comet_leitstand"]);
+export const AI_SENDER_ID = 0;
 
 export function ChatProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -71,8 +75,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isAiTyping, setIsAiTyping] = useState(false);
   const [typingInfo, setTypingInfo] = useState<TypingInfo | null>(null);
   const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const aiTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const unclaimedCount = openSessions.filter((s) => s.status === "open").length;
 
@@ -141,6 +147,11 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     };
 
     const onMessageNew = (message: ChatMessage) => {
+      // If AI message arrives, stop AI typing indicator
+      if (message.sender_user_id === AI_SENDER_ID) {
+        setIsAiTyping(false);
+        if (aiTypingTimerRef.current) clearTimeout(aiTypingTimerRef.current);
+      }
       setMessages((prev) => {
         if (prev.find((m) => m.id === message.id)) return prev;
         return [...prev, message];
@@ -211,6 +222,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setIsPanelOpen(true);
   }, [joinAndLoadMessages]);
 
+  const escalateSession = useCallback(async () => {
+    if (!activeSession) return;
+    const data = await customFetch(`/api/chat/sessions/${activeSession.id}/escalate`, {
+      method: "POST",
+    });
+    setActiveSession(data.session);
+  }, [activeSession?.id]);
+
   const closeSession = useCallback(async (sessionId?: number) => {
     const id = sessionId ?? activeSession?.id;
     if (!id) return;
@@ -222,9 +241,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const sendMessage = useCallback((content: string) => {
     if (!activeSession || !content.trim()) return;
+    if (activeSession.ai_active) {
+      // Show AI typing indicator with delay
+      aiTypingTimerRef.current = setTimeout(() => {
+        setIsAiTyping(true);
+        // Auto-hide after 15s max
+        aiTypingTimerRef.current = setTimeout(() => setIsAiTyping(false), 15000);
+      }, 800);
+    }
     const socket = getSocket();
     socket.emit("chat:message", { sessionId: activeSession.id, content: content.trim() });
-  }, [activeSession?.id]);
+  }, [activeSession?.id, activeSession?.ai_active]);
 
   return (
     <ChatContext.Provider value={{
@@ -235,6 +262,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       isPanelOpen,
       isInboxOpen,
       isLoading,
+      isAiTyping,
       typingInfo,
       setIsPanelOpen,
       setIsInboxOpen,
@@ -242,6 +270,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       openExistingSession,
       claimSession,
       closeSession,
+      escalateSession,
       sendMessage,
     }}>
       {children}

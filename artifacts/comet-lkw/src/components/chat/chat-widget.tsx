@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MessageCircle, Headphones, X, Loader2 } from "lucide-react";
+import { MessageCircle, Headphones, X, Loader2, Bot, Sparkles } from "lucide-react";
 
 const STAFF_ROLES = new Set(["comet_admin", "comet_leitstand"]);
 
@@ -43,7 +43,7 @@ function NewChatDialog({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent className="sm:max-w-[380px]">
+      <DialogContent className="sm:max-w-[400px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Headphones className="w-5 h-5 text-slate-700" />
@@ -53,6 +53,15 @@ function NewChatDialog({
             Wähle aus, an wen du dich wenden möchtest.
           </DialogDescription>
         </DialogHeader>
+
+        {/* AI info box */}
+        <div className="flex items-start gap-3 rounded-xl bg-blue-50 border border-blue-100 px-3 py-3 text-sm text-blue-800">
+          <Bot className="w-4 h-4 mt-0.5 shrink-0 text-blue-500" />
+          <div>
+            <p className="font-medium text-blue-900">KI-Assistent antwortet zuerst</p>
+            <p className="text-xs text-blue-600 mt-0.5">Falls die KI nicht helfen kann, wirst du mit einem Mitarbeiter verbunden.</p>
+          </div>
+        </div>
 
         <div className="space-y-4 pt-1">
           <div className="space-y-1.5">
@@ -82,11 +91,15 @@ function NewChatDialog({
             <Button variant="outline" className="flex-1" onClick={onClose}>
               Abbrechen
             </Button>
-            <Button className="flex-1 bg-slate-900 hover:bg-slate-700" onClick={handleStart} disabled={isLoading}>
+            <Button
+              className="flex-1 bg-slate-900 hover:bg-slate-700"
+              onClick={handleStart}
+              disabled={isLoading}
+            >
               {isLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin mr-1.5" />
               ) : (
-                <Headphones className="w-4 h-4 mr-1.5" />
+                <Sparkles className="w-4 h-4 mr-1.5" />
               )}
               Chat starten
             </Button>
@@ -101,7 +114,6 @@ export function ChatWidget() {
   const { user } = useAuth();
   const {
     activeSession,
-    openSessions,
     unclaimedCount,
     isPanelOpen,
     isInboxOpen,
@@ -129,18 +141,23 @@ export function ChatWidget() {
   };
 
   const hasActiveChat = !isStaff && activeSession && activeSession.status !== "closed";
+  const isAiMode = hasActiveChat && activeSession?.ai_active;
   const showBadge = isStaff ? unclaimedCount > 0 : false;
 
   return (
     <>
       {/* Floating button */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
-
         {/* Active chat collapsed indicator for users */}
         {hasActiveChat && !isPanelOpen && (
-          <div className="flex items-center gap-2 bg-slate-900 text-white rounded-full pl-3 pr-1 py-1 text-xs shadow-lg cursor-pointer"
-            onClick={() => setIsPanelOpen(true)}>
-            <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+          <div
+            className="flex items-center gap-2 bg-slate-900 text-white rounded-full pl-3 pr-1 py-1 text-xs shadow-lg cursor-pointer"
+            onClick={() => setIsPanelOpen(true)}
+          >
+            {isAiMode
+              ? <Bot className="w-3 h-3 text-blue-400" />
+              : <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+            }
             <span>Support-Chat</span>
             <button
               className="p-1 hover:bg-white/20 rounded-full transition-colors"
@@ -165,31 +182,33 @@ export function ChatWidget() {
         >
           {isStaff ? (
             <Headphones className="w-5 h-5" />
+          ) : isAiMode ? (
+            <Bot className="w-5 h-5 text-blue-300" />
           ) : (
             <MessageCircle className="w-5 h-5" />
           )}
 
-          {/* Badge */}
+          {/* Badge for unclaimed sessions */}
           {showBadge && (
             <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-white shadow">
               {unclaimedCount > 9 ? "9+" : unclaimedCount}
             </span>
           )}
 
-          {/* Green dot for active session (user) */}
+          {/* Green dot for active human session */}
           {hasActiveChat && activeSession?.status === "active" && (
             <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 ring-2 ring-white" />
+          )}
+
+          {/* Blue dot for AI mode */}
+          {isAiMode && (
+            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-blue-400 ring-2 ring-white animate-pulse" />
           )}
         </Button>
       </div>
 
-      {/* Chat panel (for users sending & staff responding) */}
       <ChatPanel />
-
-      {/* Support inbox (for staff) */}
       <SupportInbox />
-
-      {/* New chat dialog */}
       <NewChatDialog open={showNewDialog} onClose={() => setShowNewDialog(false)} />
     </>
   );
