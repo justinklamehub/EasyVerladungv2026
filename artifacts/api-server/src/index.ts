@@ -14,6 +14,7 @@ import { ensureStatusChangedAt } from "./routes/shipments";
 import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
 import { initWebPush, seedPushEventSettings, seedPushMessageTemplates } from "./routes/push";
 import { ensureChangelogTable } from "./routes/changelog";
+import { ensureChatTables, setupChatSocket } from "./routes/chat";
 import { pool } from "@workspace/db";
 
 // Load .env relative to this file (Node 20.6+ built-in, no dotenv needed).
@@ -218,6 +219,9 @@ io.on("connection", (socket) => {
     }
   });
 
+  // Chat support events
+  setupChatSocket(io, socket, sess);
+
   socket.on("disconnect", () => {
     logger.info({ socketId: socket.id }, "Socket.IO client disconnected");
 
@@ -401,6 +405,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("changelog_entries table ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureChangelogTable failed — non-fatal");
+  }
+  try {
+    await ensureChatTables();
+    logger.info("chat tables ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureChatTables failed — non-fatal");
   }
   initWebPush();
   startScheduler(io);

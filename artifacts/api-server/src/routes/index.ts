@@ -25,9 +25,11 @@ import systemRouter from "./system";
 import changelogRouter from "./changelog";
 import storageRouter from "./storage";
 import fotosRouter from "./fotos";
+import chatRouter from "./chat";
 
 const router: IRouter = Router();
 
+router.use(chatRouter);
 router.use(auswertungRouter);
 router.use(healthRouter);
 router.use(authRouter);
