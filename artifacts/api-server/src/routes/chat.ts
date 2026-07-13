@@ -3,15 +3,6 @@ import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import type { Server as SocketIOServer, Socket } from "socket.io";
 
-const AI_ENABLED =
-  !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL &&
-  !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
-
-async function getOpenAI() {
-  if (!AI_ENABLED) return null;
-  const { openai } = await import("@workspace/integrations-openai-ai-server");
-  return openai;
-}
 
 const router = Router();
 
@@ -232,56 +223,10 @@ async function generateLocalBotReply(
   }
 }
 
-// ── AI reply (lokaler Bot oder OpenAI) ────────────────────────────────────────
+// ── AI reply (ausschließlich lokaler Bot) ─────────────────────────────────────
 
-async function generateAiReply(
-  sessionId: number,
-  io: SocketIOServer,
-): Promise<void> {
-  const openai = await getOpenAI();
-
-  // Kein OpenAI-Key → kostenloser lokaler Bot
-  if (!openai) {
-    return generateLocalBotReply(sessionId, io);
-  }
-
-  // OpenAI-Pfad (nur wenn AI_INTEGRATIONS_OPENAI_* gesetzt sind)
-  try {
-    const { rows: msgRows } = await pool.query(
-      `SELECT sender_user_id, sender_name, content FROM chat_messages
-       WHERE session_id = $1 ORDER BY sent_at ASC`,
-      [sessionId],
-    );
-
-    const systemPrompt = await buildSystemPrompt();
-    const chatMessages = [
-      { role: "system" as const, content: systemPrompt },
-      ...msgRows
-        .filter((m) => m.sender_user_id !== AI_SENDER_ID)
-        .map((m) => ({
-          role: "user" as const,
-          content: `${m.sender_name}: ${m.content}`,
-        })),
-    ];
-
-    const lastUser = msgRows.findLast((m) => m.sender_user_id !== AI_SENDER_ID);
-    if (!lastUser) return;
-
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      max_completion_tokens: 512,
-      messages: chatMessages,
-    });
-
-    const aiContent = completion.choices[0]?.message?.content;
-    if (!aiContent?.trim()) return;
-
-    await saveBotMessage(sessionId, aiContent.trim(), io);
-  } catch (err) {
-    console.error("AI reply error for session", sessionId, err);
-    // Fallback: lokaler Bot wenn OpenAI fehlschlägt
-    return generateLocalBotReply(sessionId, io);
-  }
+function generateAiReply(sessionId: number, io: SocketIOServer): Promise<void> {
+  return generateLocalBotReply(sessionId, io);
 }
 
 // ── REST routes ───────────────────────────────────────────────────────────────
