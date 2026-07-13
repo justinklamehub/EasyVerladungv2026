@@ -200,12 +200,13 @@ router.patch("/tickets/:id", requireAuth, async (req: any, res) => {
     }
 
     const allowed: Record<string, any> = {};
-    const { status, priority, assignedTo, title, description } = req.body;
+    const { status, priority, assignedTo, title, description, shipmentId } = req.body;
 
     if (canManage) {
       if (status !== undefined) allowed.status = status;
       if (priority !== undefined) allowed.priority = priority;
       if (assignedTo !== undefined) allowed.assignedTo = assignedTo;
+      if (shipmentId !== undefined) allowed.shipmentId = shipmentId === null ? null : parseInt(shipmentId);
     }
     if (isOwner || canManage) {
       if (title !== undefined) allowed.title = title;
