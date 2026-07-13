@@ -65,6 +65,7 @@ const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
   "/fotos":              null,  // dynamic: comet roles + foto.view permission
   "/settings":           ["comet_admin"],
   "/berechtigungen":     ["comet_admin"],
+  "/wissensbase":        ["comet_admin"],
   "/tickets":            null,  // all roles
   "/hilfe":              null,  // all roles
   "/changelog":          null,  // all roles
@@ -114,6 +115,7 @@ const DEFAULT_NAV_ITEMS: { href: string; defaultLabel: string; defaultIconName: 
   { href: "/fotos", defaultLabel: "Fotos", defaultIconName: "Image" },
   { href: "/settings", defaultLabel: "Einstellungen", defaultIconName: "Settings" },
   { href: "/berechtigungen", defaultLabel: "Berechtigungen", defaultIconName: "ShieldCheck" },
+  { href: "/wissensbase", defaultLabel: "KI-Wissensbase", defaultIconName: "Brain" },
   { href: "/tickets", defaultLabel: "Tickets", defaultIconName: "TicketIcon" },
   { href: "/hilfe", defaultLabel: "Hilfe & Anleitung", defaultIconName: "HelpCircle" },
   { href: "/changelog", defaultLabel: "Neuerungen", defaultIconName: "FileClock" },
