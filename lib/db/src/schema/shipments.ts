@@ -25,6 +25,7 @@ export const shipmentsTable = pgTable("shipments", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedBy: integer("updated_by"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  statusChangedAt: timestamp("status_changed_at", { withTimezone: true }),
 });
 
 export const insertShipmentSchema = createInsertSchema(shipmentsTable).omit({ id: true, createdAt: true, updatedAt: true });

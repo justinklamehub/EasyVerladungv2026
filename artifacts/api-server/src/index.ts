@@ -10,6 +10,7 @@ import { ensureUserPreferencesTable } from "./routes/user-preferences";
 import { startScheduler, ensureReportWeeklyLogTable, ensureReconciliationReminderSentTable } from "./lib/scheduler";
 import { ensureSpeditionLimitsTable, ensureSpeditionRelationenTable } from "./routes/speditionen";
 import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
+import { ensureStatusChangedAt } from "./routes/shipments";
 import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
 import { initWebPush, seedPushEventSettings, seedPushMessageTemplates } from "./routes/push";
 import { ensureChangelogTable } from "./routes/changelog";
@@ -299,6 +300,12 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("shipment_templates table ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureShipmentTemplatesTable failed — non-fatal");
+  }
+  try {
+    await ensureStatusChangedAt();
+    logger.info("shipments.status_changed_at column ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureStatusChangedAt failed — non-fatal");
   }
   try {
     await ensureAuftragAnalyseTable();

@@ -17,6 +17,12 @@ import { notify } from "../lib/notify";
 import { sendEventEmail, buildShipmentTableHtml, buildShipmentTableText, buildBulkTableHtml, buildBulkTableText } from "../lib/email";
 import type { Server as IOServer } from "socket.io";
 
+export async function ensureStatusChangedAt(): Promise<void> {
+  await pool.query(
+    `ALTER TABLE shipments ADD COLUMN IF NOT EXISTS status_changed_at TIMESTAMPTZ`,
+  );
+}
+
 const router = Router();
 
 async function getEffectiveDailyLimit(speditionId: number): Promise<number | null> {
@@ -506,6 +512,9 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
       }
     }
 
+    if (updates.status !== undefined && updates.status !== existing.status) {
+      updates.statusChangedAt = new Date();
+    }
     updates.updatedBy = req.session.userId;
     updates.updatedAt = new Date();
 

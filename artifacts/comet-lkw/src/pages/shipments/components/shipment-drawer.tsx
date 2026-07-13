@@ -26,7 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, LockOpen, AlertCircle, Pencil, Trash2, ClipboardCheck, Plus, Clock, Printer, ShieldAlert, FileDown, ImageIcon } from "lucide-react";
+import { Loader2, Lock, LockOpen, AlertCircle, AlertTriangle, Pencil, Trash2, ClipboardCheck, Plus, Clock, Printer, ShieldAlert, FileDown, ImageIcon, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { printGefahrgutCheckliste } from "@/lib/print-gefahrgut";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
@@ -37,6 +37,114 @@ import { format } from "date-fns";
 import { getSocket } from "@/lib/socket";
 import { onShipmentEditing, type ShipmentEditor } from "@/hooks/use-socket";
 import { cn } from "@/lib/utils";
+
+// ── SLA helpers ───────────────────────────────────────────────────────────────
+
+const SLA_TIME_IN_STATUS: Record<string, { warnMin: number; dangerMin: number }> = {
+  Angekommen:     { warnMin: 60,  dangerMin: 90  },
+  "in Verladung": { warnMin: 120, dangerMin: 180 },
+};
+
+function computeSlaWarning(
+  shipment: any,
+): { level: "warn" | "danger"; label: string } | null {
+  if (!shipment) return null;
+  const now = Date.now();
+  const status: string = shipment.status ?? "";
+  const statusChangedAt: string | null = (shipment as any).statusChangedAt ?? null;
+  const etaDate: string | null = shipment.etaDate ?? null;
+  const etaTime: string | null = shipment.etaTime ?? null;
+
+  // Time-in-status SLA
+  const threshold = SLA_TIME_IN_STATUS[status];
+  if (threshold && statusChangedAt) {
+    const minIn = (now - new Date(statusChangedAt).getTime()) / 60_000;
+    if (minIn >= threshold.dangerMin) {
+      return {
+        level: "danger",
+        label: `SLA überschritten: ${Math.round(minIn)} Min. in Status „${status}"`,
+      };
+    }
+    if (minIn >= threshold.warnMin) {
+      return {
+        level: "warn",
+        label: `SLA-Warnung: ${Math.round(minIn)} Min. in Status „${status}"`,
+      };
+    }
+  }
+
+  // ETA-based SLA (ship not yet arrived)
+  if ((status === "Angemeldet" || status === "Erwartet") && etaDate) {
+    const etaStr = `${etaDate}T${etaTime ? etaTime + ":00" : "00:00:00"}`;
+    const minsLate = (now - new Date(etaStr).getTime()) / 60_000;
+    if (minsLate >= 60) {
+      return {
+        level: "danger",
+        label: `${Math.round(minsLate)} Min. nach ETA – noch nicht eingetroffen`,
+      };
+    }
+    if (minsLate >= 30) {
+      return {
+        level: "warn",
+        label: `${Math.round(minsLate)} Min. nach ETA`,
+      };
+    }
+  }
+
+  return null;
+}
+
+const STATUS_DOT: Record<string, string> = {
+  Angemeldet:     "bg-slate-400",
+  Erwartet:       "bg-blue-400",
+  Angekommen:     "bg-amber-400",
+  "in Verladung": "bg-orange-500",
+  Verladen:       "bg-green-500",
+  Abgefertigt:    "bg-slate-500",
+  Storniert:      "bg-red-400",
+};
+
+function fmtDuration(minutes: number): string {
+  if (minutes < 60) return `${Math.round(minutes)} Min.`;
+  const h = Math.floor(minutes / 60);
+  const m = Math.round(minutes % 60);
+  return m > 0 ? `${h} Std. ${m} Min.` : `${h} Std.`;
+}
+
+function AllChangesSection({ entries }: { entries: any[] }) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <div className="border-t border-slate-100 pt-3">
+      <button
+        className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 uppercase tracking-wide hover:text-slate-700 transition-colors mb-2"
+        onClick={() => setExpanded((v) => !v)}
+      >
+        {expanded ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+        Alle Feldänderungen ({entries.length})
+      </button>
+      {expanded && (
+        <div className="space-y-2">
+          {entries.map((entry) => (
+            <div key={entry.id} className="border border-slate-200 rounded-md p-3 text-sm bg-slate-50">
+              <div className="flex items-center justify-between mb-1">
+                <span className="font-medium text-slate-700">{entry.field}</span>
+                <span className="text-xs text-slate-400">
+                  {entry.changedAt ? format(new Date(entry.changedAt), "dd.MM.yy HH:mm") : ""}
+                </span>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="text-red-600 line-through">{entry.oldValue || "—"}</span>
+                <span>→</span>
+                <span className="text-green-600">{entry.newValue || "—"}</span>
+              </div>
+              <div className="text-xs text-slate-400 mt-1">von {entry.username || "?"}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface ShipmentDrawerProps {
   shipmentId: number | null;
@@ -459,6 +567,22 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               Wird gerade bearbeitet von: {otherEditors.map((e) => e.username).join(", ")}
             </div>
           )}
+          {(() => {
+            const sla = computeSlaWarning(shipment);
+            if (!sla) return null;
+            const isDanger = sla.level === "danger";
+            return (
+              <div className={cn(
+                "flex items-center gap-2 text-sm rounded-md px-3 py-2 mt-1 border",
+                isDanger
+                  ? "text-red-700 bg-red-50 border-red-200"
+                  : "text-amber-700 bg-amber-50 border-amber-200",
+              )}>
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" />
+                {sla.label}
+              </div>
+            );
+          })()}
         </SheetHeader>
 
         {isLoading ? (
@@ -688,29 +812,93 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             </TabsContent>
 
             {isEditing && (
-              <TabsContent value="history" className="space-y-2">
-                {!history || history.length === 0 ? (
-                  <p className="text-sm text-slate-500 py-4 text-center">Keine Änderungen aufgezeichnet.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {[...history].sort((a, b) => new Date(b.changedAt!).getTime() - new Date(a.changedAt!).getTime()).map(entry => (
-                      <div key={entry.id} className="border border-slate-200 rounded-md p-3 text-sm bg-slate-50">
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="font-medium text-slate-700">{entry.field}</span>
-                          <span className="text-xs text-slate-400">
-                            {entry.changedAt ? format(new Date(entry.changedAt), "dd.MM.yy HH:mm") : ""}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span className="text-red-600 line-through">{entry.oldValue || "—"}</span>
-                          <span>→</span>
-                          <span className="text-green-600">{entry.newValue || "—"}</span>
-                        </div>
-                        <div className="text-xs text-slate-400 mt-1">von {entry.username || "?"}</div>
+              <TabsContent value="history" className="space-y-4">
+                {/* ── Status-Timeline ── */}
+                {(() => {
+                  const statusEntries = [...(history ?? [])]
+                    .filter((e) => e.field === "status")
+                    .sort((a, b) => new Date(a.changedAt!).getTime() - new Date(b.changedAt!).getTime());
+
+                  if (statusEntries.length === 0) {
+                    return (
+                      <p className="text-sm text-slate-400 text-center py-3">
+                        Noch kein Statusverlauf aufgezeichnet.
+                      </p>
+                    );
+                  }
+
+                  return (
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-3">
+                        Statusverlauf
+                      </p>
+                      <div className="relative pl-6">
+                        {/* vertical connector line */}
+                        <div className="absolute left-[9px] top-2 bottom-2 w-px bg-slate-200" />
+
+                        {statusEntries.map((entry, i) => {
+                          const next = statusEntries[i + 1];
+                          const isLast = i === statusEntries.length - 1;
+                          const durationMin = next
+                            ? (new Date(next.changedAt!).getTime() - new Date(entry.changedAt!).getTime()) / 60_000
+                            : shipment
+                            ? (Date.now() - new Date(entry.changedAt!).getTime()) / 60_000
+                            : null;
+
+                          const dotColor = STATUS_DOT[entry.newValue ?? ""] ?? "bg-slate-300";
+
+                          return (
+                            <div key={entry.id} className="relative mb-4 last:mb-0">
+                              {/* dot */}
+                              <div className={cn(
+                                "absolute left-[-20px] top-1.5 w-3.5 h-3.5 rounded-full border-2 border-white shadow-sm",
+                                dotColor,
+                              )} />
+
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="text-sm font-semibold text-slate-800">
+                                      {entry.newValue || "—"}
+                                    </span>
+                                    {isLast && (
+                                      <span className="inline-flex items-center gap-0.5 text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full font-medium border border-green-200">
+                                        <CheckCircle2 className="w-2.5 h-2.5" /> aktuell
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-slate-400 mt-0.5">
+                                    {entry.changedAt
+                                      ? format(new Date(entry.changedAt), "dd.MM.yyyy HH:mm")
+                                      : "—"}
+                                    {entry.username && (
+                                      <span className="ml-1.5">· {entry.username}</span>
+                                    )}
+                                  </div>
+                                </div>
+                                {durationMin !== null && (
+                                  <div className="text-[11px] text-slate-400 shrink-0 mt-1 tabular-nums">
+                                    {isLast ? "seit " : ""}{fmtDuration(durationMin)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ))}
-                  </div>
-                )}
+                    </div>
+                  );
+                })()}
+
+                {/* ── Alle Feldänderungen (collapsible) ── */}
+                {history && history.length > 0 && (() => {
+                  const allChanges = [...history].sort(
+                    (a, b) => new Date(b.changedAt!).getTime() - new Date(a.changedAt!).getTime(),
+                  );
+                  return (
+                    <AllChangesSection entries={allChanges} />
+                  );
+                })()}
               </TabsContent>
             )}
 

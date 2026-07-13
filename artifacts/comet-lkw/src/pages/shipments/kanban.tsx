@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Lock, ShieldOff, Search, X, ChevronDown, Clock, CheckCircle2 } from "lucide-react";
+import { Loader2, Lock, ShieldOff, Search, X, ChevronDown, Clock, CheckCircle2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -69,6 +69,50 @@ function fmtDate(date: string | null): string {
   if (!date) return "";
   const [y, m, d] = date.split("-");
   return `${d}.${m}.${y?.slice(2)}`;
+}
+
+const KANBAN_SLA_TIME_IN_STATUS: Record<string, { warnMin: number; dangerMin: number }> = {
+  Angekommen:     { warnMin: 60,  dangerMin: 90  },
+  "in Verladung": { warnMin: 120, dangerMin: 180 },
+};
+
+function kanbanSlaWarning(
+  shipment: any,
+): { level: "warn" | "danger"; label: string } | null {
+  if (!shipment) return null;
+  const now = Date.now();
+  const status: string = shipment.status ?? "";
+  const statusChangedAt: string | null = shipment.statusChangedAt ?? null;
+  const etaDate: string | null = shipment.etaDate ?? null;
+  const etaTime: string | null = shipment.etaTime ?? null;
+
+  const threshold = KANBAN_SLA_TIME_IN_STATUS[status];
+  if (threshold && statusChangedAt) {
+    const minIn = (now - new Date(statusChangedAt).getTime()) / 60_000;
+    if (minIn >= threshold.dangerMin) {
+      const h = Math.floor(minIn / 60);
+      const m = Math.round(minIn % 60);
+      return { level: "danger", label: `${h > 0 ? h + " Std. " : ""}${m} Min. überfällig` };
+    }
+    if (minIn >= threshold.warnMin) {
+      const h = Math.floor(minIn / 60);
+      const m = Math.round(minIn % 60);
+      return { level: "warn", label: `${h > 0 ? h + " Std. " : ""}${m} Min. in Status` };
+    }
+  }
+
+  if ((status === "Angemeldet" || status === "Erwartet") && etaDate) {
+    const etaStr = `${etaDate}T${etaTime ? etaTime + ":00" : "00:00:00"}`;
+    const minsLate = (now - new Date(etaStr).getTime()) / 60_000;
+    if (minsLate >= 60) {
+      return { level: "danger", label: `${Math.round(minsLate)} Min. nach ETA` };
+    }
+    if (minsLate >= 30) {
+      return { level: "warn", label: `${Math.round(minsLate)} Min. nach ETA` };
+    }
+  }
+
+  return null;
 }
 
 function sortKey(s: any): string {
@@ -230,6 +274,20 @@ function ShipmentCard({
               <span>ETA {fmtDate(shipment.etaDate)}{shipment.etaTime ? ` ${shipment.etaTime}` : ""}</span>
             </div>
           ) : null}
+          {(() => {
+            const sla = kanbanSlaWarning(shipment);
+            if (!sla) return null;
+            return (
+              <div className={`flex items-center gap-1 text-[11px] font-medium rounded px-1.5 py-0.5 ${
+                sla.level === "danger"
+                  ? "bg-red-100 text-red-700"
+                  : "bg-amber-100 text-amber-700"
+              }`}>
+                <AlertTriangle className="w-3 h-3 shrink-0" />
+                <span>{sla.label}</span>
+              </div>
+            );
+          })()}
           <div className="pt-0.5">
             <WareStatusSelect
               wareStatus={shipment.wareStatus ?? null}
