@@ -368,7 +368,8 @@ router.post("/chat/sessions", requireAuth, async (req, res) => {
       `INSERT INTO chat_messages (session_id, sender_user_id, sender_name, content) VALUES ($1, $2, $3, $4) RETURNING *`,
       [session.id, AI_SENDER_ID, AI_SENDER_NAME, welcomeText],
     );
-    // Will be loaded when user joins, no need to emit yet (they haven't joined the room)
+    // Notify all staff in real-time that a new session was created
+    io.to("comet").emit("chat:session:new", session);
 
     return res.status(201).json({ session });
   } catch (err) {

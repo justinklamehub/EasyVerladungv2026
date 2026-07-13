@@ -126,9 +126,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     const onSessionNew = (session: ChatSession) => {
       if (isStaff) {
-        // Add escalated session to inbox for all staff (including own sessions for testing)
+        // Upsert: update if already in list (e.g. status changed bot→open), insert if new
         setOpenSessions((prev) => {
-          if (prev.find((s) => s.id === session.id)) return prev;
+          const idx = prev.findIndex((s) => s.id === session.id);
+          if (idx >= 0) {
+            const updated = [...prev];
+            updated[idx] = session;
+            return updated;
+          }
           return [session, ...prev];
         });
       }
