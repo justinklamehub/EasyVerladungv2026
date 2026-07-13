@@ -512,7 +512,8 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
       }
     }
 
-    if (updates.status !== undefined && updates.status !== existing.status) {
+    const isStatusChange = updates.status !== undefined && updates.status !== existing.status;
+    if (isStatusChange) {
       updates.statusChangedAt = new Date();
     }
     updates.updatedBy = req.session.userId;
@@ -524,6 +525,11 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
       .where(eq(shipmentsTable.id, id))
       .returning();
 
+    // Clear SLA notification records so they can re-fire on the new status
+    if (isStatusChange) {
+      pool.query("DELETE FROM sla_notifications_sent WHERE shipment_id = $1", [id]).catch(() => {});
+    }
+
     for (const [field, newVal] of Object.entries(updates)) {
       if (field === "updatedAt" || field === "updatedBy") continue;
       const oldVal = (existing as any)[field];
@@ -532,7 +538,6 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
       }
     }
 
-    const isStatusChange = updates.status && updates.status !== existing.status;
     emit(req, isStatusChange ? "shipment.status_changed" : "shipment.updated", { id }, existing.speditionId);
 
     if (isStatusChange) {

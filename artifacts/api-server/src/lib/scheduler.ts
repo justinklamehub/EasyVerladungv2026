@@ -262,6 +262,131 @@ async function runReconciliationReminderCheck() {
   }
 }
 
+// ── SLA-Benachrichtigungen ────────────────────────────────────────────────────
+
+const SLA_DEFAULTS = {
+  angekommen_warn_min: 60,
+  angekommen_danger_min: 90,
+  inverladung_warn_min: 120,
+  inverladung_danger_min: 180,
+  eta_warn_min: 30,
+  eta_danger_min: 60,
+};
+
+export async function ensureSlaNotificationsTable(): Promise<void> {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sla_notifications_sent (
+      shipment_id INTEGER NOT NULL,
+      level TEXT NOT NULL,
+      sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (shipment_id, level)
+    )
+  `);
+}
+
+async function getSlaThresholds(): Promise<typeof SLA_DEFAULTS> {
+  const rows = await db.select().from(settingsTable);
+  const s = Object.fromEntries(rows.map((r) => [r.key, r.value ?? ""]));
+  const parse = (key: string, def: number) => {
+    const v = parseInt(s[key] ?? "", 10);
+    return Number.isFinite(v) && v > 0 ? v : def;
+  };
+  return {
+    angekommen_warn_min:   parse("sla_angekommen_warn_min",   SLA_DEFAULTS.angekommen_warn_min),
+    angekommen_danger_min: parse("sla_angekommen_danger_min", SLA_DEFAULTS.angekommen_danger_min),
+    inverladung_warn_min:  parse("sla_inverladung_warn_min",  SLA_DEFAULTS.inverladung_warn_min),
+    inverladung_danger_min:parse("sla_inverladung_danger_min",SLA_DEFAULTS.inverladung_danger_min),
+    eta_warn_min:          parse("sla_eta_warn_min",          SLA_DEFAULTS.eta_warn_min),
+    eta_danger_min:        parse("sla_eta_danger_min",        SLA_DEFAULTS.eta_danger_min),
+  };
+}
+
+async function runSlaCheck(io: SocketIOServer) {
+  const thresholds = await getSlaThresholds();
+  const now = new Date();
+
+  // ── Zeit-in-Status-Prüfung ─────────────────────────────────────────────────
+  const { rows: statusRows } = await pool.query<{
+    id: number; bezeichnung: string; status: string; status_changed_at: string;
+  }>(
+    `SELECT id, bezeichnung, status, status_changed_at
+     FROM shipments
+     WHERE status IN ('Angekommen', 'in Verladung')
+       AND status_changed_at IS NOT NULL`,
+  );
+
+  for (const row of statusRows) {
+    const minIn = (now.getTime() - new Date(row.status_changed_at).getTime()) / 60_000;
+    const warnMin   = row.status === "Angekommen" ? thresholds.angekommen_warn_min   : thresholds.inverladung_warn_min;
+    const dangerMin = row.status === "Angekommen" ? thresholds.angekommen_danger_min : thresholds.inverladung_danger_min;
+
+    const level: "warn" | "danger" | null =
+      minIn >= dangerMin ? "danger" : minIn >= warnMin ? "warn" : null;
+    if (!level) continue;
+
+    const ins = await pool.query(
+      `INSERT INTO sla_notifications_sent (shipment_id, level) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING RETURNING shipment_id`,
+      [row.id, level],
+    );
+    if ((ins.rowCount ?? 0) === 0) continue;
+
+    const minutes = Math.round(minIn);
+    await notify(io, {
+      targetRoles: ["comet_admin", "comet_leitstand"],
+      title: level === "danger"
+        ? `SLA überschritten: ${row.bezeichnung}`
+        : `SLA-Warnung: ${row.bezeichnung}`,
+      message: `${minutes} Min. in Status „${row.status}"`,
+      type: level === "danger" ? "error" : "warning",
+      linkTo: "/shipments",
+      pushEventKey: level === "danger" ? "shipment.sla_danger" : "shipment.sla_warn",
+      pushVars: { bezeichnung: row.bezeichnung, status: row.status, minutes: String(minutes) },
+    }).catch(() => {});
+    logger.info({ shipmentId: row.id, level, minutes, status: row.status }, "SLA notification sent");
+  }
+
+  // ── ETA-basierte Prüfung ──────────────────────────────────────────────────
+  const { rows: etaRows } = await pool.query<{
+    id: number; bezeichnung: string; status: string; eta_date: string; eta_time: string | null;
+  }>(
+    `SELECT id, bezeichnung, status, eta_date, eta_time
+     FROM shipments
+     WHERE status IN ('Angemeldet', 'Erwartet')
+       AND eta_date IS NOT NULL`,
+  );
+
+  for (const row of etaRows) {
+    const etaStr = `${row.eta_date}T${row.eta_time ? row.eta_time + ":00" : "00:00:00"}`;
+    const minsLate = (now.getTime() - new Date(etaStr).getTime()) / 60_000;
+
+    const level: "warn" | "danger" | null =
+      minsLate >= thresholds.eta_danger_min ? "danger" : minsLate >= thresholds.eta_warn_min ? "warn" : null;
+    if (!level) continue;
+
+    const ins = await pool.query(
+      `INSERT INTO sla_notifications_sent (shipment_id, level) VALUES ($1, $2)
+       ON CONFLICT DO NOTHING RETURNING shipment_id`,
+      [row.id, level],
+    );
+    if ((ins.rowCount ?? 0) === 0) continue;
+
+    const minutes = Math.round(minsLate);
+    await notify(io, {
+      targetRoles: ["comet_admin", "comet_leitstand"],
+      title: level === "danger"
+        ? `ETA überschritten: ${row.bezeichnung}`
+        : `ETA-Warnung: ${row.bezeichnung}`,
+      message: `${minutes} Min. nach ETA – noch nicht eingetroffen (${row.status})`,
+      type: level === "danger" ? "error" : "warning",
+      linkTo: "/shipments",
+      pushEventKey: level === "danger" ? "shipment.sla_danger" : "shipment.sla_warn",
+      pushVars: { bezeichnung: row.bezeichnung, status: row.status, minutes: String(minutes) },
+    }).catch(() => {});
+    logger.info({ shipmentId: row.id, level, minutes, status: row.status }, "SLA ETA notification sent");
+  }
+}
+
 // ── Abgelaufene Zeitraum-Limits aufräumen ────────────────────────────────────
 
 async function runExpiredLimitsCleanup() {
@@ -299,8 +424,17 @@ async function runAllChecks(io: SocketIOServer) {
 
 export { ensureReportWeeklyLogTable, runPasswordExpiryReminderCheck, ensureReconciliationReminderSentTable };
 
+const SLA_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
+
 export function startScheduler(io: SocketIOServer) {
   runAllChecks(io);
   setInterval(() => runAllChecks(io), CHECK_INTERVAL_MS);
+
+  runSlaCheck(io).catch((e) => logger.warn({ err: e }, "Initial SLA check failed — non-fatal"));
+  setInterval(
+    () => runSlaCheck(io).catch((e) => logger.warn({ err: e }, "SLA check failed — non-fatal")),
+    SLA_CHECK_INTERVAL_MS,
+  );
+
   logger.info("Scheduler started");
 }

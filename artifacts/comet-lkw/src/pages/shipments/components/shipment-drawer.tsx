@@ -40,13 +40,27 @@ import { cn } from "@/lib/utils";
 
 // ── SLA helpers ───────────────────────────────────────────────────────────────
 
-const SLA_TIME_IN_STATUS: Record<string, { warnMin: number; dangerMin: number }> = {
-  Angekommen:     { warnMin: 60,  dangerMin: 90  },
-  "in Verladung": { warnMin: 120, dangerMin: 180 },
+export interface SlaThresholds {
+  angekommen_warn_min: number;
+  angekommen_danger_min: number;
+  inverladung_warn_min: number;
+  inverladung_danger_min: number;
+  eta_warn_min: number;
+  eta_danger_min: number;
+}
+
+const SLA_THRESHOLD_DEFAULTS: SlaThresholds = {
+  angekommen_warn_min: 60,
+  angekommen_danger_min: 90,
+  inverladung_warn_min: 120,
+  inverladung_danger_min: 180,
+  eta_warn_min: 30,
+  eta_danger_min: 60,
 };
 
 function computeSlaWarning(
   shipment: any,
+  thresholds: SlaThresholds = SLA_THRESHOLD_DEFAULTS,
 ): { level: "warn" | "danger"; label: string } | null {
   if (!shipment) return null;
   const now = Date.now();
@@ -56,20 +70,15 @@ function computeSlaWarning(
   const etaTime: string | null = shipment.etaTime ?? null;
 
   // Time-in-status SLA
-  const threshold = SLA_TIME_IN_STATUS[status];
-  if (threshold && statusChangedAt) {
+  const warnMin   = status === "Angekommen" ? thresholds.angekommen_warn_min   : thresholds.inverladung_warn_min;
+  const dangerMin = status === "Angekommen" ? thresholds.angekommen_danger_min : thresholds.inverladung_danger_min;
+  if ((status === "Angekommen" || status === "in Verladung") && statusChangedAt) {
     const minIn = (now - new Date(statusChangedAt).getTime()) / 60_000;
-    if (minIn >= threshold.dangerMin) {
-      return {
-        level: "danger",
-        label: `SLA überschritten: ${Math.round(minIn)} Min. in Status „${status}"`,
-      };
+    if (minIn >= dangerMin) {
+      return { level: "danger", label: `SLA überschritten: ${Math.round(minIn)} Min. in Status „${status}"` };
     }
-    if (minIn >= threshold.warnMin) {
-      return {
-        level: "warn",
-        label: `SLA-Warnung: ${Math.round(minIn)} Min. in Status „${status}"`,
-      };
+    if (minIn >= warnMin) {
+      return { level: "warn", label: `SLA-Warnung: ${Math.round(minIn)} Min. in Status „${status}"` };
     }
   }
 
@@ -77,17 +86,11 @@ function computeSlaWarning(
   if ((status === "Angemeldet" || status === "Erwartet") && etaDate) {
     const etaStr = `${etaDate}T${etaTime ? etaTime + ":00" : "00:00:00"}`;
     const minsLate = (now - new Date(etaStr).getTime()) / 60_000;
-    if (minsLate >= 60) {
-      return {
-        level: "danger",
-        label: `${Math.round(minsLate)} Min. nach ETA – noch nicht eingetroffen`,
-      };
+    if (minsLate >= thresholds.eta_danger_min) {
+      return { level: "danger", label: `${Math.round(minsLate)} Min. nach ETA – noch nicht eingetroffen` };
     }
-    if (minsLate >= 30) {
-      return {
-        level: "warn",
-        label: `${Math.round(minsLate)} Min. nach ETA`,
-      };
+    if (minsLate >= thresholds.eta_warn_min) {
+      return { level: "warn", label: `${Math.round(minsLate)} Min. nach ETA` };
     }
   }
 
@@ -211,6 +214,15 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
       return res.json() as Promise<any[]>;
     },
     enabled: !!shipmentId && open && canViewFotos,
+  });
+
+  const { data: slaThresholds } = useQuery<SlaThresholds>({
+    queryKey: ["sla-thresholds"],
+    queryFn: async () => {
+      const r = await fetch(`${API_BASE}/sla-settings`, { credentials: "include" });
+      return r.json();
+    },
+    staleTime: 5 * 60 * 1000,
   });
 
   const resetGefahrgutMutation = useMutation({
@@ -568,7 +580,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             </div>
           )}
           {(() => {
-            const sla = computeSlaWarning(shipment);
+            const sla = computeSlaWarning(shipment, slaThresholds);
             if (!sla) return null;
             const isDanger = sla.level === "danger";
             return (

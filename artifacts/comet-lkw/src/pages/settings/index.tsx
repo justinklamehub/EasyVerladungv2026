@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck, Tag, X } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck, Tag, X, Timer } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { useAuth } from "@/contexts/auth-context";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
@@ -2144,6 +2144,130 @@ function DesignSettingsCard({ settings, onSave, isSaving }: {
   );
 }
 
+// ── SLA Settings components ───────────────────────────────────────────────────
+
+function SlaMinuteField({
+  label,
+  description,
+  settingKey,
+  value,
+  defaultValue,
+  onSave,
+  isSaving,
+}: {
+  label: string;
+  description: string;
+  settingKey: string;
+  value: string;
+  defaultValue: number;
+  onSave: (k: string, v: string) => void;
+  isSaving: (k: string) => boolean;
+}) {
+  const stored = value !== "" ? value : String(defaultValue);
+  const [local, setLocal] = useState(stored);
+  useEffect(() => { setLocal(stored); }, [stored]);
+  const dirty = local !== stored;
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div className="min-w-0 flex-1">
+        <Label className="text-sm font-medium text-slate-700">{label}</Label>
+        <p className="text-xs text-slate-400 mt-0.5">{description}</p>
+      </div>
+      <div className="flex items-center gap-2 shrink-0">
+        <Input
+          type="number"
+          min={1}
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          className="w-20 text-sm text-right"
+        />
+        <span className="text-xs text-slate-500 w-8">Min.</span>
+        <div className="w-[52px] flex justify-end">
+          {dirty && (
+            <Button
+              size="sm"
+              className="h-7 px-2 text-xs"
+              onClick={() => onSave(settingKey, local)}
+              disabled={isSaving(settingKey)}
+            >
+              {isSaving(settingKey) ? <Loader2 className="w-3 h-3 animate-spin" /> : <Save className="w-3 h-3" />}
+            </Button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SlaSettingsCard({
+  settings,
+  onSave,
+  isSaving,
+}: {
+  settings: SettingsMap | undefined;
+  onSave: (k: string, v: string) => void;
+  isSaving: (k: string) => boolean;
+}) {
+  const s = settings ?? {};
+  const groups = [
+    {
+      title: 'Status "Angekommen"',
+      description: "Zeitüberwachung ab dem Moment, wenn ein LKW ankommt und auf die Verladung wartet.",
+      fields: [
+        { label: "Warnschwelle", description: "Ab dieser Wartezeit erscheint eine gelbe Warnung", key: "sla_angekommen_warn_min", def: 60 },
+        { label: "Kritische Schwelle", description: "Ab dieser Wartezeit erscheint eine rote Warnung", key: "sla_angekommen_danger_min", def: 90 },
+      ],
+    },
+    {
+      title: 'Status "in Verladung"',
+      description: "Zeitüberwachung während der aktiven Verladung des LKWs.",
+      fields: [
+        { label: "Warnschwelle", description: "Ab dieser Zeit erscheint eine gelbe Warnung", key: "sla_inverladung_warn_min", def: 120 },
+        { label: "Kritische Schwelle", description: "Ab dieser Zeit erscheint eine rote Warnung", key: "sla_inverladung_danger_min", def: 180 },
+      ],
+    },
+    {
+      title: "ETA-basiert (Angemeldet / Erwartet)",
+      description: "Warnung, wenn ein LKW nach dem geplanten ETA noch nicht eingetroffen ist.",
+      fields: [
+        { label: "Warnschwelle nach ETA", description: "Ab dieser Verspätung erscheint eine gelbe Warnung", key: "sla_eta_warn_min", def: 30 },
+        { label: "Kritische Schwelle nach ETA", description: "Ab dieser Verspätung erscheint eine rote Warnung", key: "sla_eta_danger_min", def: 60 },
+      ],
+    },
+  ];
+  return (
+    <>
+      {groups.map((group) => (
+        <Card key={group.title} className="shadow-sm">
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Timer className="w-4 h-4 text-primary" />
+              <CardTitle className="text-base">{group.title}</CardTitle>
+            </div>
+            <CardDescription className="text-xs">{group.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {group.fields.map((field, i) => (
+              <div key={field.key}>
+                {i > 0 && <Separator className="mb-4" />}
+                <SlaMinuteField
+                  label={field.label}
+                  description={field.description}
+                  settingKey={field.key}
+                  value={s[field.key] ?? ""}
+                  defaultValue={field.def}
+                  onSave={onSave}
+                  isSaving={isSaving}
+                />
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ))}
+    </>
+  );
+}
+
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
@@ -2223,6 +2347,9 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="push" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <BellRing className="w-3.5 h-3.5 shrink-0" /> Push-Texte
+          </TabsTrigger>
+          <TabsTrigger value="sla" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Timer className="w-3.5 h-3.5 shrink-0" /> SLA
           </TabsTrigger>
           <TabsTrigger value="berichte" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <BarChart2 className="w-3.5 h-3.5 shrink-0" /> Berichte
@@ -2363,6 +2490,11 @@ export default function SettingsPage() {
         {/* ── Tab: Push-Texte ── */}
         <TabsContent value="push" className="mt-0">
           <PushTemplateSettings />
+        </TabsContent>
+
+        {/* ── Tab: SLA ── */}
+        <TabsContent value="sla" className="space-y-5 mt-0">
+          <SlaSettingsCard settings={settings} onSave={handleSave} isSaving={isSavingKey} />
         </TabsContent>
 
         {/* ── Tab: Rechtliches ── */}

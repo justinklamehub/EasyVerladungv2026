@@ -65,6 +65,18 @@ export const DEFAULT_PUSH_EVENTS = [
     description: "Wenn eine Verladung auf den Status 'Verladen' gesetzt wird",
     target_roles: ["comet_admin", "comet_leitstand", "speditions_admin"],
   },
+  {
+    event_key: "shipment.sla_warn",
+    label: "SLA-Warnung",
+    description: "Wenn ein LKW eine SLA-Warnschwelle erreicht (zu lang im aktuellen Status)",
+    target_roles: ["comet_admin", "comet_leitstand"],
+  },
+  {
+    event_key: "shipment.sla_danger",
+    label: "SLA überschritten (kritisch)",
+    description: "Wenn ein LKW die kritische SLA-Grenze überschreitet",
+    target_roles: ["comet_admin", "comet_leitstand"],
+  },
 ];
 
 export async function seedPushEventSettings() {
@@ -96,6 +108,8 @@ const DEFAULT_PUSH_TEMPLATES: Record<string, { title: string; message: string }>
   "shipment.loaded":        { title: "Verladung fertig",             message: "{bezeichnung} wurde verladen – {relation}" },
   "reconciliation.started": { title: "Abstimmung gestartet",         message: "Paletten-Abstimmung wurde eröffnet." },
   "ticket.created":         { title: "Neues Ticket",                 message: "{titel}" },
+  "shipment.sla_warn":      { title: "SLA-Warnung",                  message: "{bezeichnung} - {minutes} Min. in Status \"{status}\"" },
+  "shipment.sla_danger":    { title: "SLA ueberschritten",            message: "{bezeichnung} - {minutes} Min. in Status \"{status}\"" },
 };
 
 export function renderPushTemplate(template: string, vars: Record<string, string | undefined>): string {

@@ -104,6 +104,12 @@ router.put("/settings/:key", requireAuth, async (req, res) => {
       "email_tpl_reconciliation_reminder_body",
       "email_tpl_reconciliation_reminder_to",
       "reconciliation_reminder_days",
+      "sla_angekommen_warn_min",
+      "sla_angekommen_danger_min",
+      "sla_inverladung_warn_min",
+      "sla_inverladung_danger_min",
+      "sla_eta_warn_min",
+      "sla_eta_danger_min",
     ];
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: "Unbekannter Einstellungsschlüssel" });
@@ -123,6 +129,38 @@ router.put("/settings/:key", requireAuth, async (req, res) => {
 
     return res.json({ ok: true });
   } catch (e) {
+    return res.status(500).json({ error: "Interner Fehler" });
+  }
+});
+
+// ── SLA-Einstellungen ─────────────────────────────────────────────────────────
+
+const SLA_DEFAULTS = {
+  angekommen_warn_min: 60,
+  angekommen_danger_min: 90,
+  inverladung_warn_min: 120,
+  inverladung_danger_min: 180,
+  eta_warn_min: 30,
+  eta_danger_min: 60,
+} as const;
+
+router.get("/sla-settings", requireAuth, async (_req, res) => {
+  try {
+    const rows = await db.select().from(settingsTable);
+    const s = Object.fromEntries(rows.map((r) => [r.key, r.value ?? ""]));
+    const parse = (key: string, def: number) => {
+      const v = parseInt(s[key] ?? "", 10);
+      return Number.isFinite(v) && v > 0 ? v : def;
+    };
+    return res.json({
+      angekommen_warn_min:   parse("sla_angekommen_warn_min",   SLA_DEFAULTS.angekommen_warn_min),
+      angekommen_danger_min: parse("sla_angekommen_danger_min", SLA_DEFAULTS.angekommen_danger_min),
+      inverladung_warn_min:  parse("sla_inverladung_warn_min",  SLA_DEFAULTS.inverladung_warn_min),
+      inverladung_danger_min:parse("sla_inverladung_danger_min",SLA_DEFAULTS.inverladung_danger_min),
+      eta_warn_min:          parse("sla_eta_warn_min",          SLA_DEFAULTS.eta_warn_min),
+      eta_danger_min:        parse("sla_eta_danger_min",        SLA_DEFAULTS.eta_danger_min),
+    });
+  } catch {
     return res.status(500).json({ error: "Interner Fehler" });
   }
 });
