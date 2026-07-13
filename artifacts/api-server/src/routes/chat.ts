@@ -1,8 +1,17 @@
 import { Router } from "express";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
-import { openai } from "@workspace/integrations-openai-ai-server";
 import type { Server as SocketIOServer, Socket } from "socket.io";
+
+const AI_ENABLED =
+  !!process.env.AI_INTEGRATIONS_OPENAI_BASE_URL &&
+  !!process.env.AI_INTEGRATIONS_OPENAI_API_KEY;
+
+async function getOpenAI() {
+  if (!AI_ENABLED) return null;
+  const { openai } = await import("@workspace/integrations-openai-ai-server");
+  return openai;
+}
 
 const router = Router();
 
@@ -124,6 +133,9 @@ async function generateAiReply(
     // Get the last user message as the final prompt
     const lastUser = msgRows.findLast((m) => m.sender_user_id !== AI_SENDER_ID);
     if (!lastUser) return;
+
+    const openai = await getOpenAI();
+    if (!openai) return;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.4-mini",
