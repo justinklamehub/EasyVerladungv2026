@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { useGetDashboard } from "@workspace/api-client-react";
+import { useQuery } from "@tanstack/react-query";
+import { useGetDashboard, customFetch } from "@workspace/api-client-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { format, subDays, startOfDay, endOfDay } from "date-fns";
 import { de } from "date-fns/locale";
@@ -8,16 +9,34 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { Calendar as CalendarIcon, Loader2, AlertCircle } from "lucide-react";
+import { Calendar as CalendarIcon, Loader2, AlertCircle, AlertTriangle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+interface LiveAlert {
+  id: number;
+  bezeichnung: string | null;
+  kennzeichen: string | null;
+  status: string;
+  tor: string | null;
+  speditionName: string;
+  level: "warn" | "danger";
+  minutesWaiting: number;
+  alertReason: "timeInStatus" | "etaOverdue";
+}
+
+function fmtMinutes(min: number): string {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}
 
 export default function DashboardPage() {
   const [dateFilter, setDateFilter] = useState("today");
-  
-  // Calculate date range based on filter
+
   let dateFrom = format(startOfDay(new Date()), "yyyy-MM-dd");
   let dateTo = format(endOfDay(new Date()), "yyyy-MM-dd");
-  
+
   if (dateFilter === "tomorrow") {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
@@ -25,14 +44,23 @@ export default function DashboardPage() {
     dateTo = format(endOfDay(tomorrow), "yyyy-MM-dd");
   } else if (dateFilter === "week") {
     const start = new Date();
-    start.setDate(start.getDate() - start.getDay() + 1); // Monday
+    start.setDate(start.getDate() - start.getDay() + 1);
     const end = new Date(start);
-    end.setDate(end.getDate() + 6); // Sunday
+    end.setDate(end.getDate() + 6);
     dateFrom = format(startOfDay(start), "yyyy-MM-dd");
     dateTo = format(endOfDay(end), "yyyy-MM-dd");
   }
 
   const { data, isLoading } = useGetDashboard({ dateFrom, dateTo });
+
+  const { data: liveData, dataUpdatedAt, isFetching: liveLoading } = useQuery<{
+    alerts: LiveAlert[];
+    checkedAt: string;
+  }>({
+    queryKey: ["dashboard-live-alerts"],
+    queryFn: () => customFetch("/api/dashboard/live-alerts"),
+    refetchInterval: 30_000,
+  });
 
   if (isLoading) {
     return (
@@ -52,14 +80,22 @@ export default function DashboardPage() {
   }
 
   const STATUS_COLORS: Record<string, string> = {
-    Angemeldet: "hsl(215.4 16.3% 46.9%)", // muted
-    Erwartet: "hsl(220 70% 50%)", // blue
-    Angekommen: "hsl(160 60% 45%)", // green
-    "in Verladung": "hsl(25 90% 55%)", // orange
-    Verladen: "hsl(45 80% 50%)", // yellow
-    Abgefertigt: "hsl(173 58% 39%)", // teal
-    Storniert: "hsl(0 84.2% 60.2%)", // red
+    Angemeldet: "hsl(215.4 16.3% 46.9%)",
+    Erwartet: "hsl(220 70% 50%)",
+    Angekommen: "hsl(160 60% 45%)",
+    "in Verladung": "hsl(25 90% 55%)",
+    Verladen: "hsl(45 80% 50%)",
+    Abgefertigt: "hsl(173 58% 39%)",
+    Storniert: "hsl(0 84.2% 60.2%)",
   };
+
+  const alerts = liveData?.alerts ?? [];
+  const dangerCount = alerts.filter((a) => a.level === "danger").length;
+  const warnCount = alerts.filter((a) => a.level === "warn").length;
+
+  const checkedAtStr = liveData?.checkedAt
+    ? format(new Date(liveData.checkedAt), "HH:mm", { locale: de })
+    : null;
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -70,7 +106,7 @@ export default function DashboardPage() {
             Überblick und aktuelle Kennzahlen
           </p>
         </div>
-        
+
         <div className="flex items-center gap-2">
           <Select value={dateFilter} onValueChange={setDateFilter}>
             <SelectTrigger className="w-[180px] bg-white">
@@ -86,6 +122,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* ── KPI Cards ── */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -129,6 +166,113 @@ export default function DashboardPage() {
         </Card>
       </div>
 
+      {/* ── Brennpunkt: Live SLA Alerts ── */}
+      <Card className={`shadow-sm border ${
+        dangerCount > 0 ? "border-red-200 bg-red-50/30" :
+        warnCount > 0  ? "border-orange-200 bg-orange-50/20" :
+        "border-slate-200 bg-white"
+      }`}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              {dangerCount > 0
+                ? <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+                : warnCount > 0
+                ? <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0" />
+                : <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
+              }
+              <CardTitle className="text-base">Handlungsbedarf</CardTitle>
+              {alerts.length > 0 && (
+                <div className="flex items-center gap-1">
+                  {dangerCount > 0 && (
+                    <Badge className="bg-red-500 text-white border-0 text-xs px-1.5">{dangerCount} kritisch</Badge>
+                  )}
+                  {warnCount > 0 && (
+                    <Badge className="bg-orange-400 text-white border-0 text-xs px-1.5">{warnCount} Warnung</Badge>
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex items-center gap-2 text-xs text-slate-400">
+              {liveLoading && <Loader2 className="w-3 h-3 animate-spin" />}
+              {checkedAtStr && (
+                <span className="flex items-center gap-1">
+                  <RefreshCw className="w-3 h-3" />
+                  {checkedAtStr} Uhr
+                </span>
+              )}
+              <CardDescription className="text-xs">alle 30 Sek. aktualisiert</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-0">
+          {alerts.length === 0 ? (
+            <div className="flex items-center gap-2 py-3 text-sm text-green-700">
+              <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+              Alle LKWs sind im Plan – keine SLA-Überschreitungen.
+            </div>
+          ) : (
+            <div className="rounded-md border border-slate-200 overflow-hidden">
+              <Table>
+                <TableHeader className="bg-slate-50">
+                  <TableRow>
+                    <TableHead className="w-2"></TableHead>
+                    <TableHead>LKW</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Tor</TableHead>
+                    <TableHead>Spedition</TableHead>
+                    <TableHead className="text-right">Wartezeit</TableHead>
+                    <TableHead className="text-right">Grund</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {alerts.map((alert) => (
+                    <TableRow key={alert.id} className={alert.level === "danger" ? "bg-red-50/40" : "bg-orange-50/30"}>
+                      <TableCell className="py-2 pr-0">
+                        <div className={`w-2 h-2 rounded-full mx-auto ${alert.level === "danger" ? "bg-red-500" : "bg-orange-400"}`} />
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <div className="flex flex-col">
+                          <span className="font-medium text-sm">{alert.bezeichnung || alert.kennzeichen || `#${alert.id}`}</span>
+                          {alert.bezeichnung && alert.kennzeichen && (
+                            <span className="text-xs text-slate-400">{alert.kennzeichen}</span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-2">
+                        <Badge variant="outline" className={`text-xs ${
+                          alert.status === "Angekommen"   ? "bg-green-50 text-green-700 border-green-200" :
+                          alert.status === "in Verladung" ? "bg-orange-50 text-orange-700 border-orange-200" :
+                          "bg-slate-50 text-slate-700 border-slate-200"
+                        }`}>
+                          {alert.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="py-2 text-slate-600 text-sm">{alert.tor ?? "–"}</TableCell>
+                      <TableCell className="py-2 text-slate-600 text-sm">{alert.speditionName}</TableCell>
+                      <TableCell className="py-2 text-right">
+                        <span className={`font-semibold text-sm flex items-center justify-end gap-1 ${
+                          alert.level === "danger" ? "text-red-600" : "text-orange-600"
+                        }`}>
+                          <Clock className="w-3 h-3 shrink-0" />
+                          {fmtMinutes(alert.minutesWaiting)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="py-2 text-right">
+                        <span className="text-xs text-slate-500">
+                          {alert.alertReason === "timeInStatus" ? "Wartezeit" : "nach ETA"}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Charts ── */}
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader>

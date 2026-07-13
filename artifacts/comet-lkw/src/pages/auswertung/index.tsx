@@ -7,7 +7,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, PieChart, Pie, Legend } from "recharts";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Cell, PieChart, Pie, Legend,
+} from "recharts";
 import { Loader2, TrendingUp, TrendingDown, Clock, AlertCircle, ArrowUp, ArrowDown, ChevronsUpDown } from "lucide-react";
 
 const ALL = "__all__";
@@ -51,8 +54,11 @@ interface Stats {
   avgVerzoegerungMin: number | null;
   avgVerarbeitungszeitMin: number | null;
   byStatus: { status: string; count: number }[];
-  byRelation: { relation: string; count: number; avgVerzoegerungMin: number | null }[];
-  bySpedition: { speditionId: number; speditionName: string; count: number; avgVerzoegerungMin: number | null }[];
+  byRelation: { relation: string; count: number; avgVerzoegerungMin: number | null; avgVerarbeitungszeitMin: number | null }[];
+  bySpedition: { speditionId: number; speditionName: string; count: number; avgVerzoegerungMin: number | null; avgVerarbeitungszeitMin: number | null }[];
+  byTor: { tor: string; count: number; avgVerarbeitungszeitMin: number | null }[];
+  byWochentag: { tag: string; count: number; avgVerarbeitungszeitMin: number | null }[];
+  byStunde: { stunde: string; count: number; avgVerarbeitungszeitMin: number | null }[];
 }
 
 interface AuswertungResponse {
@@ -76,6 +82,14 @@ function fmtMin(min: number | null): string {
   return `${sign}${m}min`;
 }
 
+function fmtMinAbs(min: number | null): string {
+  if (min === null) return "–";
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  if (h > 0) return `${h}h ${m}min`;
+  return `${m}min`;
+}
+
 function delayBadge(min: number | null) {
   if (min === null) return <span className="text-slate-400">–</span>;
   if (Math.abs(min) <= 15) return <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">Pünktlich {fmtMin(min)}</Badge>;
@@ -91,6 +105,22 @@ function SortIcon({ col, sortCol, sortDir }: { col: SortCol; sortCol: SortCol; s
     ? <ArrowUp className="w-3 h-3 ml-1 text-primary inline" />
     : <ArrowDown className="w-3 h-3 ml-1 text-primary inline" />;
 }
+
+const LADEZEIT_COLOR = "hsl(222 47% 35%)";
+
+const CustomMinTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-white rounded-lg shadow-lg border border-slate-100 px-3 py-2 text-sm">
+      <p className="font-medium text-slate-700">{label}</p>
+      {payload.map((p: any) => (
+        <p key={p.name} style={{ color: p.fill ?? p.color }}>
+          {p.name === "avgVerarbeitungszeitMin" ? "Ø Ladezeit" : p.name}: {fmtMinAbs(p.value)}
+        </p>
+      ))}
+    </div>
+  );
+};
 
 export default function AuswertungPage() {
   const [dateFrom, setDateFrom] = useState(format(subDays(new Date(), 30), "yyyy-MM-dd"));
@@ -151,48 +181,28 @@ export default function AuswertungPage() {
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1.5 text-sm text-slate-600">
             <span className="shrink-0">Von</span>
-            <Input
-              type="date"
-              value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
-              className="w-[138px] h-9 bg-white"
-            />
+            <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="w-[138px] h-9 bg-white" />
           </div>
           <div className="flex items-center gap-1.5 text-sm text-slate-600">
             <span className="shrink-0">bis</span>
-            <Input
-              type="date"
-              value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
-              className="w-[138px] h-9 bg-white"
-            />
+            <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="w-[138px] h-9 bg-white" />
           </div>
           <Select value={relation} onValueChange={setRelation}>
-            <SelectTrigger className="w-[150px] bg-white">
-              <SelectValue placeholder="Relation" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[150px] bg-white"><SelectValue placeholder="Relation" /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Alle Relationen</SelectItem>
-              {data?.meta.relations.map((r) => (
-                <SelectItem key={r} value={r!}>{r}</SelectItem>
-              ))}
+              {data?.meta.relations.map((r) => <SelectItem key={r} value={r!}>{r}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={speditionId} onValueChange={setSpeditionId}>
-            <SelectTrigger className="w-[160px] bg-white">
-              <SelectValue placeholder="Spedition" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[160px] bg-white"><SelectValue placeholder="Spedition" /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Alle Speditionen</SelectItem>
-              {data?.meta.speditionen.map((sp) => (
-                <SelectItem key={sp.id} value={String(sp.id)}>{sp.name}</SelectItem>
-              ))}
+              {data?.meta.speditionen.map((sp) => <SelectItem key={sp.id} value={String(sp.id)}>{sp.name}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-[145px] bg-white">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
+            <SelectTrigger className="w-[145px] bg-white"><SelectValue placeholder="Status" /></SelectTrigger>
             <SelectContent>
               <SelectItem value={ALL}>Alle Status</SelectItem>
               {["Angemeldet","Angekommen","in Verladung","Verladen","Abgefertigt","Storniert"].map((st) => (
@@ -257,19 +267,19 @@ export default function AuswertungPage() {
 
             <Card className="bg-white shadow-sm border-slate-200">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium text-slate-500">Ø Verarbeitungszeit</CardTitle>
+                <CardTitle className="text-sm font-medium text-slate-500">Ø Ladezeit</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold text-slate-700 flex items-center gap-2">
                   <Clock className="w-6 h-6 text-slate-400" />
-                  {fmtMin(s.avgVerarbeitungszeitMin)}
+                  {fmtMinAbs(s.avgVerarbeitungszeitMin)}
                 </div>
                 <p className="text-xs text-slate-400 mt-1">Angekommen → Verladen</p>
               </CardContent>
             </Card>
           </div>
 
-          {/* ── Charts ── */}
+          {/* ── Statusverteilung + Pünktlichkeit ── */}
           <div className="grid gap-6 md:grid-cols-2">
             <Card className="bg-white shadow-sm border-slate-200">
               <CardHeader>
@@ -331,13 +341,13 @@ export default function AuswertungPage() {
             </Card>
           </div>
 
-          {/* ── By Relation & By Spedition ── */}
+          {/* ── By Relation & By Spedition (with Ladezeit) ── */}
           <div className="grid gap-6 md:grid-cols-2">
             {s.byRelation.length > 0 && (
               <Card className="bg-white shadow-sm border-slate-200">
                 <CardHeader>
                   <CardTitle>Nach Relation</CardTitle>
-                  <CardDescription>Anzahl und Ø Abweichung je Relation</CardDescription>
+                  <CardDescription>Abweichung und Ladezeit je Relation</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="rounded-md border border-slate-200 overflow-hidden">
@@ -347,6 +357,7 @@ export default function AuswertungPage() {
                           <TableHead>Relation</TableHead>
                           <TableHead className="text-right">Anzahl</TableHead>
                           <TableHead className="text-right">Ø Abweichung</TableHead>
+                          <TableHead className="text-right">Ø Ladezeit</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -363,6 +374,11 @@ export default function AuswertungPage() {
                                 {fmtMin(r.avgVerzoegerungMin)}
                               </span>
                             </TableCell>
+                            <TableCell className="text-right">
+                              <span className={`text-sm ${r.avgVerarbeitungszeitMin !== null ? "text-slate-700 font-medium" : "text-slate-400"}`}>
+                                {fmtMinAbs(r.avgVerarbeitungszeitMin)}
+                              </span>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -376,22 +392,132 @@ export default function AuswertungPage() {
               <Card className="bg-white shadow-sm border-slate-200">
                 <CardHeader>
                   <CardTitle>Nach Spedition</CardTitle>
-                  <CardDescription>Anzahl und Ø Abweichung je Spedition</CardDescription>
+                  <CardDescription>Abweichung und Ladezeit je Spedition</CardDescription>
                 </CardHeader>
-                <CardContent className="h-[280px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={s.bySpedition} layout="vertical" margin={{ top: 5, right: 40, left: 10, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                      <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
-                      <YAxis dataKey="speditionName" type="category" axisLine={false} tickLine={false} width={110} tick={{ fontSize: 11 }} />
-                      <Tooltip cursor={{ fill: "#f1f5f9" }} contentStyle={{ borderRadius: 8, border: "none", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }} />
-                      <Bar dataKey="count" fill="hsl(222 47% 11%)" radius={[0, 4, 4, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                <CardContent>
+                  <div className="rounded-md border border-slate-200 overflow-hidden">
+                    <Table>
+                      <TableHeader className="bg-slate-50">
+                        <TableRow>
+                          <TableHead>Spedition</TableHead>
+                          <TableHead className="text-right">Anzahl</TableHead>
+                          <TableHead className="text-right">Ø Abweichung</TableHead>
+                          <TableHead className="text-right">Ø Ladezeit</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {s.bySpedition.slice(0, 10).map((sp) => (
+                          <TableRow key={sp.speditionId}>
+                            <TableCell className="font-medium">{sp.speditionName}</TableCell>
+                            <TableCell className="text-right">{sp.count}</TableCell>
+                            <TableCell className="text-right">
+                              <span className={`font-medium ${
+                                sp.avgVerzoegerungMin === null ? "text-slate-400" :
+                                sp.avgVerzoegerungMin > 15 ? "text-red-600" :
+                                sp.avgVerzoegerungMin < -15 ? "text-blue-600" : "text-green-600"
+                              }`}>
+                                {fmtMin(sp.avgVerzoegerungMin)}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <span className={`text-sm ${sp.avgVerarbeitungszeitMin !== null ? "text-slate-700 font-medium" : "text-slate-400"}`}>
+                                {fmtMinAbs(sp.avgVerarbeitungszeitMin)}
+                              </span>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 </CardContent>
               </Card>
             )}
           </div>
+
+          {/* ── Ladezeit-Analyse ── */}
+          {((s.byTor?.length ?? 0) > 0 || (s.byWochentag?.length ?? 0) > 0 || (s.byStunde?.length ?? 0) > 0) && (
+            <>
+              <div className="flex items-center gap-3 pt-2">
+                <Clock className="w-5 h-5 text-slate-400 shrink-0" />
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-800">Ladezeit-Analyse</h2>
+                  <p className="text-sm text-slate-500">Durchschnittliche Zeit von Ankunft bis Verladen — nach Tor, Wochentag und Tageszeit</p>
+                </div>
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+
+                {/* By Tor */}
+                {s.byTor.length > 0 && (
+                  <Card className="bg-white shadow-sm border-slate-200">
+                    <CardHeader>
+                      <CardTitle className="text-base">Ø Ladezeit nach Tor</CardTitle>
+                      <CardDescription>Welche Tore sind am langsamsten?</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[260px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={s.byTor.slice(0, 12)}
+                          layout="vertical"
+                          margin={{ top: 5, right: 55, left: 10, bottom: 5 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                          <XAxis type="number" axisLine={false} tickLine={false} tickFormatter={(v) => `${v}min`} tick={{ fontSize: 10 }} />
+                          <YAxis dataKey="tor" type="category" axisLine={false} tickLine={false} width={30} tick={{ fontSize: 11 }} />
+                          <Tooltip content={<CustomMinTooltip />} cursor={{ fill: "#f1f5f9" }} />
+                          <Bar dataKey="avgVerarbeitungszeitMin" fill={LADEZEIT_COLOR} radius={[0, 4, 4, 0]}
+                            label={{ position: "right", formatter: (v: number) => fmtMinAbs(v), fontSize: 10, fill: "#64748b" }} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* By Wochentag */}
+                {s.byWochentag.length > 0 && (
+                  <Card className="bg-white shadow-sm border-slate-200">
+                    <CardHeader>
+                      <CardTitle className="text-base">Ø Ladezeit nach Wochentag</CardTitle>
+                      <CardDescription>An welchen Tagen dauert es länger?</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[260px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={s.byWochentag} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="tag" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `${v}min`} tick={{ fontSize: 10 }} />
+                          <Tooltip content={<CustomMinTooltip />} cursor={{ fill: "#f1f5f9" }} />
+                          <Bar dataKey="avgVerarbeitungszeitMin" fill={LADEZEIT_COLOR} radius={[4, 4, 0, 0]}
+                            label={{ position: "top", formatter: (v: number) => v !== null ? `${v}` : "", fontSize: 10, fill: "#64748b" }} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* By Stunde */}
+                {s.byStunde.length > 0 && (
+                  <Card className="bg-white shadow-sm border-slate-200">
+                    <CardHeader>
+                      <CardTitle className="text-base">Ø Ladezeit nach Tageszeit</CardTitle>
+                      <CardDescription>Zu welcher Uhrzeit sind LKWs am langsamsten?</CardDescription>
+                    </CardHeader>
+                    <CardContent className="h-[260px]">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={s.byStunde} margin={{ top: 10, right: 20, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
+                          <XAxis dataKey="stunde" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} interval={0} angle={-45} textAnchor="end" height={40} />
+                          <YAxis axisLine={false} tickLine={false} tickFormatter={(v) => `${v}min`} tick={{ fontSize: 10 }} />
+                          <Tooltip content={<CustomMinTooltip />} cursor={{ fill: "#f1f5f9" }} />
+                          <Bar dataKey="avgVerarbeitungszeitMin" fill="hsl(222 47% 50%)" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                )}
+              </div>
+            </>
+          )}
 
           {/* ── Shipments table ── */}
           <Card className="bg-white shadow-sm border-slate-200">
@@ -415,7 +541,7 @@ export default function AuswertungPage() {
                           ["tor",                 "Tor"],
                           ["status",              "Status"],
                           ["verzoegerungMin",     "Abweichung"],
-                          ["verarbeitungszeitMin","Verarbeitungszeit"],
+                          ["verarbeitungszeitMin","Ladezeit"],
                         ] as [SortCol, string][]).map(([col, label]) => (
                           <TableHead
                             key={col}
@@ -467,7 +593,7 @@ export default function AuswertungPage() {
                           <TableCell>{delayBadge(row.verzoegerungMin)}</TableCell>
                           <TableCell className="text-slate-600 text-sm">
                             {row.verarbeitungszeitMin !== null
-                              ? <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" />{fmtMin(row.verarbeitungszeitMin)}</span>
+                              ? <span className="flex items-center gap-1"><Clock className="w-3 h-3 text-slate-400" />{fmtMinAbs(row.verarbeitungszeitMin)}</span>
                               : <span className="text-slate-400">–</span>}
                           </TableCell>
                         </TableRow>

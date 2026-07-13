@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { db } from "@workspace/db";
 import { shipmentsTable, speditionenTable, auditLogTable } from "@workspace/db";
-import { eq, and, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -26,6 +26,8 @@ function avg(arr: number[]): number | null {
   if (!arr.length) return null;
   return Math.round(arr.reduce((a, b) => a + b, 0) / arr.length);
 }
+
+const WOCHENTAGE = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"];
 
 router.get("/auswertung", requireAuth, async (req, res) => {
   try {
@@ -140,38 +142,98 @@ router.get("/auswertung", requireAuth, async (req, res) => {
     const zuFrueh   = withDelay.filter((s) => s.verzoegerungMin! < -TOLERANCE).length;
 
     const avgVerzoegerungMin = avg(withDelay.map((s) => s.verzoegerungMin!));
-    const avgVerarbeitungszeitMin = avg(
-      enriched.filter((s) => s.verarbeitungszeitMin !== null && s.verarbeitungszeitMin >= 0).map((s) => s.verarbeitungszeitMin!),
-    );
+    const withVerarbeitung = enriched.filter((s) => s.verarbeitungszeitMin !== null && s.verarbeitungszeitMin >= 0);
+    const avgVerarbeitungszeitMin = avg(withVerarbeitung.map((s) => s.verarbeitungszeitMin!));
 
     // By status
     const statusMap: Record<string, number> = {};
     for (const s of enriched) statusMap[s.status] = (statusMap[s.status] || 0) + 1;
     const byStatus = Object.entries(statusMap).map(([status, count]) => ({ status, count }));
 
-    // By relation
-    const relationMap: Record<string, { count: number; delays: number[] }> = {};
+    // By relation — includes avgVerarbeitungszeitMin
+    const relationMap: Record<string, { count: number; delays: number[]; verarbeitungszeiten: number[] }> = {};
     for (const s of enriched) {
       const key = s.relation || "–";
-      if (!relationMap[key]) relationMap[key] = { count: 0, delays: [] };
+      if (!relationMap[key]) relationMap[key] = { count: 0, delays: [], verarbeitungszeiten: [] };
       relationMap[key].count++;
       if (s.verzoegerungMin !== null) relationMap[key].delays.push(s.verzoegerungMin);
+      if (s.verarbeitungszeitMin !== null && s.verarbeitungszeitMin >= 0) relationMap[key].verarbeitungszeiten.push(s.verarbeitungszeitMin);
     }
     const byRelation = Object.entries(relationMap)
-      .map(([relation, { count, delays }]) => ({ relation, count, avgVerzoegerungMin: avg(delays) }))
+      .map(([relation, { count, delays, verarbeitungszeiten }]) => ({
+        relation,
+        count,
+        avgVerzoegerungMin: avg(delays),
+        avgVerarbeitungszeitMin: avg(verarbeitungszeiten),
+      }))
       .sort((a, b) => b.count - a.count);
 
-    // By spedition
-    const spedCountMap: Record<string, { count: number; delays: number[]; name: string }> = {};
+    // By spedition — includes avgVerarbeitungszeitMin
+    const spedCountMap: Record<string, { count: number; delays: number[]; verarbeitungszeiten: number[]; name: string }> = {};
     for (const s of enriched) {
       const key = String(s.speditionId ?? 0);
-      if (!spedCountMap[key]) spedCountMap[key] = { count: 0, delays: [], name: s.speditionName };
+      if (!spedCountMap[key]) spedCountMap[key] = { count: 0, delays: [], verarbeitungszeiten: [], name: s.speditionName };
       spedCountMap[key].count++;
       if (s.verzoegerungMin !== null) spedCountMap[key].delays.push(s.verzoegerungMin);
+      if (s.verarbeitungszeitMin !== null && s.verarbeitungszeitMin >= 0) spedCountMap[key].verarbeitungszeiten.push(s.verarbeitungszeitMin);
     }
     const bySpedition = Object.entries(spedCountMap)
-      .map(([id, { count, delays, name }]) => ({ speditionId: Number(id), speditionName: name, count, avgVerzoegerungMin: avg(delays) }))
+      .map(([id, { count, delays, verarbeitungszeiten, name }]) => ({
+        speditionId: Number(id),
+        speditionName: name,
+        count,
+        avgVerzoegerungMin: avg(delays),
+        avgVerarbeitungszeitMin: avg(verarbeitungszeiten),
+      }))
       .sort((a, b) => b.count - a.count);
+
+    // By Tor — avg processing time per gate
+    const torMap: Record<string, { count: number; verarbeitungszeiten: number[] }> = {};
+    for (const s of enriched) {
+      if (!s.tor) continue;
+      if (!torMap[s.tor]) torMap[s.tor] = { count: 0, verarbeitungszeiten: [] };
+      torMap[s.tor].count++;
+      if (s.verarbeitungszeitMin !== null && s.verarbeitungszeitMin >= 0) torMap[s.tor].verarbeitungszeiten.push(s.verarbeitungszeitMin);
+    }
+    const byTor = Object.entries(torMap)
+      .map(([tor, { count, verarbeitungszeiten }]) => ({
+        tor,
+        count,
+        avgVerarbeitungszeitMin: avg(verarbeitungszeiten),
+      }))
+      .filter((t) => t.avgVerarbeitungszeitMin !== null)
+      .sort((a, b) => (b.avgVerarbeitungszeitMin ?? 0) - (a.avgVerarbeitungszeitMin ?? 0));
+
+    // By Wochentag — avg processing time per day of week
+    const wochentagMap: Record<number, { count: number; verarbeitungszeiten: number[] }> = {};
+    for (const s of enriched) {
+      if (!s.angekommenAt) continue;
+      const day = new Date(s.angekommenAt).getDay();
+      if (!wochentagMap[day]) wochentagMap[day] = { count: 0, verarbeitungszeiten: [] };
+      wochentagMap[day].count++;
+      if (s.verarbeitungszeitMin !== null && s.verarbeitungszeitMin >= 0) wochentagMap[day].verarbeitungszeiten.push(s.verarbeitungszeitMin);
+    }
+    // Mon→Sun order
+    const byWochentag = [1, 2, 3, 4, 5, 6, 0].map((day) => ({
+      tag: WOCHENTAGE[day],
+      count: wochentagMap[day]?.count ?? 0,
+      avgVerarbeitungszeitMin: avg(wochentagMap[day]?.verarbeitungszeiten ?? []),
+    })).filter((d) => d.count > 0);
+
+    // By Stunde — avg processing time per hour of day (when arrived)
+    const stundeMap: Record<number, { count: number; verarbeitungszeiten: number[] }> = {};
+    for (const s of enriched) {
+      if (!s.angekommenAt) continue;
+      const hour = new Date(s.angekommenAt).getHours();
+      if (!stundeMap[hour]) stundeMap[hour] = { count: 0, verarbeitungszeiten: [] };
+      stundeMap[hour].count++;
+      if (s.verarbeitungszeitMin !== null && s.verarbeitungszeitMin >= 0) stundeMap[hour].verarbeitungszeiten.push(s.verarbeitungszeitMin);
+    }
+    const byStunde = Array.from({ length: 24 }, (_, h) => ({
+      stunde: `${String(h).padStart(2, "0")}:00`,
+      count: stundeMap[h]?.count ?? 0,
+      avgVerarbeitungszeitMin: avg(stundeMap[h]?.verarbeitungszeiten ?? []),
+    })).filter((s) => s.count > 0);
 
     // Available filter values
     const relations = [...new Set(allShipments.map((s) => s.relation).filter(Boolean))].sort();
@@ -189,6 +251,9 @@ router.get("/auswertung", requireAuth, async (req, res) => {
         byStatus,
         byRelation,
         bySpedition,
+        byTor,
+        byWochentag,
+        byStunde,
       },
       meta: { from, to, relations, speditionen: speds.map((s) => ({ id: s.id, name: s.name })) },
     });

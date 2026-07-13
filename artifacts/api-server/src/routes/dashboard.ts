@@ -5,8 +5,8 @@ import {
   speditionenTable,
   palletMovementsTable,
   palletReconciliationsTable,
+  settingsTable,
 } from "@workspace/db";
-import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 
 const router = Router();
@@ -114,6 +114,106 @@ router.get("/dashboard", requireAuth, async (req, res) => {
       palletBalances,
       openReconciliations: filteredRecs.length,
     });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Live SLA alerts (Brennpunkt) ──────────────────────────────────────────────
+
+router.get("/dashboard/live-alerts", requireAuth, async (req, res) => {
+  try {
+    const role = req.session.role!;
+    const sessionSpeditionId = req.session.speditionId;
+    const isSpedUser = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"].includes(role);
+
+    // Load configurable SLA thresholds from settings
+    const settingsRows = await db.select().from(settingsTable);
+    const sm = Object.fromEntries(settingsRows.map((r) => [r.key, r.value ?? ""]));
+    const parseSla = (k: string, def: number) => {
+      const v = parseInt(sm[k] ?? "", 10);
+      return Number.isFinite(v) && v > 0 ? v : def;
+    };
+    const sla = {
+      angekommen_warn_min:    parseSla("sla_angekommen_warn_min",    60),
+      angekommen_danger_min:  parseSla("sla_angekommen_danger_min",  90),
+      inverladung_warn_min:   parseSla("sla_inverladung_warn_min",  120),
+      inverladung_danger_min: parseSla("sla_inverladung_danger_min",180),
+      eta_warn_min:           parseSla("sla_eta_warn_min",           30),
+      eta_danger_min:         parseSla("sla_eta_danger_min",         60),
+    };
+
+    let allShipments = await db.select().from(shipmentsTable);
+    allShipments = allShipments.filter((s) =>
+      ["Angekommen", "in Verladung", "Angemeldet", "Erwartet"].includes(s.status)
+    );
+    if (isSpedUser) allShipments = allShipments.filter((s) => s.speditionId === sessionSpeditionId);
+
+    const speds = await db.select({ id: speditionenTable.id, name: speditionenTable.name }).from(speditionenTable);
+    const spedMap: Record<number, string> = {};
+    for (const s of speds) spedMap[s.id] = s.name;
+
+    const nowMs = Date.now();
+
+    type Alert = {
+      id: number;
+      bezeichnung: string | null;
+      kennzeichen: string | null;
+      status: string;
+      tor: string | null;
+      speditionName: string;
+      level: "warn" | "danger";
+      minutesWaiting: number;
+      alertReason: "timeInStatus" | "etaOverdue";
+    };
+
+    const alerts: Alert[] = [];
+
+    for (const s of allShipments) {
+      let level: "warn" | "danger" | null = null;
+      let minutesWaiting = 0;
+      let alertReason: Alert["alertReason"] = "timeInStatus";
+
+      const statusChangedAt = (s as any).statusChangedAt as Date | string | null;
+
+      if ((s.status === "Angekommen" || s.status === "in Verladung") && statusChangedAt) {
+        const minIn = (nowMs - new Date(statusChangedAt).getTime()) / 60_000;
+        const warnMin   = s.status === "Angekommen" ? sla.angekommen_warn_min   : sla.inverladung_warn_min;
+        const dangerMin = s.status === "Angekommen" ? sla.angekommen_danger_min : sla.inverladung_danger_min;
+        if (minIn >= dangerMin)    { level = "danger"; minutesWaiting = Math.round(minIn); }
+        else if (minIn >= warnMin) { level = "warn";   minutesWaiting = Math.round(minIn); }
+        alertReason = "timeInStatus";
+      } else if ((s.status === "Angemeldet" || s.status === "Erwartet") && s.etaDate && s.etaTime) {
+        const eta = new Date(`${s.etaDate}T${s.etaTime.length === 5 ? s.etaTime : s.etaTime + ":00"}:00`);
+        const minsLate = (nowMs - eta.getTime()) / 60_000;
+        if (minsLate >= sla.eta_danger_min)    { level = "danger"; minutesWaiting = Math.round(minsLate); }
+        else if (minsLate >= sla.eta_warn_min) { level = "warn";   minutesWaiting = Math.round(minsLate); }
+        alertReason = "etaOverdue";
+      }
+
+      if (level) {
+        alerts.push({
+          id: s.id,
+          bezeichnung: s.bezeichnung,
+          kennzeichen: s.kennzeichen,
+          status: s.status,
+          tor: s.tor,
+          speditionName: s.speditionId ? (spedMap[s.speditionId] ?? "–") : "–",
+          level,
+          minutesWaiting,
+          alertReason,
+        });
+      }
+    }
+
+    // danger first, then by longest waiting
+    alerts.sort((a, b) => {
+      if (a.level !== b.level) return a.level === "danger" ? -1 : 1;
+      return b.minutesWaiting - a.minutesWaiting;
+    });
+
+    return res.json({ alerts, checkedAt: new Date().toISOString() });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
