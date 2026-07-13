@@ -108,10 +108,144 @@ async function buildSystemPrompt(): Promise<string> {
   }
 }
 
+// ── Shared helper ─────────────────────────────────────────────────────────────
+
+async function saveBotMessage(
+  sessionId: number,
+  content: string,
+  io: SocketIOServer,
+): Promise<void> {
+  const { rows } = await pool.query(
+    `INSERT INTO chat_messages (session_id, sender_user_id, sender_name, content)
+     VALUES ($1, $2, $3, $4) RETURNING *`,
+    [sessionId, AI_SENDER_ID, AI_SENDER_NAME, content],
+  );
+  io.to(`chat:${sessionId}`).emit("chat:message:new", rows[0]);
+  await pool.query(
+    "UPDATE chat_sessions SET updated_at = NOW() WHERE id = $1",
+    [sessionId],
+  );
+}
+
+// ── Lokaler Bot (kostenlos, kein externer API-Call) ───────────────────────────
+
+const GREETING_PATTERNS = [
+  "hallo", "guten tag", "guten morgen", "guten abend",
+  "hi ", "hi,", "hey ", "servus", "moin", "grüß", "gruss",
+];
+const THANKS_PATTERNS = [
+  "danke", "vielen dank", "herzlichen dank", "dankeschön",
+  "super", "toll", "klasse", "prima", "perfekt", "wunderbar",
+];
+const BYE_PATTERNS = ["tschüss", "tschüs", "auf wiedersehen", "ciao", "bye", "bis dann"];
+const ESCALATION_PATTERNS = [
+  "mitarbeiter", "mensch", "person", "jemanden", "jemand sprechen",
+  "anruf", "telefon", "rückruf", "weiterleiten",
+];
+
+const GREETING_RESPONSES = [
+  "Hallo! Ich bin der COMET KI-Assistent und helfe Ihnen gerne weiter. Was kann ich für Sie tun?",
+  "Guten Tag! Womit kann ich Ihnen behilflich sein?",
+  "Hallo! Wie kann ich Ihnen heute helfen?",
+];
+const THANKS_RESPONSES = [
+  "Gern geschehen! Kann ich Ihnen noch mit etwas anderem helfen?",
+  "Freut mich, dass ich helfen konnte! Haben Sie noch weitere Fragen?",
+  "Gerne! Melden Sie sich einfach, wenn Sie noch Fragen haben.",
+];
+const BYE_RESPONSES = [
+  "Auf Wiedersehen! Bei weiteren Fragen stehe ich jederzeit zur Verfügung.",
+  "Tschüss! Ich helfe Ihnen gerne wieder, wenn Sie Fragen haben.",
+];
+const ESCALATION_RESPONSE =
+  'Selbstverständlich. Klicken Sie auf **"Mitarbeiter hinzuziehen"**, um direkt mit einem Mitarbeiter zu sprechen.';
+const NO_MATCH_RESPONSE =
+  'Zu dieser Frage habe ich leider keine passende Information in meiner Wissensdatenbank. ' +
+  'Klicken Sie auf **"Mitarbeiter hinzuziehen"**, wenn Sie direkte Unterstützung benötigen, ' +
+  'oder stellen Sie Ihre Frage etwas anders — vielleicht kann ich dann besser helfen.';
+
+function pickRandom<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+async function generateLocalBotReply(
+  sessionId: number,
+  io: SocketIOServer,
+): Promise<void> {
+  try {
+    const { rows: msgRows } = await pool.query(
+      `SELECT sender_user_id, content FROM chat_messages
+       WHERE session_id = $1 ORDER BY sent_at DESC LIMIT 5`,
+      [sessionId],
+    );
+    const lastUser = msgRows.find((m) => m.sender_user_id !== AI_SENDER_ID);
+    if (!lastUser) return;
+
+    const userText = lastUser.content.trim().toLowerCase();
+
+    if (GREETING_PATTERNS.some((p) => userText.includes(p))) {
+      await saveBotMessage(sessionId, pickRandom(GREETING_RESPONSES), io);
+      return;
+    }
+    if (THANKS_PATTERNS.some((p) => userText.includes(p))) {
+      await saveBotMessage(sessionId, pickRandom(THANKS_RESPONSES), io);
+      return;
+    }
+    if (BYE_PATTERNS.some((p) => userText.includes(p))) {
+      await saveBotMessage(sessionId, pickRandom(BYE_RESPONSES), io);
+      return;
+    }
+    if (ESCALATION_PATTERNS.some((p) => userText.includes(p))) {
+      await saveBotMessage(sessionId, ESCALATION_RESPONSE, io);
+      return;
+    }
+
+    // Volltextsuche in der Wissensdatenbank (PostgreSQL German-Stemming)
+    try {
+      const { rows: ftsRows } = await pool.query(
+        `SELECT title, content,
+           ts_rank(
+             to_tsvector('german', title || ' ' || content),
+             plainto_tsquery('german', $1)
+           ) AS rank
+         FROM chat_knowledge
+         WHERE active = TRUE
+           AND to_tsvector('german', title || ' ' || content)
+               @@ plainto_tsquery('german', $1)
+         ORDER BY rank DESC
+         LIMIT 1`,
+        [lastUser.content.trim()],
+      );
+
+      if (ftsRows.length > 0 && ftsRows[0].rank >= 0.01) {
+        const entry = ftsRows[0];
+        await saveBotMessage(sessionId, `**${entry.title}**\n\n${entry.content}`, io);
+        return;
+      }
+    } catch {
+      // plainto_tsquery kann bei sehr kurzen Texten / Stop-Words fehlschlagen
+    }
+
+    await saveBotMessage(sessionId, NO_MATCH_RESPONSE, io);
+  } catch (err) {
+    console.error("Local bot reply error for session", sessionId, err);
+  }
+}
+
+// ── AI reply (lokaler Bot oder OpenAI) ────────────────────────────────────────
+
 async function generateAiReply(
   sessionId: number,
   io: SocketIOServer,
 ): Promise<void> {
+  const openai = await getOpenAI();
+
+  // Kein OpenAI-Key → kostenloser lokaler Bot
+  if (!openai) {
+    return generateLocalBotReply(sessionId, io);
+  }
+
+  // OpenAI-Pfad (nur wenn AI_INTEGRATIONS_OPENAI_* gesetzt sind)
   try {
     const { rows: msgRows } = await pool.query(
       `SELECT sender_user_id, sender_name, content FROM chat_messages
@@ -130,12 +264,8 @@ async function generateAiReply(
         })),
     ];
 
-    // Get the last user message as the final prompt
     const lastUser = msgRows.findLast((m) => m.sender_user_id !== AI_SENDER_ID);
     if (!lastUser) return;
-
-    const openai = await getOpenAI();
-    if (!openai) return;
 
     const completion = await openai.chat.completions.create({
       model: "gpt-5.4-mini",
@@ -146,17 +276,7 @@ async function generateAiReply(
     const aiContent = completion.choices[0]?.message?.content;
     if (!aiContent?.trim()) return;
 
-    const { rows: savedRows } = await pool.query(
-      `INSERT INTO chat_messages (session_id, sender_user_id, sender_name, content)
-       VALUES ($1, $2, $3, $4) RETURNING *`,
-      [sessionId, AI_SENDER_ID, AI_SENDER_NAME, aiContent.trim()],
-    );
-    const aiMessage = savedRows[0];
-    io.to(`chat:${sessionId}`).emit("chat:message:new", aiMessage);
-    await pool.query(
-      "UPDATE chat_sessions SET updated_at = NOW() WHERE id = $1",
-      [sessionId],
-    );
+    await saveBotMessage(sessionId, aiContent.trim(), io);
   } catch (err) {
     console.error("AI reply error for session", sessionId, err);
   }
