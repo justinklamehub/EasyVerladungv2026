@@ -88,10 +88,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const load = async () => {
       try {
         const data = await customFetch("/api/chat/sessions");
+        const all: ChatSession[] = data.sessions ?? [];
         if (isStaff) {
-          setOpenSessions(data.sessions ?? []);
+          // Staff see others' sessions in inbox, but can also have their own chat
+          const mine = all.find((s) => s.created_by_user_id === user!.id) ?? null;
+          const others = all.filter((s) => s.created_by_user_id !== user!.id);
+          setOpenSessions(others);
+          if (mine) {
+            setActiveSession(mine);
+            joinAndLoadMessages(mine.id);
+          }
         } else {
-          const existing = data.sessions?.[0] ?? null;
+          const existing = all[0] ?? null;
           if (existing) {
             setActiveSession(existing);
             joinAndLoadMessages(existing.id);
@@ -118,15 +126,18 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
     const onSessionNew = (session: ChatSession) => {
       if (isStaff) {
-        setOpenSessions((prev) => {
-          if (prev.find((s) => s.id === session.id)) return prev;
-          return [session, ...prev];
-        });
+        // Only add to inbox if it's someone else's session
+        if (session.created_by_user_id !== user!.id) {
+          setOpenSessions((prev) => {
+            if (prev.find((s) => s.id === session.id)) return prev;
+            return [session, ...prev];
+          });
+        }
       }
     };
 
     const onSessionUpdated = (session: ChatSession) => {
-      if (isStaff) {
+      if (isStaff && session.created_by_user_id !== user!.id) {
         setOpenSessions((prev) => {
           if (session.status === "closed") return prev.filter((s) => s.id !== session.id);
           return prev.map((s) => (s.id === session.id ? session : s));

@@ -128,27 +128,24 @@ export function ChatWidget() {
 
   const isStaff = STAFF_ROLES.has(user.role);
 
-  const handleButtonClick = () => {
-    if (isStaff) {
-      setIsInboxOpen(true);
+  const handleChatClick = () => {
+    if (activeSession && activeSession.status !== "closed") {
+      setIsPanelOpen((v) => !v);
     } else {
-      if (activeSession && activeSession.status !== "closed") {
-        setIsPanelOpen((v) => !v);
-      } else {
-        setShowNewDialog(true);
-      }
+      setShowNewDialog(true);
     }
   };
 
-  const hasActiveChat = !isStaff && activeSession && activeSession.status !== "closed";
+  const hasActiveChat = activeSession && activeSession.status !== "closed";
   const isAiMode = hasActiveChat && activeSession?.ai_active;
-  const showBadge = isStaff ? unclaimedCount > 0 : false;
+  const showBadge = isStaff && unclaimedCount > 0;
 
   return (
     <>
-      {/* Floating button */}
+      {/* Floating button cluster */}
       <div className="fixed bottom-4 right-4 z-50 flex flex-col items-end gap-2">
-        {/* Active chat collapsed indicator for users */}
+
+        {/* Collapsed chat indicator */}
         {hasActiveChat && !isPanelOpen && (
           <div
             className="flex items-center gap-2 bg-slate-900 text-white rounded-full pl-3 pr-1 py-1 text-xs shadow-lg cursor-pointer"
@@ -169,42 +166,56 @@ export function ChatWidget() {
           </div>
         )}
 
-        {/* Main button */}
-        <Button
-          size="icon"
-          className={`relative h-12 w-12 rounded-full shadow-xl transition-all ${
-            isPanelOpen || isInboxOpen
-              ? "bg-slate-700 hover:bg-slate-600"
-              : "bg-slate-900 hover:bg-slate-700"
-          }`}
-          onClick={handleButtonClick}
-          title={isStaff ? "Support-Inbox" : "Support kontaktieren"}
-        >
-          {isStaff ? (
-            <Headphones className="w-5 h-5" />
-          ) : isAiMode ? (
-            <Bot className="w-5 h-5 text-blue-300" />
-          ) : (
-            <MessageCircle className="w-5 h-5" />
+        <div className="flex items-center gap-2">
+          {/* Inbox button — only for staff */}
+          {isStaff && (
+            <Button
+              size="icon"
+              className={`relative h-10 w-10 rounded-full shadow-lg transition-all ${
+                isInboxOpen
+                  ? "bg-slate-700 hover:bg-slate-600"
+                  : "bg-white hover:bg-slate-100 text-slate-700 border border-slate-200"
+              }`}
+              onClick={() => setIsInboxOpen(true)}
+              title="Support-Inbox"
+            >
+              <Headphones className={`w-4 h-4 ${isInboxOpen ? "text-white" : "text-slate-700"}`} />
+              {showBadge && (
+                <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-white shadow">
+                  {unclaimedCount > 9 ? "9+" : unclaimedCount}
+                </span>
+              )}
+            </Button>
           )}
 
-          {/* Badge for unclaimed sessions */}
-          {showBadge && (
-            <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-red-500 text-white text-[10px] font-bold px-1 ring-2 ring-white shadow">
-              {unclaimedCount > 9 ? "9+" : unclaimedCount}
-            </span>
-          )}
+          {/* Chat button — for everyone */}
+          <Button
+            size="icon"
+            className={`relative h-12 w-12 rounded-full shadow-xl transition-all ${
+              isPanelOpen
+                ? "bg-slate-700 hover:bg-slate-600"
+                : "bg-slate-900 hover:bg-slate-700"
+            }`}
+            onClick={handleChatClick}
+            title="Support-Chat öffnen"
+          >
+            {isAiMode ? (
+              <Bot className="w-5 h-5 text-blue-300" />
+            ) : (
+              <MessageCircle className="w-5 h-5" />
+            )}
 
-          {/* Green dot for active human session */}
-          {hasActiveChat && activeSession?.status === "active" && (
-            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 ring-2 ring-white" />
-          )}
+            {/* Green dot for active human session */}
+            {hasActiveChat && activeSession?.status === "active" && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-green-400 ring-2 ring-white" />
+            )}
 
-          {/* Blue dot for AI mode */}
-          {isAiMode && (
-            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-blue-400 ring-2 ring-white animate-pulse" />
-          )}
-        </Button>
+            {/* Blue dot for AI mode */}
+            {isAiMode && (
+              <span className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-blue-400 ring-2 ring-white animate-pulse" />
+            )}
+          </Button>
+        </div>
       </div>
 
       <ChatPanel />
