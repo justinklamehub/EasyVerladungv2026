@@ -47,6 +47,7 @@ import {
   ImageIcon,
   Route,
   GanttChart,
+  Brain,
   type LucideProps,
 } from "lucide-react";
 import { NAV_ICONS } from "@/lib/nav-icons";
@@ -376,6 +377,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     { name: "Relationen", href: "/relationen", icon: Route, show: user.role === "speditions_admin" },
     { name: "Einstellungen", href: "/settings", icon: Settings, show: user.role === "comet_admin" },
     { name: "Berechtigungen", href: "/berechtigungen", icon: ShieldCheck, show: user.role === "comet_admin" },
+    { name: "KI-Wissensbase", href: "/wissensbase", icon: Brain, show: user.role === "comet_admin" },
     { name: "Tickets", href: "/tickets", icon: TicketIcon, show: true },
     { name: "Neuerungen", href: "/changelog", icon: FileClock, show: true },
     { name: "Hilfe & Anleitung", href: "/hilfe", icon: HelpCircle, show: true },

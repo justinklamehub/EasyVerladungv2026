@@ -29,7 +29,6 @@ export async function ensureChatTables(): Promise<void> {
       updated_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
-  // Add ai_active column to existing tables
   await pool.query(`
     ALTER TABLE chat_sessions ADD COLUMN IF NOT EXISTS ai_active BOOLEAN NOT NULL DEFAULT TRUE
   `);
@@ -43,11 +42,23 @@ export async function ensureChatTables(): Promise<void> {
       sent_at TIMESTAMPTZ DEFAULT NOW()
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_knowledge (
+      id SERIAL PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT NOT NULL,
+      category TEXT NOT NULL DEFAULT 'allgemein',
+      active BOOLEAN NOT NULL DEFAULT TRUE,
+      created_by_name TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
 }
 
 // ── AI reply ─────────────────────────────────────────────────────────────────
 
-const SYSTEM_PROMPT = `Du bist ein freundlicher KI-Support-Assistent für das COMET LKW-Verladungsverwaltungssystem (Easy-Verladung).
+const BASE_SYSTEM_PROMPT = `Du bist ein freundlicher KI-Support-Assistent für das COMET LKW-Verladungsverwaltungssystem (Easy-Verladung).
 Du hilfst Benutzern bei Fragen rund um die LKW-Verladungsverwaltung.
 
 Typische Themen, bei denen du helfen kannst:
@@ -64,6 +75,30 @@ Falls du eine Frage nicht beantworten kannst oder das Problem eine manuelle Bear
 
 Antworte immer auf Deutsch. Sei präzise und hilfreich. Halte Antworten kurz (max. 4 Sätze) außer bei komplexen Erklärungen.`;
 
+async function buildSystemPrompt(): Promise<string> {
+  try {
+    const { rows } = await pool.query(
+      `SELECT title, content, category FROM chat_knowledge WHERE active = TRUE ORDER BY category, id`,
+    );
+    if (!rows.length) return BASE_SYSTEM_PROMPT;
+    const byCategory = new Map<string, typeof rows>();
+    for (const row of rows) {
+      if (!byCategory.has(row.category)) byCategory.set(row.category, []);
+      byCategory.get(row.category)!.push(row);
+    }
+    let knowledge = "\n\n## Wissensdatenbank (verwende diese Informationen bei passenden Fragen):\n";
+    for (const [cat, entries] of byCategory) {
+      knowledge += `\n### ${cat}\n`;
+      for (const e of entries) {
+        knowledge += `**${e.title}**\n${e.content}\n\n`;
+      }
+    }
+    return BASE_SYSTEM_PROMPT + knowledge;
+  } catch {
+    return BASE_SYSTEM_PROMPT;
+  }
+}
+
 async function generateAiReply(
   sessionId: number,
   io: SocketIOServer,
@@ -75,8 +110,9 @@ async function generateAiReply(
       [sessionId],
     );
 
+    const systemPrompt = await buildSystemPrompt();
     const chatMessages = [
-      { role: "system" as const, content: SYSTEM_PROMPT },
+      { role: "system" as const, content: systemPrompt },
       ...msgRows
         .filter((m) => m.sender_user_id !== AI_SENDER_ID)
         .map((m) => ({
@@ -291,6 +327,84 @@ router.post("/chat/sessions/:id/close", requireAuth, async (req, res) => {
     io.to(`chat:${sessionId}`).emit("chat:session:closed", { sessionId, session });
     io.to("comet").emit("chat:session:updated", session);
     return res.json({ session });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// ── Knowledge base routes ─────────────────────────────────────────────────────
+
+router.get("/chat/knowledge", requireAuth, async (req, res) => {
+  const role = req.session.role!;
+  if (!STAFF_ROLES.has(role)) return res.status(403).json({ error: "Forbidden" });
+  try {
+    const { rows } = await pool.query(
+      `SELECT * FROM chat_knowledge ORDER BY category, id`,
+    );
+    return res.json({ entries: rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.post("/chat/knowledge", requireAuth, async (req, res) => {
+  const role = req.session.role!;
+  const username = req.session.username!;
+  if (role !== "comet_admin") return res.status(403).json({ error: "Forbidden" });
+  const { title, content, category } = req.body as {
+    title: string; content: string; category?: string;
+  };
+  if (!title?.trim() || !content?.trim()) {
+    return res.status(400).json({ error: "title and content required" });
+  }
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO chat_knowledge (title, content, category, created_by_name)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [title.trim(), content.trim(), category?.trim() || "allgemein", username],
+    );
+    return res.status(201).json({ entry: rows[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.put("/chat/knowledge/:id", requireAuth, async (req, res) => {
+  const role = req.session.role!;
+  if (role !== "comet_admin") return res.status(403).json({ error: "Forbidden" });
+  const id = Number(req.params.id);
+  const { title, content, category, active } = req.body as {
+    title?: string; content?: string; category?: string; active?: boolean;
+  };
+  try {
+    const { rows } = await pool.query(
+      `UPDATE chat_knowledge SET
+         title = COALESCE($1, title),
+         content = COALESCE($2, content),
+         category = COALESCE($3, category),
+         active = COALESCE($4, active),
+         updated_at = NOW()
+       WHERE id = $5 RETURNING *`,
+      [title?.trim() ?? null, content?.trim() ?? null, category?.trim() ?? null, active ?? null, id],
+    );
+    if (!rows.length) return res.status(404).json({ error: "Not found" });
+    return res.json({ entry: rows[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+router.delete("/chat/knowledge/:id", requireAuth, async (req, res) => {
+  const role = req.session.role!;
+  if (role !== "comet_admin") return res.status(403).json({ error: "Forbidden" });
+  const id = Number(req.params.id);
+  try {
+    await pool.query("DELETE FROM chat_knowledge WHERE id = $1", [id]);
+    return res.json({ ok: true });
   } catch (err) {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });

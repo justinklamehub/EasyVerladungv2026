@@ -58,6 +58,7 @@ import DatenschutzPage from "@/pages/datenschutz";
 import ChangelogPage from "@/pages/changelog";
 import FotosPage from "@/pages/fotos/index";
 import TorbelegungPage from "@/pages/torbelegung";
+import ChatWissensbasePage from "@/pages/chat-wissensbase";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -130,6 +131,7 @@ function Router() {
             <Route path="/tickets"><ProtectedRoute component={TicketsPage} /></Route>
             <Route path="/kalkulation"><ProtectedRoute component={KalkulationPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
             <Route path="/changelog"><ProtectedRoute component={ChangelogPage} /></Route>
+            <Route path="/wissensbase"><ProtectedRoute component={ChatWissensbasePage} roles={["comet_admin"]} /></Route>
             <Route component={NotFound} />
           </Switch>
         </AppLayout>
