@@ -81,6 +81,8 @@ export function ChatPanel() {
   const [inputValue, setInputValue] = useState("");
   const [isEscalating, setIsEscalating] = useState(false);
   const [escalateError, setEscalateError] = useState<string | null>(null);
+  const [confirmClose, setConfirmClose] = useState(false);
+  const confirmCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSessionIdRef = useRef<number | null>(null);
@@ -189,16 +191,47 @@ export function ChatPanel() {
           </div>
         </div>
         <div className="flex items-center gap-1">
-          {!isClosed && (
+          {!isClosed && !confirmClose && (
             <Button
               size="icon"
               variant="ghost"
               className="h-7 w-7 text-slate-400 hover:text-red-400 hover:bg-white/10"
-              onClick={() => closeSession()}
+              onClick={() => {
+                setConfirmClose(true);
+                confirmCloseTimerRef.current = setTimeout(() => setConfirmClose(false), 4000);
+              }}
               title="Chat beenden"
             >
               <X className="w-4 h-4" />
             </Button>
+          )}
+          {!isClosed && confirmClose && (
+            <div className="flex items-center gap-1">
+              <span className="text-[10px] text-red-300">Wirklich beenden?</span>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-[10px] text-red-400 hover:bg-red-900/30 hover:text-red-300"
+                onClick={() => {
+                  if (confirmCloseTimerRef.current) clearTimeout(confirmCloseTimerRef.current);
+                  setConfirmClose(false);
+                  closeSession();
+                }}
+              >
+                Ja
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-6 px-2 text-[10px] text-slate-400 hover:bg-white/10"
+                onClick={() => {
+                  if (confirmCloseTimerRef.current) clearTimeout(confirmCloseTimerRef.current);
+                  setConfirmClose(false);
+                }}
+              >
+                Nein
+              </Button>
+            </div>
           )}
           <Button
             size="icon"

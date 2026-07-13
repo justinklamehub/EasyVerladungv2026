@@ -293,13 +293,16 @@ router.get("/chat/sessions", requireAuth, async (req, res) => {
   const isStaff = STAFF_ROLES.has(role);
   try {
     if (isStaff) {
+      const showHistory = req.query["history"] === "true";
       const { rows } = await pool.query(
-        `SELECT * FROM chat_sessions WHERE status != 'closed' ORDER BY created_at DESC`,
+        showHistory
+          ? `SELECT * FROM chat_sessions WHERE status = 'closed' ORDER BY updated_at DESC LIMIT 50`
+          : `SELECT * FROM chat_sessions WHERE status != 'closed' ORDER BY created_at DESC`,
       );
       return res.json({ sessions: rows });
     } else {
       const { rows } = await pool.query(
-        `SELECT * FROM chat_sessions WHERE created_by_user_id = $1 AND status != 'closed' ORDER BY created_at DESC LIMIT 1`,
+        `SELECT * FROM chat_sessions WHERE created_by_user_id = $1 ORDER BY created_at DESC LIMIT 5`,
         [userId],
       );
       return res.json({ sessions: rows });
@@ -434,6 +437,35 @@ router.post("/chat/sessions/:id/claim", requireAuth, async (req, res) => {
       session,
     });
     io.to("comet").emit("chat:session:updated", session);
+    return res.json({ session });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+// Force-escalate: staff can bypass bot for any session
+router.post("/chat/sessions/:id/force-escalate", requireAuth, async (req, res) => {
+  const role = req.session.role!;
+  if (!STAFF_ROLES.has(role)) return res.status(403).json({ error: "Forbidden" });
+  const sessionId = Number(req.params.id);
+  try {
+    const { rows } = await pool.query(
+      `UPDATE chat_sessions SET ai_active = FALSE, status = 'open', updated_at = NOW()
+       WHERE id = $1 AND status = 'bot' RETURNING *`,
+      [sessionId],
+    );
+    if (!rows.length) return res.status(404).json({ error: "Not found or already escalated" });
+    const session = rows[0];
+    const io = req.app.get("io") as SocketIOServer;
+    const handoffText = "Ein Mitarbeiter hat den KI-Bot deaktiviert. Du wirst gleich mit einem Mitarbeiter verbunden.";
+    const { rows: aiMsgRows } = await pool.query(
+      `INSERT INTO chat_messages (session_id, sender_user_id, sender_name, content) VALUES ($1, $2, $3, $4) RETURNING *`,
+      [sessionId, AI_SENDER_ID, AI_SENDER_NAME, handoffText],
+    );
+    io.to(`chat:${sessionId}`).emit("chat:message:new", aiMsgRows[0]);
+    io.to(`chat:${sessionId}`).emit("chat:session:updated", session);
+    io.to("comet").emit("chat:session:new", session);
     return res.json({ session });
   } catch (err) {
     console.error(err);

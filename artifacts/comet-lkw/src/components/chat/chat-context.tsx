@@ -44,6 +44,9 @@ interface ChatContextType {
   activeSession: ChatSession | null;
   messages: ChatMessage[];
   openSessions: ChatSession[];
+  closedSessions: ChatSession[];
+  showHistory: boolean;
+  setShowHistory: (show: boolean) => void;
   unclaimedCount: number;
   isPanelOpen: boolean;
   isInboxOpen: boolean;
@@ -57,6 +60,7 @@ interface ChatContextType {
   claimSession: (sessionId: number) => Promise<void>;
   closeSession: (sessionId?: number) => Promise<void>;
   escalateSession: () => Promise<void>;
+  forceEscalate: (sessionId: number) => Promise<void>;
   sendMessage: (content: string) => void;
 }
 
@@ -72,6 +76,8 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [activeSession, setActiveSession] = useState<ChatSession | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [openSessions, setOpenSessions] = useState<ChatSession[]>([]);
+  const [closedSessions, setClosedSessions] = useState<ChatSession[]>([]);
+  const [showHistory, setShowHistoryState] = useState(false);
   const [isPanelOpen, setIsPanelOpen] = useState(false);
   const [isInboxOpen, setIsInboxOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -237,6 +243,17 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     setIsPanelOpen(true);
   }, [joinAndLoadMessages]);
 
+  const setShowHistory = useCallback((show: boolean) => {
+    setShowHistoryState(show);
+    if (show && isStaff) {
+      customFetch("/api/chat/sessions?history=true")
+        .then((data) => setClosedSessions(data.sessions ?? []))
+        .catch(() => {});
+    } else {
+      setClosedSessions([]);
+    }
+  }, [isStaff]);
+
   const escalateSession = useCallback(async () => {
     if (!activeSession) return;
     const data = await customFetch(`/api/chat/sessions/${activeSession.id}/escalate`, {
@@ -244,6 +261,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     });
     setActiveSession(data.session);
   }, [activeSession?.id]);
+
+  const forceEscalate = useCallback(async (sessionId: number) => {
+    await customFetch(`/api/chat/sessions/${sessionId}/force-escalate`, { method: "POST" });
+  }, []);
 
   const closeSession = useCallback(async (sessionId?: number) => {
     const id = sessionId ?? activeSession?.id;
@@ -273,6 +294,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       activeSession,
       messages,
       openSessions,
+      closedSessions,
+      showHistory,
+      setShowHistory,
       unclaimedCount,
       isPanelOpen,
       isInboxOpen,
@@ -286,6 +310,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       claimSession,
       closeSession,
       escalateSession,
+      forceEscalate,
       sendMessage,
     }}>
       {children}
