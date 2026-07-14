@@ -303,10 +303,23 @@ export default function ShipmentsPage() {
         })
       : shipments;
     return [...visible].sort((a, b) => {
+      if (sortField === "etaDate") {
+        const aHasAta = !!a.ataDate;
+        const bHasAta = !!b.ataDate;
+        // ATA entries always before ETA-only entries (regardless of direction)
+        if (aHasAta !== bHasAta) return aHasAta ? -1 : 1;
+        const aKey = aHasAta
+          ? (a.ataDate ?? "") + " " + (a.ataTime ?? "")
+          : (a.etaDate ?? "9999-99-99") + " " + (a.etaTime ?? "99:99");
+        const bKey = bHasAta
+          ? (b.ataDate ?? "") + " " + (b.ataTime ?? "")
+          : (b.etaDate ?? "9999-99-99") + " " + (b.etaTime ?? "99:99");
+        const cmp = aKey.localeCompare(bKey, "de");
+        return sortDir === "asc" ? cmp : -cmp;
+      }
       let av: string = "";
       let bv: string = "";
       if (sortField === "kennzeichen") { av = a.kennzeichen ?? ""; bv = b.kennzeichen ?? ""; }
-      else if (sortField === "etaDate") { av = a.etaDate ?? ""; bv = b.etaDate ?? ""; }
       else if (sortField === "status") { av = a.status ?? ""; bv = b.status ?? ""; }
       else if (sortField === "tor") { av = a.tor ?? ""; bv = b.tor ?? ""; }
       else if (sortField === "speditionName") { av = a.speditionName ?? ""; bv = b.speditionName ?? ""; }

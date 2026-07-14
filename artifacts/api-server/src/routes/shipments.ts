@@ -138,9 +138,20 @@ router.get("/shipments", requireAuth, async (req, res) => {
     }
 
     rows.sort((a, b) => {
-      const aTime = a.ataTime || a.etaTime || "99:99";
-      const bTime = b.ataTime || b.etaTime || "99:99";
-      return aTime.localeCompare(bTime);
+      const aHasAta = !!a.ataDate;
+      const bHasAta = !!b.ataDate;
+      // ATA entries before ETA-only entries
+      if (aHasAta !== bHasAta) return aHasAta ? -1 : 1;
+      // Within ATA group: sort ascending by ataDate + ataTime
+      if (aHasAta) {
+        const aKey = (a.ataDate ?? "") + " " + (a.ataTime ?? "00:00");
+        const bKey = (b.ataDate ?? "") + " " + (b.ataTime ?? "00:00");
+        return aKey.localeCompare(bKey);
+      }
+      // Within ETA group: sort ascending by etaDate + etaTime
+      const aKey = (a.etaDate ?? "9999-99-99") + " " + (a.etaTime ?? "99:99");
+      const bKey = (b.etaDate ?? "9999-99-99") + " " + (b.etaTime ?? "99:99");
+      return aKey.localeCompare(bKey);
     });
 
     const speds = await db.select().from(speditionenTable);
