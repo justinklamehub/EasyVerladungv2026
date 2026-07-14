@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Loader2, Plus, Lock, LockOpen, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate } from "lucide-react";
+import { Search, Loader2, Plus, Lock, LockOpen, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate, AlertTriangle } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ShipmentDrawer } from "./components/shipment-drawer";
 import { BulkCreateDialog, type RowData } from "./components/bulk-create-dialog";
@@ -19,6 +19,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { getListShipmentsQueryKey } from "@workspace/api-client-react";
 import { useSocketStatus } from "@/hooks/use-socket";
 import { usePermissions } from "@/hooks/use-permissions";
+import { slaWarning, SlaThresholds, SLA_DEFAULTS } from "@/lib/sla";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
@@ -268,6 +269,16 @@ export default function ShipmentsPage() {
   const unlockShipment = useUnlockShipment();
 
   const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
+
+  const { data: slaSettings } = useQuery<SlaThresholds>({
+    queryKey: ["sla-settings"],
+    queryFn: async () => {
+      const r = await fetch(`${API_BASE}/sla-settings`, { credentials: "include" });
+      return r.json();
+    },
+    staleTime: 5 * 60_000,
+  });
+
   const { data: gefahrgutStatus } = useQuery({
     queryKey: ["gefahrgut-status"],
     queryFn: async () => {
@@ -855,15 +866,24 @@ export default function ShipmentsPage() {
                       case "art": return <TableCell key="art">{shipment.lkwArt || "-"}</TableCell>;
                       case "relation": return <TableCell key="relation" className="text-slate-600 text-sm">{shipment.relation || "-"}</TableCell>;
                       case "bezeichnung": return <TableCell key="bezeichnung" className="text-slate-600 text-sm">{shipment.bezeichnung || "-"}</TableCell>;
-                      case "eta": return (
-                        <TableCell key="eta" className="text-xs">
-                          <div className="text-slate-600">
-                            {shipment.etaDate ? <div>ETA: <span className="font-medium text-slate-700">{format(new Date(shipment.etaDate), "dd.MM.yy")}{shipment.etaTime ? ` ${shipment.etaTime}` : ""}</span></div> : null}
-                            {s.ataDate ? <div className="text-green-700">ATA: <span className="font-medium">{format(new Date(s.ataDate), "dd.MM.yy")}{s.ataTime ? ` ${s.ataTime}` : ""}</span></div> : null}
-                            {!shipment.etaDate && !s.ataDate ? "-" : null}
-                          </div>
-                        </TableCell>
-                      );
+                      case "eta": {
+                        const sla = slaWarning(s, slaSettings ?? SLA_DEFAULTS);
+                        return (
+                          <TableCell key="eta" className="text-xs">
+                            <div className="text-slate-600">
+                              {shipment.etaDate ? <div>ETA: <span className="font-medium text-slate-700">{format(new Date(shipment.etaDate), "dd.MM.yy")}{shipment.etaTime ? ` ${shipment.etaTime}` : ""}</span></div> : null}
+                              {s.ataDate ? <div className="text-green-700">ATA: <span className="font-medium">{format(new Date(s.ataDate), "dd.MM.yy")}{s.ataTime ? ` ${s.ataTime}` : ""}</span></div> : null}
+                              {!shipment.etaDate && !s.ataDate ? "-" : null}
+                              {sla && (
+                                <div className={`inline-flex items-center gap-1 mt-1 rounded px-1 py-0.5 text-[10px] font-semibold ${sla.level === "danger" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700"}`}>
+                                  <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+                                  {sla.label}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                        );
+                      }
                       case "status": return (
                         <TableCell key="status">
                           <Badge variant="outline" className={STATUS_COLOR[shipment.status] ?? "bg-slate-100 text-slate-700"}>{shipment.status}</Badge>

@@ -17,9 +17,10 @@ import { useAuth } from "@/contexts/auth-context";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, ChevronLeft, ChevronRight, CalendarDays, GripVertical, Clock, Lock, X, Filter } from "lucide-react";
+import { Loader2, ChevronLeft, ChevronRight, CalendarDays, GripVertical, Clock, Lock, X, Filter, AlertTriangle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
+import { slaWarning, SlaThresholds, SLA_DEFAULTS } from "@/lib/sla";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 
@@ -81,6 +82,7 @@ interface Shipment {
   ataDate?: string | null;
   ataTime?: string | null;
   status: string;
+  statusChangedAt?: string | null;
   speditionName?: string | null;
   lkwArt?: string | null;
   tor?: string | null;
@@ -90,15 +92,18 @@ interface Shipment {
 function ShipmentCard({
   shipment,
   compact = false,
+  slaThresholds,
   onClick,
 }: {
   shipment: Shipment;
   compact?: boolean;
+  slaThresholds?: SlaThresholds;
   onClick?: () => void;
 }) {
   const statusClass = STATUS_COLORS[shipment.status] ?? "bg-slate-100 text-slate-600 border-slate-200";
   const time = shipment.ataTime || shipment.etaTime;
   const isLocked = shipment.gesperrtFuerSpedition;
+  const sla = slaWarning(shipment, slaThresholds ?? SLA_DEFAULTS);
   return (
     <div
       onClick={onClick}
@@ -139,6 +144,15 @@ function ShipmentCard({
       {shipment.tor && (
         <div className="text-[9px] text-slate-400">Tor: {shipment.tor}</div>
       )}
+      {sla && (
+        <div className={cn(
+          "flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold",
+          sla.level === "danger" ? "bg-red-100 text-red-700" : "bg-amber-100 text-amber-700",
+        )}>
+          <AlertTriangle className="w-2.5 h-2.5 shrink-0" />
+          {sla.label}
+        </div>
+      )}
     </div>
   );
 }
@@ -147,10 +161,12 @@ function ShipmentCard({
 function DraggableShipment({
   shipment,
   canDrag,
+  slaThresholds,
   onSelect,
 }: {
   shipment: Shipment;
   canDrag: boolean;
+  slaThresholds?: SlaThresholds;
   onSelect: (id: number) => void;
 }) {
   const isLocked = !!shipment.gesperrtFuerSpedition;
@@ -187,6 +203,7 @@ function DraggableShipment({
       <div className={canDrag ? "pl-4" : ""}>
         <ShipmentCard
           shipment={shipment}
+          slaThresholds={slaThresholds}
           onClick={() => onSelect(shipment.id)}
         />
       </div>
@@ -202,6 +219,7 @@ function DroppableDay({
   shipments,
   canDrag,
   isToday,
+  slaThresholds,
   onSelect,
 }: {
   dateStr: string;
@@ -210,6 +228,7 @@ function DroppableDay({
   shipments: Shipment[];
   canDrag: boolean;
   isToday: boolean;
+  slaThresholds?: SlaThresholds;
   onSelect: (id: number) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: dateStr });
@@ -263,7 +282,7 @@ function DroppableDay({
           </div>
         )}
         {shipments.map((s) => (
-          <DraggableShipment key={s.id} shipment={s} canDrag={canDrag} onSelect={onSelect} />
+          <DraggableShipment key={s.id} shipment={s} canDrag={canDrag} slaThresholds={slaThresholds} onSelect={onSelect} />
         ))}
         {shipments.length > 0 && isOver && (
           <div className="h-10 rounded-md border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center">
@@ -312,6 +331,13 @@ export default function WochenansichtPage() {
     queryKey: ["my-permissions"],
     queryFn: () => customFetch("/api/auth/permissions"),
     staleTime: 60_000,
+  });
+
+  // Fetch SLA thresholds
+  const { data: slaThresholds } = useQuery<SlaThresholds>({
+    queryKey: ["sla-settings"],
+    queryFn: () => customFetch("/api/sla-settings"),
+    staleTime: 5 * 60_000,
   });
 
   // Fetch Speditionen list (only relevant for COMET-side users)
@@ -519,6 +545,7 @@ export default function WochenansichtPage() {
                     shipments={dayShipments}
                     canDrag={canDrag}
                     isToday={dateStr === today}
+                    slaThresholds={slaThresholds}
                     onSelect={openDrawer}
                   />
                 );
@@ -534,7 +561,7 @@ export default function WochenansichtPage() {
                 <div className="flex flex-wrap gap-2">
                   {undated.map((s) => (
                     <div key={s.id} className="w-48">
-                      <ShipmentCard shipment={s} onClick={() => openDrawer(s.id)} />
+                      <ShipmentCard shipment={s} slaThresholds={slaThresholds} onClick={() => openDrawer(s.id)} />
                     </div>
                   ))}
                 </div>
@@ -546,7 +573,7 @@ export default function WochenansichtPage() {
           <DragOverlay dropAnimation={null}>
             {activeShipment && (
               <div className="w-44 rotate-1 opacity-95 shadow-2xl">
-                <ShipmentCard shipment={activeShipment} compact />
+                <ShipmentCard shipment={activeShipment} compact slaThresholds={slaThresholds} />
               </div>
             )}
           </DragOverlay>
