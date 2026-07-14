@@ -34,11 +34,12 @@ interface PermissionsData {
 const SUPERADMIN = "comet_admin";
 
 const CATEGORY_COLORS: Record<string, string> = {
-  Palettenbuchungen:    "bg-blue-50 text-blue-800 border-blue-200",
-  Verladungen:          "bg-green-50 text-green-800 border-green-200",
-  Austragen:            "bg-orange-50 text-orange-800 border-orange-200",
-  Abstimmungen:         "bg-purple-50 text-purple-800 border-purple-200",
-  Speditionsverwaltung: "bg-indigo-50 text-indigo-800 border-indigo-200",
+  Palettenbuchungen:      "bg-blue-50 text-blue-800 border-blue-200",
+  Verladungen:            "bg-green-50 text-green-800 border-green-200",
+  Austragen:              "bg-orange-50 text-orange-800 border-orange-200",
+  Abstimmungen:           "bg-purple-50 text-purple-800 border-purple-200",
+  Speditionsverwaltung:   "bg-indigo-50 text-indigo-800 border-indigo-200",
+  "KI-Wissensdatenbank":  "bg-teal-50 text-teal-800 border-teal-200",
 };
 
 const VIEWER_LOCKED = new Set(["comet_viewer", "speditions_viewer"]);
