@@ -69,6 +69,17 @@ function normalizeLkwArt(raw: string): string {
   return raw.trim();
 }
 
+function normalizeStatus(raw: string): string {
+  const lower = raw.toLowerCase().trim();
+  for (const opt of STATUS_OPTIONS) {
+    if (opt.toLowerCase() === lower) return opt;
+  }
+  return "";
+}
+
+// Parsed CSV rows may carry a temporary spedition name before ID resolution
+type ParsedRow = Partial<RowData> & { _speditionName?: string };
+
 function normalizeTor(raw: string): string {
   const lower = raw.toLowerCase().trim().replace(/\s+/g, " ");
   for (const opt of TOR_OPTIONS) {
@@ -87,7 +98,7 @@ function parseDate(raw: string): string {
   return "";
 }
 
-function parseCsv(text: string, isCometUser: boolean): Partial<RowData>[] {
+function parseCsv(text: string, isCometUser: boolean): ParsedRow[] {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) return [];
 
@@ -108,11 +119,14 @@ function parseCsv(text: string, isCometUser: boolean): Partial<RowData>[] {
   const colEtaDate      = idx(["datum", "date", "eta dat"]);
   const colEtaTime      = idx(["zeit", "time", "eta z"]);
   const colTor          = isCometUser ? idx(["tor", "gate", "dock"]) : -1;
+  const colStatus       = idx(["status"]);
+  const colSpedition    = isCometUser ? idx(["spedition"]) : -1;
+  const colSubSpedition = isCometUser ? idx(["sub-spedition", "subspedition", "sub_spedition"]) : -1;
   const colRelation     = idx(["relation", "route", "strecke"]);
   const colTelefon      = idx(["telefon", "phone", "tel"]);
   const colBemerkungen  = idx(["bemerkung", "remark", "notiz", "note", "comment"]);
 
-  const rows: Partial<RowData>[] = [];
+  const rows: ParsedRow[] = [];
   for (let i = 1; i < lines.length; i++) {
     const cells = lines[i].split(sep);
     const get = (col: number) => (col >= 0 ? (cells[col] ?? "").trim() : "");
@@ -120,17 +134,21 @@ function parseCsv(text: string, isCometUser: boolean): Partial<RowData>[] {
     const kz = get(colKennzeichen);
     if (!kz) continue;
 
+    const speditionName = isCometUser ? get(colSpedition) : "";
+
     rows.push({
-      kennzeichen: kz,
-      bezeichnung: get(colBezeichnung),
-      lkwArt:      normalizeLkwArt(get(colLkwArt)),
-      etaDate:     parseDate(get(colEtaDate)),
-      etaTime:     get(colEtaTime),
-      tor:         isCometUser ? normalizeTor(get(colTor)) : "",
-      relation:    get(colRelation),
-      telefon:     get(colTelefon),
-      bemerkungen: get(colBemerkungen),
-      status:      "Angemeldet",
+      kennzeichen:  kz,
+      bezeichnung:  get(colBezeichnung),
+      lkwArt:       normalizeLkwArt(get(colLkwArt)),
+      etaDate:      parseDate(get(colEtaDate)),
+      etaTime:      get(colEtaTime),
+      tor:          isCometUser ? normalizeTor(get(colTor)) : "",
+      status:       normalizeStatus(get(colStatus)) || "Angemeldet",
+      subSpedition: isCometUser ? get(colSubSpedition) : "",
+      relation:     get(colRelation),
+      telefon:      get(colTelefon),
+      bemerkungen:  get(colBemerkungen),
+      ...(speditionName ? { _speditionName: speditionName } : {}),
     });
   }
   return rows;
@@ -153,28 +171,60 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
 
   // Muster-CSV: role-aware columns
   function downloadCsvTemplate() {
-    const columns = [
-      "Kennzeichen",
-      "Bezeichnung",
-      "LKW-Art",
-      "ETA Datum (JJJJ-MM-TT)",
-      "ETA Zeit (HH:MM)",
-      ...(isCometUser ? ["Tor"] : []),
-      "Relation",
-      "Telefon",
-      "Bemerkungen",
-    ];
-    const example = [
-      "M-AB 1234",
-      "Wöchentliche Lieferung",
-      "Container",
-      "2025-07-01",
-      "08:00",
-      ...(isCometUser ? ["Tor 3"] : []),
-      "München → Hamburg",
-      "+49 89 12345",
-      "Bitte Kühlung beachten",
-    ];
+    const cometSpedName = speditionen?.[0]?.name ?? "Mustermann Spedition GmbH";
+
+    const columns = isCometUser
+      ? [
+          "Kennzeichen",
+          "Bezeichnung",
+          "LKW-Art",
+          "ETA Datum (JJJJ-MM-TT)",
+          "ETA Zeit (HH:MM)",
+          "Tor",
+          "Status",
+          "Spedition",
+          "Sub-Spedition",
+          "Relation",
+          "Telefon",
+          "Bemerkungen",
+        ]
+      : [
+          "Kennzeichen",
+          "Bezeichnung",
+          "LKW-Art",
+          "ETA Datum (JJJJ-MM-TT)",
+          "ETA Zeit (HH:MM)",
+          "Relation",
+          "Telefon",
+          "Bemerkungen",
+        ];
+
+    const example = isCometUser
+      ? [
+          "M-AB 1234",
+          "Wöchentliche Lieferung",
+          "Container",
+          "2025-07-01",
+          "08:00",
+          "Tor 3",
+          "Angemeldet",
+          cometSpedName,
+          "",
+          "MUC → HH",
+          "+49 89 12345",
+          "Bitte Kühlung beachten",
+        ]
+      : [
+          "M-AB 1234",
+          "Wöchentliche Lieferung",
+          "Container",
+          "2025-07-01",
+          "08:00",
+          "MUC → HH",
+          "+49 89 12345",
+          "Bitte Kühlung beachten",
+        ];
+
     const blob = new Blob(["\uFEFF" + columns.join(";") + "\r\n" + example.join(";") + "\r\n"], {
       type: "text/csv;charset=utf-8;",
     });
@@ -272,9 +322,32 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
         toast({ title: "Keine Daten gefunden", description: "Bitte prüfen Sie das CSV-Format.", variant: "destructive" });
         return;
       }
-      setRows(parsed.map((partial) => emptyRow(rowCounter++, partial)));
+
+      // Resolve spedition names → IDs for COMET users
+      let unmatchedSped = 0;
+      const resolved: Partial<RowData>[] = parsed.map((row) => {
+        const { _speditionName, ...rest } = row as ParsedRow & Record<string, unknown>;
+        if (isCometUser && _speditionName && speditionen) {
+          const needle = (_speditionName as string).toLowerCase();
+          const match =
+            speditionen.find((s) => s.name.toLowerCase() === needle) ??
+            speditionen.find((s) => s.name.toLowerCase().includes(needle) || needle.includes(s.name.toLowerCase()));
+          if (match) return { ...rest, speditionId: String(match.id) };
+          unmatchedSped++;
+        }
+        return rest as Partial<RowData>;
+      });
+
+      setRows(resolved.map((partial) => emptyRow(rowCounter++, partial)));
       setFieldErrors(new Map());
-      toast({ title: `${parsed.length} Zeile${parsed.length !== 1 ? "n" : ""} importiert` });
+
+      const msg = unmatchedSped > 0
+        ? `${resolved.length} Zeile${resolved.length !== 1 ? "n" : ""} importiert — ${unmatchedSped} Spedition${unmatchedSped !== 1 ? "en" : ""} nicht gefunden, bitte manuell auswählen.`
+        : `${resolved.length} Zeile${resolved.length !== 1 ? "n" : ""} importiert`;
+      toast({
+        title: msg,
+        variant: unmatchedSped > 0 ? "destructive" : "default",
+      });
     };
     reader.readAsText(file, "utf-8");
   };
