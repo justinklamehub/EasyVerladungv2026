@@ -68,6 +68,35 @@ interface ChatContextType {
 const ChatContext = createContext<ChatContextType | null>(null);
 
 const STAFF_ROLES = new Set(["comet_admin", "comet_leitstand"]);
+
+// ── Notruf-Alarm (Web Audio API) ──────────────────────────────────────────────
+
+function playEscalationAlarm() {
+  try {
+    const ctx = new (window.AudioContext ?? (window as any).webkitAudioContext)();
+    // 5 alternating pulses: 880 Hz → 660 Hz → …
+    const pulses = [880, 660, 880, 660, 880];
+    let t = ctx.currentTime;
+    for (const freq of pulses) {
+      const osc  = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.45, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.18);
+      osc.start(t);
+      osc.stop(t + 0.18);
+      t += 0.22;
+    }
+    // Auto-close context after sound finishes
+    setTimeout(() => ctx.close().catch(() => {}), 2000);
+  } catch {
+    // Browser may block audio without prior user interaction — silently ignore
+  }
+}
+
 export const AI_SENDER_ID = 0;
 
 export function ChatProvider({ children }: { children: ReactNode }) {
@@ -189,12 +218,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }
     };
 
+    const onEscalationAlert = (_data: { sessionId: number; createdByName: string; subject: string | null }) => {
+      if (isStaff) {
+        playEscalationAlarm();
+      }
+    };
+
     socket.on("chat:session:new", onSessionNew);
     socket.on("chat:session:updated", onSessionUpdated);
     socket.on("chat:session:claimed", onSessionClaimed);
     socket.on("chat:session:closed", onSessionClosed);
     socket.on("chat:message:new", onMessageNew);
     socket.on("chat:typing", onTyping);
+    socket.on("chat:escalation:alert", onEscalationAlert);
 
     return () => {
       socket.off("chat:session:new", onSessionNew);
@@ -203,6 +239,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       socket.off("chat:session:closed", onSessionClosed);
       socket.off("chat:message:new", onMessageNew);
       socket.off("chat:typing", onTyping);
+      socket.off("chat:escalation:alert", onEscalationAlert);
     };
   }, [user?.id, isStaff]);
 

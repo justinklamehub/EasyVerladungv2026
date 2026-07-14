@@ -77,6 +77,12 @@ export const DEFAULT_PUSH_EVENTS = [
     description: "Wenn ein LKW die kritische SLA-Grenze überschreitet",
     target_roles: ["comet_admin", "comet_leitstand"],
   },
+  {
+    event_key: "chat.escalation",
+    label: "Mitarbeiter angefordert (Chat)",
+    description: "Wenn ein Benutzer im Chat auf 'Mitarbeiter hinzuziehen' klickt",
+    target_roles: ["comet_admin", "comet_leitstand"],
+  },
 ];
 
 export async function seedPushEventSettings() {
@@ -99,6 +105,7 @@ export const PUSH_TEMPLATE_PLACEHOLDERS: Record<string, string[]> = {
   "shipment.loaded":        ["id", "bezeichnung", "kennzeichen", "spedition", "relation", "tor", "status"],
   "reconciliation.started": ["spedition"],
   "ticket.created":         ["titel", "nachricht"],
+  "chat.escalation":        ["name", "subject"],
 };
 
 const DEFAULT_PUSH_TEMPLATES: Record<string, { title: string; message: string }> = {
@@ -110,6 +117,7 @@ const DEFAULT_PUSH_TEMPLATES: Record<string, { title: string; message: string }>
   "ticket.created":         { title: "Neues Ticket",                 message: "{titel}" },
   "shipment.sla_warn":      { title: "SLA-Warnung",                  message: "{bezeichnung} - {minutes} Min. in Status \"{status}\"" },
   "shipment.sla_danger":    { title: "SLA ueberschritten",            message: "{bezeichnung} - {minutes} Min. in Status \"{status}\"" },
+  "chat.escalation":        { title: "🆘 Mitarbeiter angefordert",    message: "{name} benötigt Hilfe im Chat." },
 };
 
 export function renderPushTemplate(template: string, vars: Record<string, string | undefined>): string {

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import type { Server as SocketIOServer, Socket } from "socket.io";
+import { notify } from "../lib/notify";
 
 
 const router = Router();
@@ -349,8 +350,29 @@ router.post("/chat/sessions/:id/escalate", requireAuth, async (req, res) => {
     io.to(`chat:${sessionId}`).emit("chat:message:new", aiMsgRows[0]);
     io.to(`chat:${sessionId}`).emit("chat:session:updated", session);
 
-    // Notify staff
+    // Notify staff via Socket.IO
     io.to("comet").emit("chat:session:new", session);
+
+    // Real-time alarm event (triggers sound on all connected staff clients)
+    io.to("comet").emit("chat:escalation:alert", {
+      sessionId,
+      createdByName: session.created_by_name,
+      subject: session.subject ?? null,
+    });
+
+    // Push notification (best-effort, non-blocking)
+    notify(io, {
+      targetRoles: ["comet_admin", "comet_leitstand"],
+      title: "🆘 Mitarbeiter angefordert",
+      message: `${session.created_by_name}${session.subject ? `: ${session.subject}` : ""} benötigt Hilfe im Chat.`,
+      type: "warning",
+      linkTo: "/",
+      pushEventKey: "chat.escalation",
+      pushVars: {
+        name: session.created_by_name,
+        subject: session.subject ?? "",
+      },
+    }).catch(() => {});
 
     return res.json({ session });
   } catch (err) {
