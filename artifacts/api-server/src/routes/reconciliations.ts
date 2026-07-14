@@ -340,6 +340,7 @@ router.post("/reconciliations/:id/accept", requireAuth, async (req, res) => {
       if (m.movementType === "korrektur") return sum + m.amount;
       if (m.movementType === "anfangsbestand") return sum + m.amount;
       if (m.movementType === "abstimmung") return sum + m.amount;
+      if (m.movementType === "abschreibung") return sum + m.amount;
       return sum;
     }, 0);
 
@@ -421,6 +422,7 @@ router.post("/reconciliations/:id/force-accept", requireAuth, async (req, res) =
       if (m.movementType === "korrektur") return sum + m.amount;
       if (m.movementType === "anfangsbestand") return sum + m.amount;
       if (m.movementType === "abstimmung") return sum + m.amount;
+      if (m.movementType === "abschreibung") return sum + m.amount;
       return sum;
     }, 0);
 
@@ -433,7 +435,7 @@ router.post("/reconciliations/:id/force-accept", requireAuth, async (req, res) =
     if (correctionAmount !== 0) {
       await db.insert(palletMovementsTable).values({
         speditionId: rec.speditionId,
-        movementType: "korrektur",
+        movementType: "abschreibung",
         movementDate: todayStr,
         amount: correctionAmount,
         bemerkungen: `Direktabschluss durch COMET (Abstimmung #${id}) – ohne Speditionszustimmung`,

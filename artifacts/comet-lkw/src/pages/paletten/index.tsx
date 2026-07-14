@@ -178,10 +178,10 @@ export default function PalettenPage() {
       const typeLabel = (t: string) =>
         t === "eingang" ? "Zugang" : t === "ausgang" ? "Abgang" :
         t === "korrektur" ? "Korrektur" : t === "neutral" ? "Neutral" :
-        t === "anfangsbestand" ? "Anfangsbestand" : "Abstimmung";
+        t === "anfangsbestand" ? "Anfangsbestand" : t === "abschreibung" ? "Abschreibung" : "Abstimmung";
 
       const signedAmt = (m: any) => {
-        if (m.movementType === "anfangsbestand" || m.movementType === "abstimmung") return m.amount ?? 0;
+        if (m.movementType === "anfangsbestand" || m.movementType === "abstimmung" || m.movementType === "abschreibung") return m.amount ?? 0;
         const sign = m.movementType === "ausgang" ? -1 : 1;
         const amt = m.movementType === "neutral" && f > 1
           ? Math.abs(((m.anCometEuropaletten ?? 0) + (m.anCometLadungssicherung ?? 0)) * f
@@ -519,12 +519,13 @@ export default function PalettenPage() {
       case "neutral": return "bg-blue-100 text-blue-800 hover:bg-blue-100 border-transparent";
       case "abstimmung": return "bg-slate-100 text-slate-600 hover:bg-slate-100 border-transparent";
       case "anfangsbestand": return "bg-violet-100 text-violet-800 hover:bg-violet-100 border-transparent";
+      case "abschreibung": return "bg-pink-100 text-pink-800 hover:bg-pink-100 border-transparent";
       default: return "bg-slate-100 text-slate-800 border-transparent";
     }
   };
 
   const displayAmount = (m: any) => {
-    const sign = m.movementType === "ausgang" ? "-" : m.movementType === "eingang" ? "+" : "";
+    const sign = m.movementType === "ausgang" ? "-" : m.movementType === "eingang" ? "+" : m.movementType === "abschreibung" ? (m.amount >= 0 ? "+" : "") : "";
     const f = (balances ?? []).find((b: any) => b.speditionId === m.speditionId)?.palletFaktor ?? 1;
     const amt = (m.movementType === "neutral" && f > 1)
       ? Math.abs(
@@ -779,7 +780,8 @@ export default function PalettenPage() {
                        movement.movementType === "ausgang" ? "Abgang" :
                        movement.movementType === "korrektur" ? "Korrektur" :
                        movement.movementType === "neutral" ? "Neutral" :
-                       movement.movementType === "anfangsbestand" ? "Anfangsbestand" : "Abstimmung"}
+                       movement.movementType === "anfangsbestand" ? "Anfangsbestand" :
+                       movement.movementType === "abschreibung" ? "Abschreibung" : "Abstimmung"}
                     </Badge>
                   </TableCell>
                   <TableCell className="font-mono text-sm text-slate-700">

@@ -106,13 +106,13 @@ router.post("/pallet-movements", requireAuth, async (req, res) => {
     if (isNaN(parsedAmount)) {
       return res.status(400).json({ error: "Ungültige Menge" });
     }
-    // anfangsbestand and abstimmung allow negative values; all other types must be >= 0
-    if (movementType !== "anfangsbestand" && movementType !== "abstimmung" && parsedAmount < 0) {
+    // anfangsbestand, abstimmung and abschreibung allow negative values; all other types must be >= 0
+    if (movementType !== "anfangsbestand" && movementType !== "abstimmung" && movementType !== "abschreibung" && parsedAmount < 0) {
       return res.status(400).json({ error: "Ungültige Menge" });
     }
     const absAmount = parsedAmount;
 
-    if (movementType !== "abstimmung" && movementType !== "anfangsbestand" && !palettenscheinnummer) {
+    if (movementType !== "abstimmung" && movementType !== "anfangsbestand" && movementType !== "abschreibung" && !palettenscheinnummer) {
       return res.status(400).json({ error: "Palettenscheinnummer ist erforderlich" });
     }
 
@@ -223,6 +223,7 @@ router.get("/pallet-balances", requireAuth, async (req, res) => {
         sumKorrektur:        sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementType} = 'korrektur'       THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         sumAnfangsbestand:   sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementType} = 'anfangsbestand' THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         sumAbstimmung:       sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementType} = 'abstimmung'     THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
+        sumAbschreibung:     sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementType} = 'abschreibung'   THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         neutralAnNet:    sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) - COALESCE(${palletMovementsTable.anDefektePaletten},0) ELSE 0 END)`.mapWith(Number),
         neutralVonNet:   sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0) ELSE 0 END)`.mapWith(Number),
         // Gross (no defekte) — used when faktor > 1 to exclude defective pallets entirely
@@ -242,8 +243,8 @@ router.get("/pallet-balances", requireAuth, async (req, res) => {
         // Ausgang and von-side are unchanged.
         // When f > 1, defective pallets are excluded (use gross totals instead of net).
         const balance = f > 1
-          ? r.sumEingang * f - r.sumAusgang + r.sumKorrektur + r.sumAnfangsbestand + r.sumAbstimmung + (r.neutralAnGross * f - r.neutralVonGross)
-          : r.sumEingang - r.sumAusgang + r.sumKorrektur + r.sumAnfangsbestand + r.sumAbstimmung + (r.neutralAnNet - r.neutralVonNet);
+          ? r.sumEingang * f - r.sumAusgang + r.sumKorrektur + r.sumAnfangsbestand + r.sumAbstimmung + r.sumAbschreibung + (r.neutralAnGross * f - r.neutralVonGross)
+          : r.sumEingang - r.sumAusgang + r.sumKorrektur + r.sumAnfangsbestand + r.sumAbstimmung + r.sumAbschreibung + (r.neutralAnNet - r.neutralVonNet);
         return [r.speditionId, { balance, lastMovementDate: r.lastMovementDate }];
       }));
 
@@ -296,6 +297,7 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
         preKorrektur:         sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'korrektur'       THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         preAnfangsbestand:    sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'anfangsbestand' THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         preAbstimmung:        sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'abstimmung'     THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
+        preAbschreibung:      sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'abschreibung'   THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         preNeutralAnNet: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) - COALESCE(${palletMovementsTable.anDefektePaletten},0) ELSE 0 END)`.mapWith(Number),
         preNeutralVonNet: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0) ELSE 0 END)`.mapWith(Number),
         preNeutralAnGross: sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} < ${dateFrom} AND ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) ELSE 0 END)`.mapWith(Number),
@@ -306,6 +308,7 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
         korrekturRaw:         sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'korrektur'       THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         anfangsbestandRaw:    sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'anfangsbestand' THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         abstimmungRaw:        sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'abstimmung'     THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
+        abschreibungRaw:      sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'abschreibung'   THEN ${palletMovementsTable.amount} ELSE 0 END)`.mapWith(Number),
         neutralAnNet:   sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) - COALESCE(${palletMovementsTable.anDefektePaletten},0) ELSE 0 END)`.mapWith(Number),
         neutralVonNet:  sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.vonCometEuropaletten},0) + COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) - COALESCE(${palletMovementsTable.vonDefektePaletten},0) ELSE 0 END)`.mapWith(Number),
         neutralAnGross:  sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementDate} >= ${dateFrom} AND ${palletMovementsTable.movementDate} <= ${dateTo} AND ${palletMovementsTable.movementType} = 'neutral' THEN COALESCE(${palletMovementsTable.anCometEuropaletten},0) + COALESCE(${palletMovementsTable.anCometLadungssicherung},0) ELSE 0 END)`.mapWith(Number),
@@ -321,9 +324,9 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
 
     const report = speds.map((s) => {
       const r = aggMap[s.id] ?? {
-        preEingang: 0, preAusgang: 0, preKorrektur: 0, preAnfangsbestand: 0, preAbstimmung: 0,
+        preEingang: 0, preAusgang: 0, preKorrektur: 0, preAnfangsbestand: 0, preAbstimmung: 0, preAbschreibung: 0,
         preNeutralAnNet: 0, preNeutralVonNet: 0,
-        zugaenge: 0, abgaengeRaw: 0, korrekturRaw: 0, anfangsbestandRaw: 0, abstimmungRaw: 0,
+        zugaenge: 0, abgaengeRaw: 0, korrekturRaw: 0, anfangsbestandRaw: 0, abstimmungRaw: 0, abschreibungRaw: 0,
         neutralAnNet: 0, neutralVonNet: 0,
         defekteVonComet: 0, defekteAnComet: 0,
         preNeutralAnGross: 0, preNeutralVonGross: 0,
@@ -347,8 +350,8 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
       // Balance calculation: factor applied to the "received by COMET" side only
       const preZugaengeRaw = r.preEingang + preNeutralAnRaw;
       const preAbgaengeRaw = r.preAusgang + preNeutralVonRaw;
-      const anfangsbestand = preZugaengeRaw * f - preAbgaengeRaw + r.preKorrektur + r.preAnfangsbestand + r.preAbstimmung;
-      const endbestand     = anfangsbestand + zugaenge * f - abgaenge + korrekturen + r.anfangsbestandRaw + r.abstimmungRaw;
+      const anfangsbestand = preZugaengeRaw * f - preAbgaengeRaw + r.preKorrektur + r.preAnfangsbestand + r.preAbstimmung + r.preAbschreibung;
+      const endbestand     = anfangsbestand + zugaenge * f - abgaenge + korrekturen + r.anfangsbestandRaw + r.abstimmungRaw + r.abschreibungRaw;
       return {
         speditionId: s.id,
         speditionName: s.name,

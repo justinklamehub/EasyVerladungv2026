@@ -35,13 +35,16 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
   const [palletForm, setPalletForm] = useState(emptyForm());
 
   // Special booking modes (mutually exclusive)
-  const [specialMode, setSpecialMode] = useState<"anfangsbestand" | "abstimmung" | null>(null);
+  const [specialMode, setSpecialMode] = useState<"anfangsbestand" | "abstimmung" | "abschreibung" | null>(null);
   const isAnfangsbestandMode = specialMode === "anfangsbestand";
   const isAbstimmungMode = specialMode === "abstimmung";
+  const isAbschreibungMode = specialMode === "abschreibung";
   const [anfangsbestandYear, setAnfangsbestandYear] = useState(new Date().getFullYear());
   const [anfangsbestandBetrag, setAnfangsbestandBetrag] = useState<number | "">(0);
   const [abstimmungDate, setAbstimmungDate] = useState(new Date().toISOString().slice(0, 10));
   const [abstimmungBetrag, setAbstimmungBetrag] = useState<number | "">(0);
+  const [abschreibungDate, setAbschreibungDate] = useState(new Date().toISOString().slice(0, 10));
+  const [abschreibungBetrag, setAbschreibungBetrag] = useState<number | "">(0);
 
   // Gross = euro + ladungssicherung (ohne Defekte-Abzug)
   // Net  = gross - defekte (für Anzeige und amount-Feld)
@@ -81,6 +84,8 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
     setAnfangsbestandYear(new Date().getFullYear());
     setAbstimmungBetrag(0);
     setAbstimmungDate(new Date().toISOString().slice(0, 10));
+    setAbschreibungBetrag(0);
+    setAbschreibungDate(new Date().toISOString().slice(0, 10));
   };
 
   const createMutation = useCreatePalletMovement({
@@ -144,6 +149,31 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
       });
       return;
     }
+    if (isAbschreibungMode) {
+      if (!speditionId) {
+        toast({ title: "Spedition wählen", variant: "destructive" });
+        return;
+      }
+      if (!abschreibungDate) {
+        toast({ title: "Datum eingeben", variant: "destructive" });
+        return;
+      }
+      const betrag = Number(abschreibungBetrag);
+      if (isNaN(betrag)) {
+        toast({ title: "Ungültiger Betrag", variant: "destructive" });
+        return;
+      }
+      createMutation.mutate({
+        data: {
+          speditionId: parseInt(speditionId),
+          movementType: "abschreibung" as any,
+          movementDate: abschreibungDate,
+          amount: betrag,
+          bemerkungen: bemerkungen || undefined,
+        }
+      });
+      return;
+    }
     if (requiresSchein && !palletForm.palettenscheinnummer.trim()) {
       toast({ title: "Palettenscheinnummer ist erforderlich", variant: "destructive" });
       return;
@@ -197,7 +227,7 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
           <div className="space-y-4 py-2">
 
             {/* Special mode toggles */}
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <div
                 className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer select-none transition-colors ${isAnfangsbestandMode ? "border-violet-300 bg-violet-50" : "border-slate-200 bg-slate-50 hover:bg-slate-100"}`}
                 onClick={() => setSpecialMode(v => v === "anfangsbestand" ? null : "anfangsbestand")}
@@ -220,6 +250,18 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
                 <div>
                   <div className={`text-xs font-medium leading-tight ${isAbstimmungMode ? "text-slate-800" : "text-slate-700"}`}>Ext. Abstimmung</div>
                   <div className="text-xs text-slate-400 leading-tight">E-Mail / Telefonat</div>
+                </div>
+              </div>
+              <div
+                className={`flex items-center gap-2 rounded-md border px-3 py-2 cursor-pointer select-none transition-colors ${isAbschreibungMode ? "border-pink-300 bg-pink-50" : "border-slate-200 bg-slate-50 hover:bg-slate-100"}`}
+                onClick={() => setSpecialMode(v => v === "abschreibung" ? null : "abschreibung")}
+              >
+                <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${isAbschreibungMode ? "border-pink-600 bg-pink-600" : "border-slate-400"}`}>
+                  {isAbschreibungMode && <div className="w-2 h-2 bg-white rounded-sm" />}
+                </div>
+                <div>
+                  <div className={`text-xs font-medium leading-tight ${isAbschreibungMode ? "text-pink-800" : "text-slate-700"}`}>Abschreibung</div>
+                  <div className="text-xs text-slate-400 leading-tight">Verlust / Abgang</div>
                 </div>
               </div>
             </div>
@@ -260,6 +302,37 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
                     placeholder="z.B. 50 oder -30"
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Abschreibung fields */}
+            {isAbschreibungMode && (
+              <div className="rounded-md border border-pink-200 bg-pink-50 p-3 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <Label className="text-xs text-pink-700">Datum</Label>
+                    <Input
+                      type="date"
+                      className="bg-white"
+                      value={abschreibungDate}
+                      onChange={e => setAbschreibungDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs text-pink-700">Betrag</Label>
+                    <Input
+                      type="number"
+                      className="bg-white"
+                      value={abschreibungBetrag}
+                      onChange={e => setAbschreibungBetrag(e.target.value === "" ? "" : Number(e.target.value))}
+                      placeholder="z.B. −68 oder +12"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-pink-700">
+                  Verändert nur den Speditions-Saldo, <strong>nicht</strong> den Palettenbestand am Werk.
+                  Negativ = Saldo sinkt (Paletten abschreiben) · Positiv = Saldo steigt.
+                </p>
               </div>
             )}
 

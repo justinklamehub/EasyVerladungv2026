@@ -15,4 +15,5 @@ export const PalletMovementInputMovementType = {
   korrektur: 'korrektur',
   abstimmung: 'abstimmung',
   anfangsbestand: 'anfangsbestand',
+  abschreibung: 'abschreibung',
 } as const;
