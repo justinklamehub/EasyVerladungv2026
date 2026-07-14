@@ -3,6 +3,7 @@ import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
 import type { Server as SocketIOServer, Socket } from "socket.io";
 import { notify } from "../lib/notify";
+import { can } from "../lib/permissions";
 
 
 const router = Router();
@@ -515,7 +516,7 @@ router.post("/chat/sessions/:id/create-ticket", requireAuth, async (req, res) =>
 
 router.get("/chat/knowledge", requireAuth, async (req, res) => {
   const role = req.session.role!;
-  if (!STAFF_ROLES.has(role)) return res.status(403).json({ error: "Forbidden" });
+  if (!await can(role, "knowledge.view")) return res.status(403).json({ error: "Forbidden" });
   try {
     const { rows } = await pool.query(
       `SELECT * FROM chat_knowledge ORDER BY category, id`,
@@ -530,7 +531,7 @@ router.get("/chat/knowledge", requireAuth, async (req, res) => {
 router.post("/chat/knowledge", requireAuth, async (req, res) => {
   const role = req.session.role!;
   const username = req.session.username!;
-  if (role !== "comet_admin") return res.status(403).json({ error: "Forbidden" });
+  if (!await can(role, "knowledge.edit")) return res.status(403).json({ error: "Forbidden" });
   const { title, content, category } = req.body as {
     title: string; content: string; category?: string;
   };
@@ -552,7 +553,7 @@ router.post("/chat/knowledge", requireAuth, async (req, res) => {
 
 router.put("/chat/knowledge/:id", requireAuth, async (req, res) => {
   const role = req.session.role!;
-  if (role !== "comet_admin") return res.status(403).json({ error: "Forbidden" });
+  if (!await can(role, "knowledge.edit")) return res.status(403).json({ error: "Forbidden" });
   const id = Number(req.params.id);
   const { title, content, category, active } = req.body as {
     title?: string; content?: string; category?: string; active?: boolean;
@@ -578,7 +579,7 @@ router.put("/chat/knowledge/:id", requireAuth, async (req, res) => {
 
 router.delete("/chat/knowledge/:id", requireAuth, async (req, res) => {
   const role = req.session.role!;
-  if (role !== "comet_admin") return res.status(403).json({ error: "Forbidden" });
+  if (!await can(role, "knowledge.edit")) return res.status(403).json({ error: "Forbidden" });
   const id = Number(req.params.id);
   try {
     await pool.query("DELETE FROM chat_knowledge WHERE id = $1", [id]);

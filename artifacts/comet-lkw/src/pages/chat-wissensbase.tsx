@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
+import { usePermissions } from "@/hooks/use-permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -195,6 +196,8 @@ function EntryDialog({
 
 export default function ChatWissensbasePage() {
   const qc = useQueryClient();
+  const permissions = usePermissions();
+  const canEdit = !!permissions["knowledge.edit"];
   const [search, setSearch] = useState("");
   const [editEntry, setEditEntry] = useState<KnowledgeEntry | null>(null);
   const [showDialog, setShowDialog] = useState(false);
@@ -259,13 +262,15 @@ export default function ChatWissensbasePage() {
             </p>
           </div>
         </div>
-        <Button
-          className="bg-slate-900 hover:bg-slate-700 gap-2"
-          onClick={() => { setEditEntry(null); setShowDialog(true); }}
-        >
-          <Plus className="w-4 h-4" />
-          Neuer Eintrag
-        </Button>
+        {canEdit && (
+          <Button
+            className="bg-slate-900 hover:bg-slate-700 gap-2"
+            onClick={() => { setEditEntry(null); setShowDialog(true); }}
+          >
+            <Plus className="w-4 h-4" />
+            Neuer Eintrag
+          </Button>
+        )}
       </div>
 
       {/* AI info banner */}
@@ -300,7 +305,7 @@ export default function ChatWissensbasePage() {
           <p className="text-sm font-medium">
             {search ? "Keine Einträge gefunden." : "Noch keine Einträge vorhanden."}
           </p>
-          {!search && (
+          {!search && canEdit && (
             <Button
               variant="outline"
               size="sm"
@@ -345,31 +350,33 @@ export default function ChatWissensbasePage() {
                         Erstellt von {entry.created_by_name}
                       </p>
                     </div>
-                    <div className="flex flex-col items-end gap-2 shrink-0">
-                      <Switch
-                        checked={entry.active}
-                        onCheckedChange={(v) => toggleMutation.mutate({ id: entry.id, active: v })}
-                        title={entry.active ? "Deaktivieren" : "Aktivieren"}
-                      />
-                      <div className="flex gap-1">
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-slate-400 hover:text-slate-700"
-                          onClick={() => { setEditEntry(entry); setShowDialog(true); }}
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-7 w-7 text-slate-400 hover:text-red-600"
-                          onClick={() => setDeleteId(entry.id)}
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
+                    {canEdit && (
+                      <div className="flex flex-col items-end gap-2 shrink-0">
+                        <Switch
+                          checked={entry.active}
+                          onCheckedChange={(v) => toggleMutation.mutate({ id: entry.id, active: v })}
+                          title={entry.active ? "Deaktivieren" : "Aktivieren"}
+                        />
+                        <div className="flex gap-1">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-slate-400 hover:text-slate-700"
+                            onClick={() => { setEditEntry(entry); setShowDialog(true); }}
+                          >
+                            <Pencil className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-7 w-7 text-slate-400 hover:text-red-600"
+                            onClick={() => setDeleteId(entry.id)}
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ))}
               </div>

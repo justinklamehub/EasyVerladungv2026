@@ -131,7 +131,7 @@ function Router() {
             <Route path="/tickets"><ProtectedRoute component={TicketsPage} /></Route>
             <Route path="/kalkulation"><ProtectedRoute component={KalkulationPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
             <Route path="/changelog"><ProtectedRoute component={ChangelogPage} /></Route>
-            <Route path="/wissensbase"><ProtectedRoute component={ChatWissensbasePage} roles={["comet_admin"]} /></Route>
+            <Route path="/wissensbase"><ProtectedRoute component={ChatWissensbasePage} roles={["comet_admin"]} permission="knowledge.view" /></Route>
             <Route component={NotFound} />
           </Switch>
         </AppLayout>

@@ -65,7 +65,7 @@ const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
   "/fotos":              null,  // dynamic: comet roles + foto.view permission
   "/settings":           ["comet_admin"],
   "/berechtigungen":     ["comet_admin"],
-  "/wissensbase":        ["comet_admin"],
+  "/wissensbase":        null,
   "/tickets":            null,  // all roles
   "/hilfe":              null,  // all roles
   "/changelog":          null,  // all roles

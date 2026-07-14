@@ -24,7 +24,9 @@ export type Permission =
   | "push.send_custom"
   | "foto.view"
   | "foto.edit"
-  | "foto.delete";
+  | "foto.delete"
+  | "knowledge.view"
+  | "knowledge.edit";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -67,6 +69,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   "foto.view",
   "foto.edit",
   "foto.delete",
+  "knowledge.view",
+  "knowledge.edit",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
@@ -93,6 +97,8 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "foto.view":                  { label: "Fotogalerie ansehen",        category: "Fotos" },
   "foto.edit":                  { label: "Foto bearbeiten (LKW zuordnen)", category: "Fotos" },
   "foto.delete":                { label: "Foto löschen",               category: "Fotos" },
+  "knowledge.view":             { label: "Wissensdatenbank ansehen",   category: "KI-Wissensdatenbank" },
+  "knowledge.edit":             { label: "Einträge erstellen / bearbeiten", category: "KI-Wissensdatenbank" },
 };
 
 export const ROLE_LABELS: Record<string, string> = {
@@ -151,6 +157,13 @@ export async function seedMissingPermissions(): Promise<void> {
   await db.execute(
     sql`INSERT INTO role_permissions (role, permission, allowed)
         SELECT role_key, 'push.send_custom', true FROM roles
+        WHERE role_key = 'comet_leitstand'
+        ON CONFLICT (role, permission) DO NOTHING`
+  );
+  // Smart defaults: knowledge.view enabled by default for leitstand
+  await db.execute(
+    sql`INSERT INTO role_permissions (role, permission, allowed)
+        SELECT role_key, 'knowledge.view', true FROM roles
         WHERE role_key = 'comet_leitstand'
         ON CONFLICT (role, permission) DO NOTHING`
   );
