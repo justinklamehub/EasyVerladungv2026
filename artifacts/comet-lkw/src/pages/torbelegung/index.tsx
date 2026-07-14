@@ -1,9 +1,9 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { format, addDays, subDays, parseISO } from "date-fns";
 import { de } from "date-fns/locale";
 import { ChevronLeft, ChevronRight, CalendarDays, Loader2, GanttChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
 import { cn } from "@/lib/utils";
 
@@ -179,21 +179,35 @@ function NowLine({ dateStr }: { dateStr: string }) {
   );
 }
 
-function ShipmentBlock({ shipment, lane, startMin, onClick }: Placed & { onClick: () => void }) {
+function ShipmentBlock({
+  shipment, lane, startMin, onClick, onDragStart, onDragEnd,
+}: Placed & {
+  onClick: () => void;
+  onDragStart: (id: number) => void;
+  onDragEnd: () => void;
+}) {
   const style = STATUS_STYLE[shipment.status ?? ""] ?? STATUS_STYLE["Angemeldet"];
   const leftPx = (startMin / 60 - START_HOUR) * PX_PER_HOUR;
   const widthPx = (BLOCK_DURATION_MIN / 60) * PX_PER_HOUR - 4;
   const topPx = ROW_PADDING + lane * BLOCK_HEIGHT;
   const label = shipment.kennzeichen || shipment.bezeichnung || `#${shipment.id}`;
+  const sub = [shipment.relation, shipment.speditionName].filter(Boolean).join(" · ");
 
   return (
     <div
       role="button"
       tabIndex={0}
+      draggable
       onClick={onClick}
       onKeyDown={(e) => e.key === "Enter" && onClick()}
-      title={[label, shipment.speditionName, shipment.status, shipment.lkwArt, shipment.bemerkungen].filter(Boolean).join(" · ")}
-      className="absolute rounded border shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-pointer overflow-hidden select-none"
+      onDragStart={(e) => {
+        e.dataTransfer.setData("shipmentId", String(shipment.id));
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart(shipment.id);
+      }}
+      onDragEnd={onDragEnd}
+      title={[label, shipment.relation, shipment.speditionName, shipment.status, shipment.lkwArt, shipment.bemerkungen].filter(Boolean).join(" · ")}
+      className="absolute rounded border shadow-sm hover:shadow-md hover:scale-[1.02] transition-all cursor-grab active:cursor-grabbing overflow-hidden select-none"
       style={{
         left: leftPx,
         top: topPx,
@@ -207,10 +221,8 @@ function ShipmentBlock({ shipment, lane, startMin, onClick }: Placed & { onClick
     >
       <div className="px-1.5 h-full flex flex-col justify-center overflow-hidden">
         <span className="text-[11px] font-semibold leading-tight truncate">{label}</span>
-        {(shipment.speditionName || shipment.relation) && (
-          <span className="text-[10px] leading-tight opacity-75 truncate">
-            {shipment.speditionName || shipment.relation}
-          </span>
+        {sub && (
+          <span className="text-[10px] leading-tight opacity-75 truncate">{sub}</span>
         )}
       </div>
     </div>
@@ -222,11 +234,23 @@ function GateRow({
   shipments,
   dateStr,
   onSelect,
+  isDragTarget,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+  onBlockDragStart,
+  onBlockDragEnd,
 }: {
   gate: string;
   shipments: ShipmentItem[];
   dateStr: string;
   onSelect: (id: number) => void;
+  isDragTarget: boolean;
+  onDragOver: (gate: string) => void;
+  onDragLeave: () => void;
+  onDrop: (gate: string, shipmentId: number) => void;
+  onBlockDragStart: (id: number) => void;
+  onBlockDragEnd: () => void;
 }) {
   const placed = assignLanes(shipments);
   const numLanes = placed.length > 0 ? Math.max(...placed.map((p) => p.lane)) + 1 : 1;
@@ -236,12 +260,31 @@ function GateRow({
   const isKeinTor = gate === "Kein Tor";
 
   return (
-    <div className={cn("flex border-b border-slate-100 hover:bg-slate-50/40 group", isKeinTor && "border-t-2 border-t-slate-200")}>
+    <div
+      className={cn(
+        "flex border-b border-slate-100 group transition-colors",
+        isKeinTor && "border-t-2 border-t-slate-200",
+        isDragTarget ? "bg-blue-50 ring-2 ring-inset ring-blue-400" : "hover:bg-slate-50/40",
+      )}
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onDragOver(gate); }}
+      onDragLeave={onDragLeave}
+      onDrop={(e) => {
+        e.preventDefault();
+        const id = Number(e.dataTransfer.getData("shipmentId"));
+        if (id) onDrop(gate, id);
+      }}
+    >
       <div
-        className="flex-shrink-0 border-r border-slate-200 flex items-start pt-2 px-2 bg-white z-10"
+        className={cn(
+          "flex-shrink-0 border-r border-slate-200 flex items-start pt-2 px-2 z-10 transition-colors",
+          isDragTarget ? "bg-blue-50" : "bg-white",
+        )}
         style={{ width: GATE_LABEL_W, minHeight: rowH }}
       >
-        <span className={cn("text-xs font-medium truncate", isKeinTor ? "text-slate-400 italic" : "text-slate-600")}>
+        <span className={cn(
+          "text-xs font-medium truncate",
+          isKeinTor ? "text-slate-400 italic" : isDragTarget ? "text-blue-700 font-semibold" : "text-slate-600",
+        )}>
           {gate}
         </span>
       </div>
@@ -255,6 +298,8 @@ function GateRow({
             lane={lane}
             startMin={startMin}
             onClick={() => onSelect(shipment.id)}
+            onDragStart={onBlockDragStart}
+            onDragEnd={onBlockDragEnd}
           />
         ))}
       </div>
@@ -303,7 +348,11 @@ export default function TorbelegungPage() {
   const [hiddenStatuses, setHiddenStatuses] = useState<Set<string>>(
     new Set(["Storniert", "Abgefertigt"]),
   );
+  const [dragOverGate, setDragOverGate] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  const queryClient = useQueryClient();
   const dateStr = toDateStr(date);
 
   const { data: shipments = [], isLoading } = useQuery<ShipmentItem[]>({
@@ -315,6 +364,35 @@ export default function TorbelegungPage() {
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
+
+  const handleDrop = async (gate: string, shipmentId: number) => {
+    const newTor = gate === "Kein Tor" ? null : gate;
+    // Optimistic update
+    queryClient.setQueryData<ShipmentItem[]>(["torbelegung", dateStr], (old) =>
+      (old ?? []).map((s) => s.id === shipmentId ? { ...s, tor: newTor } : s),
+    );
+    setDragOverGate(null);
+    setIsDragging(false);
+    try {
+      await fetch(`${API}/shipments/${shipmentId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ tor: newTor ?? "" }),
+      });
+    } finally {
+      queryClient.invalidateQueries({ queryKey: ["torbelegung", dateStr] });
+    }
+  };
+
+  const handleDragOver = (gate: string) => {
+    if (dragLeaveTimer.current) clearTimeout(dragLeaveTimer.current);
+    setDragOverGate(gate);
+  };
+
+  const handleDragLeave = () => {
+    dragLeaveTimer.current = setTimeout(() => setDragOverGate(null), 80);
+  };
 
   const visible = useMemo(
     () => shipments.filter((s) => !hiddenStatuses.has(s.status ?? "")),
@@ -418,7 +496,7 @@ export default function TorbelegungPage() {
             Aktuelle Zeit
           </span>
           <span className="ml-auto text-[10px] text-slate-400">
-            Jedes Feld entspricht 90 Min · Klicken zum Öffnen
+            Jedes Feld entspricht 90 Min · Klicken zum Öffnen · Ziehen zum Tor wechseln
           </span>
         </div>
 
@@ -456,6 +534,12 @@ export default function TorbelegungPage() {
                     shipments={byGate.get(gate) ?? []}
                     dateStr={dateStr}
                     onSelect={openDrawer}
+                    isDragTarget={isDragging && dragOverGate === gate}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onBlockDragStart={(id) => { setIsDragging(true); setDragOverGate(null); }}
+                    onBlockDragEnd={() => { setIsDragging(false); setDragOverGate(null); }}
                   />
                 ))}
               </div>
