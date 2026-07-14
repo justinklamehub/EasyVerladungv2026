@@ -18,6 +18,9 @@ import {
   UserRound,
   Headphones,
   Sparkles,
+  ThumbsUp,
+  ThumbsDown,
+  Ticket,
 } from "lucide-react";
 
 function renderMessageContent(content: string, isAi: boolean) {
@@ -76,6 +79,7 @@ export function ChatPanel() {
     sendMessage,
     closeSession,
     escalateSession,
+    createTicketFromChat,
   } = useChatContext();
 
   const [inputValue, setInputValue] = useState("");
@@ -83,6 +87,12 @@ export function ChatPanel() {
   const [escalateError, setEscalateError] = useState<string | null>(null);
   const [confirmClose, setConfirmClose] = useState(false);
   const confirmCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Feedback after session closes
+  const [wasJustClosed, setWasJustClosed] = useState(false);
+  const [isCreatingTicket, setIsCreatingTicket] = useState(false);
+  const [createdTicketId, setCreatedTicketId] = useState<number | null>(null);
+  const prevStatusRef = useRef<string | undefined>(undefined);
   const bottomRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSessionIdRef = useRef<number | null>(null);
@@ -109,8 +119,20 @@ export function ChatPanel() {
     if (activeSession?.id && activeSession.id !== lastSessionIdRef.current) {
       lastSessionIdRef.current = activeSession.id;
       setInputValue("");
+      setWasJustClosed(false);
+      setCreatedTicketId(null);
+      prevStatusRef.current = activeSession.status;
     }
   }, [activeSession?.id]);
+
+  // Detect when status transitions to "closed" during this session
+  useEffect(() => {
+    const current = activeSession?.status;
+    if (current === "closed" && prevStatusRef.current && prevStatusRef.current !== "closed") {
+      setWasJustClosed(true);
+    }
+    prevStatusRef.current = current;
+  }, [activeSession?.status]);
 
   const handleSend = () => {
     const trimmed = inputValue.trim();
@@ -378,19 +400,77 @@ export function ChatPanel() {
 
       {/* Input */}
       {isClosed ? (
-        <div className="px-4 py-3 bg-white border-t border-slate-100 shrink-0">
-          <div className="flex items-center gap-2 text-sm text-slate-500">
-            <AlertCircle className="w-4 h-4 shrink-0 text-slate-400" />
-            <span>Chat wurde beendet.</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="ml-auto text-xs h-7"
-              onClick={() => setIsPanelOpen(false)}
-            >
-              Schließen
-            </Button>
-          </div>
+        <div className="border-t border-slate-100 shrink-0">
+          {wasJustClosed && createdTicketId === null ? (
+            /* Feedback-Abfrage */
+            <div className="px-4 py-3 bg-green-50 space-y-2">
+              <p className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
+                Chat beendet — Wurde Ihr Problem gelöst?
+              </p>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  className="flex-1 h-8 text-xs bg-green-600 hover:bg-green-700 text-white"
+                  disabled={isCreatingTicket}
+                  onClick={async () => {
+                    if (!activeSession) return;
+                    setIsCreatingTicket(true);
+                    try {
+                      const ticket = await createTicketFromChat(activeSession.id);
+                      setCreatedTicketId(ticket.id);
+                    } finally {
+                      setIsCreatingTicket(false);
+                    }
+                  }}
+                >
+                  <ThumbsUp className="w-3 h-3 mr-1.5" />
+                  {isCreatingTicket ? "Erstelle Ticket…" : "Ja, gelöst"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="flex-1 h-8 text-xs"
+                  onClick={() => setWasJustClosed(false)}
+                >
+                  <ThumbsDown className="w-3 h-3 mr-1.5" />
+                  Nein
+                </Button>
+              </div>
+            </div>
+          ) : createdTicketId !== null ? (
+            /* Ticket erstellt */
+            <div className="px-4 py-3 bg-white space-y-2">
+              <div className="flex items-center gap-2 text-sm text-green-700">
+                <Ticket className="w-4 h-4 shrink-0" />
+                <span>Ticket <strong>#{createdTicketId}</strong> wurde erstellt.</span>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full text-xs h-7"
+                onClick={() => setIsPanelOpen(false)}
+              >
+                Schließen
+              </Button>
+            </div>
+          ) : (
+            /* Normaler geschlossener Zustand */
+            <div className="px-4 py-3 bg-white">
+              <div className="flex items-center gap-2 text-sm text-slate-500">
+                <AlertCircle className="w-4 h-4 shrink-0 text-slate-400" />
+                <span>Chat wurde beendet.</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="ml-auto text-xs h-7"
+                  onClick={() => setIsPanelOpen(false)}
+                >
+                  Schließen
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       ) : isWaitingForHuman ? (
         <div className="px-3 py-3 bg-white border-t border-slate-100 shrink-0">

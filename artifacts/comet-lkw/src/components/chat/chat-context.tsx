@@ -61,6 +61,7 @@ interface ChatContextType {
   closeSession: (sessionId?: number) => Promise<void>;
   escalateSession: () => Promise<void>;
   forceEscalate: (sessionId: number) => Promise<void>;
+  createTicketFromChat: (sessionId: number) => Promise<{ id: number; title: string }>;
   sendMessage: (content: string) => void;
 }
 
@@ -266,6 +267,13 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     await customFetch(`/api/chat/sessions/${sessionId}/force-escalate`, { method: "POST" });
   }, []);
 
+  const createTicketFromChat = useCallback(async (sessionId: number) => {
+    const data = await customFetch(`/api/chat/sessions/${sessionId}/create-ticket`, {
+      method: "POST",
+    });
+    return data.ticket as { id: number; title: string };
+  }, []);
+
   const closeSession = useCallback(async (sessionId?: number) => {
     const id = sessionId ?? activeSession?.id;
     if (!id) return;
@@ -311,6 +319,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       closeSession,
       escalateSession,
       forceEscalate,
+      createTicketFromChat,
       sendMessage,
     }}>
       {children}

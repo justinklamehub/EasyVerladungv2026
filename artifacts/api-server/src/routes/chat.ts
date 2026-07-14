@@ -445,6 +445,50 @@ router.post("/chat/sessions/:id/close", requireAuth, async (req, res) => {
   }
 });
 
+// Ticket aus Chat-Verlauf erstellen
+router.post("/chat/sessions/:id/create-ticket", requireAuth, async (req, res) => {
+  const userId = req.session.userId!;
+  const sessionId = Number(req.params.id);
+  try {
+    const { rows: sessionRows } = await pool.query(
+      `SELECT * FROM chat_sessions WHERE id = $1 AND created_by_user_id = $2`,
+      [sessionId, userId],
+    );
+    if (!sessionRows.length) return res.status(404).json({ error: "Session nicht gefunden" });
+    const session = sessionRows[0];
+
+    const { rows: messages } = await pool.query(
+      `SELECT sender_name, content, sent_at FROM chat_messages
+       WHERE session_id = $1 ORDER BY sent_at ASC`,
+      [sessionId],
+    );
+
+    const date = new Date(session.created_at).toLocaleDateString("de-DE", {
+      day: "2-digit", month: "2-digit", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+    const transcript = messages
+      .map((m) => `[${m.sender_name}]: ${m.content}`)
+      .join("\n\n");
+
+    const title = session.subject
+      ? `Support: ${session.subject}`
+      : `Support-Chat vom ${date}`;
+    const description =
+      `Chat-Support vom ${date}\n\n--- Gesprächsverlauf ---\n\n${transcript}`;
+
+    const { rows: ticketRows } = await pool.query(
+      `INSERT INTO tickets (title, description, category, priority, status, created_by)
+       VALUES ($1, $2, 'Support', 'Mittel', 'Geschlossen', $3) RETURNING *`,
+      [title, description, userId],
+    );
+    return res.status(201).json({ ticket: ticketRows[0] });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // ── Knowledge base routes ─────────────────────────────────────────────────────
 
 router.get("/chat/knowledge", requireAuth, async (req, res) => {
