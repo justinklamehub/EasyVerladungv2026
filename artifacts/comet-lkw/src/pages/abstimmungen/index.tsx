@@ -23,7 +23,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { Loader2, Plus, ChevronRight } from "lucide-react";
+import { Loader2, Plus, ChevronRight, ShieldAlert } from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
@@ -222,6 +222,8 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
   const [cometBalance, setCometBalance] = useState("");
   const [status, setStatus] = useState("");
   const [confirmAccept, setConfirmAccept] = useState(false);
+  const [forceBalance, setForceBalance] = useState("");
+  const [confirmForce, setConfirmForce] = useState(false);
 
   const updateMutation = useUpdateReconciliation({
     mutation: {
@@ -253,6 +255,31 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
         ? "Abstimmung abgeschlossen – kein Korrekturbedarf."
         : `Abstimmung abgeschlossen. Korrekturbuchung: ${data.correctionAmount > 0 ? "+" : ""}${data.correctionAmount} Paletten.`;
       toast({ title: "Daten übernommen", description: msg });
+    },
+    onError: (e: any) => toast({ title: e.message ?? "Fehler", variant: "destructive" }),
+  });
+
+  const forceMutation = useMutation({
+    mutationFn: async (targetBalance: number) => {
+      const res = await fetch(`/api/reconciliations/${id}/force-accept`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ targetBalance }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Fehler");
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: getListReconciliationsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetReconciliationQueryKey(id) });
+      setConfirmForce(false);
+      setForceBalance("");
+      const msg = data.correctionAmount === 0
+        ? "Konto direkt abgestimmt – kein Korrekturbedarf."
+        : `Konto abgestimmt. Korrekturbuchung: ${data.correctionAmount > 0 ? "+" : ""}${data.correctionAmount} Paletten.`;
+      toast({ title: "Direktabschluss durchgeführt", description: msg });
     },
     onError: (e: any) => toast({ title: e.message ?? "Fehler", variant: "destructive" }),
   });
@@ -380,6 +407,69 @@ function ReconciliationDetail({ id, open, onOpenChange }: { id: number; open: bo
                         </Button>
                         <Button size="sm" className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white" onClick={() => acceptMutation.mutate()} disabled={acceptMutation.isPending}>
                           {acceptMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
+                          Bestätigen
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* COMET-seitiger Direktabschluss – ohne Speditions-Zustimmung */}
+              {isCometAdmin && rec.status !== "abgeschlossen" && (
+                <div className="border border-slate-200 bg-slate-50 rounded-lg p-3 space-y-2">
+                  <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
+                    Direktabschluss durch COMET
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Setzt das Konto direkt auf den angegebenen Saldo – ohne Zustimmung der Spedition.
+                    Es wird eine Korrekturbuchung erstellt; es finden keine Palettenbuchungen statt.
+                  </p>
+                  {!confirmForce ? (
+                    <div className="flex gap-2 items-end">
+                      <div className="flex-1 space-y-1">
+                        <Label className="text-xs text-slate-500">Ziel-Saldo</Label>
+                        <Input
+                          type="number"
+                          placeholder={rec.cometBalance !== null && rec.cometBalance !== undefined ? String(rec.cometBalance) : "Saldo eingeben"}
+                          value={forceBalance}
+                          onChange={e => setForceBalance(e.target.value)}
+                          className="h-8 text-sm"
+                        />
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-amber-300 text-amber-700 hover:bg-amber-50 shrink-0"
+                        onClick={() => {
+                          if (forceBalance === "" && rec.cometBalance !== null && rec.cometBalance !== undefined) {
+                            setForceBalance(String(rec.cometBalance));
+                          }
+                          setConfirmForce(true);
+                        }}
+                        disabled={forceBalance === "" && (rec.cometBalance === null || rec.cometBalance === undefined)}
+                      >
+                        Direkt abschließen
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <div className="text-xs text-slate-700">
+                        Saldo wird auf <strong>{forceBalance !== "" ? forceBalance : rec.cometBalance}</strong> gesetzt.
+                        Diese Aktion ist nicht rückgängig zu machen.
+                      </div>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" className="flex-1" onClick={() => setConfirmForce(false)} disabled={forceMutation.isPending}>
+                          Abbrechen
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                          onClick={() => forceMutation.mutate(Number(forceBalance !== "" ? forceBalance : rec.cometBalance))}
+                          disabled={forceMutation.isPending}
+                        >
+                          {forceMutation.isPending ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : null}
                           Bestätigen
                         </Button>
                       </div>

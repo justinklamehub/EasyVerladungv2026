@@ -388,4 +388,96 @@ router.post("/reconciliations/:id/accept", requireAuth, async (req, res) => {
   }
 });
 
+// COMET-seitige Direktabstimmung – ohne Zustimmung der Spedition
+router.post("/reconciliations/:id/force-accept", requireAuth, async (req, res) => {
+  try {
+    const id = Number(req.params.id);
+    const role = req.session.role!;
+
+    if (!["comet_admin", "comet_leitstand"].includes(role)) {
+      return res.status(403).json({ error: "Keine Berechtigung" });
+    }
+
+    const result = await getRecWithScope(id, role, req.session.speditionId);
+    if (result === null) return res.status(404).json({ error: "Not found" });
+    if (result === "forbidden") return res.status(403).json({ error: "Forbidden" });
+    const rec = result;
+
+    if (rec.status === "abgeschlossen") {
+      return res.status(400).json({ error: "Abstimmung ist bereits abgeschlossen" });
+    }
+
+    const { targetBalance } = req.body as { targetBalance?: number };
+    if (targetBalance === undefined || targetBalance === null || isNaN(Number(targetBalance))) {
+      return res.status(400).json({ error: "Ziel-Saldo fehlt" });
+    }
+    const target = Number(targetBalance);
+
+    // Calculate current live balance for this Spedition
+    const movements = await db.select().from(palletMovementsTable).where(eq(palletMovementsTable.speditionId, rec.speditionId));
+    const currentBalance = movements.reduce((sum, m) => {
+      if (m.movementType === "eingang") return sum + m.amount;
+      if (m.movementType === "ausgang") return sum - m.amount;
+      if (m.movementType === "korrektur") return sum + m.amount;
+      if (m.movementType === "anfangsbestand") return sum + m.amount;
+      if (m.movementType === "abstimmung") return sum + m.amount;
+      return sum;
+    }, 0);
+
+    const correctionAmount = target - currentBalance;
+
+    const today = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const todayStr = `${today.getFullYear()}-${pad(today.getMonth() + 1)}-${pad(today.getDate())}`;
+
+    if (correctionAmount !== 0) {
+      await db.insert(palletMovementsTable).values({
+        speditionId: rec.speditionId,
+        movementType: "korrektur",
+        movementDate: todayStr,
+        amount: correctionAmount,
+        bemerkungen: `Direktabschluss durch COMET (Abstimmung #${id}) – ohne Speditionszustimmung`,
+        reconciliationId: id,
+        createdBy: req.session.userId,
+      });
+    }
+
+    const [updated] = await db
+      .update(palletReconciliationsTable)
+      .set({
+        status: "abgeschlossen",
+        cometBalance: target,
+        updatedAt: new Date(),
+      })
+      .where(eq(palletReconciliationsTable.id, id))
+      .returning();
+
+    await logAudit(
+      req.session.userId!,
+      "reconciliation",
+      id,
+      "force_accepted",
+      rec.status,
+      `Direktabschluss COMET; Ziel-Saldo: ${target}; Korrekturbuchung: ${correctionAmount}`,
+    );
+    emit(req, "reconciliation.updated", { id }, rec.speditionId);
+    if (correctionAmount !== 0) emit(req, "pallet_balance.updated", { speditionId: rec.speditionId }, rec.speditionId);
+
+    const [sped] = await db.select().from(speditionenTable).where(eq(speditionenTable.id, rec.speditionId)).limit(1);
+    const creator = updated.createdBy
+      ? (await db.select().from(usersTable).where(eq(usersTable.id, updated.createdBy)).limit(1))[0]
+      : null;
+
+    return res.json({
+      ...updated,
+      speditionName: sped?.name ?? null,
+      createdByName: creator?.username ?? null,
+      correctionAmount,
+    });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 export default router;
