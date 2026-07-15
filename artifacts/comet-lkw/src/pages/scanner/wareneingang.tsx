@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useSearch } from "wouter";
-import { ChevronLeft, Send, RotateCcw, CheckCircle2, AlertCircle, Loader2, PenTool } from "lucide-react";
+import { ChevronLeft, Send, RotateCcw, CheckCircle2, AlertCircle, Loader2, PenTool, Camera, ImagePlus, X } from "lucide-react";
+import { useUpload } from "@workspace/object-storage-web";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const API = `${BASE}/api`;
@@ -57,6 +58,9 @@ const S = {
     color: "#64748b",
     borderBottom: `1px solid ${BORDER}`,
     background: "#f8fafc",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   row: {
     padding: "10px 14px",
@@ -323,6 +327,139 @@ function SignaturePadModal({
   );
 }
 
+function LiveCamera({
+  onCapture,
+  onCancel,
+  onError,
+}: {
+  onCapture: (file: File) => void;
+  onCancel: () => void;
+  onError: (message: string) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: { ideal: "environment" } }, audio: false })
+      .then((stream) => {
+        if (cancelled) { stream.getTracks().forEach((t) => t.stop()); return; }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.play().catch(() => {});
+        }
+        setReady(true);
+      })
+      .catch((err) => {
+        if (cancelled) return;
+        onError(err?.name === "NotAllowedError"
+          ? "Kamerazugriff wurde verweigert."
+          : "Kamera konnte nicht gestartet werden.");
+      });
+    return () => {
+      cancelled = true;
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    };
+  }, []);
+
+  function capture() {
+    const video = videoRef.current;
+    if (!video || !video.videoWidth) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], `wareneingang-${Date.now()}.jpg`, { type: "image/jpeg" });
+        onCapture(file);
+      },
+      "image/jpeg",
+      0.9
+    );
+  }
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      background: "rgba(0,0,0,0.92)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 16,
+    }}>
+      <div style={{
+        background: "#ffffff",
+        border: `1px solid ${BORDER}`,
+        borderRadius: 12,
+        padding: 16,
+        width: "100%",
+        maxWidth: 480,
+        boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", marginBottom: 10, letterSpacing: "0.1em" }}>
+          FOTO DER WARE
+        </div>
+        <div style={{
+          position: "relative", width: "100%", aspectRatio: "4 / 3",
+          background: "#000", borderRadius: 6, overflow: "hidden",
+          border: `2px solid #cbd5e1`,
+        }}>
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+          />
+          {!ready && (
+            <div style={{
+              position: "absolute", inset: 0, display: "flex",
+              alignItems: "center", justifyContent: "center", color: "#94a3b8", fontSize: 13,
+            }}>
+              <Loader2 size={20} style={{ animation: "spin 1s linear infinite", marginRight: 8 }} />
+              Kamera wird gestartet...
+            </div>
+          )}
+        </div>
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: "11px", borderRadius: 6,
+              border: `1px solid ${BORDER}`, background: "transparent",
+              color: "#64748b", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            }}
+          >
+            Abbrechen
+          </button>
+          <button
+            disabled={!ready}
+            onClick={capture}
+            style={{
+              flex: 2, padding: "11px", borderRadius: 6, border: "none",
+              background: ready ? "#0f172a" : "#e2e8f0",
+              color: ready ? "#ffffff" : "#94a3b8",
+              cursor: ready ? "pointer" : "not-allowed",
+              fontSize: 13, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <Camera size={14} /> Foto aufnehmen
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type PendingPhoto = { previewUrl: string; objectPath: string; fileName: string; contentType: string };
+
 export default function ScannerWareneingangPage() {
   const [, setLocation] = useLocation();
   const search = useSearch();
@@ -346,10 +483,68 @@ export default function ScannerWareneingangPage() {
   const [druckbuchstaben, setDruckbuchstaben] = useState("");
   const [showSigPad, setShowSigPad] = useState(false);
 
+  const [photos, setPhotos] = useState<PendingPhoto[]>([]);
+  const [photoUploadError, setPhotoUploadError] = useState("");
+  const { uploadFile, isUploading: isUploadingPhoto } = useUpload({ basePath: `${API}/storage` });
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+  const [liveCameraOpen, setLiveCameraOpen] = useState(false);
+  const cameraSupportedRef = useRef<boolean | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitOk, setSubmitOk] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [lfdNr, setLfdNr] = useState<number | null>(null);
+
+  const addPhotoFile = useCallback(
+    async (file: File) => {
+      setPhotoUploadError("");
+      const result = await uploadFile(file);
+      if (!result) {
+        setPhotoUploadError("Foto-Upload fehlgeschlagen. Bitte erneut versuchen.");
+        return;
+      }
+      setPhotos((prev) => [
+        ...prev,
+        {
+          previewUrl: URL.createObjectURL(file),
+          objectPath: result.objectPath,
+          fileName: file.name,
+          contentType: file.type || "application/octet-stream",
+        },
+      ]);
+    },
+    [uploadFile]
+  );
+
+  const handlePhotoSelected = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file) return;
+      await addPhotoFile(file);
+    },
+    [addPhotoFile]
+  );
+
+  const openPhotoCapture = useCallback(() => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      cameraSupportedRef.current = false;
+    }
+    if (cameraSupportedRef.current === false) {
+      photoInputRef.current?.click();
+      return;
+    }
+    setLiveCameraOpen(true);
+  }, []);
+
+  const openGalleryPicker = useCallback(() => {
+    galleryInputRef.current?.click();
+  }, []);
+
+  const removePhoto = useCallback((index: number) => {
+    setPhotos((prev) => prev.filter((_, i) => i !== index));
+  }, []);
 
   async function handleSubmit() {
     setIsSubmitting(true);
@@ -379,6 +574,36 @@ export default function ScannerWareneingangPage() {
       }
       const data = await res.json();
       setLfdNr(data.lfdNr);
+
+      if (photos.length > 0) {
+        const results = await Promise.all(
+          photos.map((photo) =>
+            fetch(`${API}/scanner/fotos`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                shipmentId: shipmentId ? Number(shipmentId) : null,
+                kennzeichen: kfzKennzeichen || null,
+                objectPath: photo.objectPath,
+                fileName: photo.fileName,
+                contentType: photo.contentType,
+              }),
+            })
+              .then((r) => r.ok)
+              .catch(() => false)
+          )
+        );
+        const failedCount = results.filter((ok) => !ok).length;
+        if (failedCount > 0) {
+          setSubmitError(
+            `Protokoll gespeichert, aber ${failedCount} von ${photos.length} Foto(s) konnten nicht übertragen werden.`
+          );
+          setLfdNr(data.lfdNr);
+          setSubmitOk(true);
+          return;
+        }
+      }
+
       setSubmitOk(true);
     } catch (e: any) {
       setSubmitError(e.message ?? "Unbekannter Fehler");
@@ -397,9 +622,15 @@ export default function ScannerWareneingangPage() {
         <div style={{ fontSize: 14, color: "#475569", textAlign: "center" }}>
           Lfd. Nr. <strong style={{ color: "#0f172a" }}>{lfdNr}</strong>
           {shipmentId && <> · LKW-ID <strong style={{ color: "#0f172a" }}>{shipmentId}</strong></>}
+          {photos.length > 0 && <> · <strong style={{ color: "#0f172a" }}>{photos.length}</strong> Foto{photos.length !== 1 ? "s" : ""}</>}
         </div>
+        {submitError && (
+          <div style={{ fontSize: 13, color: "#f87171", textAlign: "center", maxWidth: 320 }}>
+            {submitError}
+          </div>
+        )}
         <button
-          style={{ ...S.submitBtn, marginTop: 16, width: "auto", padding: "12px 28px" }}
+          style={{ ...S.submitBtn, marginTop: 8, width: "auto", padding: "12px 28px" }}
           onClick={() => setLocation("/scanner")}
         >
           Zurück zum Scanner
@@ -414,6 +645,23 @@ export default function ScannerWareneingangPage() {
         <SignaturePadModal
           onConfirm={(dataUrl) => { setUnterschrift(dataUrl); setShowSigPad(false); }}
           onCancel={() => setShowSigPad(false)}
+        />
+      )}
+
+      {liveCameraOpen && (
+        <LiveCamera
+          onCapture={(file) => {
+            setLiveCameraOpen(false);
+            cameraSupportedRef.current = true;
+            addPhotoFile(file);
+          }}
+          onCancel={() => setLiveCameraOpen(false)}
+          onError={(msg) => {
+            setLiveCameraOpen(false);
+            cameraSupportedRef.current = false;
+            setPhotoUploadError(msg);
+            photoInputRef.current?.click();
+          }}
         />
       )}
 
@@ -449,6 +697,103 @@ export default function ScannerWareneingangPage() {
           label1="Anz. Paletten" value1={anzPaletten} onChange1={setAnzPaletten}
           label2="Defekte Paletten" value2={defektePaletten} onChange2={setDefektePaletten}
         />
+      </div>
+
+      {/* Fotos */}
+      <div style={S.section}>
+        <div style={S.sectionTitle}>
+          <span>Fotos</span>
+          <span style={{ fontSize: 11, fontWeight: 400, color: "#94a3b8" }}>(optional)</span>
+        </div>
+        <div style={{ padding: "12px 14px" }}>
+          <div style={{ fontSize: 12, color: "#64748b", marginBottom: 10 }}>
+            Ware fotografieren und dem Protokoll zuordnen. Nicht erforderlich zum Abschicken.
+          </div>
+
+          {photos.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
+              {photos.map((photo, i) => (
+                <div key={photo.objectPath + i} style={{ position: "relative", width: 84, height: 84 }}>
+                  <img
+                    src={photo.previewUrl}
+                    alt={photo.fileName}
+                    style={{ width: 84, height: 84, objectFit: "cover", borderRadius: 8, border: `1px solid ${BORDER}` }}
+                  />
+                  <button
+                    onClick={() => removePhoto(i)}
+                    style={{
+                      position: "absolute", top: -6, right: -6, width: 22, height: 22,
+                      borderRadius: "50%", background: "#ef4444", border: "none",
+                      color: "#fff", display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer",
+                    }}
+                    title="Foto entfernen"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            onChange={handlePhotoSelected}
+            style={{ display: "none" }}
+          />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handlePhotoSelected}
+            style={{ display: "none" }}
+          />
+
+          <button
+            type="button"
+            onClick={openPhotoCapture}
+            disabled={isUploadingPhoto}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              width: "100%", padding: "12px", borderRadius: 8,
+              background: "transparent", border: `1px dashed ${BORDER}`,
+              color: "#0f172a", fontSize: 13, fontWeight: 600, cursor: "pointer",
+              opacity: isUploadingPhoto ? 0.6 : 1,
+            }}
+          >
+            {isUploadingPhoto ? (
+              <><Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} /> Foto wird hochgeladen...</>
+            ) : photos.length > 0 ? (
+              <><ImagePlus size={16} /> Weiteres Foto aufnehmen</>
+            ) : (
+              <><Camera size={16} /> Foto aufnehmen</>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={openGalleryPicker}
+            disabled={isUploadingPhoto}
+            style={{
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+              width: "100%", padding: "10px", borderRadius: 8, marginTop: 8,
+              background: "transparent", border: `1px dashed ${BORDER}`,
+              color: "#94a3b8", fontSize: 12, fontWeight: 600, cursor: "pointer",
+              opacity: isUploadingPhoto ? 0.6 : 1,
+            }}
+          >
+            <ImagePlus size={14} /> Foto aus Galerie/Datei wählen (falls Kamera blockiert)
+          </button>
+
+          {photoUploadError && (
+            <div style={{ marginTop: 8, fontSize: 12, color: "#f87171", display: "flex", alignItems: "center", gap: 6 }}>
+              <AlertCircle size={14} /> {photoUploadError}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Bemerkungen */}
@@ -502,9 +847,16 @@ export default function ScannerWareneingangPage() {
         onClick={handleSubmit}
         disabled={isSubmitting}
       >
-        {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+        {isSubmitting ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} /> : <Send size={18} />}
         WARENEINGANGSPROTOKOLL EINREICHEN
       </button>
+
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0.5; }
+        input::placeholder, textarea::placeholder { color: #94a3b8; }
+      `}</style>
     </div>
   );
 }
