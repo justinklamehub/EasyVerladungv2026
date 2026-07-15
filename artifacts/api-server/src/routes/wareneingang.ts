@@ -2,6 +2,7 @@ import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { wareneingangProtokollTable } from "@workspace/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { requireAuth } from "../lib/auth";
 
 const router = Router();
 
@@ -100,9 +101,7 @@ router.post("/scanner/wareneingang", async (req, res) => {
   }
 });
 
-router.get("/wareneingang-protokolle", async (req, res) => {
-  const user = (req as any).session?.user;
-  if (!user) return res.status(401).json({ error: "Nicht angemeldet" });
+router.get("/wareneingang-protokolle", requireAuth, async (req, res) => {
   try {
     const shipmentId = req.query.shipmentId ? Number(req.query.shipmentId) : null;
     let rows;
