@@ -167,7 +167,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   const { user } = useAuth();
 
   const role = user?.role ?? "";
-  const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(role);
+  const isCometUser = !["speditions_admin", "speditions_bearbeiter", "speditions_viewer"].includes(role);
   const isSpedUser  = ["speditions_admin", "speditions_bearbeiter"].includes(role);
   const isEditing   = !!shipmentId;
   const drawerPerms = usePermissions();
