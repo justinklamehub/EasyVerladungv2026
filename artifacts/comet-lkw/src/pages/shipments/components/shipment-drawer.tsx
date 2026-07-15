@@ -28,6 +28,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Lock, LockOpen, AlertCircle, AlertTriangle, Pencil, Trash2, ClipboardCheck, Plus, Clock, Printer, ShieldAlert, FileDown, ImageIcon, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { printGefahrgutCheckliste } from "@/lib/print-gefahrgut";
+import { printWareneingangProtokoll } from "@/lib/print-wareneingang";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
@@ -211,6 +212,16 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     queryKey: ["gefahrgut-checklisten", shipmentId],
     queryFn: async () => {
       const res = await fetch(`${API_BASE}/gefahrgut-checklisten?shipmentId=${shipmentId}`, { credentials: "include" });
+      if (!res.ok) return [] as any[];
+      return res.json() as Promise<any[]>;
+    },
+    enabled: !!shipmentId && open && isCometUser,
+  });
+
+  const { data: wareneingangProtokolle } = useQuery({
+    queryKey: ["wareneingang-protokolle", shipmentId],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/wareneingang-protokolle?shipmentId=${shipmentId}`, { credentials: "include" });
       if (!res.ok) return [] as any[];
       return res.json() as Promise<any[]>;
     },
@@ -620,9 +631,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               {isEditing && isCometUser && (
                 <TabsTrigger value="gefahrgut" className="flex-1 gap-1">
                   Protokolle
-                  {gefahrgutChecklisten && gefahrgutChecklisten.length > 0 && (
+                  {((gefahrgutChecklisten?.length ?? 0) + (wareneingangProtokolle?.length ?? 0)) > 0 && (
                     <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] leading-none px-1 py-0.5 rounded-full">
-                      {gefahrgutChecklisten.length}
+                      {(gefahrgutChecklisten?.length ?? 0) + (wareneingangProtokolle?.length ?? 0)}
                     </span>
                   )}
                 </TabsTrigger>
@@ -1221,6 +1232,68 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                         </div>
                       );
                     })}
+                  </div>
+                )}
+
+                {/* Wareneingang-Protokolle */}
+                {wareneingangProtokolle && wareneingangProtokolle.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2 pt-1">
+                      <div className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Wareneingangsprotokolle</div>
+                      <div className="flex-1 border-t border-slate-200" />
+                    </div>
+                    {wareneingangProtokolle.map((wp: any) => (
+                      <div key={wp.id} className="border border-slate-200 rounded-md p-3 bg-slate-50 text-sm space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="font-semibold text-slate-700 text-xs">
+                            {wp.eingereichtAt ? format(new Date(wp.eingereichtAt), "dd.MM.yyyy HH:mm") : "—"} Uhr
+                            {wp.lfdNr != null && <span className="ml-2 text-slate-400 font-normal">Lfd. Nr. {wp.lfdNr}</span>}
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-slate-500 hover:text-slate-700"
+                            title="PDF / Drucken"
+                            onClick={() => printWareneingangProtokoll({
+                              lfdNr:                 wp.lfdNr,
+                              lkwid:                 wp.lkwid,
+                              shipmentId:            wp.shipmentId,
+                              anlieferungsdatum:     wp.anlieferungsdatum,
+                              beauftrageSpedition:   wp.beauftrageSpedition,
+                              ausfuehrendeSpedition: wp.ausfuehrendeSpedition,
+                              kfzKennzeichen:        wp.kfzKennzeichen,
+                              anzPaletten:           wp.anzPaletten,
+                              defektePaletten:       wp.defektePaletten,
+                              bemerkungen:           wp.bemerkungen,
+                              wareErhaltenDatum:     wp.wareErhaltenDatum,
+                              unterschrift:          wp.unterschrift,
+                              druckbuchstaben:       wp.druckbuchstaben,
+                              eingereichtAt:         wp.eingereichtAt,
+                            })}
+                          >
+                            <FileDown className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-slate-600">
+                          {wp.kfzKennzeichen && <div><span className="text-slate-400">Kennzeichen:</span> {wp.kfzKennzeichen}</div>}
+                          {wp.beauftrageSpedition && <div><span className="text-slate-400">Spedition:</span> {wp.beauftrageSpedition}</div>}
+                          {wp.anzPaletten && <div><span className="text-slate-400">Paletten:</span> {wp.anzPaletten}</div>}
+                          {wp.defektePaletten && <div><span className="text-slate-400">Defekt:</span> {wp.defektePaletten}</div>}
+                        </div>
+                        {wp.druckbuchstaben && (
+                          <div className="flex flex-wrap gap-2 text-xs">
+                            <span className="text-slate-500 border border-slate-200 px-2 py-0.5 rounded-full bg-white">
+                              {wp.unterschrift ? "✓ Unterschrift · " : ""}{wp.druckbuchstaben}
+                            </span>
+                          </div>
+                        )}
+                        {wp.bemerkungen && (
+                          <div className="text-xs text-slate-500 border-t border-slate-200 pt-1.5 italic">
+                            {wp.bemerkungen}
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
                 )}
               </TabsContent>

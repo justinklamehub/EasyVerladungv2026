@@ -104,11 +104,22 @@ router.get("/wareneingang-protokolle", async (req, res) => {
   const user = (req as any).session?.user;
   if (!user) return res.status(401).json({ error: "Nicht angemeldet" });
   try {
-    const rows = await db
-      .select()
-      .from(wareneingangProtokollTable)
-      .orderBy(desc(wareneingangProtokollTable.eingereichtAt))
-      .limit(200);
+    const shipmentId = req.query.shipmentId ? Number(req.query.shipmentId) : null;
+    let rows;
+    if (shipmentId) {
+      rows = await db
+        .select()
+        .from(wareneingangProtokollTable)
+        .where(eq(wareneingangProtokollTable.shipmentId, shipmentId))
+        .orderBy(desc(wareneingangProtokollTable.eingereichtAt))
+        .limit(200);
+    } else {
+      rows = await db
+        .select()
+        .from(wareneingangProtokollTable)
+        .orderBy(desc(wareneingangProtokollTable.eingereichtAt))
+        .limit(200);
+    }
     return res.json(rows);
   } catch (err) {
     console.error("GET /wareneingang-protokolle error:", err);
