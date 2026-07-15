@@ -59,6 +59,7 @@ router.get("/scanner/find-shipment", async (req, res) => {
         speditionId: shipmentsTable.speditionId,
         status: shipmentsTable.status,
         tor: shipmentsTable.tor,
+        lkwArt: shipmentsTable.lkwArt,
       })
       .from(shipmentsTable)
       .where(eq(shipmentsTable.id, numId))

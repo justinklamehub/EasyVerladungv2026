@@ -12,8 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck, Tag, X, Timer } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck, Tag, X, Timer, Truck } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
+import { LkwArtenConfig } from "./lkw-arten-config";
 import { useAuth } from "@/contexts/auth-context";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
@@ -2378,6 +2379,9 @@ export default function SettingsPage() {
           <TabsTrigger value="tickets" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <Tag className="w-3.5 h-3.5 shrink-0" /> Tickets
           </TabsTrigger>
+          <TabsTrigger value="lkw-arten" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Truck className="w-3.5 h-3.5 shrink-0" /> LKW-Arten
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Tab: Allgemein ── */}
@@ -2568,6 +2572,11 @@ export default function SettingsPage() {
         {/* ── Tab: Tickets ── */}
         <TabsContent value="tickets" className="space-y-5 mt-0">
           <TicketCategoriesCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
+        </TabsContent>
+
+        {/* ── Tab: LKW-Arten ── */}
+        <TabsContent value="lkw-arten" className="mt-0">
+          <LkwArtenConfig />
         </TabsContent>
       </Tabs>
     </div>

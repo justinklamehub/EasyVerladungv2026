@@ -15,6 +15,8 @@ import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
 import { initWebPush, seedPushEventSettings, seedPushMessageTemplates } from "./routes/push";
 import { ensureChangelogTable } from "./routes/changelog";
 import { ensureChatTables, setupChatSocket } from "./routes/chat";
+import { ensureLkwArtenTable } from "./routes/lkw-arten";
+import { ensureWareneingangTable } from "./routes/wareneingang";
 import { pool } from "@workspace/db";
 
 // Load .env relative to this file (Node 20.6+ built-in, no dotenv needed).
@@ -411,6 +413,18 @@ httpServer.listen(port, async (err?: Error) => {
     logger.info("chat tables ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureChatTables failed — non-fatal");
+  }
+  try {
+    await ensureLkwArtenTable();
+    logger.info("lkw_arten table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureLkwArtenTable failed — non-fatal");
+  }
+  try {
+    await ensureWareneingangTable();
+    logger.info("wareneingang_protokolle table ensured");
+  } catch (e) {
+    logger.warn({ err: e }, "ensureWareneingangTable failed — non-fatal");
   }
   initWebPush();
   startScheduler(io);

@@ -49,6 +49,7 @@ import AuswertungPage from "@/pages/auswertung";
 import AuftragsauswertungPage from "@/pages/auftragsauswertung";
 import ScannerLandingPage from "@/pages/scanner/index";
 import ScannerGefahrgutPage from "@/pages/scanner/gefahrgut";
+import ScannerWareneingangPage from "@/pages/scanner/wareneingang";
 import GefahrgutPage from "@/pages/gefahrgut/index";
 import HilfePage from "@/pages/hilfe";
 import TicketsPage from "@/pages/tickets";
@@ -98,6 +99,7 @@ function Router() {
       <Route path="/passwort-aendern" component={PasswortAendernPage} />
       <Route path="/scanner" component={ScannerLandingPage} />
       <Route path="/scanner/gefahrgut" component={ScannerGefahrgutPage} />
+      <Route path="/scanner/wareneingang" component={ScannerWareneingangPage} />
       <Route path="/impressum" component={ImpressumPage} />
       <Route path="/datenschutz" component={DatenschutzPage} />
 

@@ -11,3 +11,5 @@ export * from "./email-log";
 export * from "./tickets";
 export * from "./changelog";
 export * from "./fotos";
+export * from "./lkw-arten";
+export * from "./wareneingang";

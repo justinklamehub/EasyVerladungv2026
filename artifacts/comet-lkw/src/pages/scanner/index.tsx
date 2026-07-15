@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, ClipboardCheck, ChevronDown, ChevronUp, Save } from "lucide-react";
 
@@ -132,6 +132,8 @@ const S_hint = {
   textAlign: "center" as const,
 };
 
+type LkwArt = { id: number; name: string; typ: string; aktiv: boolean };
+
 type ShipmentInfo = {
   id: number;
   kennzeichen: string | null;
@@ -140,6 +142,7 @@ type ShipmentInfo = {
   status: string;
   tor: string | null;
   wareStatus: string | null;
+  lkwArt: string | null;
 } | null;
 
 type ShipmentListItem = {
@@ -260,7 +263,7 @@ export default function ScannerLandingPage() {
     }
   }
 
-  function goToChecklist(ship: ShipmentInfo, sped: string | null) {
+  async function goToChecklist(ship: ShipmentInfo, sped: string | null) {
     const params = new URLSearchParams();
     if (ship) {
       params.set("shipmentId", String(ship.id));
@@ -268,7 +271,22 @@ export default function ScannerLandingPage() {
       if (ship.bezeichnung) params.set("bezeichnung", ship.bezeichnung);
     }
     if (sped) params.set("spedition", sped);
-    setLocation(`/scanner/gefahrgut?${params.toString()}`);
+
+    // Determine route based on lkwArt type
+    let route = "/scanner/gefahrgut";
+    if (ship?.lkwArt) {
+      try {
+        const res = await fetch(`${API}/lkw-arten`);
+        if (res.ok) {
+          const arten: LkwArt[] = await res.json();
+          const match = arten.find((a) => a.name === ship.lkwArt && a.aktiv);
+          if (match?.typ === "anlieferung") {
+            route = "/scanner/wareneingang";
+          }
+        }
+      } catch { /* use default route */ }
+    }
+    setLocation(`${route}?${params.toString()}`);
   }
 
   return (

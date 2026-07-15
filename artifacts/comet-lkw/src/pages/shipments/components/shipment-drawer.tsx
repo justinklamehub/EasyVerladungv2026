@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -155,8 +155,9 @@ interface ShipmentDrawerProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
-const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
+const FALLBACK_LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
 
 export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawerProps) {
@@ -190,6 +191,16 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   );
 
   const { data: speditionen } = useListSpeditionen();
+
+  const { data: lkwArtenData } = useQuery<{ id: number; name: string; aktiv: boolean }[]>({
+    queryKey: ["lkw-arten"],
+    queryFn: () => fetch(`${API_BASE}/lkw-arten`, { credentials: "include" }).then((r) => r.json()),
+    staleTime: 60_000,
+  });
+  const lkwArtOptions = useMemo(() => {
+    if (!lkwArtenData?.length) return FALLBACK_LKW_ART_OPTIONS;
+    return lkwArtenData.filter((a) => a.aktiv).map((a) => a.name);
+  }, [lkwArtenData]);
   const { data: austraege } = useListLkwAustraege(shipmentId || undefined, {
     query: { enabled: !!shipmentId && open && isCometUser, queryKey: getListLkwAustraegeQueryKey(shipmentId || undefined) },
   });
@@ -662,7 +673,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                   <Label className="text-xs text-slate-500">LKW-Art {!isEditing && <span className="text-red-500">*</span>}</Label>
                   <Select value={form.lkwArt} onValueChange={v => { setForm(f => ({ ...f, lkwArt: v })); setFormErrors(prev => { if (!prev.has("lkwArt")) return prev; const next = new Set(prev); next.delete("lkwArt"); return next; }); }} disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}>
                     <SelectTrigger className={cn("h-9", formErrors.has("lkwArt") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Wählen..." /></SelectTrigger>
-                    <SelectContent>{LKW_ART_OPTIONS.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                    <SelectContent>{lkwArtOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
