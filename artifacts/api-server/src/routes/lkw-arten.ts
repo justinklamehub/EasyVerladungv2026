@@ -42,7 +42,7 @@ router.get("/lkw-arten", async (req, res) => {
 });
 
 router.post("/lkw-arten", async (req, res) => {
-  if ((req as any).session?.user?.role !== "comet_admin") {
+  if (req.session.role !== "comet_admin") {
     return res.status(403).json({ error: "Keine Berechtigung" });
   }
   try {
@@ -64,7 +64,7 @@ router.post("/lkw-arten", async (req, res) => {
 });
 
 router.patch("/lkw-arten/:id", async (req, res) => {
-  if ((req as any).session?.user?.role !== "comet_admin") {
+  if (req.session.role !== "comet_admin") {
     return res.status(403).json({ error: "Keine Berechtigung" });
   }
   try {
@@ -99,7 +99,7 @@ router.patch("/lkw-arten/:id", async (req, res) => {
 });
 
 router.delete("/lkw-arten/:id", async (req, res) => {
-  if ((req as any).session?.user?.role !== "comet_admin") {
+  if (req.session.role !== "comet_admin") {
     return res.status(403).json({ error: "Keine Berechtigung" });
   }
   try {
