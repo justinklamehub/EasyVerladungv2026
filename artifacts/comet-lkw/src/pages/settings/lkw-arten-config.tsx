@@ -9,14 +9,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Plus, Pencil, Trash2, Truck, PackageSearch } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Truck, PackageSearch, Ban } from "lucide-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
 export interface LkwArt {
   id: number;
   name: string;
-  typ: "anlieferung" | "abholung";
+  typ: "anlieferung" | "abholung" | "keins";
   aktiv: boolean;
   sortOrder: number;
 }
@@ -24,6 +24,7 @@ export interface LkwArt {
 const TYP_LABELS: Record<string, { label: string; badge: string; icon: typeof Truck }> = {
   abholung:   { label: "Abholung (Auslieferung)", badge: "bg-blue-100 text-blue-700 border-blue-200", icon: Truck },
   anlieferung: { label: "Anlieferung (Retoure)", badge: "bg-green-100 text-green-700 border-green-200", icon: PackageSearch },
+  keins:       { label: "Kein Scanner-Dokument",  badge: "bg-slate-100 text-slate-500 border-slate-200", icon: Ban },
 };
 
 function LkwArtDialog({
@@ -73,6 +74,7 @@ function LkwArtDialog({
               <SelectContent>
                 <SelectItem value="abholung">Abholung → Gefahrgut-Checkliste</SelectItem>
                 <SelectItem value="anlieferung">Anlieferung → Wareneingangsprotokoll</SelectItem>
+                <SelectItem value="keins">Kein Dokument → kein Scanner-Formular</SelectItem>
               </SelectContent>
             </Select>
             <p className="text-xs text-slate-500">
@@ -222,7 +224,7 @@ export function LkwArtenConfig() {
                     </span>
                     <div className="mt-0.5">
                       <span className={`text-[10px] font-medium border rounded px-1.5 py-0.5 ${meta?.badge ?? "bg-slate-100 text-slate-500 border-slate-200"}`}>
-                        {art.typ === "abholung" ? "Gefahrgut-Checkliste" : "Wareneingangsprotokoll"}
+                        {art.typ === "abholung" ? "Gefahrgut-Checkliste" : art.typ === "anlieferung" ? "Wareneingangsprotokoll" : "Kein Scanner-Dokument"}
                       </span>
                     </div>
                   </div>

@@ -173,6 +173,7 @@ export default function ScannerLandingPage() {
   const [saveError, setSaveError] = useState("");
   const [saveOk, setSaveOk] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [matchedTyp, setMatchedTyp] = useState<string | null>(null);
   const [, setLocation] = useLocation();
 
   async function doFetch(val: string) {
@@ -184,6 +185,7 @@ export default function ScannerLandingPage() {
     setSaveOk(false);
     setSaveError("");
     setShipmentList([]);
+    setMatchedTyp(null);
     try {
       const res = await fetch(`${API}/scanner/find-shipment?q=${encodeURIComponent(val)}&id=${encodeURIComponent(val)}`, {
         credentials: "include",
@@ -213,6 +215,16 @@ export default function ScannerLandingPage() {
         setEditStatus(s.status ?? "");
         setEditTor(s.tor ?? "");
         setEditWareStatus(s.wareStatus ?? "");
+        if (s.lkwArt) {
+          try {
+            const artenRes = await fetch(`${API}/lkw-arten`);
+            if (artenRes.ok) {
+              const arten: LkwArt[] = await artenRes.json();
+              const match = arten.find((a) => a.name === s.lkwArt && a.aktiv);
+              setMatchedTyp(match?.typ ?? null);
+            }
+          } catch { /* ignore */ }
+        }
       }
       setSearched(true);
     } catch (err: any) {
@@ -263,7 +275,7 @@ export default function ScannerLandingPage() {
     }
   }
 
-  async function goToChecklist(ship: ShipmentInfo, sped: string | null) {
+  function goToChecklist(ship: ShipmentInfo, sped: string | null, typ?: string | null) {
     const params = new URLSearchParams();
     if (ship) {
       params.set("shipmentId", String(ship.id));
@@ -272,20 +284,9 @@ export default function ScannerLandingPage() {
     }
     if (sped) params.set("spedition", sped);
 
-    // Determine route based on lkwArt type
     let route = "/scanner/gefahrgut";
-    if (ship?.lkwArt) {
-      try {
-        const res = await fetch(`${API}/lkw-arten`);
-        if (res.ok) {
-          const arten: LkwArt[] = await res.json();
-          const match = arten.find((a) => a.name === ship.lkwArt && a.aktiv);
-          if (match?.typ === "anlieferung") {
-            route = "/scanner/wareneingang";
-          }
-        }
-      } catch { /* use default route */ }
-    }
+    if (typ === "anlieferung") route = "/scanner/wareneingang";
+    if (typ === "keins") return;
     setLocation(`${route}?${params.toString()}`);
   }
 
@@ -513,7 +514,20 @@ export default function ScannerLandingPage() {
                 </div>
               )}
 
-              {checklistCount > 0 && !confirmedDuplicate ? (
+              {matchedTyp === "keins" ? (
+                <div style={{
+                  marginTop: 14,
+                  background: "rgba(100,116,139,0.1)",
+                  border: "1px solid #475569",
+                  borderRadius: 8,
+                  padding: "12px 14px",
+                  fontSize: 13,
+                  color: "#94a3b8",
+                  textAlign: "center" as const,
+                }}>
+                  Für diese LKW-Art ist kein Scanner-Dokument erforderlich.
+                </div>
+              ) : checklistCount > 0 && !confirmedDuplicate ? (
                 <div style={{ marginTop: 14 }}>
                   <div style={{
                     background: "rgba(251,191,36,0.1)",
@@ -544,7 +558,7 @@ export default function ScannerLandingPage() {
                   </button>
                 </div>
               ) : (
-                <button style={{ ...S.btnGreen, marginTop: 14 }} onClick={() => goToChecklist(shipment, spedition)}>
+                <button style={{ ...S.btnGreen, marginTop: 14 }} onClick={() => goToChecklist(shipment, spedition, matchedTyp)}>
                   <Truck size={18} />
                   CHECKLISTE AUSFÜLLEN
                 </button>
