@@ -6,20 +6,20 @@ const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
 const API = `${BASE}/api`;
 
 const C = "#b4ff00";
-const BG = "#0d1b2a";
-const CARD = "#111d2e";
-const BORDER = "#1e3a5f";
+const BG = "#f1f5f9";
+const CARD = "#ffffff";
+const BORDER = "#e2e8f0";
 
 const S = {
   page: {
     minHeight: "100dvh",
     background: BG,
-    color: "#e2e8f0",
+    color: "#0f172a",
     fontFamily: "system-ui,-apple-system,sans-serif",
     paddingBottom: 40,
   },
   header: {
-    background: "#0a1628",
+    background: "#ffffff",
     borderBottom: `1px solid ${BORDER}`,
     padding: "12px 16px",
     display: "flex",
@@ -33,7 +33,7 @@ const S = {
     background: "transparent",
     border: `1px solid ${BORDER}`,
     borderRadius: 6,
-    color: "#94a3b8",
+    color: "#475569",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
@@ -56,7 +56,7 @@ const S = {
     textTransform: "uppercase" as const,
     color: "#64748b",
     borderBottom: `1px solid ${BORDER}`,
-    background: "#0a1628",
+    background: "#f8fafc",
   },
   row: {
     padding: "10px 14px",
@@ -73,10 +73,10 @@ const S = {
     width: "100%",
     padding: "10px 12px",
     fontSize: 15,
-    background: "#0d1b2a",
+    background: "#f8fafc",
     border: `1.5px solid ${BORDER}`,
     borderRadius: 7,
-    color: "#e2e8f0",
+    color: "#0f172a",
     outline: "none",
     boxSizing: "border-box" as const,
   },
@@ -89,7 +89,7 @@ const S = {
     padding: "12px",
     borderRadius: 6,
     border: `1.5px dashed ${BORDER}`,
-    background: "#0a1628",
+    background: "#f8fafc",
     color: "#64748b",
     cursor: "pointer",
     display: "flex",
@@ -101,9 +101,9 @@ const S = {
     marginTop: 6,
   },
   sigBtnSigned: {
-    borderColor: C,
-    color: C,
-    background: "rgba(180,255,0,0.06)",
+    borderColor: "#16a34a",
+    color: "#16a34a",
+    background: "rgba(22,163,74,0.06)",
   },
   submitBtn: {
     margin: "20px 12px 0",
@@ -112,8 +112,8 @@ const S = {
     fontSize: 15,
     fontWeight: 700,
     letterSpacing: "0.08em",
-    background: C,
-    color: "#0d1b2a",
+    background: "#0f172a",
+    color: "#ffffff",
     border: "none",
     borderRadius: 10,
     cursor: "pointer",
@@ -189,9 +189,9 @@ function SignaturePadModal({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#0d1b2a";
+    ctx.fillStyle = "#f8fafc";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.strokeStyle = C;
+    ctx.strokeStyle = "#1e293b";
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
     ctx.lineJoin = "round";
@@ -234,7 +234,7 @@ function SignaturePadModal({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#0d1b2a";
+    ctx.fillStyle = "#f8fafc";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     setIsEmpty(true);
   }
@@ -242,19 +242,20 @@ function SignaturePadModal({
   return (
     <div style={{
       position: "fixed", inset: 0, zIndex: 100,
-      background: "rgba(0,0,0,0.85)",
+      background: "rgba(15,23,42,0.6)",
       display: "flex", alignItems: "center", justifyContent: "center",
       padding: 16,
     }}>
       <div style={{
-        background: "#111d2e",
+        background: "#ffffff",
         border: `1px solid ${BORDER}`,
         borderRadius: 12,
         padding: 16,
         width: "100%",
         maxWidth: 480,
+        boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
       }}>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", marginBottom: 10, letterSpacing: "0.1em" }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#475569", marginBottom: 10, letterSpacing: "0.1em" }}>
           UNTERSCHRIFT ERFASSEN
         </div>
         <canvas
@@ -264,14 +265,15 @@ function SignaturePadModal({
           style={{
             width: "100%",
             height: 180,
-            border: `2px solid ${C}`,
+            border: `2px solid #cbd5e1`,
             borderRadius: 6,
             display: "block",
             touchAction: "none",
             cursor: "crosshair",
+            background: "#f8fafc",
           }}
         />
-        <div style={{ fontSize: 11, color: "#475569", textAlign: "center", marginTop: 6 }}>
+        <div style={{ fontSize: 11, color: "#94a3b8", textAlign: "center", marginTop: 6 }}>
           Hier unterschreiben
         </div>
         <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
@@ -280,7 +282,7 @@ function SignaturePadModal({
             style={{
               flex: 1, padding: "11px", borderRadius: 6,
               border: `1px solid ${BORDER}`, background: "transparent",
-              color: "#94a3b8", cursor: "pointer", fontSize: 13, fontWeight: 600,
+              color: "#64748b", cursor: "pointer", fontSize: 13, fontWeight: 600,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
             }}
           >
@@ -290,8 +292,8 @@ function SignaturePadModal({
             onClick={onCancel}
             style={{
               flex: 1, padding: "11px", borderRadius: 6,
-              border: `1px solid #374151`, background: "transparent",
-              color: "#6b7280", cursor: "pointer", fontSize: 13, fontWeight: 600,
+              border: `1px solid ${BORDER}`, background: "transparent",
+              color: "#64748b", cursor: "pointer", fontSize: 13, fontWeight: 600,
             }}
           >
             Abbrechen
@@ -306,8 +308,8 @@ function SignaturePadModal({
             style={{
               flex: 2, padding: "11px", borderRadius: 6,
               border: "none",
-              background: isEmpty ? "#1e3a5f" : C,
-              color: isEmpty ? "#475569" : BG,
+              background: isEmpty ? "#e2e8f0" : "#0f172a",
+              color: isEmpty ? "#94a3b8" : "#ffffff",
               cursor: isEmpty ? "not-allowed" : "pointer",
               fontSize: 13, fontWeight: 700,
               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
@@ -388,13 +390,13 @@ export default function ScannerWareneingangPage() {
   if (submitOk) {
     return (
       <div style={{ ...S.page, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 24 }}>
-        <CheckCircle2 size={56} color={C} />
-        <div style={{ fontSize: 20, fontWeight: 700, color: "#f8fafc", textAlign: "center" }}>
+        <CheckCircle2 size={56} color="#16a34a" />
+        <div style={{ fontSize: 20, fontWeight: 700, color: "#0f172a", textAlign: "center" }}>
           Wareneingangsprotokoll gespeichert
         </div>
-        <div style={{ fontSize: 14, color: "#94a3b8", textAlign: "center" }}>
-          Lfd. Nr. <strong style={{ color: C }}>{lfdNr}</strong>
-          {shipmentId && <> · LKW-ID <strong style={{ color: C }}>{shipmentId}</strong></>}
+        <div style={{ fontSize: 14, color: "#475569", textAlign: "center" }}>
+          Lfd. Nr. <strong style={{ color: "#0f172a" }}>{lfdNr}</strong>
+          {shipmentId && <> · LKW-ID <strong style={{ color: "#0f172a" }}>{shipmentId}</strong></>}
         </div>
         <button
           style={{ ...S.submitBtn, marginTop: 16, width: "auto", padding: "12px 28px" }}
@@ -421,7 +423,7 @@ export default function ScannerWareneingangPage() {
           <ChevronLeft size={15} /> Zurück
         </button>
         <div style={{ flex: 1, textAlign: "center" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "#f8fafc" }}>Wareneingangsprotokoll</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Wareneingangsprotokoll</div>
           {(shipmentId || bezeichnung) && (
             <div style={{ fontSize: 11, color: "#64748b" }}>
               {bezeichnung || `LKW-ID ${shipmentId}`}
@@ -482,7 +484,7 @@ export default function ScannerWareneingangPage() {
             <img
               src={unterschrift}
               alt="Unterschrift"
-              style={{ marginTop: 8, width: "100%", height: 60, objectFit: "contain", borderRadius: 4, background: "#0d1b2a", border: `1px solid ${BORDER}` }}
+              style={{ marginTop: 8, width: "100%", height: 60, objectFit: "contain", borderRadius: 4, background: "#f8fafc", border: `1px solid ${BORDER}` }}
             />
           )}
         </div>
