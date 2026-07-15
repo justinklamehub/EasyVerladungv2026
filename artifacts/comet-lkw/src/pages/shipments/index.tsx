@@ -294,6 +294,21 @@ export default function ShipmentsPage() {
     [gefahrgutStatus]
   );
 
+  const { data: wareneingangStatus } = useQuery({
+    queryKey: ["wareneingang-status"],
+    queryFn: async () => {
+      const res = await fetch(`${API_BASE}/wareneingang-status`, { credentials: "include" });
+      if (!res.ok) return { shipmentIds: [] as number[] };
+      return res.json() as Promise<{ shipmentIds: number[] }>;
+    },
+    enabled: isCometUser,
+    staleTime: 30_000,
+  });
+  const wareneingangSet = useMemo(
+    () => new Set(wareneingangStatus?.shipmentIds ?? []),
+    [wareneingangStatus]
+  );
+
   function toggleSort(field: SortField) {
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -920,6 +935,11 @@ export default function ShipmentsPage() {
                       {isCometUser && gefahrgutSet.has(shipment.id) && (
                         <span title="Gefahrgut-Checkliste vorhanden">
                           <ClipboardCheck className="w-3.5 h-3.5 text-amber-500" />
+                        </span>
+                      )}
+                      {isCometUser && wareneingangSet.has(shipment.id) && (
+                        <span title="Wareneingangsprotokoll vorhanden">
+                          <ClipboardCheck className="w-3.5 h-3.5 text-blue-500" />
                         </span>
                       )}
                       {shipment.gesperrtFuerSpedition ? (

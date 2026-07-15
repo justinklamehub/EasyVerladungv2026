@@ -1,8 +1,8 @@
 import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { wareneingangProtokollTable } from "@workspace/db/schema";
-import { eq, desc } from "drizzle-orm";
-import { requireAuth } from "../lib/auth";
+import { eq, desc, isNotNull } from "drizzle-orm";
+import { requireAuth, isCometRole } from "../lib/auth";
 
 const router = Router();
 
@@ -97,6 +97,27 @@ router.post("/scanner/wareneingang", async (req, res) => {
     return res.status(201).json({ ok: true, id: row.id, lfdNr: row.lfdNr });
   } catch (err) {
     console.error("POST /scanner/wareneingang error:", err);
+    return res.status(500).json({ error: "Serverfehler" });
+  }
+});
+
+router.get("/wareneingang-status", requireAuth, async (req, res) => {
+  try {
+    if (!isCometRole(req.session.role!)) {
+      return res.status(403).json({ error: "Kein Zugriff" });
+    }
+    const rows = await db
+      .select({ shipmentId: wareneingangProtokollTable.shipmentId })
+      .from(wareneingangProtokollTable)
+      .where(isNotNull(wareneingangProtokollTable.shipmentId));
+    const ids = [
+      ...new Set(
+        rows.map((r) => r.shipmentId).filter((id): id is number => id !== null)
+      ),
+    ];
+    return res.json({ shipmentIds: ids });
+  } catch (err) {
+    console.error(err);
     return res.status(500).json({ error: "Serverfehler" });
   }
 });
