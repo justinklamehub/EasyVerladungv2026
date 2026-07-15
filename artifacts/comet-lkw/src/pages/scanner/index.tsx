@@ -7,8 +7,8 @@ const API = "/api";
 const S = {
   page: {
     minHeight: "100dvh",
-    background: "#0d1b2a",
-    color: "#e2e8f0",
+    background: "#f1f5f9",
+    color: "#0f172a",
     fontFamily: "system-ui, -apple-system, sans-serif",
     display: "flex",
     flexDirection: "column" as const,
@@ -23,21 +23,21 @@ const S = {
   logo: {
     fontSize: 13,
     letterSpacing: "0.15em",
-    color: "#94a3b8",
+    color: "#64748b",
     textTransform: "uppercase" as const,
     marginBottom: 8,
   },
   title: {
     fontSize: 22,
     fontWeight: 700,
-    color: "#f8fafc",
+    color: "#0f172a",
     letterSpacing: "0.02em",
   },
   card: {
     width: "100%",
     maxWidth: 480,
-    background: "#162032",
-    border: "1px solid #1e3a5f",
+    background: "#ffffff",
+    border: "1px solid #e2e8f0",
     borderRadius: 12,
     padding: 24,
     marginBottom: 16,
@@ -45,7 +45,7 @@ const S = {
   label: {
     display: "block",
     fontSize: 13,
-    color: "#94a3b8",
+    color: "#64748b",
     marginBottom: 8,
     letterSpacing: "0.08em",
     textTransform: "uppercase" as const,
@@ -56,10 +56,10 @@ const S = {
     fontSize: 24,
     fontWeight: 700,
     letterSpacing: "0.05em",
-    background: "#0d1b2a",
-    border: "2px solid #b4ff00",
+    background: "#f8fafc",
+    border: "2px solid #334155",
     borderRadius: 8,
-    color: "#f8fafc",
+    color: "#0f172a",
     outline: "none",
     boxSizing: "border-box" as const,
   },
@@ -69,8 +69,8 @@ const S = {
     fontSize: 16,
     fontWeight: 700,
     letterSpacing: "0.1em",
-    background: "#b4ff00",
-    color: "#0d1b2a",
+    background: "#0f172a",
+    color: "#ffffff",
     border: "none",
     borderRadius: 8,
     cursor: "pointer",
@@ -87,8 +87,8 @@ const S = {
     fontWeight: 600,
     letterSpacing: "0.08em",
     background: "transparent",
-    color: "#94a3b8",
-    border: "1px solid #2d4a6b",
+    color: "#475569",
+    border: "1px solid #e2e8f0",
     borderRadius: 8,
     cursor: "pointer",
     marginTop: 8,
@@ -101,11 +101,11 @@ const S = {
     display: "flex",
     justifyContent: "space-between",
     padding: "8px 0",
-    borderBottom: "1px solid #1e3a5f",
+    borderBottom: "1px solid #e2e8f0",
     fontSize: 14,
   },
-  infoLabel: { color: "#94a3b8" },
-  infoValue: { color: "#f8fafc", fontWeight: 600 },
+  infoLabel: { color: "#64748b" },
+  infoValue: { color: "#0f172a", fontWeight: 600 },
   statusBadge: (found: boolean) => ({
     display: "inline-flex",
     alignItems: "center",
@@ -114,9 +114,9 @@ const S = {
     borderRadius: 20,
     fontSize: 12,
     fontWeight: 600,
-    background: found ? "rgba(180,255,0,0.12)" : "rgba(239,68,68,0.12)",
-    color: found ? "#b4ff00" : "#f87171",
-    border: `1px solid ${found ? "#b4ff00" : "#f87171"}`,
+    background: found ? "rgba(22,163,74,0.08)" : "rgba(239,68,68,0.08)",
+    color: found ? "#16a34a" : "#dc2626",
+    border: `1px solid ${found ? "#16a34a" : "#dc2626"}`,
     marginBottom: 16,
   }),
 };
@@ -307,9 +307,9 @@ export default function ScannerLandingPage() {
             fontSize: 14,
             fontWeight: 700,
             letterSpacing: "0.08em",
-            background: "rgba(180,255,0,0.08)",
-            color: "#b4ff00",
-            border: "1.5px solid #b4ff00",
+            background: "#0f172a",
+            color: "#ffffff",
+            border: "none",
             borderRadius: 10,
             cursor: "pointer",
             display: "flex",
@@ -328,9 +328,9 @@ export default function ScannerLandingPage() {
       </div>
 
       <div style={{ width: "100%", maxWidth: 480, marginBottom: 8, display: "flex", alignItems: "center", gap: 10 }}>
-        <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
-        <span style={{ fontSize: 11, color: "#475569", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>oder nach ID / Bezeichnung suchen</span>
-        <div style={{ flex: 1, height: 1, background: "#1e3a5f" }} />
+        <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
+        <span style={{ fontSize: 11, color: "#94a3b8", letterSpacing: "0.1em", textTransform: "uppercase" as const }}>oder nach ID / Bezeichnung suchen</span>
+        <div style={{ flex: 1, height: 1, background: "#e2e8f0" }} />
       </div>
 
       <div style={S.card}>
@@ -370,8 +370,8 @@ export default function ScannerLandingPage() {
 
       {searched && shipmentList.length > 0 && (
         <div style={{ width: "100%", maxWidth: 480 }}>
-          <div style={{ fontSize: 13, color: "#94a3b8", marginBottom: 10, textAlign: "center" as const }}>
-            <span style={{ color: "#b4ff00", fontWeight: 700 }}>{shipmentList.length}</span> Verladung{shipmentList.length !== 1 ? "en" : ""} gefunden – bitte auswählen:
+          <div style={{ fontSize: 13, color: "#64748b", marginBottom: 10, textAlign: "center" as const }}>
+            <span style={{ color: "#0f172a", fontWeight: 700 }}>{shipmentList.length}</span> Verladung{shipmentList.length !== 1 ? "en" : ""} gefunden – bitte auswählen:
           </div>
           {shipmentList.map((item) => (
             <button
@@ -380,14 +380,14 @@ export default function ScannerLandingPage() {
               style={{
                 display: "block",
                 width: "100%",
-                background: "#162032",
-                border: "1px solid #1e3a5f",
+                background: "#ffffff",
+                border: "1px solid #e2e8f0",
                 borderRadius: 10,
                 padding: "14px 16px",
                 marginBottom: 10,
                 cursor: "pointer",
                 textAlign: "left" as const,
-                color: "#f8fafc",
+                color: "#0f172a",
               }}
             >
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
@@ -395,7 +395,7 @@ export default function ScannerLandingPage() {
                   <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>
                     {item.bezeichnung ?? `Verladung #${item.id}`}
                   </div>
-                  <div style={{ fontSize: 12, color: "#94a3b8", display: "flex", flexWrap: "wrap" as const, gap: "4px 12px" }}>
+                  <div style={{ fontSize: 12, color: "#64748b", display: "flex", flexWrap: "wrap" as const, gap: "4px 12px" }}>
                     {item.kennzeichen && <span>🚛 {item.kennzeichen}</span>}
                     {item.relation && <span>📍 {item.relation}</span>}
                     {item.speditionName && <span>🏢 {item.speditionName}</span>}
@@ -403,10 +403,10 @@ export default function ScannerLandingPage() {
                   </div>
                 </div>
                 <div style={{ display: "flex", flexDirection: "column" as const, alignItems: "flex-end", gap: 4, flexShrink: 0, marginLeft: 8 }}>
-                  <span style={{ fontSize: 11, color: "#64748b" }}>#{item.id}</span>
+                  <span style={{ fontSize: 11, color: "#94a3b8" }}>#{item.id}</span>
                   <span style={{
                     fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 10,
-                    background: "rgba(180,255,0,0.1)", color: "#b4ff00", border: "1px solid #b4ff00",
+                    background: "#f1f5f9", color: "#475569", border: "1px solid #e2e8f0",
                   }}>{item.status}</span>
                 </div>
               </div>
@@ -432,7 +432,7 @@ export default function ScannerLandingPage() {
 
               {/* Save-Feedback */}
               {saveOk && (
-                <div style={{ background: "rgba(180,255,0,0.1)", border: "1px solid #b4ff00", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#b4ff00", marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
+                <div style={{ background: "rgba(22,163,74,0.08)", border: "1px solid #16a34a", borderRadius: 8, padding: "8px 12px", fontSize: 13, color: "#16a34a", marginTop: 10, display: "flex", alignItems: "center", gap: 8 }}>
                   <CheckCircle2 size={15} /> Änderungen gespeichert
                 </div>
               )}
@@ -447,7 +447,7 @@ export default function ScannerLandingPage() {
               </button>
 
               {editOpen && (
-                <div style={{ marginTop: 12, background: "rgba(30,58,95,0.4)", border: "1px solid #2d4a6b", borderRadius: 8, padding: "14px 14px 10px" }}>
+                <div style={{ marginTop: 12, background: "#f8fafc", border: "1px solid #e2e8f0", borderRadius: 8, padding: "14px 14px 10px" }}>
                   {/* Status */}
                   <div style={{ marginBottom: 12 }}>
                     <label style={{ ...S.label, marginBottom: 6 }}>Status</label>
@@ -458,9 +458,9 @@ export default function ScannerLandingPage() {
                           onClick={() => setEditStatus(opt)}
                           style={{
                             padding: "7px 13px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                            background: editStatus === opt ? "#b4ff00" : "transparent",
-                            color: editStatus === opt ? "#0d1b2a" : "#94a3b8",
-                            border: editStatus === opt ? "1.5px solid #b4ff00" : "1.5px solid #2d4a6b",
+                            background: editStatus === opt ? "#0f172a" : "transparent",
+                            color: editStatus === opt ? "#ffffff" : "#64748b",
+                            border: editStatus === opt ? "1.5px solid #0f172a" : "1.5px solid #e2e8f0",
                           }}
                         >{opt}</button>
                       ))}
@@ -477,9 +477,9 @@ export default function ScannerLandingPage() {
                           onClick={() => setEditWareStatus(prev => prev === opt ? "" : opt)}
                           style={{
                             padding: "7px 13px", borderRadius: 20, fontSize: 13, fontWeight: 600, cursor: "pointer",
-                            background: editWareStatus === opt ? "#b4ff00" : "transparent",
-                            color: editWareStatus === opt ? "#0d1b2a" : "#94a3b8",
-                            border: editWareStatus === opt ? "1.5px solid #b4ff00" : "1.5px solid #2d4a6b",
+                            background: editWareStatus === opt ? "#0f172a" : "transparent",
+                            color: editWareStatus === opt ? "#ffffff" : "#64748b",
+                            border: editWareStatus === opt ? "1.5px solid #0f172a" : "1.5px solid #e2e8f0",
                           }}
                         >{opt}</button>
                       ))}
@@ -492,7 +492,7 @@ export default function ScannerLandingPage() {
                     <select
                       value={editTor}
                       onChange={e => setEditTor(e.target.value)}
-                      style={{ width: "100%", padding: "10px 14px", borderRadius: 8, fontSize: 15, background: "#0d1b2a", color: editTor ? "#f1f5f9" : "#64748b", border: "1.5px solid #2d4a6b", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
+                      style={{ width: "100%", padding: "10px 14px", borderRadius: 8, fontSize: 15, background: "#ffffff", color: editTor ? "#0f172a" : "#94a3b8", border: "1.5px solid #e2e8f0", appearance: "none", WebkitAppearance: "none", cursor: "pointer" }}
                     >
                       <option value="">— Kein Tor —</option>
                       {TOR_OPTIONS.map(o => <option key={o} value={o}>{o}</option>)}
@@ -517,12 +517,12 @@ export default function ScannerLandingPage() {
               {matchedTyp === "keins" ? (
                 <div style={{
                   marginTop: 14,
-                  background: "rgba(100,116,139,0.1)",
-                  border: "1px solid #475569",
+                  background: "#f1f5f9",
+                  border: "1px solid #e2e8f0",
                   borderRadius: 8,
                   padding: "12px 14px",
                   fontSize: 13,
-                  color: "#94a3b8",
+                  color: "#64748b",
                   textAlign: "center" as const,
                 }}>
                   Für diese LKW-Art ist kein Scanner-Dokument erforderlich.
@@ -575,8 +575,8 @@ export default function ScannerLandingPage() {
                   {searchError}
                 </p>
               ) : (
-                <p style={{ fontSize: 14, color: "#94a3b8", margin: "0 0 16px 0" }}>
-                  Keine Verladung für <strong style={{ color: "#f8fafc" }}>„{idInput.trim()}"</strong> gefunden.
+                <p style={{ fontSize: 14, color: "#64748b", margin: "0 0 16px 0" }}>
+                  Keine Verladung für <strong style={{ color: "#0f172a" }}>„{idInput.trim()}"</strong> gefunden.
                   Sie können die Checkliste trotzdem manuell ausfüllen.
                 </p>
               )}
