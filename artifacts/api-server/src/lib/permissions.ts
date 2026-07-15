@@ -18,6 +18,7 @@ export type Permission =
   | "spedition.edit"
   | "gefahrgut.reset"
   | "gefahrgut.assign_shipment"
+  | "wareneingang.reset"
   | "kanban.use"
   | "auftrag.analyse"
   | "auftrag.analyse.spedition"
@@ -62,6 +63,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "spedition.edit",
   "gefahrgut.reset",
   "gefahrgut.assign_shipment",
+  "wareneingang.reset",
   "kanban.use",
   "auftrag.analyse",
   "auftrag.analyse.spedition",
@@ -90,6 +92,7 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "spedition.edit":       { label: "Spedition bearbeiten",     category: "Speditionsverwaltung" },
   "gefahrgut.reset":            { label: "Checkliste zurücksetzen",       category: "Gefahrgut" },
   "gefahrgut.assign_shipment":  { label: "Checkliste LKW zuordnen",      category: "Gefahrgut" },
+  "wareneingang.reset":         { label: "Protokoll löschen",             category: "Wareneingang" },
   "kanban.use":                 { label: "Kanban-Board nutzen (Drag & Drop)", category: "Kanban" },
   "auftrag.analyse":            { label: "Auftragsauswertung (CSV-Upload)",    category: "Auftragsauswertung" },
   "auftrag.analyse.spedition":  { label: "Auftragsauswertung (eigene Zeile sehen)", category: "Auftragsauswertung" },

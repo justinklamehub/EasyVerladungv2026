@@ -147,4 +147,24 @@ router.get("/wareneingang-protokolle", requireAuth, async (req, res) => {
   }
 });
 
+router.delete("/wareneingang-protokolle/:id", requireAuth, async (req, res) => {
+  try {
+    if (!isCometRole(req.session.role!)) {
+      return res.status(403).json({ error: "Kein Zugriff" });
+    }
+    const { can } = await import("../lib/permissions");
+    const allowed = await can(req.session.role!, "wareneingang.reset");
+    if (!allowed) {
+      return res.status(403).json({ error: "Keine Berechtigung (wareneingang.reset)" });
+    }
+    const id = Number(req.params.id);
+    if (isNaN(id)) return res.status(400).json({ error: "Ungültige ID" });
+    await db.delete(wareneingangProtokollTable).where(eq(wareneingangProtokollTable.id, id));
+    return res.json({ success: true });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Serverfehler" });
+  }
+});
+
 export default router;

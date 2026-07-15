@@ -267,6 +267,26 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     onError: (e: any) => toast({ title: e.message ?? "Fehler", variant: "destructive" }),
   });
 
+  const resetWareneingangMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await fetch(`${API_BASE}/wareneingang-protokolle/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error((data as any).error ?? "Fehler beim Löschen");
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["wareneingang-protokolle", shipmentId] });
+      queryClient.invalidateQueries({ queryKey: ["wareneingang-status"] });
+      toast({ title: "Wareneingangsprotokoll gelöscht" });
+    },
+    onError: (e: any) => toast({ title: e.message ?? "Fehler", variant: "destructive" }),
+  });
+
   useEffect(() => {
     if (!shipmentId || !open) {
       setOtherEditors([]);
@@ -1249,30 +1269,42 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                             {wp.eingereichtAt ? format(new Date(wp.eingereichtAt), "dd.MM.yyyy HH:mm") : "—"} Uhr
                             {wp.lfdNr != null && <span className="ml-2 text-slate-400 font-normal">Lfd. Nr. {wp.lfdNr}</span>}
                           </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 text-slate-500 hover:text-slate-700"
-                            title="PDF / Drucken"
-                            onClick={() => printWareneingangProtokoll({
-                              lfdNr:                 wp.lfdNr,
-                              lkwid:                 wp.lkwid,
-                              shipmentId:            wp.shipmentId,
-                              anlieferungsdatum:     wp.anlieferungsdatum,
-                              beauftrageSpedition:   wp.beauftrageSpedition,
-                              ausfuehrendeSpedition: wp.ausfuehrendeSpedition,
-                              kfzKennzeichen:        wp.kfzKennzeichen,
-                              anzPaletten:           wp.anzPaletten,
-                              defektePaletten:       wp.defektePaletten,
-                              bemerkungen:           wp.bemerkungen,
-                              wareErhaltenDatum:     wp.wareErhaltenDatum,
-                              unterschrift:          wp.unterschrift,
-                              druckbuchstaben:       wp.druckbuchstaben,
-                              eingereichtAt:         wp.eingereichtAt,
-                            })}
-                          >
-                            <FileDown className="w-3.5 h-3.5" />
-                          </Button>
+                          <div className="flex items-center gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-slate-500 hover:text-slate-700"
+                              title="PDF / Drucken"
+                              onClick={() => printWareneingangProtokoll({
+                                lfdNr:                 wp.lfdNr,
+                                lkwid:                 wp.lkwid,
+                                shipmentId:            wp.shipmentId,
+                                anlieferungsdatum:     wp.anlieferungsdatum,
+                                beauftrageSpedition:   wp.beauftrageSpedition,
+                                ausfuehrendeSpedition: wp.ausfuehrendeSpedition,
+                                kfzKennzeichen:        wp.kfzKennzeichen,
+                                anzPaletten:           wp.anzPaletten,
+                                defektePaletten:       wp.defektePaletten,
+                                bemerkungen:           wp.bemerkungen,
+                                wareErhaltenDatum:     wp.wareErhaltenDatum,
+                                unterschrift:          wp.unterschrift,
+                                druckbuchstaben:       wp.druckbuchstaben,
+                                eingereichtAt:         wp.eingereichtAt,
+                              })}
+                            >
+                              <FileDown className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-red-400 hover:text-red-600"
+                              onClick={() => resetWareneingangMutation.mutate(wp.id)}
+                              disabled={resetWareneingangMutation.isPending}
+                              title="Protokoll löschen (Berechtigung: wareneingang.reset)"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs text-slate-600">
                           {wp.kfzKennzeichen && <div><span className="text-slate-400">Kennzeichen:</span> {wp.kfzKennzeichen}</div>}
