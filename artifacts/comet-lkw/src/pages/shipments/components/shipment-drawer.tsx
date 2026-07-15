@@ -1341,7 +1341,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                     <ImageIcon className="w-10 h-10 text-slate-300 mx-auto" />
                     <p className="text-sm text-slate-500">Noch keine Fotos vorhanden.</p>
                     <p className="text-xs text-slate-400">
-                      Fotos können optional beim Ausfüllen der Gefahrgut-Checkliste im Scanner aufgenommen werden.
+                      Fotos können optional beim Ausfüllen der Gefahrgut-Checkliste oder des Wareneingangsprotokolls im Scanner aufgenommen werden.
                     </p>
                   </div>
                 ) : (
