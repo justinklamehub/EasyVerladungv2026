@@ -50,7 +50,7 @@ router.post("/lkw-arten", async (req, res) => {
       name: string; typ: string; aktiv?: boolean; sortOrder?: number;
     };
     if (!name?.trim()) return res.status(400).json({ error: "Name erforderlich" });
-    if (!["anlieferung", "abholung"].includes(typ)) return res.status(400).json({ error: "Ungültiger Typ" });
+    if (!["anlieferung", "abholung", "keins"].includes(typ)) return res.status(400).json({ error: "Ungültiger Typ" });
 
     const [row] = await db
       .insert(lkwArtenTable)
@@ -77,7 +77,7 @@ router.patch("/lkw-arten/:id", async (req, res) => {
     const update: Record<string, unknown> = {};
     if (name !== undefined) update.name = name.trim();
     if (typ !== undefined) {
-      if (!["anlieferung", "abholung"].includes(typ)) return res.status(400).json({ error: "Ungültiger Typ" });
+      if (!["anlieferung", "abholung", "keins"].includes(typ)) return res.status(400).json({ error: "Ungültiger Typ" });
       update.typ = typ;
     }
     if (aktiv !== undefined) update.aktiv = aktiv;
