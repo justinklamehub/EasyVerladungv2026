@@ -1,8 +1,9 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useLocation, useSearch } from "wouter";
-import { ChevronLeft, Send, RotateCcw, CheckCircle2, AlertCircle, Loader2, PenTool, X } from "lucide-react";
+import { ChevronLeft, Send, RotateCcw, CheckCircle2, AlertCircle, Loader2, PenTool } from "lucide-react";
 
-const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
+const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
+const API = `${BASE}/api`;
 
 const C = "#b4ff00";
 const BG = "#0d1b2a";
@@ -79,25 +80,30 @@ const S = {
     outline: "none",
     boxSizing: "border-box" as const,
   },
-  checkRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-    padding: "8px 14px",
-    borderBottom: `1px solid ${BORDER}`,
+  inputReadonly: {
+    opacity: 0.6,
+    cursor: "default",
   },
-  checkbox: {
-    width: 22,
-    height: 22,
-    borderRadius: 5,
-    border: `2px solid ${BORDER}`,
-    background: "transparent",
+  sigBtn: {
+    width: "100%",
+    padding: "12px",
+    borderRadius: 6,
+    border: `1.5px dashed ${BORDER}`,
+    background: "#0a1628",
+    color: "#64748b",
     cursor: "pointer",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    flexShrink: 0,
-    transition: "all 0.15s",
+    gap: 8,
+    fontSize: 13,
+    fontWeight: 600,
+    marginTop: 6,
+  },
+  sigBtnSigned: {
+    borderColor: C,
+    color: C,
+    background: "rgba(180,255,0,0.06)",
   },
   submitBtn: {
     margin: "20px 12px 0",
@@ -119,19 +125,21 @@ const S = {
 };
 
 function Field({
-  label, value, onChange, placeholder, type = "text",
+  label, value, onChange, placeholder, type = "text", readOnly = false,
 }: {
-  label: string; value: string; onChange: (v: string) => void; placeholder?: string; type?: string;
+  label: string; value: string; onChange?: (v: string) => void;
+  placeholder?: string; type?: string; readOnly?: boolean;
 }) {
   return (
     <div style={S.row}>
       <div style={S.label}>{label}</div>
       <input
-        style={S.input}
+        style={{ ...S.input, ...(readOnly ? S.inputReadonly : {}) }}
         type={type}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder ?? ""}
+        onChange={readOnly ? undefined : (e) => onChange?.(e.target.value)}
+        readOnly={readOnly}
+        placeholder={readOnly ? undefined : (placeholder ?? "")}
       />
     </div>
   );
@@ -157,126 +165,158 @@ function TwoCol({
   );
 }
 
-function CheckItem({
-  label, checked, onToggle, lagerplatz, onLagerplatz,
+function SignaturePadModal({
+  onConfirm, onCancel,
 }: {
-  label: string; checked: boolean; onToggle: () => void;
-  lagerplatz: string; onLagerplatz: (v: string) => void;
+  onConfirm: (dataUrl: string) => void;
+  onCancel: () => void;
 }) {
-  return (
-    <div style={{ ...S.row, display: "grid", gridTemplateColumns: "auto 1fr auto 1fr", alignItems: "center", gap: 8 }}>
-      <button
-        style={{
-          ...S.checkbox,
-          background: checked ? C : "transparent",
-          borderColor: checked ? C : BORDER,
-        }}
-        onClick={onToggle}
-      >
-        {checked && <span style={{ fontSize: 14, color: BG, fontWeight: 700 }}>✓</span>}
-      </button>
-      <span style={{ fontSize: 14, color: checked ? "#e2e8f0" : "#94a3b8" }}>{label}</span>
-      <span style={{ fontSize: 11, color: "#64748b", whiteSpace: "nowrap" }}>Lagerplatz:</span>
-      <input
-        style={{ ...S.input, fontSize: 13, padding: "6px 10px" }}
-        value={lagerplatz}
-        onChange={(e) => onLagerplatz(e.target.value)}
-        placeholder="—"
-      />
-    </div>
-  );
-}
-
-function SignaturePad({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
+  const lastPos = useRef<{ x: number; y: number } | null>(null);
+  const [isEmpty, setIsEmpty] = useState(true);
 
-  const getPos = (e: React.MouseEvent | React.TouchEvent, canvas: HTMLCanvasElement) => {
+  const getPos = (e: MouseEvent | TouchEvent, canvas: HTMLCanvasElement) => {
     const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    if ("touches" in e) {
-      return {
-        x: (e.touches[0].clientX - rect.left) * scaleX,
-        y: (e.touches[0].clientY - rect.top) * scaleY,
-      };
-    }
+    const src = "touches" in e ? (e as TouchEvent).touches[0] : (e as MouseEvent);
     return {
-      x: (e.clientX - rect.left) * scaleX,
-      y: (e.clientY - rect.top) * scaleY,
+      x: (src.clientX - rect.left) * (canvas.width / rect.width),
+      y: (src.clientY - rect.top) * (canvas.height / rect.height),
     };
   };
 
-  const startDraw = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    drawing.current = true;
-    const canvas = canvasRef.current!;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    const pos = getPos(e, canvas);
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
-  }, []);
-
-  const draw = useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
-    if (!drawing.current) return;
-    const canvas = canvasRef.current!;
-    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#0d1b2a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = C;
     ctx.lineWidth = 2.5;
     ctx.lineCap = "round";
-    ctx.strokeStyle = C;
-    const pos = getPos(e, canvas);
-    ctx.lineTo(pos.x, pos.y);
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(pos.x, pos.y);
+    ctx.lineJoin = "round";
+
+    const start = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      drawing.current = true;
+      lastPos.current = getPos(e, canvas);
+      setIsEmpty(false);
+    };
+    const move = (e: MouseEvent | TouchEvent) => {
+      e.preventDefault();
+      if (!drawing.current || !lastPos.current) return;
+      const pos = getPos(e, canvas);
+      ctx.beginPath();
+      ctx.moveTo(lastPos.current.x, lastPos.current.y);
+      ctx.lineTo(pos.x, pos.y);
+      ctx.stroke();
+      lastPos.current = pos;
+    };
+    const end = () => { drawing.current = false; lastPos.current = null; };
+
+    canvas.addEventListener("mousedown", start);
+    canvas.addEventListener("mousemove", move);
+    canvas.addEventListener("mouseup", end);
+    canvas.addEventListener("touchstart", start, { passive: false });
+    canvas.addEventListener("touchmove", move, { passive: false });
+    canvas.addEventListener("touchend", end);
+    return () => {
+      canvas.removeEventListener("mousedown", start);
+      canvas.removeEventListener("mousemove", move);
+      canvas.removeEventListener("mouseup", end);
+      canvas.removeEventListener("touchstart", start);
+      canvas.removeEventListener("touchmove", move);
+      canvas.removeEventListener("touchend", end);
+    };
   }, []);
 
-  const endDraw = useCallback(() => {
-    drawing.current = false;
+  function clearPad() {
     const canvas = canvasRef.current;
-    if (canvas) onChange(canvas.toDataURL());
-  }, [onChange]);
-
-  const clear = useCallback(() => {
-    const canvas = canvasRef.current!;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onChange("");
-  }, [onChange]);
+    ctx.fillStyle = "#0d1b2a";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    setIsEmpty(true);
+  }
 
   return (
-    <div style={S.row}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-        <div style={S.label}>{label}</div>
-        <button
-          onClick={clear}
-          style={{ background: "transparent", border: `1px solid ${BORDER}`, borderRadius: 5, color: "#64748b", cursor: "pointer", fontSize: 11, padding: "3px 8px", display: "flex", alignItems: "center", gap: 4 }}
-        >
-          <RotateCcw size={10} /> Löschen
-        </button>
-      </div>
-      <div style={{ border: `1.5px solid ${value ? C : BORDER}`, borderRadius: 8, overflow: "hidden" }}>
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 100,
+      background: "rgba(0,0,0,0.85)",
+      display: "flex", alignItems: "center", justifyContent: "center",
+      padding: 16,
+    }}>
+      <div style={{
+        background: "#111d2e",
+        border: `1px solid ${BORDER}`,
+        borderRadius: 12,
+        padding: 16,
+        width: "100%",
+        maxWidth: 480,
+      }}>
+        <div style={{ fontSize: 13, fontWeight: 700, color: "#94a3b8", marginBottom: 10, letterSpacing: "0.1em" }}>
+          UNTERSCHRIFT ERFASSEN
+        </div>
         <canvas
           ref={canvasRef}
-          width={480}
-          height={120}
-          style={{ display: "block", width: "100%", height: 120, touchAction: "none", background: "#0a1628" }}
-          onMouseDown={startDraw}
-          onMouseMove={draw}
-          onMouseUp={endDraw}
-          onMouseLeave={endDraw}
-          onTouchStart={startDraw}
-          onTouchMove={draw}
-          onTouchEnd={endDraw}
+          width={640}
+          height={240}
+          style={{
+            width: "100%",
+            height: 180,
+            border: `2px solid ${C}`,
+            borderRadius: 6,
+            display: "block",
+            touchAction: "none",
+            cursor: "crosshair",
+          }}
         />
-      </div>
-      {!value && (
-        <div style={{ fontSize: 11, color: "#64748b", textAlign: "center", marginTop: 4 }}>
-          <PenTool size={11} style={{ display: "inline", marginRight: 4 }} />
-          Bitte unterschreiben
+        <div style={{ fontSize: 11, color: "#475569", textAlign: "center", marginTop: 6 }}>
+          Hier unterschreiben
         </div>
-      )}
+        <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+          <button
+            onClick={clearPad}
+            style={{
+              flex: 1, padding: "11px", borderRadius: 6,
+              border: `1px solid ${BORDER}`, background: "transparent",
+              color: "#94a3b8", cursor: "pointer", fontSize: 13, fontWeight: 600,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <RotateCcw size={14} /> Löschen
+          </button>
+          <button
+            onClick={onCancel}
+            style={{
+              flex: 1, padding: "11px", borderRadius: 6,
+              border: `1px solid #374151`, background: "transparent",
+              color: "#6b7280", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            }}
+          >
+            Abbrechen
+          </button>
+          <button
+            disabled={isEmpty}
+            onClick={() => {
+              const canvas = canvasRef.current;
+              if (!canvas) return;
+              onConfirm(canvas.toDataURL("image/png"));
+            }}
+            style={{
+              flex: 2, padding: "11px", borderRadius: 6,
+              border: "none",
+              background: isEmpty ? "#1e3a5f" : C,
+              color: isEmpty ? "#475569" : BG,
+              cursor: isEmpty ? "not-allowed" : "pointer",
+              fontSize: 13, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+            }}
+          >
+            <CheckCircle2 size={14} /> Übernehmen
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -292,26 +332,17 @@ export default function ScannerWareneingangPage() {
 
   const today = new Date().toISOString().slice(0, 10);
 
-  const [lkwid, setLkwid] = useState(shipmentId);
-  const [palettenscheinNr, setPalettenscheinNr] = useState("");
   const [anlieferungsdatum, setAnlieferungsdatum] = useState(today);
   const [beauftrageSpedition, setBeauftrageSpedition] = useState(spedition);
   const [ausfuehrendeSpedition, setAusfuehrendeSpedition] = useState("");
   const [kfzKennzeichen, setKfzKennzeichen] = useState(kennzeichen);
   const [anzPaletten, setAnzPaletten] = useState("");
   const [defektePaletten, setDefektePaletten] = useState("");
-  const [anzKartonsSoll, setAnzKartonsSoll] = useState("");
-  const [anzKartonsIst, setAnzKartonsIst] = useState("");
-  const [artRetoure, setArtRetoure] = useState(false);
-  const [artServiceware, setArtServiceware] = useState(false);
-  const [artSonstiges, setArtSonstiges] = useState(false);
-  const [lagerplatzRetoure, setLagerplatzRetoure] = useState("");
-  const [lagerplatzServiceware, setLagerplatzServiceware] = useState("");
-  const [lagerplatzSonstiges, setLagerplatzSonstiges] = useState("");
   const [bemerkungen, setBemerkungen] = useState("");
   const [wareErhaltenDatum, setWareErhaltenDatum] = useState(today);
-  const [unterschrift, setUnterschrift] = useState("");
+  const [unterschrift, setUnterschrift] = useState<string | null>(null);
   const [druckbuchstaben, setDruckbuchstaben] = useState("");
+  const [showSigPad, setShowSigPad] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitOk, setSubmitOk] = useState(false);
@@ -327,22 +358,13 @@ export default function ScannerWareneingangPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           shipmentId: shipmentId ? Number(shipmentId) : null,
-          lkwid,
-          palettenscheinNr,
+          lkwid: shipmentId,
           anlieferungsdatum,
           beauftrageSpedition,
           ausfuehrendeSpedition,
           kfzKennzeichen,
           anzPaletten,
           defektePaletten,
-          anzKartonsSoll,
-          anzKartonsIst,
-          artRetoure,
-          artServiceware,
-          artSonstiges,
-          lagerplatzRetoure,
-          lagerplatzServiceware,
-          lagerplatzSonstiges,
           bemerkungen,
           wareErhaltenDatum,
           unterschrift,
@@ -386,6 +408,13 @@ export default function ScannerWareneingangPage() {
 
   return (
     <div style={S.page}>
+      {showSigPad && (
+        <SignaturePadModal
+          onConfirm={(dataUrl) => { setUnterschrift(dataUrl); setShowSigPad(false); }}
+          onCancel={() => setShowSigPad(false)}
+        />
+      )}
+
       {/* Header */}
       <div style={S.header}>
         <button style={S.backBtn} onClick={() => setLocation("/scanner")}>
@@ -401,13 +430,10 @@ export default function ScannerWareneingangPage() {
         </div>
       </div>
 
-      {/* LKW-ID + Palettenschein header row */}
-      <div style={{ ...S.section }}>
+      {/* Kopfdaten */}
+      <div style={S.section}>
         <div style={S.sectionTitle}>Kopfdaten</div>
-        <TwoCol
-          label1="LKWID" value1={lkwid} onChange1={setLkwid}
-          label2="Palettenschein-Nr." value2={palettenscheinNr} onChange2={setPalettenscheinNr}
-        />
+        <Field label="LKW-ID" value={shipmentId} readOnly />
         <Field label="Anlieferungsdatum" value={anlieferungsdatum} onChange={setAnlieferungsdatum} type="date" />
         <Field label="Beauftragte Spedition" value={beauftrageSpedition} onChange={setBeauftrageSpedition} />
         <Field label="Ausführende Spedition" value={ausfuehrendeSpedition} onChange={setAusfuehrendeSpedition} />
@@ -416,40 +442,10 @@ export default function ScannerWareneingangPage() {
 
       {/* Paletten */}
       <div style={S.section}>
-        <div style={S.sectionTitle}>Paletten & Kartons</div>
+        <div style={S.sectionTitle}>Paletten</div>
         <TwoCol
           label1="Anz. Paletten" value1={anzPaletten} onChange1={setAnzPaletten}
           label2="Defekte Paletten" value2={defektePaletten} onChange2={setDefektePaletten}
-        />
-        <TwoCol
-          label1="Anz. Kartons SOLL" value1={anzKartonsSoll} onChange1={setAnzKartonsSoll}
-          label2="Anz. Kartons IST" value2={anzKartonsIst} onChange2={setAnzKartonsIst}
-        />
-      </div>
-
-      {/* Art der Anlieferung */}
-      <div style={S.section}>
-        <div style={S.sectionTitle}>Art der Anlieferung</div>
-        <CheckItem
-          label="Retoure"
-          checked={artRetoure}
-          onToggle={() => setArtRetoure((v) => !v)}
-          lagerplatz={lagerplatzRetoure}
-          onLagerplatz={setLagerplatzRetoure}
-        />
-        <CheckItem
-          label="Serviceware"
-          checked={artServiceware}
-          onToggle={() => setArtServiceware((v) => !v)}
-          lagerplatz={lagerplatzServiceware}
-          onLagerplatz={setLagerplatzServiceware}
-        />
-        <CheckItem
-          label="Sonstiges"
-          checked={artSonstiges}
-          onToggle={() => setArtSonstiges((v) => !v)}
-          lagerplatz={lagerplatzSonstiges}
-          onLagerplatz={setLagerplatzSonstiges}
         />
       </div>
 
@@ -466,11 +462,30 @@ export default function ScannerWareneingangPage() {
         </div>
       </div>
 
-      {/* Ware erhalten */}
+      {/* Ware erhalten / Unterschrift */}
       <div style={S.section}>
         <div style={S.sectionTitle}>Ware erhalten</div>
         <Field label="Datum" value={wareErhaltenDatum} onChange={setWareErhaltenDatum} type="date" />
-        <SignaturePad label="Unterschrift" value={unterschrift} onChange={setUnterschrift} />
+        <div style={S.row}>
+          <div style={S.label}>Unterschrift</div>
+          <button
+            style={{ ...S.sigBtn, ...(unterschrift ? S.sigBtnSigned : {}) }}
+            onClick={() => setShowSigPad(true)}
+          >
+            {unterschrift ? (
+              <><CheckCircle2 size={16} /> Unterschrift vorhanden (erneut erfassen)</>
+            ) : (
+              <><PenTool size={16} /> Unterschrift erfassen</>
+            )}
+          </button>
+          {unterschrift && (
+            <img
+              src={unterschrift}
+              alt="Unterschrift"
+              style={{ marginTop: 8, width: "100%", height: 60, objectFit: "contain", borderRadius: 4, background: "#0d1b2a", border: `1px solid ${BORDER}` }}
+            />
+          )}
+        </div>
         <Field label="Druckbuchstaben (Name)" value={druckbuchstaben} onChange={setDruckbuchstaben} placeholder="Vor- und Nachname" />
       </div>
 

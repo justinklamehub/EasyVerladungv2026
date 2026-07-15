@@ -619,7 +619,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               {isEditing && isCometUser && <TabsTrigger value="austragen" className="flex-1">Austragen</TabsTrigger>}
               {isEditing && isCometUser && (
                 <TabsTrigger value="gefahrgut" className="flex-1 gap-1">
-                  Gefahrgut
+                  Protokolle
                   {gefahrgutChecklisten && gefahrgutChecklisten.length > 0 && (
                     <span className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 text-[10px] leading-none px-1 py-0.5 rounded-full">
                       {gefahrgutChecklisten.length}
