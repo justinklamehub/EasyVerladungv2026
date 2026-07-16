@@ -335,12 +335,13 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
       const f = faktorMap[s.id] ?? 1;
       // Factor N:1: displayed zugaenge/abgaenge show RAW physical quantities (no factor applied).
       // The factor only affects anfangsbestand and endbestand (balance calculation).
-      // When f > 1: defekte excluded from neutral (use gross). When f = 1: use net (defekte subtracted).
-      // Neutral movements are split: AN-side → Zugänge, VON-side → Abgänge.
-      const neutralAnRaw  = f > 1 ? r.neutralAnGross  : r.neutralAnNet;
-      const neutralVonRaw = f > 1 ? r.neutralVonGross : r.neutralVonNet;
-      const preNeutralAnRaw  = f > 1 ? r.preNeutralAnGross  : r.preNeutralAnNet;
-      const preNeutralVonRaw = f > 1 ? r.preNeutralVonGross : r.preNeutralVonNet;
+      // Defekte (defective pallets) are EXCLUDED from zugaenge/abgaenge columns — they are
+      // shown separately in defekteVonComet / defekteAnComet, and rolled into "saldo".
+      // Neutral movements are split: AN-side → Zugänge (gross), VON-side → Abgänge (gross).
+      const neutralAnRaw  = r.neutralAnGross;
+      const neutralVonRaw = r.neutralVonGross;
+      const preNeutralAnRaw  = r.preNeutralAnGross;
+      const preNeutralVonRaw = r.preNeutralVonGross;
 
       // Display columns: raw physical quantities
       const zugaenge    = r.zugaenge + neutralAnRaw;
@@ -364,6 +365,7 @@ router.get("/pallet-report", requireAuth, async (req, res) => {
         defekteVonComet: r.defekteVonComet,
         defekteAnComet: r.defekteAnComet,
         defekteGesamt: r.defekteVonComet + r.defekteAnComet,
+        saldo: endbestand + r.defekteVonComet - r.defekteAnComet,
       };
     });
 

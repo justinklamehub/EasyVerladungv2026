@@ -423,10 +423,10 @@ export default function PalettenPage() {
   const plantCountTotal = plantCounts.reduce((s, p) => s + p.amount, 0);
 
   const getReportRows = () => {
-    const cols = ["Position", "Anfangsbestand", "Zugänge (+)", "Abgänge (−)", "Korrekturen", "Endbestand", "Def. von COMET", "Def. an COMET", "Def. Gesamt"];
+    const cols = ["Position", "Anfangsbestand", "Zugänge (+)", "Abgänge (−)", "Korrekturen", "Endbestand", "Def. von COMET", "Def. an COMET", "Saldo"];
     const rows = reportData.map(r => [
       r.speditionName, r.anfangsbestand, r.zugaenge, r.abgaenge, r.korrekturen, r.endbestand,
-      r.defekteVonComet, r.defekteAnComet, r.defekteGesamt,
+      r.defekteVonComet, r.defekteAnComet, r.saldo,
     ]);
     const calcEndbestand = reportData.reduce((s, r) => s + r.endbestand, 0);
     const inventurRows = plantCounts.map(p => [`Inventur Werk (${p.recordedAt})`, "", "", "", "", p.amount, "", "", p.note || ""]);
@@ -438,7 +438,7 @@ export default function PalettenPage() {
       calcEndbestand + plantCountTotal,
       reportData.reduce((s, r) => s + r.defekteVonComet, 0),
       reportData.reduce((s, r) => s + r.defekteAnComet, 0),
-      reportData.reduce((s, r) => s + r.defekteGesamt, 0),
+      reportData.reduce((s, r) => s + r.saldo, 0) + plantCountTotal,
     ];
     return { cols, rows: [...rows, ...inventurRows], totals };
   };
@@ -879,7 +879,7 @@ export default function PalettenPage() {
                       <TableHead className="text-right font-bold">Endbestand</TableHead>
                       <TableHead className="text-right text-slate-500">Def. (von COMET)</TableHead>
                       <TableHead className="text-right text-slate-500">Def. (an COMET)</TableHead>
-                      <TableHead className="text-right text-slate-700">Def. Gesamt</TableHead>
+                      <TableHead className="text-right font-bold text-slate-700">Saldo</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -897,8 +897,8 @@ export default function PalettenPage() {
                         </TableCell>
                         <TableCell className="text-right font-mono text-slate-500">{row.defekteVonComet || "—"}</TableCell>
                         <TableCell className="text-right font-mono text-slate-500">{row.defekteAnComet || "—"}</TableCell>
-                        <TableCell className={`text-right font-mono ${row.defekteGesamt > 0 ? "text-amber-700 font-semibold" : "text-slate-400"}`}>
-                          {row.defekteGesamt || "—"}
+                        <TableCell className={`text-right font-bold font-mono ${row.saldo < 0 ? "text-red-600" : row.saldo > 0 ? "text-green-700" : "text-slate-600"}`}>
+                          {row.saldo > 0 ? "+" : ""}{row.saldo}
                         </TableCell>
                       </TableRow>
                     ))}
@@ -940,7 +940,9 @@ export default function PalettenPage() {
                       </TableCell>
                       <TableCell className="text-right font-mono">{reportData.reduce((s, r) => s + r.defekteVonComet, 0) || "—"}</TableCell>
                       <TableCell className="text-right font-mono">{reportData.reduce((s, r) => s + r.defekteAnComet, 0) || "—"}</TableCell>
-                      <TableCell className="text-right font-mono">{reportData.reduce((s, r) => s + r.defekteGesamt, 0) || "—"}</TableCell>
+                      <TableCell className={`text-right font-bold font-mono ${(() => { const t = reportData.reduce((s, r) => s + r.saldo, 0) + plantCountTotal; return t < 0 ? "text-red-600" : t > 0 ? "text-green-700" : "text-slate-800"; })()}`}>
+                        {(() => { const t = reportData.reduce((s, r) => s + r.saldo, 0) + plantCountTotal; return t > 0 ? `+${t}` : t; })()}
+                      </TableCell>
                     </TableRow>
                   </TableBody>
                 </Table>
