@@ -446,7 +446,7 @@ router.get("/pallet-werkbestand", requireAuth, async (req, res) => {
         neutralVonGross:sql<number>`SUM(CASE WHEN ${palletMovementsTable.movementType}='neutral'   THEN COALESCE(${palletMovementsTable.vonCometEuropaletten},0)+COALESCE(${palletMovementsTable.vonCometLadungssicherung},0) ELSE 0 END)`.mapWith(Number),
       })
       .from(palletMovementsTable)
-      .where(sql`${palletMovementsTable.movementDate} > ${latest.recordedAt}`);
+      .where(sql`${palletMovementsTable.movementDate} >= ${latest.recordedAt}`);
 
     const delta =
       r.sumEingang - r.sumAusgang + r.sumKorrektur
