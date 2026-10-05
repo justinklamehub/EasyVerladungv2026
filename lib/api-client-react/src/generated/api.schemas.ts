@@ -462,6 +462,8 @@ export interface Shipment {
   lkwArt?: ShipmentLkwArt;
   status: ShipmentStatus;
   /** @nullable */
+  wareStatus?: string | null;
+  /** @nullable */
   tor?: string | null;
   cometBearbeitet: boolean;
   gesperrtFuerSpedition: boolean;
@@ -592,6 +594,8 @@ export interface ShipmentUpdate {
   lkwArt?: ShipmentUpdateLkwArt;
   status?: ShipmentUpdateStatus;
   /** @nullable */
+  wareStatus?: string | null;
+  /** @nullable */
   tor?: string | null;
 }
 
@@ -627,6 +631,20 @@ export interface PalletMovement {
   /** @nullable */
   bemerkungen?: string | null;
   /** @nullable */
+  palettenscheinnummer?: string | null;
+  /** @nullable */
+  vonCometEuropaletten?: number | null;
+  /** @nullable */
+  vonCometLadungssicherung?: number | null;
+  /** @nullable */
+  vonDefektePaletten?: number | null;
+  /** @nullable */
+  anCometEuropaletten?: number | null;
+  /** @nullable */
+  anCometLadungssicherung?: number | null;
+  /** @nullable */
+  anDefektePaletten?: number | null;
+  /** @nullable */
   reconciliationId?: number | null;
   /** @nullable */
   createdBy?: number | null;
@@ -657,6 +675,16 @@ export interface PalletMovementInput {
   amount: number;
   /** @nullable */
   bemerkungen?: string | null;
+  /** @nullable */
+  palettenscheinnummer?: string | null;
+  vonCometEuropaletten?: number;
+  vonCometLadungssicherung?: number;
+  vonDefektePaletten?: number;
+  anCometEuropaletten?: number;
+  anCometLadungssicherung?: number;
+  anDefektePaletten?: number;
+  /** @nullable */
+  reconciliationId?: number | null;
 }
 
 export type PalletMovementUpdateMovementType = typeof PalletMovementUpdateMovementType[keyof typeof PalletMovementUpdateMovementType];
@@ -685,6 +713,7 @@ export interface PalletBalance {
   speditionName: string;
   kuerzel?: string;
   balance: number;
+  palletFaktor?: number;
   /** @nullable */
   lastMovementDate?: string | null;
 }

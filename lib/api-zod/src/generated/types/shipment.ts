@@ -38,6 +38,8 @@ export interface Shipment {
   lkwArt?: ShipmentLkwArt;
   status: ShipmentStatus;
   /** @nullable */
+  wareStatus?: string | null;
+  /** @nullable */
   tor?: string | null;
   cometBearbeitet: boolean;
   gesperrtFuerSpedition: boolean;

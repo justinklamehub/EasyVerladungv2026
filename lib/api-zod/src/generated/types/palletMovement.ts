@@ -22,6 +22,20 @@ export interface PalletMovement {
   /** @nullable */
   bemerkungen?: string | null;
   /** @nullable */
+  palettenscheinnummer?: string | null;
+  /** @nullable */
+  vonCometEuropaletten?: number | null;
+  /** @nullable */
+  vonCometLadungssicherung?: number | null;
+  /** @nullable */
+  vonDefektePaletten?: number | null;
+  /** @nullable */
+  anCometEuropaletten?: number | null;
+  /** @nullable */
+  anCometLadungssicherung?: number | null;
+  /** @nullable */
+  anDefektePaletten?: number | null;
+  /** @nullable */
   reconciliationId?: number | null;
   /** @nullable */
   createdBy?: number | null;

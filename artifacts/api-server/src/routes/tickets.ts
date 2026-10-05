@@ -130,10 +130,10 @@ router.post("/tickets", requireAuth, async (req: any, res) => {
       })
       .returning();
 
-    res.status(201).json(ticket);
+    return res.status(201).json(ticket);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler beim Erstellen des Tickets" });
+    return res.status(500).json({ error: "Fehler beim Erstellen des Tickets" });
   }
 });
 
@@ -176,10 +176,10 @@ router.get("/tickets/:id", requireAuth, async (req: any, res) => {
       .where(eq(ticketCommentsTable.ticketId, id))
       .orderBy(ticketCommentsTable.createdAt);
 
-    res.json({ ...ticket, comments });
+    return res.json({ ...ticket, comments });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler" });
+    return res.status(500).json({ error: "Fehler" });
   }
 });
 
@@ -221,10 +221,10 @@ router.patch("/tickets/:id", requireAuth, async (req: any, res) => {
       .where(eq(ticketsTable.id, id))
       .returning();
 
-    res.json(updated);
+    return res.json(updated);
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler beim Aktualisieren" });
+    return res.status(500).json({ error: "Fehler beim Aktualisieren" });
   }
 });
 
@@ -243,10 +243,10 @@ router.delete("/tickets/:id", requireAuth, async (req: any, res) => {
     await db.delete(ticketCommentsTable).where(eq(ticketCommentsTable.ticketId, id));
     await db.delete(ticketsTable).where(eq(ticketsTable.id, id));
 
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler beim Loeschen" });
+    return res.status(500).json({ error: "Fehler beim Loeschen" });
   }
 });
 
@@ -271,10 +271,10 @@ router.post("/tickets/:id/comments", requireAuth, async (req: any, res) => {
       .set({ updatedAt: new Date() })
       .where(eq(ticketsTable.id, ticketId));
 
-    res.status(201).json({ ...comment, username: req.session.username });
+    return res.status(201).json({ ...comment, username: req.session.username });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler beim Speichern des Kommentars" });
+    return res.status(500).json({ error: "Fehler beim Speichern des Kommentars" });
   }
 });
 
@@ -295,10 +295,10 @@ router.delete("/tickets/:id/comments/:commentId", requireAuth, async (req: any, 
     if (!canDelete) return res.status(403).json({ error: "Keine Berechtigung" });
 
     await db.delete(ticketCommentsTable).where(eq(ticketCommentsTable.id, commentId));
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler" });
+    return res.status(500).json({ error: "Fehler" });
   }
 });
 
@@ -338,7 +338,7 @@ router.post("/tickets/:id/attachments", requireAuth, async (req: any, res) => {
       [ticketId, objectPath, fileName, contentType || "image/jpeg", req.session.userId]
     );
     const r = rows[0];
-    res.status(201).json({
+    return res.status(201).json({
       id: r.id,
       ticketId: r.ticket_id,
       objectPath: r.object_path,
@@ -349,7 +349,7 @@ router.post("/tickets/:id/attachments", requireAuth, async (req: any, res) => {
     });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler beim Speichern des Anhangs" });
+    return res.status(500).json({ error: "Fehler beim Speichern des Anhangs" });
   }
 });
 
@@ -370,10 +370,10 @@ router.delete("/tickets/:id/attachments/:attachmentId", requireAuth, async (req:
     if (!canDelete) return res.status(403).json({ error: "Keine Berechtigung" });
 
     await pool.query(`DELETE FROM ticket_attachments WHERE id = $1`, [attachmentId]);
-    res.json({ ok: true });
+    return res.json({ ok: true });
   } catch (e) {
     console.error(e);
-    res.status(500).json({ error: "Fehler beim Löschen des Anhangs" });
+    return res.status(500).json({ error: "Fehler beim Löschen des Anhangs" });
   }
 });
 

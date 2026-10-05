@@ -527,6 +527,7 @@ export const ListShipmentsResponseItem = zod.object({
   "ataTime": zod.string().nullish(),
   "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
   "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
   "tor": zod.string().nullish(),
   "cometBearbeitet": zod.boolean(),
   "gesperrtFuerSpedition": zod.boolean(),
@@ -607,6 +608,7 @@ export const GetShipmentResponse = zod.object({
   "ataTime": zod.string().nullish(),
   "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
   "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
   "tor": zod.string().nullish(),
   "cometBearbeitet": zod.boolean(),
   "gesperrtFuerSpedition": zod.boolean(),
@@ -640,6 +642,7 @@ export const UpdateShipmentBody = zod.object({
   "ataTime": zod.string().nullish(),
   "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
   "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']).optional(),
+  "wareStatus": zod.string().nullish(),
   "tor": zod.string().nullish()
 })
 
@@ -659,6 +662,7 @@ export const UpdateShipmentResponse = zod.object({
   "ataTime": zod.string().nullish(),
   "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
   "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
   "tor": zod.string().nullish(),
   "cometBearbeitet": zod.boolean(),
   "gesperrtFuerSpedition": zod.boolean(),
@@ -702,6 +706,7 @@ export const LockShipmentResponse = zod.object({
   "ataTime": zod.string().nullish(),
   "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
   "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
   "tor": zod.string().nullish(),
   "cometBearbeitet": zod.boolean(),
   "gesperrtFuerSpedition": zod.boolean(),
@@ -737,6 +742,7 @@ export const UnlockShipmentResponse = zod.object({
   "ataTime": zod.string().nullish(),
   "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
   "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
   "tor": zod.string().nullish(),
   "cometBearbeitet": zod.boolean(),
   "gesperrtFuerSpedition": zod.boolean(),
@@ -791,6 +797,13 @@ export const ListPalletMovementsResponseItem = zod.object({
   "movementDate": zod.string(),
   "amount": zod.number(),
   "bemerkungen": zod.string().nullish(),
+  "palettenscheinnummer": zod.string().nullish(),
+  "vonCometEuropaletten": zod.number().nullish(),
+  "vonCometLadungssicherung": zod.number().nullish(),
+  "vonDefektePaletten": zod.number().nullish(),
+  "anCometEuropaletten": zod.number().nullish(),
+  "anCometLadungssicherung": zod.number().nullish(),
+  "anDefektePaletten": zod.number().nullish(),
   "reconciliationId": zod.number().nullish(),
   "createdBy": zod.number().nullish(),
   "createdByName": zod.string().nullish(),
@@ -808,7 +821,15 @@ export const CreatePalletMovementBody = zod.object({
   "movementType": zod.enum(['eingang', 'ausgang', 'neutral', 'korrektur', 'abstimmung', 'anfangsbestand', 'abschreibung']),
   "movementDate": zod.string(),
   "amount": zod.number(),
-  "bemerkungen": zod.string().nullish()
+  "bemerkungen": zod.string().nullish(),
+  "palettenscheinnummer": zod.string().nullish(),
+  "vonCometEuropaletten": zod.number().optional(),
+  "vonCometLadungssicherung": zod.number().optional(),
+  "vonDefektePaletten": zod.number().optional(),
+  "anCometEuropaletten": zod.number().optional(),
+  "anCometLadungssicherung": zod.number().optional(),
+  "anDefektePaletten": zod.number().optional(),
+  "reconciliationId": zod.number().nullish()
 })
 
 
@@ -836,6 +857,13 @@ export const UpdatePalletMovementResponse = zod.object({
   "movementDate": zod.string(),
   "amount": zod.number(),
   "bemerkungen": zod.string().nullish(),
+  "palettenscheinnummer": zod.string().nullish(),
+  "vonCometEuropaletten": zod.number().nullish(),
+  "vonCometLadungssicherung": zod.number().nullish(),
+  "vonDefektePaletten": zod.number().nullish(),
+  "anCometEuropaletten": zod.number().nullish(),
+  "anCometLadungssicherung": zod.number().nullish(),
+  "anDefektePaletten": zod.number().nullish(),
   "reconciliationId": zod.number().nullish(),
   "createdBy": zod.number().nullish(),
   "createdByName": zod.string().nullish(),
@@ -859,6 +887,7 @@ export const ListPalletBalancesResponseItem = zod.object({
   "speditionName": zod.string(),
   "kuerzel": zod.string().optional(),
   "balance": zod.number(),
+  "palletFaktor": zod.number().optional(),
   "lastMovementDate": zod.string().nullish()
 })
 export const ListPalletBalancesResponse = zod.array(ListPalletBalancesResponseItem)
@@ -1021,6 +1050,7 @@ export const GetDashboardResponse = zod.object({
   "speditionName": zod.string(),
   "kuerzel": zod.string().optional(),
   "balance": zod.number(),
+  "palletFaktor": zod.number().optional(),
   "lastMovementDate": zod.string().nullish()
 })),
   "openReconciliations": zod.number()

@@ -88,7 +88,7 @@ router.post("/shipments/templates", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/shipments/templates/:id", requireAuth, async (req, res) => {
+router.patch<{ id: string }>("/shipments/templates/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: "Ungültige ID" });
@@ -139,7 +139,7 @@ router.patch("/shipments/templates/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.delete("/shipments/templates/:id", requireAuth, async (req, res) => {
+router.delete<{ id: string }>("/shipments/templates/:id", requireAuth, async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: "Ungültige ID" });

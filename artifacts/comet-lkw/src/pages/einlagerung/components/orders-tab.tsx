@@ -123,7 +123,7 @@ export function OrdersTab({ state, model, has }: { state: EinlagerungState; mode
         )}
       </section>
 
-      <RecordDialog open={open} onOpenChange={setOpen} title={edit ? "Reservierung bearbeiten" : "Neue Reservierung"} kind="reservation" record={edit} fields={fields} defaults={{ status: "offen", plusKw: 0 }} />
+      <RecordDialog open={open} onOpenChange={setOpen} title={edit ? "Reservierung bearbeiten" : "Neue Reservierung"} kind="reservation" record={edit} fields={fields} defaults={{ status: "offen", plusKw: "" }} />
       <ConfirmDelete open={!!del} onOpenChange={(o) => !o && setDel(null)} title="Reservierung löschen?" description="Die Reservierung wird dauerhaft entfernt."
         onConfirm={async () => { if (!del) return; try { await remove("reservation", del.id); toast({ title: "Reservierung gelöscht" }); } catch (e) { toast({ title: "Löschen fehlgeschlagen", description: errMsg(e), variant: "destructive" }); } setDel(null); }} />
     </div>

@@ -635,8 +635,8 @@ export default function AuftragsauswertungPage() {
                             </span>
                             {!isSpedUser && (
                               s.matched
-                                ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" title="In Stammdaten gefunden" />
-                                : <AlertCircle className="h-3.5 w-3.5 text-amber-400 shrink-0" title="Nicht zugeordnet" />
+                                ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" aria-label="In Stammdaten gefunden"><title>In Stammdaten gefunden</title></CheckCircle2>
+                                : <AlertCircle className="h-3.5 w-3.5 text-amber-400 shrink-0" aria-label="Nicht zugeordnet"><title>Nicht zugeordnet</title></AlertCircle>
                             )}
                             {isSpedUser && isOwn && (
                               <span className="text-[11px] font-medium text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full leading-none">

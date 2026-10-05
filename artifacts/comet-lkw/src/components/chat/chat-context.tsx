@@ -6,6 +6,8 @@ import {
   useCallback,
   useRef,
   ReactNode,
+  Dispatch,
+  SetStateAction,
 } from "react";
 import { customFetch } from "@workspace/api-client-react";
 import { getSocket } from "@/lib/socket";
@@ -53,7 +55,7 @@ interface ChatContextType {
   isLoading: boolean;
   isAiTyping: boolean;
   typingInfo: TypingInfo | null;
-  setIsPanelOpen: (open: boolean) => void;
+  setIsPanelOpen: Dispatch<SetStateAction<boolean>>;
   setIsInboxOpen: (open: boolean) => void;
   openNewChat: (targetRole: "leitstand" | "admin", subject?: string) => Promise<void>;
   openExistingSession: (session: ChatSession) => Promise<void>;
@@ -123,7 +125,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     const load = async () => {
       try {
-        const data = await customFetch("/api/chat/sessions");
+        const data = await customFetch<{ sessions: ChatSession[] }>("/api/chat/sessions");
         const all: ChatSession[] = data.sessions ?? [];
         if (isStaff) {
           // Staff see others' sessions in inbox, but can also have their own chat
@@ -150,7 +152,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const socket = getSocket();
     socket.emit("chat:join", { sessionId });
     try {
-      const data = await customFetch(`/api/chat/sessions/${sessionId}/messages`);
+      const data = await customFetch<{ messages: ChatMessage[] }>(`/api/chat/sessions/${sessionId}/messages`);
       setMessages(data.messages ?? []);
     } catch { /* ignore */ }
   }, []);
@@ -246,7 +248,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const openNewChat = useCallback(async (targetRole: "leitstand" | "admin", subject?: string) => {
     setIsLoading(true);
     try {
-      const data = await customFetch("/api/chat/sessions", {
+      const data = await customFetch<{ session: ChatSession }>("/api/chat/sessions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ targetRole, subject }),
@@ -270,7 +272,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [joinAndLoadMessages]);
 
   const claimSession = useCallback(async (sessionId: number) => {
-    const data = await customFetch(`/api/chat/sessions/${sessionId}/claim`, {
+    const data = await customFetch<{ session: ChatSession }>(`/api/chat/sessions/${sessionId}/claim`, {
       method: "POST",
     });
     const session: ChatSession = data.session;
@@ -284,7 +286,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const setShowHistory = useCallback((show: boolean) => {
     setShowHistoryState(show);
     if (show && isStaff) {
-      customFetch("/api/chat/sessions?history=true")
+      customFetch<{ sessions: ChatSession[] }>("/api/chat/sessions?history=true")
         .then((data) => setClosedSessions(data.sessions ?? []))
         .catch(() => {});
     } else {
@@ -294,7 +296,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
 
   const escalateSession = useCallback(async () => {
     if (!activeSession) return;
-    const data = await customFetch(`/api/chat/sessions/${activeSession.id}/escalate`, {
+    const data = await customFetch<{ session: ChatSession }>(`/api/chat/sessions/${activeSession.id}/escalate`, {
       method: "POST",
     });
     setActiveSession(data.session);
@@ -305,10 +307,10 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const createTicketFromChat = useCallback(async (sessionId: number) => {
-    const data = await customFetch(`/api/chat/sessions/${sessionId}/create-ticket`, {
+    const data = await customFetch<{ ticket: { id: number; title: string } }>(`/api/chat/sessions/${sessionId}/create-ticket`, {
       method: "POST",
     });
-    return data.ticket as { id: number; title: string };
+    return data.ticket;
   }, []);
 
   const closeSession = useCallback(async (sessionId?: number) => {

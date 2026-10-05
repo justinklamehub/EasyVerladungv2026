@@ -34,7 +34,7 @@ router.get("/settings", requireAuth, async (req, res) => {
   }
 });
 
-router.put("/settings/:key", requireAuth, async (req, res) => {
+router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;
     if (role !== "comet_admin") {

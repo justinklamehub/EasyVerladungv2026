@@ -1485,6 +1485,8 @@ components:
         status:
           type: string
           enum: [Angemeldet, Erwartet, Angekommen, Verladen, Abgefertigt, Storniert]
+        wareStatus:
+          type: ["string", "null"]
         tor:
           type: ["string", "null"]
         cometBearbeitet:
@@ -1569,6 +1571,8 @@ components:
         status:
           type: string
           enum: [Angemeldet, Erwartet, Angekommen, Verladen, Abgefertigt, Storniert]
+        wareStatus:
+          type: ["string", "null"]
         tor:
           type: ["string", "null"]
 
@@ -1604,6 +1608,20 @@ components:
           type: integer
         bemerkungen:
           type: ["string", "null"]
+        palettenscheinnummer:
+          type: ["string", "null"]
+        vonCometEuropaletten:
+          type: ["integer", "null"]
+        vonCometLadungssicherung:
+          type: ["integer", "null"]
+        vonDefektePaletten:
+          type: ["integer", "null"]
+        anCometEuropaletten:
+          type: ["integer", "null"]
+        anCometLadungssicherung:
+          type: ["integer", "null"]
+        anDefektePaletten:
+          type: ["integer", "null"]
         reconciliationId:
           type: ["integer", "null"]
         createdBy:
@@ -1630,6 +1648,22 @@ components:
           type: integer
         bemerkungen:
           type: ["string", "null"]
+        palettenscheinnummer:
+          type: ["string", "null"]
+        vonCometEuropaletten:
+          type: integer
+        vonCometLadungssicherung:
+          type: integer
+        vonDefektePaletten:
+          type: integer
+        anCometEuropaletten:
+          type: integer
+        anCometLadungssicherung:
+          type: integer
+        anDefektePaletten:
+          type: integer
+        reconciliationId:
+          type: ["integer", "null"]
 
     PalletMovementUpdate:
       type: object
@@ -1656,6 +1690,8 @@ components:
           type: string
         balance:
           type: integer
+        palletFaktor:
+          type: number
         lastMovementDate:
           type: ["string", "null"]
 

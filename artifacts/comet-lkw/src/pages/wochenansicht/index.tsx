@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { customFetch, useListSpeditionen } from "@workspace/api-client-react";
+import { customFetch, getListSpeditionenQueryKey, useListSpeditionen } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { Badge } from "@/components/ui/badge";
@@ -341,7 +341,7 @@ export default function WochenansichtPage() {
   });
 
   // Fetch Speditionen list (only relevant for COMET-side users)
-  const { data: speditionen } = useListSpeditionen({ query: { enabled: isCometUser } });
+  const { data: speditionen } = useListSpeditionen({ query: { queryKey: getListSpeditionenQueryKey(), enabled: isCometUser } });
 
   const canDrag = !!permissions["shipment.reschedule"];
 

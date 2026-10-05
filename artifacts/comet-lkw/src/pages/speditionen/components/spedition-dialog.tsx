@@ -128,7 +128,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
       onSuccess: () => {
         if (editSpedition) queryClient.invalidateQueries({ queryKey: getListSpeditionPermissionsQueryKey(editSpedition.id) });
         toast({ title: "Berechtigung gesetzt" });
-        setNewReceivingId("__none__"); setNewLevel("view");
+        setNewReceivingId("__none__");
       },
       onError: (e: any) => toast({ title: e?.response?.data?.error ?? "Fehler", variant: "destructive" }),
     },

@@ -297,7 +297,7 @@ router.get("/push/message-templates", requireCometAdmin, async (_req, res) => {
 });
 
 // Admin: Push-Nachrichten-Template aktualisieren
-router.patch("/push/message-templates/:eventKey", requireCometAdmin, async (req, res) => {
+router.patch<{ eventKey: string }>("/push/message-templates/:eventKey", requireCometAdmin, async (req, res) => {
   try {
     const { eventKey } = req.params;
     const { title_template, message_template } = req.body as { title_template?: string; message_template?: string };

@@ -35,5 +35,7 @@ export interface ShipmentUpdate {
   lkwArt?: ShipmentUpdateLkwArt;
   status?: ShipmentUpdateStatus;
   /** @nullable */
+  wareStatus?: string | null;
+  /** @nullable */
   tor?: string | null;
 }

@@ -81,14 +81,14 @@ export function useSocket() {
     const invalidatePalletMovements = () => {
       if (palletMovementsTimer) clearTimeout(palletMovementsTimer);
       palletMovementsTimer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: getListPalletMovementsQueryKey(), cancelRefetch: false });
+        queryClient.invalidateQueries({ queryKey: getListPalletMovementsQueryKey() }, { cancelRefetch: false });
         palletMovementsTimer = null;
       }, 500);
     };
     const invalidatePalletBalances = () => {
       if (palletBalancesTimer) clearTimeout(palletBalancesTimer);
       palletBalancesTimer = setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: getListPalletBalancesQueryKey(), cancelRefetch: false });
+        queryClient.invalidateQueries({ queryKey: getListPalletBalancesQueryKey() }, { cancelRefetch: false });
         palletBalancesTimer = null;
       }, 500);
     };

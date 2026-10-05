@@ -2,6 +2,7 @@ import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { pool } from "@workspace/db";
+import { CreateEinlagerungRecordBody, UpdateEinlagerungRecordBody } from "@workspace/api-zod";
 import { parseCsv, prepareImport, commitImport, type ImportInput } from "./import";
 import { aggregateStock, checkData, records, settingsSchema, defaults, read } from "./model";
 import { occupancy, search } from "./search";
@@ -86,6 +87,30 @@ test("Record validation rejects duplicate cross-article EANs and unknown kinds",
   assert.throws(() => checkData("toString", {}, []), /Unbekannter/);
 });
 
+test("Reservation dialog payloads support creation and editing with default, blank and populated Plus-KW", () => {
+  const all = [
+    { id: 1, kind: "shelf", updatedAt: "2026-10-05T00:00:00.000Z", data: { name: "S1", active: true } },
+    { id: 4, kind: "carrier", updatedAt: "", data: { name: "Testspedition", speditionId: 2, active: true } },
+  ];
+  const form = { shelfId: 1, carrierId: 4, speditionId: null, speditionName: "", relation: "Relation", termin: "2026-10-05",
+    note: "", status: "offen", plusKw: "" };
+  for (const value of ["", " ", "0", "2", "02"]) {
+    // Text inputs are trimmed by RecordDialog; IDs from numeric selects are numbers.
+    const submitted = { ...form, plusKw: value.trim() };
+    const expected = { ...submitted, speditionId: 2, speditionName: "Testspedition" };
+    const create = CreateEinlagerungRecordBody.parse({ data: submitted });
+    assert.deepEqual(checkData("reservation", create.data, all), expected);
+    const existing = { id: 3, kind: "reservation", updatedAt: all[0]!.updatedAt, data: { ...form, plusKw: "4" } };
+    const edit = UpdateEinlagerungRecordBody.parse({
+      data: { ...existing.data, ...submitted }, expectedUpdatedAt: existing.updatedAt,
+    });
+    assert.deepEqual(checkData("reservation", edit.data, [...all, existing], existing.id), expected);
+    assert.equal(edit.expectedUpdatedAt, existing.updatedAt);
+  }
+  assert.equal(checkData("reservation", { ...form, plusKw: undefined }, all).plusKw, "");
+  assert.throws(() => checkData("reservation", { ...form, plusKw: "1".repeat(31) }, all), /plusKw/);
+});
+
 test("Occupancy counts distinct HUs, not CSV lines or mixed-material groups", () => {
   const rows = [
     { lagerplatz: "S1", material: "001", lagereinh: "HU1" },
@@ -110,6 +135,29 @@ test("Transactional CSV preview/commit, merge by HU, replace, and current strate
     const shelfName = `TEST-${suffix}`, otherName = `TEST2-${suffix}`;
     const shelf = await add("shelf", { name: shelfName, aisleId: aisle, active: true, sort: 99, full: false });
     await add("shelf", { name: otherName, aisleId: aisle, active: true, sort: 100, full: false });
+    // Reservation smoke test: validate dialog-shaped bodies and round-trip JSON storage
+    // for create, populated edit, zero text, and clearing the field. All writes roll back.
+    const reservationSpedition = (await client.query("SELECT id FROM speditionen ORDER BY id LIMIT 1")).rows[0];
+    assert.ok(reservationSpedition, "reservation smoke test needs an existing spedition");
+    const carrierId = await add("carrier", { name: `TEST-CARRIER-${suffix}`, speditionId: reservationSpedition.id, active: true });
+    const form = { shelfId: shelf, carrierId, relation: "TEST",
+      termin: "2026-10-05", plusKw: "", note: "", status: "offen" };
+    const createBody = CreateEinlagerungRecordBody.parse({ data: form });
+    const reservationId = await add("reservation", checkData("reservation", createBody.data, await records(client)));
+    for (const plusKw of ["", "02", "0", ""]) {
+      const all = await records(client);
+      const existing = all.find((r) => r.id === reservationId)!;
+      const editBody = UpdateEinlagerungRecordBody.parse({
+        data: { ...existing.data, plusKw }, expectedUpdatedAt: existing.updatedAt,
+      });
+      const validated = checkData("reservation", editBody.data, all, reservationId);
+      await client.query("UPDATE einlagerung_records SET data=$1,updated_at=clock_timestamp() WHERE id=$2",
+        [JSON.stringify(validated), reservationId]);
+      const saved = (await records(client)).find((r) => r.id === reservationId)!;
+      assert.equal(saved.data.plusKw, plusKw);
+      assert.equal(typeof saved.data.plusKw, "string");
+    }
+    await client.query("DELETE FROM einlagerung_records WHERE id=$1", [reservationId]);
     const articleNo = `00-${suffix}`, ean = `000-${suffix}`;
     const articleInput: ImportInput = { type: "artikel", filename: "test.csv", mode: "merge", mapping: {},
       csv: `artikelnummer;ean;artikelname\n${articleNo};${ean};Testartikel` };

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { useListUsers } from "@workspace/api-client-react";
+import { getListUsersQueryKey, useListUsers } from "@workspace/api-client-react";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,7 @@ export function SendPushDialog({ open, onOpenChange }: SendPushDialogProps) {
   const [message, setMessage] = useState("");
   const { toast } = useToast();
 
-  const { data: users } = useListUsers(undefined, { query: { enabled: open && targetType === "user" } });
+  const { data: users } = useListUsers(undefined, { query: { queryKey: getListUsersQueryKey(), enabled: open && targetType === "user" } });
 
   const reset = () => {
     setTargetType("all");

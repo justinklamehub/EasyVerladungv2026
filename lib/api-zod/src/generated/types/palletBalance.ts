@@ -11,6 +11,7 @@ export interface PalletBalance {
   speditionName: string;
   kuerzel?: string;
   balance: number;
+  palletFaktor?: number;
   /** @nullable */
   lastMovementDate?: string | null;
 }

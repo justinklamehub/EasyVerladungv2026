@@ -314,7 +314,7 @@ export default function TicketsPage() {
   const [activeStatus, setActiveStatus] = useState("Offen");
   const [filterCategory, setFilterCategory] = useState("");
   const [filterPriority, setFilterPriority] = useState("");
-  const [selectedTicket, setSelectedTicket] = useState<TicketDetail | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<TicketRow | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [commentBody, setCommentBody] = useState("");
   const [newTicket, setNewTicket] = useState({
