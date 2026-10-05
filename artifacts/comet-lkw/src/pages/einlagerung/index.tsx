@@ -32,7 +32,7 @@ export default function EinlagerungPage() {
   const active = tabs.find((t) => t.id === tab)?.id ?? tabs[0]?.id;
 
   return (
-    <div className="p-6 max-w-7xl mx-auto space-y-5">
+    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-5">
       <div className="flex flex-wrap items-start gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2"><Warehouse className="w-6 h-6 text-slate-500" />Einlagerung</h1>

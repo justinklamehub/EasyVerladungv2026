@@ -15,3 +15,5 @@
 - [COMET LKW password policy](comet-lkw-password-policy.md) — forced first-login change, 90-day expiry, complexity rules via must_change_password/password_changed_at columns; dev DB schema drift can silently add NOT NULL constraints not in the Drizzle schema.
 - [Einlagerungsstrategie](einlagerung-scope.md) — in COMET integrieren, aktuelles Styling verwenden, Lagerstruktur und Strategie dynamisch mit Einstellungen und Rechtevergabe.
 - [Dropdown CSS variables](dropdown-css-variables.md) — CSS-Variablen für Höhen ausdrücklich mit var(...) angeben; lange Radix-Auswahllisten im Browser auf interne Scrollbarkeit prüfen.
+- [Frontend JSX tests](frontend-jsx-tests.md) — Vite and plain tsx component tests can use different JSX runtimes; align them before treating SSR failures as app bugs.
+- [Browser preview resets](browser-preview-recovery.md) — after a testing notebook reset and HTTP 502, check stopped workflows before diagnosing an app regression.

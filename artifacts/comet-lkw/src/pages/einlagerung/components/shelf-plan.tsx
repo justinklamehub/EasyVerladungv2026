@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useSearchEinlagerung, getSearchEinlagerungQueryKey } from "@workspace/api-client-react";
 import type { EinlagerungState, SearchEinlagerungParams } from "@workspace/api-client-react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -11,21 +11,28 @@ import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { SimpleSelect } from "./simple-select";
 import { LocationCard } from "./location-card";
+import { ArticleStrip } from "./article-strip";
+import { ShelfMatrix } from "./shelf-matrix";
+import { compareShelvesDescending } from "./shelf-layout";
 import { DATASET_LABELS, datasetOf, nf, type Model, type Rec } from "../lib";
 
 function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null; model: Model; state: EinlagerungState; has: (k: string) => boolean; onClose: () => void }) {
   const params = useMemo<SearchEinlagerungParams>(() => ({ mode: "regal", shelfId: shelf?.id }), [shelf?.id]);
   const q = useSearchEinlagerung(params, { query: { enabled: !!shelf, queryKey: getSearchEinlagerungQueryKey(params), refetchInterval: 30_000, refetchIntervalInBackground: false } });
   const imported = { ist: !!datasetOf(state.datasets, "istbestand"), retouren: !!datasetOf(state.datasets, "retouren"), auftraege: !!datasetOf(state.datasets, "auftraege") };
-  const loc = q.data?.locations.find((l) => l.shelf.id === shelf?.id) ?? q.data?.locations[0];
+  const loc = q.data?.locations.find((l) => l.shelf.id === shelf?.id);
   const resv = model.reservations.filter((r) => Number(r.d.shelfId) === shelf?.id && r.d.status === "offen");
   return (
     <Dialog open={!!shelf} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-xl max-h-[90dvh] overflow-y-auto">
-        <DialogHeader><DialogTitle>Regal {String(shelf?.d.name ?? "")}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Regal {String(shelf?.d.name ?? "")}</DialogTitle>
+          <DialogDescription className="sr-only">IST-Bestand, Retouren und Aufträge des ausgewählten Regals.</DialogDescription>
+        </DialogHeader>
         {q.isLoading && <Skeleton className="h-40" />}
         {q.isError && <p className="text-sm text-red-700">Details konnten nicht geladen werden.</p>}
-        {loc && <LocationCard loc={loc} has={has} imported={imported} label={model.shelfLabel(shelf ?? undefined)} />}
+        {loc && <LocationCard loc={loc} has={has} imported={imported} label={model.shelfLabel(shelf ?? undefined)} separateStock />}
+        {!q.isLoading && !q.isError && q.data && !loc && <p className="text-sm text-slate-500">{q.data.message || "Keine Daten für dieses Regal gefunden."}</p>}
         {resv.length > 0 && (
           <div className="space-y-1">
             <div className="text-xs uppercase tracking-wider text-slate-500">Offene Reservierungen</div>
@@ -48,22 +55,25 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
   const [q, setQ] = useState("");
   const [hideFull, setHideFull] = useState(state.settings.hideFull);
   const [sel, setSel] = useState<Rec | null>(null);
+  const [view, setView] = useState<"matrix" | "tiles">("matrix");
 
   const occ = useMemo(() => new Map(state.occupancy.map((o) => [o.shelf, o])), [state.occupancy]);
   const assigned = useMemo(() => {
-    const byShelf = new Map<number, { number: string; name: string; priority: number }[]>();
+    const byShelf = new Map<number, { id: number; number: string; name: string; priority: number; color: string; group: string }[]>();
     for (const rule of model.rules) {
       if (rule.d.active === false) continue;
       const article = model.articleById.get(Number(rule.d.articleId));
       if (!article || article.d.active === false) continue;
       const shelfId = Number(rule.d.shelfId);
       const list = byShelf.get(shelfId) ?? [];
-      list.push({ number: String(article.d.number), name: String(article.d.name ?? ""), priority: Number(rule.d.priority) });
+      const group = model.groupById.get(Number(rule.d.groupId));
+      list.push({ id: rule.id, number: String(article.d.number), name: String(article.d.name ?? ""),
+        priority: Number(rule.d.priority), color: String(group?.d.color ?? "#e2e8f0"), group: String(group?.d.name ?? "") });
       byShelf.set(shelfId, list);
     }
     for (const list of byShelf.values()) list.sort((a, b) => a.priority - b.priority || a.number.localeCompare(b.number, "de", { numeric: true }));
     return byShelf;
-  }, [model.rules, model.articleById]);
+  }, [model.rules, model.articleById, model.groupById]);
   const ds = { ist: datasetOf(state.datasets, "istbestand"), ret: datasetOf(state.datasets, "retouren"), auf: datasetOf(state.datasets, "auftraege") };
 
   const aisles = model.aisles.filter((a) => a.d.active !== false && (!hall || String(a.d.hallId) === hall));
@@ -80,7 +90,7 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
       if (q && !String(s.d.name).toLowerCase().includes(q.toLowerCase()) &&
         !(assigned.get(s.id) ?? []).some((a) => a.number.toLowerCase().includes(q.toLowerCase()))) return false;
       return true;
-    }),
+    }).sort(compareShelvesDescending),
   })).filter((g) => g.shelves.length > 0 && g.hall?.d.active !== false);
 
   const staleMs = state.settings.staleHours * 3600_000;
@@ -113,8 +123,17 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
         </div>
       </div>
 
+      <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Ansicht">
+        {([["matrix", "Matrix"], ["tiles", "Kacheln"]] as const).map(([v, l]) => (
+          <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} data-testid={`view-${v}`}
+            className={`px-3 py-1 rounded ${view === v ? "bg-slate-900 text-white" : "text-slate-700"}`}>{l}</button>
+        ))}
+      </div>
       {groups.length === 0 && <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">Keine Regale für diese Filter.</div>}
-      {groups.map(({ aisle: a, hall: h, shelves }) => (
+      {view === "matrix" && groups.length > 0 && (
+        <ShelfMatrix groups={groups} occ={occ} assigned={assigned} colors={state.settings.colors} istImported={!!ds.ist} onSelect={setSel} />
+      )}
+      {view === "tiles" && groups.map(({ aisle: a, hall: h, shelves }) => (
         <section key={a.id} className="rounded-xl border border-slate-200 bg-white">
           <div className="px-4 py-2.5 border-b border-slate-200 flex items-baseline gap-2">
             <span className="text-xs uppercase tracking-wider text-slate-500">{String(h?.d.name ?? "")}</span>
@@ -143,9 +162,8 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
                      <span className="font-semibold text-sm" style={{ color: foreground }}>{String(s.d.name)}</span>
                      {s.d.full ? <span className="text-[10px] font-semibold uppercase" style={{ color: foreground }}>Voll</span> : null}
                   </div>
-                   {articles.length > 0 && <div className="mb-2 text-[11px] leading-snug" style={{ color: foreground }} data-testid={`articles-shelf-${s.id}`}>
-                     <span className="font-medium">Artikel: </span>
-                     {articles.map((article, i) => <span key={i} className="inline-block mr-1" title={`${article.name} · Priorität ${article.priority}`}>{article.number}{i < articles.length - 1 ? "," : ""}</span>)}
+                   {articles.length > 0 && <div className="mb-2 space-y-1" data-testid={`articles-shelf-${s.id}`}>
+                     {articles.map((article) => <ArticleStrip key={article.id} {...article} />)}
                    </div>}
                   {cell("IST", o?.ist, !!ds.ist)}
                   {cell("Retouren", o?.retouren, !!ds.ret)}

@@ -8,6 +8,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRefreshEinlagerung, useEinlagerungState } from "../use-einlagerung";
 import { errMsg, nf, P, type D } from "../lib";
+import { ShelfStockDrops } from "./shelf-stock-drops";
 
 function Count({ label, n, pal, imported }: { label: string; n: number; pal: number; imported: boolean }) {
   return (
@@ -22,9 +23,9 @@ function Count({ label, n, pal, imported }: { label: string; n: number; pal: num
   );
 }
 
-export function LocationCard({ loc, label, has, imported, highlight }: {
+export function LocationCard({ loc, label, has, imported, highlight, separateStock = false }: {
   loc: EinlagerungSearchResultLocationsItem; label?: string; has: (k: string) => boolean;
-  imported: { ist: boolean; retouren: boolean; auftraege: boolean }; highlight?: boolean;
+  imported: { ist: boolean; retouren: boolean; auftraege: boolean }; highlight?: boolean; separateStock?: boolean;
 }) {
   const { data: state } = useEinlagerungState();
   const total = state?.occupancy.find((x) => x.shelf === String(loc.shelf.data.name));
@@ -60,12 +61,12 @@ export function LocationCard({ loc, label, has, imported, highlight }: {
       </div>
       {loc.note && <p className="text-sm text-slate-700 bg-slate-50 rounded-md px-3 py-2">{loc.note}</p>}
       {full && sd.fullNote ? <p className="text-xs text-red-700">Vollmeldung: {String(sd.fullNote)}</p> : null}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      {separateStock ? <ShelfStockDrops shelfId={loc.shelf.id} ist={ist} retouren={ret} auftraege={ord} imported={imported} totals={total} /> : <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Count label="IST" n={ist.length} pal={total?.ist ?? 0} imported={imported.ist} />
         <Count label="Retouren" n={ret.length} pal={total?.retouren ?? 0} imported={imported.retouren} />
         <Count label="Aufträge" n={ord.length} pal={total?.auftraege ?? 0} imported={imported.auftraege} />
-      </div>
-      {(ist.length > 0 || ret.length > 0 || ord.length > 0) && (
+      </div>}
+      {!separateStock && (ist.length > 0 || ret.length > 0 || ord.length > 0) && (
         <details className="text-xs text-slate-600">
           <summary className="cursor-pointer text-slate-500 hover:text-slate-900">Details anzeigen</summary>
           <div className="mt-2 space-y-1">

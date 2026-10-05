@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -10,11 +10,12 @@ import { useToast } from "@/hooks/use-toast";
 import { SimpleSelect } from "./simple-select";
 import { useRecordActions } from "../use-einlagerung";
 import { errMsg, type D, type Rec } from "../lib";
+import { lookupText, lookupValue } from "./field-lookup";
 
 export interface FieldSpec {
   key: string; label: string;
-  type: "text" | "number" | "bool" | "select" | "color" | "textarea" | "date";
-  options?: { value: string; label: string }[];
+  type: "text" | "number" | "bool" | "select" | "autocomplete" | "color" | "textarea" | "date";
+  options?: { value: string; label: string; inputLabel?: string }[];
   numeric?: boolean; nullable?: boolean; required?: boolean; hint?: string;
 }
 
@@ -35,6 +36,7 @@ export function RecordDialog({ open, onOpenChange, title, kind, record, fields, 
     for (const f of fields) {
       const x = src[f.key];
       if (f.type === "bool") init[f.key] = x === undefined ? true : !!x;
+      else if (f.type === "autocomplete") init[f.key] = lookupText(f.options ?? [], x);
       else init[f.key] = x === null || x === undefined ? "" : String(x);
     }
     setV(init);
@@ -47,9 +49,17 @@ export function RecordDialog({ open, onOpenChange, title, kind, record, fields, 
     for (const f of fields) {
       const raw = v[f.key];
       if (f.type === "bool") { out[f.key] = !!raw; continue; }
-      const s = String(raw ?? "").trim();
+      let s = String(raw ?? "").trim();
       if (f.required && !s) { toast({ title: `${f.label} fehlt`, variant: "destructive" }); return; }
-      if (f.type === "number" || (f.type === "select" && f.numeric)) {
+      if (f.type === "autocomplete" && s) {
+        const match = lookupValue(f.options ?? [], s);
+        if (match === undefined) {
+          toast({ title: `${f.label} nicht eindeutig gefunden`, description: "Bitte die Bezeichnung eines vorhandenen Regals eingeben oder einen Vorschlag auswählen.", variant: "destructive" });
+          return;
+        }
+        s = match;
+      }
+      if (f.type === "number" || ((f.type === "select" || f.type === "autocomplete") && f.numeric)) {
         if (!s) { out[f.key] = f.nullable ? null : 0; continue; }
         const n = Number(s);
         if (Number.isNaN(n)) { toast({ title: `${f.label} ist keine Zahl`, variant: "destructive" }); return; }
@@ -69,7 +79,7 @@ export function RecordDialog({ open, onOpenChange, title, kind, record, fields, 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md max-h-[90dvh] overflow-y-auto">
-        <DialogHeader><DialogTitle>{title}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{title}</DialogTitle><DialogDescription className="sr-only">Felder ausfüllen und den Eintrag speichern.</DialogDescription></DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           {fields.map((f) => (
             <div key={f.key} className="space-y-1.5">
@@ -88,6 +98,16 @@ export function RecordDialog({ open, onOpenChange, title, kind, record, fields, 
                       options={[...(f.nullable ? [{ value: NONE, label: "Keine" }] : []), ...(f.options ?? [])]}
                       placeholder="Auswählen" testId={`select-${f.key}`}
                     />
+                  ) : f.type === "autocomplete" ? (
+                    <>
+                      <Input id={`f-${f.key}`} list={`f-${f.key}-suggestions`} value={v[f.key] ?? ""}
+                        autoComplete="off" placeholder="Regal eingeben oder Vorschlag wählen"
+                        onChange={(e) => setV((p) => ({ ...p, [f.key]: e.target.value }))}
+                        data-testid={`input-${f.key}`} />
+                      <datalist id={`f-${f.key}-suggestions`}>
+                        {(f.options ?? []).map((o) => <option key={o.value} value={o.inputLabel ?? o.label} label={o.label} />)}
+                      </datalist>
+                    </>
                   ) : f.type === "textarea" ? (
                     <Textarea id={`f-${f.key}`} value={v[f.key] ?? ""} rows={3} onChange={(e) => setV((p) => ({ ...p, [f.key]: e.target.value }))} data-testid={`input-${f.key}`} />
                   ) : f.type === "color" ? (

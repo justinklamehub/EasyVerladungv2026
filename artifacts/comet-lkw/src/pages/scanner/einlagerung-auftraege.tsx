@@ -11,6 +11,7 @@ import { SimpleSelect } from "@/pages/einlagerung/components/simple-select";
 import { RecordDialog, type FieldSpec } from "@/pages/einlagerung/components/record-dialog";
 import { useEinlagerungState, useRecordActions } from "@/pages/einlagerung/use-einlagerung";
 import { errMsg, nf, P, toRec, useEinlagerungAccess, useModel, type D, type Rec } from "@/pages/einlagerung/lib";
+import { suggestReservationShelf } from "@/pages/einlagerung/components/reservation-suggestion";
 
 const STATUS = [{ value: "offen", label: "Offen" }, { value: "erledigt", label: "Erledigt" }, { value: "storniert", label: "Storniert" }];
 
@@ -37,18 +38,20 @@ export default function ScannerEinlagerungAuftraegePage() {
   const [resFilter, setResFilter] = useState("offen");
   const [edit, setEdit] = useState<Rec | null>(null);
   const [open, setOpen] = useState(false);
+  const [view, setView] = useState<"search" | "reserve">("search");
   const { save, busy } = useRecordActions();
   const { toast } = useToast();
 
   const params = useMemo<SearchEinlagerungParams>(() => {
     const p: SearchEinlagerungParams = { mode: "auftraege" };
+    if (view === "reserve") return p;
     if (applied.q.trim()) p.q = applied.q.trim();
     if (applied.spedition) p.spedition = applied.spedition;
     if (applied.relation.trim()) p.relation = applied.relation.trim();
     if (applied.termin.trim()) p.termin = applied.termin.trim();
     if (applied.shelfId) p.shelfId = Number(applied.shelfId);
     return p;
-  }, [applied]);
+  }, [applied, view]);
   const q = useSearchEinlagerung(params, { query: { queryKey: getSearchEinlagerungQueryKey(params), enabled: allowed, refetchInterval: 30_000, refetchIntervalInBackground: false } });
 
   const orders = (q.data?.orders ?? []) as D[];
@@ -70,8 +73,19 @@ export default function ScannerEinlagerungAuftraegePage() {
   const openCount = allRes.filter((r) => r.d.status === "offen").length;
 
   const canCreate = has(P.resCreate), canEdit = has(P.resEdit);
+  const activeShelves = model.shelves.filter((s) => {
+    const aisle = model.aisleById.get(Number(s.d.aisleId));
+    const hall = aisle && model.hallById.get(Number(aisle.d.hallId));
+    return s.d.active !== false && aisle?.d.active !== false && hall?.d.active !== false;
+  });
+  const proposedShelf = suggestReservationShelf(activeShelves, stateQ.data?.occupancy ?? [], model.reservations);
+  const shelfOptions = activeShelves.concat(edit && !activeShelves.some((s) => s.id === Number(edit.d.shelfId))
+    ? model.shelves.filter((s) => s.id === Number(edit.d.shelfId)) : []);
   const fields: FieldSpec[] = [
-    { key: "shelfId", label: "Regal", type: "select", numeric: true, required: true, options: model.shelves.map((s) => ({ value: String(s.id), label: model.shelfLabel(s) })) },
+    { key: "shelfId", label: "Regal", type: "autocomplete", numeric: true, required: true,
+      options: shelfOptions.map((s) => ({ value: String(s.id), label: model.shelfLabel(s),
+        inputLabel: shelfOptions.filter((o) => String(o.d.name).toLowerCase() === String(s.d.name).toLowerCase()).length === 1 ? String(s.d.name) : model.shelfLabel(s) })),
+      hint: proposedShelf ? `Systemvorschlag: ${model.shelfLabel(proposedShelf)}. Frei überschreibbar; bitte ein gepflegtes Regal verwenden. Voll gemeldete Regale werden nicht vorgeschlagen.` : "Regal frei eingeben oder einen Vorschlag aus den Stammdaten wählen." },
     { key: "carrierId", label: "Spedition (Modul)", type: "select", numeric: true, required: true, options: model.carriers.filter((r) => r.d.active).map((r) => ({ value: String(r.id), label: String(r.d.name) })) },
     { key: "relation", label: "Relation (optional)", type: "text" },
     { key: "termin", label: "Termin (KW.Jahr oder Datum)", type: "text", required: true, hint: "z. B. 47.2026 oder 18.11.2026" },
@@ -114,6 +128,23 @@ export default function ScannerEinlagerungAuftraegePage() {
     <div className="min-h-[100dvh] bg-slate-100 text-slate-900">
       {header}
       <main className="max-w-xl mx-auto p-4 space-y-4">
+        <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 gap-1" role="tablist" aria-label="Auftrags-Scanner">
+          {([["search", "Aufträge suchen"], ["reserve", "Regal vormerken"]] as const).map(([value, label]) => (
+            <button key={value} type="button" role="tab" aria-selected={view === value}
+              tabIndex={view === value ? 0 : -1}
+              aria-controls={`scanner-panel-${value}`} id={`scanner-tab-${value}`}
+              data-testid={`scanner-tab-${value}`} onClick={() => setView(value)}
+              onKeyDown={(e) => {
+                if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) return;
+                e.preventDefault();
+                const next = e.key === "Home" ? "search" : e.key === "End" ? "reserve" : view === "search" ? "reserve" : "search";
+                setView(next);
+                document.getElementById(`scanner-tab-${next}`)?.focus();
+              }}
+              className={`rounded-lg px-3 py-3 text-sm font-semibold ${view === value ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{label}</button>
+          ))}
+        </div>
+        {view === "search" && <div id="scanner-panel-search" role="tabpanel" aria-labelledby="scanner-tab-search" className="space-y-4">
         <form className="rounded-xl border border-slate-200 bg-white p-3 space-y-2" onSubmit={(e) => { e.preventDefault(); setApplied(draft); }}>
           <Input value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} placeholder="Auftrag, Lieferung oder HU" data-testid="input-orders-q" />
           <div className="grid grid-cols-2 gap-2">
@@ -150,14 +181,18 @@ export default function ScannerEinlagerungAuftraegePage() {
               ))}
             </ul>}
         </section>
+        </div>}
 
-        <section className="rounded-xl border border-slate-200 bg-white">
+        {view === "reserve" && <section id="scanner-panel-reserve" role="tabpanel" aria-labelledby="scanner-tab-reserve" className="rounded-xl border border-slate-200 bg-white">
+          {!canCreate && <p className="px-4 pt-3 text-sm text-slate-500">Keine Berechtigung für neue Vormerkungen.</p>}
           <div className="px-4 py-3 border-b border-slate-200 flex items-center gap-2">
             <span className="font-semibold mr-auto">Reservierungen</span>
             <div className="w-32"><SimpleSelect value={resFilter} onChange={setResFilter} allLabel="Alle" options={STATUS} testId="filter-res-status" /></div>
-            {canCreate && <Button size="sm" onClick={() => { setEdit(null); setOpen(true); }} data-testid="button-new-reservation"><Plus className="w-4 h-4 mr-1" />Neu</Button>}
+            {canCreate && <Button size="sm" onClick={() => { setEdit(null); setOpen(true); }} data-testid="button-new-reservation"><Plus className="w-4 h-4 mr-1" />Vormerken</Button>}
           </div>
-          {resv.length === 0 ? <p className="p-6 text-center text-sm text-slate-500" data-testid="reservations-empty">Keine Reservierungen.</p>
+          {q.isLoading ? <div className="p-4"><Skeleton className="h-24" /></div>
+          : q.isError ? <div className="p-4 text-sm text-red-700 space-y-2">{errMsg(q.error)}<div><Button size="sm" variant="outline" onClick={() => q.refetch()}>Erneut versuchen</Button></div></div>
+          : resv.length === 0 ? <p className="p-6 text-center text-sm text-slate-500" data-testid="reservations-empty">Keine Reservierungen.</p>
           : <ul className="divide-y divide-slate-100">
               {resv.map((r) => (
                 <li key={r.id} className="px-4 py-3 space-y-2" data-testid={`row-reservation-${r.id}`}>
@@ -182,12 +217,12 @@ export default function ScannerEinlagerungAuftraegePage() {
                 </li>
               ))}
             </ul>}
-        </section>
+        </section>}
       </main>
 
       <RecordDialog open={open} onOpenChange={setOpen} title={edit ? "Reservierung bearbeiten" : "Neue Reservierung"} kind="reservation" record={edit} fields={fields}
         defaults={{ status: "offen", plusKw: "", termin: applied.termin.trim() || currentKw(), relation: applied.relation.trim(),
-          shelfId: applied.shelfId ? Number(applied.shelfId) : undefined,
+          shelfId: proposedShelf?.id,
           carrierId: model.carriers.find((c) => c.d.name === applied.spedition)?.id }} />
     </div>
   );

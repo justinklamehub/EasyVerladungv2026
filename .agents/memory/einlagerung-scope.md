@@ -33,8 +33,32 @@ Es gibt zwei getrennte Handscanner-Abläufe: Die „Lagerübersicht“ zeigt von
 
 **How to apply:** Separate Scannerfenster anbieten. Historische Kalenderwochenangaben und Speditionsnamen müssen auch ohne passende COMET-Speditionszuordnung nutzbar bleiben.
 
+In der Auftrags-Scanneransicht sollen „Aufträge suchen“ und „Regal vormerken“ oben getrennt auswählbar sein. Das Regal soll frei eingebbar sein, aber vom System vorgeschlagen werden.
+
+**Why:** Der Nutzer hat diesen getrennten Ablauf und die freie Eingabe mit Vorschlag ausdrücklich verlangt.
+
+**How to apply:** Einen Vorschlag nicht als unveränderbare Auswahl behandeln; eine manuell eingegebene Regalbezeichnung eindeutig dem vorgesehenen Regal zuordnen und bei fehlender oder mehrdeutiger Zuordnung ausdrücklich warnen.
+
 Artikelnummern sollen direkt in der Lagerübersicht einsehbar sein, und die Farben der Lageranzeige sollen definierbar sein.
 
 **Why:** Der Nutzer hat beide Anforderungen für die Einlagerungsansicht ausdrücklich ergänzt.
 
 **How to apply:** Artikelnummern ohne Öffnen eines Regaldetails anzeigen; anpassbare Farben in den Einlagerungs-Einstellungen anbieten, ohne die bestehenden Artikel-, Gruppen- und Speditionszuordnungen zu verändern.
+
+Die Artikelnummern sollen als abgerundete Farbbalken wie in der Bildvorlage erscheinen. Die Farbe richtet sich nach der Gruppe der Artikel-Regal-Zuordnung, nicht nach dem Regalstatus.
+
+**Why:** Der Nutzer hat die Darstellung anhand einer Bildvorlage und die Farbzuordnung ausdrücklich vorgegeben.
+
+**How to apply:** Die gepflegten Gruppenfarben verwenden; bei mehreren Artikeln pro Regal jeden Artikel separat darstellen. Statusfarben der Regalkacheln bleiben davon unabhängig.
+
+Beim Klick auf ein Regal sollen IST-Bestand, Retouren und Aufträge in drei separaten aufklappbaren Listen im Regaldetail erscheinen.
+
+**Why:** Der Nutzer hat die getrennten „Drops“ anhand der Screenshots ausdrücklich verlangt.
+
+**How to apply:** Jede Datenart unabhängig aufklappbar machen, Palettenanzahl und Daten des ausgewählten Regals anzeigen und leere Bestände eindeutig kennzeichnen.
+
+Die primäre Lagerübersicht soll die Matrix der Bildvorlage verwenden: Hallen nebeneinander, Gänge als Spalten. Die bisherige Kachelansicht bleibt als zweite Ansicht erhalten. Regale immer vom letzten oben zum ersten unten sortieren.
+
+**Why:** Der Nutzer hat diese Ansichten und die absteigende Sortierung ausdrücklich vorgegeben.
+
+**How to apply:** Nach tatsächlicher Regalposition absteigend sortieren, nicht nach Importreihenfolge; Hallen, Gänge und Positionen weiterhin aus den gepflegten Daten ableiten.
