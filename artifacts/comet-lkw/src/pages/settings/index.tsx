@@ -16,6 +16,8 @@ import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye,
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { LkwArtenConfig } from "./lkw-arten-config";
 import { useAuth } from "@/contexts/auth-context";
+import { Link } from "wouter";
+import { Warehouse } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
@@ -2334,6 +2336,14 @@ export default function SettingsPage() {
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Einstellungen</h1>
         <p className="text-sm text-slate-500 mt-1">Globale Systemkonfiguration — nur für COMET-Admins sichtbar</p>
       </div>
+
+      <Link href="/einlagerung/einstellungen" className="flex items-center gap-3 rounded-lg border border-slate-200 bg-white p-4 hover:bg-slate-50 transition-colors" data-testid="link-einlagerung-settings">
+        <Warehouse className="w-5 h-5 text-slate-500 shrink-0" />
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-slate-900">Einlagerung</div>
+          <div className="text-xs text-slate-500">Lagerstrategie, Import-Profile und Einlagerungs-Einstellungen</div>
+        </div>
+      </Link>
 
       <Tabs defaultValue="allgemein" className="space-y-5">
         <TabsList className="flex flex-wrap h-auto w-full gap-1 justify-start p-1.5">

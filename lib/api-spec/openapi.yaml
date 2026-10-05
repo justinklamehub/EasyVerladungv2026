@@ -30,6 +30,156 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /einlagerung/state:
+    get:
+      operationId: getEinlagerungState
+      tags: [einlagerung]
+      responses:
+        "200":
+          description: Lagerstruktur, Strategie, Vormerkungen und Importstände
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungState"
+  /einlagerung/records/{kind}:
+    post:
+      operationId: createEinlagerungRecord
+      tags: [einlagerung]
+      parameters:
+        - {name: kind, in: path, required: true, schema: {type: string}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungRecordInput"
+      responses:
+        "201":
+          description: Angelegt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungRecord"
+  /einlagerung/records/{kind}/{id}:
+    put:
+      operationId: updateEinlagerungRecord
+      tags: [einlagerung]
+      parameters:
+        - {name: kind, in: path, required: true, schema: {type: string}}
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungRecordInput"
+      responses:
+        "200":
+          description: Aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungRecord"
+    delete:
+      operationId: deleteEinlagerungRecord
+      tags: [einlagerung]
+      parameters:
+        - {name: kind, in: path, required: true, schema: {type: string}}
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      responses:
+        "200":
+          description: Gelöscht
+          content:
+            application/json:
+              schema: {type: object, properties: {ok: {type: boolean}}, required: [ok]}
+  /einlagerung/search:
+    get:
+      operationId: searchEinlagerung
+      tags: [einlagerung]
+      parameters:
+        - {name: mode, in: query, required: true, schema: {type: string, enum: [artikel, auftraege, regal]}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: shelfId, in: query, schema: {type: integer}}
+        - {name: spedition, in: query, schema: {type: string}}
+        - {name: relation, in: query, schema: {type: string}}
+        - {name: termin, in: query, schema: {type: string}}
+      responses:
+        "200":
+          description: Suchergebnis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungSearchResult"
+  /einlagerung/shelves/{id}/status:
+    post:
+      operationId: setEinlagerungShelfStatus
+      tags: [einlagerung]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungShelfStatusInput"
+      responses:
+        "200":
+          description: Status gespeichert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungRecord"
+  /einlagerung/settings:
+    put:
+      operationId: updateEinlagerungSettings
+      tags: [einlagerung]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungSettings"
+      responses:
+        "200":
+          description: Einstellungen gespeichert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungSettings"
+  /einlagerung/import/preview:
+    post:
+      operationId: previewEinlagerungImport
+      tags: [einlagerung]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungImportInput"
+      responses:
+        "200":
+          description: Importprüfung ohne Datenänderung
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungImportPreview"
+  /einlagerung/import/commit:
+    post:
+      operationId: commitEinlagerungImport
+      tags: [einlagerung]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungImportInput"
+      responses:
+        "200":
+          description: Vollständig geprüfter Import übernommen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungDataset"
   /healthz:
     get:
       operationId: healthCheck
@@ -952,6 +1102,133 @@ paths:
 
 components:
   schemas:
+    EinlagerungShelfStatusInput:
+      type: object
+      required: [full]
+      properties:
+        full: {type: boolean}
+        note: {type: string}
+    EinlagerungRecord:
+      type: object
+      required: [id, kind, data, updatedAt]
+      properties:
+        id: {type: integer}
+        kind: {type: string, enum: [hall, aisle, shelf, article, group, rule, reservation, carrier]}
+        data: {type: object, additionalProperties: true}
+        updatedAt: {type: string}
+    EinlagerungRecordInput:
+      type: object
+      required: [data]
+      properties:
+        data: {type: object, additionalProperties: true}
+        expectedUpdatedAt: {type: string}
+    EinlagerungSettings:
+      type: object
+      required: [hideFull, staleHours, profiles, colors]
+      properties:
+        hideFull: {type: boolean}
+        staleHours: {type: integer, minimum: 1, maximum: 8760}
+        profiles: {type: object, additionalProperties: true}
+        colors:
+          type: object
+          required: [free, occupied, full]
+          properties:
+            free: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
+            occupied: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
+            full: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
+    EinlagerungDataset:
+      type: object
+      required: [id, type, filename, importedAt, importedBy, rowCount]
+      properties:
+        id: {type: integer}
+        type: {type: string}
+        filename: {type: string}
+        importedAt: {type: string}
+        importedBy: {type: string}
+        rowCount: {type: integer}
+    EinlagerungState:
+      type: object
+      required: [records, datasets, settings, occupancy, events, speditionen]
+      properties:
+        records:
+          type: array
+          items: {$ref: "#/components/schemas/EinlagerungRecord"}
+        datasets:
+          type: array
+          items: {$ref: "#/components/schemas/EinlagerungDataset"}
+        settings: {$ref: "#/components/schemas/EinlagerungSettings"}
+        occupancy:
+          type: array
+          items:
+            type: object
+            required: [shelf, ist, retouren, auftraege]
+            properties:
+              shelf: {type: string}
+              ist: {type: integer}
+              retouren: {type: integer}
+              auftraege: {type: integer}
+        events:
+          type: array
+          items:
+            type: object
+            required: [id, action, createdAt, username, detail]
+            properties:
+              id: {type: integer}
+              action: {type: string}
+              createdAt: {type: string}
+              username: {type: string}
+              detail: {type: string}
+        speditionen:
+          type: array
+          items:
+            type: object
+            required: [id, name]
+            properties:
+              id: {type: integer}
+              name: {type: string}
+    EinlagerungSearchResult:
+      type: object
+      required: [locations, orders, reservations, message]
+      properties:
+        article: {$ref: "#/components/schemas/EinlagerungRecord"}
+        message: {type: string}
+        locations:
+          type: array
+          items:
+            type: object
+            required: [shelf, priority, note, group, color, ist, retouren, orders]
+            properties:
+              shelf: {$ref: "#/components/schemas/EinlagerungRecord"}
+              priority: {type: integer}
+              note: {type: string}
+              group: {type: string}
+              color: {type: string}
+              ist: {type: array, items: {type: object, additionalProperties: true}}
+              retouren: {type: array, items: {type: object, additionalProperties: true}}
+              orders: {type: array, items: {type: object, additionalProperties: true}}
+        orders: {type: array, items: {type: object, additionalProperties: true}}
+        reservations:
+          type: array
+          items: {$ref: "#/components/schemas/EinlagerungRecord"}
+    EinlagerungImportInput:
+      type: object
+      required: [type, csv, filename, mode]
+      properties:
+        type: {type: string, enum: [strategie, istbestand, retouren, auftraege, artikel]}
+        csv: {type: string}
+        filename: {type: string}
+        mode: {type: string, enum: [replace, merge]}
+        mapping: {type: object, additionalProperties: {type: integer, minimum: 0}}
+    EinlagerungImportPreview:
+      type: object
+      required: [valid, rowCount, headers, sample, errors, warnings]
+      properties:
+        valid: {type: boolean}
+        rowCount: {type: integer}
+        headers: {type: array, items: {type: string}}
+        sample: {type: array, items: {type: object, additionalProperties: true}}
+        errors: {type: array, items: {type: string}}
+        warnings: {type: array, items: {type: string}}
     UploadUrlRequest:
       type: object
       required: [name, size, contentType]
@@ -1320,7 +1597,7 @@ components:
           type: ["string", "null"]
         movementType:
           type: string
-          enum: [eingang, ausgang, korrektur, abstimmung, anfangsbestand]
+          enum: [eingang, ausgang, neutral, korrektur, abstimmung, anfangsbestand, abschreibung]
         movementDate:
           type: string
         amount:
@@ -1346,7 +1623,7 @@ components:
           type: ["integer", "null"]
         movementType:
           type: string
-          enum: [eingang, ausgang, korrektur, abstimmung, anfangsbestand]
+          enum: [eingang, ausgang, neutral, korrektur, abstimmung, anfangsbestand, abschreibung]
         movementDate:
           type: string
         amount:
@@ -1359,7 +1636,7 @@ components:
       properties:
         movementType:
           type: string
-          enum: [eingang, ausgang, korrektur, abstimmung, anfangsbestand]
+          enum: [eingang, ausgang, neutral, korrektur, abstimmung, anfangsbestand, abschreibung]
         movementDate:
           type: string
         amount:

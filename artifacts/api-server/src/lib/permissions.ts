@@ -27,7 +27,18 @@ export type Permission =
   | "foto.edit"
   | "foto.delete"
   | "knowledge.view"
-  | "knowledge.edit";
+  | "knowledge.edit"
+  | "einlagerung.view"
+  | "einlagerung.scan"
+  | "einlagerung.full"
+  | "einlagerung.release"
+  | "einlagerung.reservation.create"
+  | "einlagerung.reservation.edit"
+  | "einlagerung.strategy"
+  | "einlagerung.master"
+  | "einlagerung.import"
+  | "einlagerung.replace"
+  | "einlagerung.settings";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -73,9 +84,31 @@ export const ALL_PERMISSIONS: Permission[] = [
   "foto.delete",
   "knowledge.view",
   "knowledge.edit",
+  "einlagerung.view",
+  "einlagerung.scan",
+  "einlagerung.full",
+  "einlagerung.release",
+  "einlagerung.reservation.create",
+  "einlagerung.reservation.edit",
+  "einlagerung.strategy",
+  "einlagerung.master",
+  "einlagerung.import",
+  "einlagerung.replace",
+  "einlagerung.settings",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
+  "einlagerung.view": { label: "Lagerübersicht und Bestände ansehen", category: "Einlagerung" },
+  "einlagerung.scan": { label: "Einlagerungsscanner nutzen", category: "Einlagerung" },
+  "einlagerung.full": { label: "Regal voll melden", category: "Einlagerung" },
+  "einlagerung.release": { label: "Regal wieder freigeben", category: "Einlagerung" },
+  "einlagerung.reservation.create": { label: "Vormerkung erstellen", category: "Einlagerung" },
+  "einlagerung.reservation.edit": { label: "Vormerkung bearbeiten / abschließen", category: "Einlagerung" },
+  "einlagerung.strategy": { label: "Einlagerungsstrategie pflegen", category: "Einlagerung" },
+  "einlagerung.master": { label: "Lagerstammdaten pflegen", category: "Einlagerung" },
+  "einlagerung.import": { label: "CSV-Daten importieren", category: "Einlagerung" },
+  "einlagerung.replace": { label: "Datenstände durch Import ersetzen", category: "Einlagerung" },
+  "einlagerung.settings": { label: "Einlagerungseinstellungen ändern", category: "Einlagerung" },
   "pallet.create":        { label: "Buchung erstellen",       category: "Palettenbuchungen" },
   "pallet.edit":          { label: "Buchung bearbeiten",      category: "Palettenbuchungen" },
   "pallet.delete":        { label: "Buchung löschen",         category: "Palettenbuchungen" },
@@ -140,6 +173,18 @@ export function invalidatePermissionsCache() {
 
 /** Ensures every role has a row for every permission (new perms default to false). */
 export async function seedMissingPermissions(): Promise<void> {
+  for (const permission of ALL_PERMISSIONS.filter((p) => p.startsWith("einlagerung."))) {
+    const defaults = permission === "einlagerung.view"
+      ? ["comet_lager", "comet_leitstand", "comet_viewer"]
+      : ["einlagerung.scan", "einlagerung.full", "einlagerung.reservation.create"].includes(permission)
+        ? ["comet_lager", "comet_leitstand"]
+        : ["einlagerung.release", "einlagerung.reservation.edit", "einlagerung.strategy"].includes(permission)
+          ? ["comet_leitstand"] : [];
+    for (const role of defaults) {
+      await db.execute(sql`INSERT INTO role_permissions (role, permission, allowed)
+        VALUES (${role}, ${permission}, true) ON CONFLICT (role, permission) DO NOTHING`);
+    }
+  }
   // Smart defaults must be inserted BEFORE the generic false-fallback below,
   // since both use ON CONFLICT DO NOTHING — whichever runs first "wins" the row.
   // Smart defaults: kanban.use enabled by default for lager & leitstand

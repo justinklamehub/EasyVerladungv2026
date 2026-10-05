@@ -5,6 +5,168 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export interface EinlagerungShelfStatusInput {
+  full: boolean;
+  note?: string;
+}
+
+export type EinlagerungRecordKind = typeof EinlagerungRecordKind[keyof typeof EinlagerungRecordKind];
+
+
+export const EinlagerungRecordKind = {
+  hall: 'hall',
+  aisle: 'aisle',
+  shelf: 'shelf',
+  article: 'article',
+  group: 'group',
+  rule: 'rule',
+  reservation: 'reservation',
+  carrier: 'carrier',
+} as const;
+
+export type EinlagerungRecordData = { [key: string]: unknown };
+
+export interface EinlagerungRecord {
+  id: number;
+  kind: EinlagerungRecordKind;
+  data: EinlagerungRecordData;
+  updatedAt: string;
+}
+
+export type EinlagerungRecordInputData = { [key: string]: unknown };
+
+export interface EinlagerungRecordInput {
+  data: EinlagerungRecordInputData;
+  expectedUpdatedAt?: string;
+}
+
+export type EinlagerungSettingsProfiles = { [key: string]: unknown };
+
+export type EinlagerungSettingsColors = {
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  free: string;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  occupied: string;
+  /** @pattern ^#[0-9a-fA-F]{6}$ */
+  full: string;
+};
+
+export interface EinlagerungSettings {
+  hideFull: boolean;
+  /**
+     * @minimum 1
+     * @maximum 8760
+     */
+  staleHours: number;
+  profiles: EinlagerungSettingsProfiles;
+  colors: EinlagerungSettingsColors;
+}
+
+export interface EinlagerungDataset {
+  id: number;
+  type: string;
+  filename: string;
+  importedAt: string;
+  importedBy: string;
+  rowCount: number;
+}
+
+export type EinlagerungStateOccupancyItem = {
+  shelf: string;
+  ist: number;
+  retouren: number;
+  auftraege: number;
+};
+
+export type EinlagerungStateEventsItem = {
+  id: number;
+  action: string;
+  createdAt: string;
+  username: string;
+  detail: string;
+};
+
+export type EinlagerungStateSpeditionenItem = {
+  id: number;
+  name: string;
+};
+
+export interface EinlagerungState {
+  records: EinlagerungRecord[];
+  datasets: EinlagerungDataset[];
+  settings: EinlagerungSettings;
+  occupancy: EinlagerungStateOccupancyItem[];
+  events: EinlagerungStateEventsItem[];
+  speditionen: EinlagerungStateSpeditionenItem[];
+}
+
+export type EinlagerungSearchResultLocationsItemIstItem = { [key: string]: unknown };
+
+export type EinlagerungSearchResultLocationsItemRetourenItem = { [key: string]: unknown };
+
+export type EinlagerungSearchResultLocationsItemOrdersItem = { [key: string]: unknown };
+
+export type EinlagerungSearchResultLocationsItem = {
+  shelf: EinlagerungRecord;
+  priority: number;
+  note: string;
+  group: string;
+  color: string;
+  ist: EinlagerungSearchResultLocationsItemIstItem[];
+  retouren: EinlagerungSearchResultLocationsItemRetourenItem[];
+  orders: EinlagerungSearchResultLocationsItemOrdersItem[];
+};
+
+export type EinlagerungSearchResultOrdersItem = { [key: string]: unknown };
+
+export interface EinlagerungSearchResult {
+  article?: EinlagerungRecord;
+  message: string;
+  locations: EinlagerungSearchResultLocationsItem[];
+  orders: EinlagerungSearchResultOrdersItem[];
+  reservations: EinlagerungRecord[];
+}
+
+export type EinlagerungImportInputType = typeof EinlagerungImportInputType[keyof typeof EinlagerungImportInputType];
+
+
+export const EinlagerungImportInputType = {
+  strategie: 'strategie',
+  istbestand: 'istbestand',
+  retouren: 'retouren',
+  auftraege: 'auftraege',
+  artikel: 'artikel',
+} as const;
+
+export type EinlagerungImportInputMode = typeof EinlagerungImportInputMode[keyof typeof EinlagerungImportInputMode];
+
+
+export const EinlagerungImportInputMode = {
+  replace: 'replace',
+  merge: 'merge',
+} as const;
+
+export type EinlagerungImportInputMapping = {[key: string]: number};
+
+export interface EinlagerungImportInput {
+  type: EinlagerungImportInputType;
+  csv: string;
+  filename: string;
+  mode: EinlagerungImportInputMode;
+  mapping?: EinlagerungImportInputMapping;
+}
+
+export type EinlagerungImportPreviewSampleItem = { [key: string]: unknown };
+
+export interface EinlagerungImportPreview {
+  valid: boolean;
+  rowCount: number;
+  headers: string[];
+  sample: EinlagerungImportPreviewSampleItem[];
+  errors: string[];
+  warnings: string[];
+}
+
 export interface UploadUrlRequest {
   /**
      * Original file name.
@@ -443,9 +605,11 @@ export type PalletMovementMovementType = typeof PalletMovementMovementType[keyof
 export const PalletMovementMovementType = {
   eingang: 'eingang',
   ausgang: 'ausgang',
+  neutral: 'neutral',
   korrektur: 'korrektur',
   abstimmung: 'abstimmung',
   anfangsbestand: 'anfangsbestand',
+  abschreibung: 'abschreibung',
 } as const;
 
 export interface PalletMovement {
@@ -477,9 +641,11 @@ export type PalletMovementInputMovementType = typeof PalletMovementInputMovement
 export const PalletMovementInputMovementType = {
   eingang: 'eingang',
   ausgang: 'ausgang',
+  neutral: 'neutral',
   korrektur: 'korrektur',
   abstimmung: 'abstimmung',
   anfangsbestand: 'anfangsbestand',
+  abschreibung: 'abschreibung',
 } as const;
 
 export interface PalletMovementInput {
@@ -499,9 +665,11 @@ export type PalletMovementUpdateMovementType = typeof PalletMovementUpdateMoveme
 export const PalletMovementUpdateMovementType = {
   eingang: 'eingang',
   ausgang: 'ausgang',
+  neutral: 'neutral',
   korrektur: 'korrektur',
   abstimmung: 'abstimmung',
   anfangsbestand: 'anfangsbestand',
+  abschreibung: 'abschreibung',
 } as const;
 
 export interface PalletMovementUpdate {
@@ -639,6 +807,28 @@ export interface AuditLogPage {
   page: number;
   limit: number;
 }
+
+export type DeleteEinlagerungRecord200 = {
+  ok: boolean;
+};
+
+export type SearchEinlagerungParams = {
+mode: SearchEinlagerungMode;
+q?: string;
+shelfId?: number;
+spedition?: string;
+relation?: string;
+termin?: string;
+};
+
+export type SearchEinlagerungMode = typeof SearchEinlagerungMode[keyof typeof SearchEinlagerungMode];
+
+
+export const SearchEinlagerungMode = {
+  artikel: 'artikel',
+  auftraege: 'auftraege',
+  regal: 'regal',
+} as const;
 
 export type ListUsersParams = {
 /**

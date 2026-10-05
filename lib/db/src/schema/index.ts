@@ -13,3 +13,4 @@ export * from "./changelog";
 export * from "./fotos";
 export * from "./lkw-arten";
 export * from "./wareneingang";
+export * from "./einlagerung";

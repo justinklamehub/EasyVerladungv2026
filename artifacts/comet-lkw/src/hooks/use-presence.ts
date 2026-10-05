@@ -21,6 +21,8 @@ export const PAGE_NAMES: Record<string, string> = {
   "/users": "Benutzer",
   "/paletten": "Palettenkonto",
   "/abstimmungen": "Abstimmungen",
+  "/einlagerung": "Einlagerung",
+  "/scanner/einlagerung": "Scanner Einlagerung",
   "/gefahrgut": "Gefahrgut",
   "/auswertung": "Auswertung",
   "/auditlog": "Änderungslog",

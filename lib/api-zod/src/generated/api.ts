@@ -8,6 +8,236 @@
 import * as zod from 'zod';
 
 
+export const getEinlagerungStateResponseSettingsStaleHoursMax = 8760;
+
+export const getEinlagerungStateResponseSettingsColorsFreeRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const getEinlagerungStateResponseSettingsColorsOccupiedRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const getEinlagerungStateResponseSettingsColorsFullRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+
+
+export const GetEinlagerungStateResponse = zod.object({
+  "records": zod.array(zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+})),
+  "datasets": zod.array(zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "filename": zod.string(),
+  "importedAt": zod.string(),
+  "importedBy": zod.string(),
+  "rowCount": zod.number()
+})),
+  "settings": zod.object({
+  "hideFull": zod.boolean(),
+  "staleHours": zod.number().min(1).max(getEinlagerungStateResponseSettingsStaleHoursMax),
+  "profiles": zod.record(zod.string(), zod.unknown()),
+  "colors": zod.object({
+  "free": zod.string().regex(getEinlagerungStateResponseSettingsColorsFreeRegExp),
+  "occupied": zod.string().regex(getEinlagerungStateResponseSettingsColorsOccupiedRegExp),
+  "full": zod.string().regex(getEinlagerungStateResponseSettingsColorsFullRegExp)
+})
+}),
+  "occupancy": zod.array(zod.object({
+  "shelf": zod.string(),
+  "ist": zod.number(),
+  "retouren": zod.number(),
+  "auftraege": zod.number()
+})),
+  "events": zod.array(zod.object({
+  "id": zod.number(),
+  "action": zod.string(),
+  "createdAt": zod.string(),
+  "username": zod.string(),
+  "detail": zod.string()
+})),
+  "speditionen": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+}))
+})
+
+
+export const CreateEinlagerungRecordParams = zod.object({
+  "kind": zod.coerce.string()
+})
+
+export const CreateEinlagerungRecordBody = zod.object({
+  "data": zod.record(zod.string(), zod.unknown()),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+
+export const UpdateEinlagerungRecordParams = zod.object({
+  "kind": zod.coerce.string(),
+  "id": zod.coerce.number()
+})
+
+export const UpdateEinlagerungRecordBody = zod.object({
+  "data": zod.record(zod.string(), zod.unknown()),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+export const UpdateEinlagerungRecordResponse = zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+})
+
+
+export const DeleteEinlagerungRecordParams = zod.object({
+  "kind": zod.coerce.string(),
+  "id": zod.coerce.number()
+})
+
+export const DeleteEinlagerungRecordResponse = zod.object({
+  "ok": zod.boolean()
+})
+
+
+export const SearchEinlagerungQueryParams = zod.object({
+  "mode": zod.enum(['artikel', 'auftraege', 'regal']),
+  "q": zod.coerce.string().optional(),
+  "shelfId": zod.coerce.number().optional(),
+  "spedition": zod.coerce.string().optional(),
+  "relation": zod.coerce.string().optional(),
+  "termin": zod.coerce.string().optional()
+})
+
+export const SearchEinlagerungResponse = zod.object({
+  "article": zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+}).optional(),
+  "message": zod.string(),
+  "locations": zod.array(zod.object({
+  "shelf": zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+}),
+  "priority": zod.number(),
+  "note": zod.string(),
+  "group": zod.string(),
+  "color": zod.string(),
+  "ist": zod.array(zod.record(zod.string(), zod.unknown())),
+  "retouren": zod.array(zod.record(zod.string(), zod.unknown())),
+  "orders": zod.array(zod.record(zod.string(), zod.unknown()))
+})),
+  "orders": zod.array(zod.record(zod.string(), zod.unknown())),
+  "reservations": zod.array(zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+}))
+})
+
+
+export const SetEinlagerungShelfStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SetEinlagerungShelfStatusBody = zod.object({
+  "full": zod.boolean(),
+  "note": zod.string().optional()
+})
+
+export const SetEinlagerungShelfStatusResponse = zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+})
+
+
+export const updateEinlagerungSettingsBodyStaleHoursMax = 8760;
+
+export const updateEinlagerungSettingsBodyColorsFreeRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const updateEinlagerungSettingsBodyColorsOccupiedRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const updateEinlagerungSettingsBodyColorsFullRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+
+
+export const UpdateEinlagerungSettingsBody = zod.object({
+  "hideFull": zod.boolean(),
+  "staleHours": zod.number().min(1).max(updateEinlagerungSettingsBodyStaleHoursMax),
+  "profiles": zod.record(zod.string(), zod.unknown()),
+  "colors": zod.object({
+  "free": zod.string().regex(updateEinlagerungSettingsBodyColorsFreeRegExp),
+  "occupied": zod.string().regex(updateEinlagerungSettingsBodyColorsOccupiedRegExp),
+  "full": zod.string().regex(updateEinlagerungSettingsBodyColorsFullRegExp)
+})
+})
+
+export const updateEinlagerungSettingsResponseStaleHoursMax = 8760;
+
+export const updateEinlagerungSettingsResponseColorsFreeRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const updateEinlagerungSettingsResponseColorsOccupiedRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const updateEinlagerungSettingsResponseColorsFullRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+
+
+export const UpdateEinlagerungSettingsResponse = zod.object({
+  "hideFull": zod.boolean(),
+  "staleHours": zod.number().min(1).max(updateEinlagerungSettingsResponseStaleHoursMax),
+  "profiles": zod.record(zod.string(), zod.unknown()),
+  "colors": zod.object({
+  "free": zod.string().regex(updateEinlagerungSettingsResponseColorsFreeRegExp),
+  "occupied": zod.string().regex(updateEinlagerungSettingsResponseColorsOccupiedRegExp),
+  "full": zod.string().regex(updateEinlagerungSettingsResponseColorsFullRegExp)
+})
+})
+
+
+export const previewEinlagerungImportBodyMappingMinOne = 0;
+
+
+
+export const PreviewEinlagerungImportBody = zod.object({
+  "type": zod.enum(['strategie', 'istbestand', 'retouren', 'auftraege', 'artikel']),
+  "csv": zod.string(),
+  "filename": zod.string(),
+  "mode": zod.enum(['replace', 'merge']),
+  "mapping": zod.record(zod.string(), zod.number().min(previewEinlagerungImportBodyMappingMinOne)).optional()
+})
+
+export const PreviewEinlagerungImportResponse = zod.object({
+  "valid": zod.boolean(),
+  "rowCount": zod.number(),
+  "headers": zod.array(zod.string()),
+  "sample": zod.array(zod.record(zod.string(), zod.unknown())),
+  "errors": zod.array(zod.string()),
+  "warnings": zod.array(zod.string())
+})
+
+
+export const commitEinlagerungImportBodyMappingMinOne = 0;
+
+
+
+export const CommitEinlagerungImportBody = zod.object({
+  "type": zod.enum(['strategie', 'istbestand', 'retouren', 'auftraege', 'artikel']),
+  "csv": zod.string(),
+  "filename": zod.string(),
+  "mode": zod.enum(['replace', 'merge']),
+  "mapping": zod.record(zod.string(), zod.number().min(commitEinlagerungImportBodyMappingMinOne)).optional()
+})
+
+export const CommitEinlagerungImportResponse = zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "filename": zod.string(),
+  "importedAt": zod.string(),
+  "importedBy": zod.string(),
+  "rowCount": zod.number()
+})
+
+
 /**
  * Returns server health status
  * @summary Health check
@@ -557,7 +787,7 @@ export const ListPalletMovementsResponseItem = zod.object({
   "speditionName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
   "shipmentBezeichnung": zod.string().nullish(),
-  "movementType": zod.enum(['eingang', 'ausgang', 'korrektur', 'abstimmung', 'anfangsbestand']),
+  "movementType": zod.enum(['eingang', 'ausgang', 'neutral', 'korrektur', 'abstimmung', 'anfangsbestand', 'abschreibung']),
   "movementDate": zod.string(),
   "amount": zod.number(),
   "bemerkungen": zod.string().nullish(),
@@ -575,7 +805,7 @@ export const ListPalletMovementsResponse = zod.array(ListPalletMovementsResponse
 export const CreatePalletMovementBody = zod.object({
   "speditionId": zod.number(),
   "shipmentId": zod.number().nullish(),
-  "movementType": zod.enum(['eingang', 'ausgang', 'korrektur', 'abstimmung', 'anfangsbestand']),
+  "movementType": zod.enum(['eingang', 'ausgang', 'neutral', 'korrektur', 'abstimmung', 'anfangsbestand', 'abschreibung']),
   "movementDate": zod.string(),
   "amount": zod.number(),
   "bemerkungen": zod.string().nullish()
@@ -590,7 +820,7 @@ export const UpdatePalletMovementParams = zod.object({
 })
 
 export const UpdatePalletMovementBody = zod.object({
-  "movementType": zod.enum(['eingang', 'ausgang', 'korrektur', 'abstimmung', 'anfangsbestand']).optional(),
+  "movementType": zod.enum(['eingang', 'ausgang', 'neutral', 'korrektur', 'abstimmung', 'anfangsbestand', 'abschreibung']).optional(),
   "movementDate": zod.string().optional(),
   "amount": zod.number().optional(),
   "bemerkungen": zod.string().nullish()
@@ -602,7 +832,7 @@ export const UpdatePalletMovementResponse = zod.object({
   "speditionName": zod.string().nullish(),
   "shipmentId": zod.number().nullish(),
   "shipmentBezeichnung": zod.string().nullish(),
-  "movementType": zod.enum(['eingang', 'ausgang', 'korrektur', 'abstimmung', 'anfangsbestand']),
+  "movementType": zod.enum(['eingang', 'ausgang', 'neutral', 'korrektur', 'abstimmung', 'anfangsbestand', 'abschreibung']),
   "movementDate": zod.string(),
   "amount": zod.number(),
   "bemerkungen": zod.string().nullish(),

@@ -48,8 +48,10 @@ import {
   Route,
   GanttChart,
   Brain,
+  Warehouse,
   type LucideProps,
 } from "lucide-react";
+import { hasEinlagerungAccess } from "@/pages/einlagerung/lib";
 import { NAV_ICONS } from "@/lib/nav-icons";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -366,6 +368,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
     { name: "Speditionen", href: "/speditionen", icon: Building2, show: canManageSpeditionen },
     { name: "Benutzer", href: "/users", icon: Users, show: canManageUsers },
     { name: "Palettenkonto", href: "/paletten", icon: PackageSearch, show: true },
+    { name: "Einlagerung", href: "/einlagerung", icon: Warehouse, show: hasEinlagerungAccess(user.role === "comet_admin", permissions) },
     { name: "Abstimmungen", href: "/abstimmungen", icon: FileCheck2, show: true },
     { name: "Kalkulation", href: "/kalkulation", icon: Calculator, show: isCometUser },
     { name: "Gefahrgut", href: "/gefahrgut", icon: ShieldAlert, show: isCometUser, badgeCount: gefahrgutBlankoCount || 0 },

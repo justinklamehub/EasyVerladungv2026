@@ -60,6 +60,11 @@ import ChangelogPage from "@/pages/changelog";
 import FotosPage from "@/pages/fotos/index";
 import TorbelegungPage from "@/pages/torbelegung";
 import ChatWissensbasePage from "@/pages/chat-wissensbase";
+import EinlagerungPage from "@/pages/einlagerung";
+import ScannerEinlagerungPage from "@/pages/scanner/einlagerung";
+import ScannerEinlagerungAuftraegePage from "@/pages/scanner/einlagerung-auftraege";
+import { EinlagerungRoute } from "@/pages/einlagerung/guard";
+import { ALL_KEYS as EINLAGERUNG_KEYS, P as EP } from "@/pages/einlagerung/lib";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -100,6 +105,8 @@ function Router() {
       <Route path="/scanner" component={ScannerLandingPage} />
       <Route path="/scanner/gefahrgut" component={ScannerGefahrgutPage} />
       <Route path="/scanner/wareneingang" component={ScannerWareneingangPage} />
+      <Route path="/scanner/einlagerung"><EinlagerungRoute component={ScannerEinlagerungPage} anyOf={[EP.scan]} /></Route>
+      <Route path="/scanner/einlagerung-auftraege"><EinlagerungRoute component={ScannerEinlagerungAuftraegePage} anyOf={[EP.scan, EP.view, EP.resCreate, EP.resEdit]} /></Route>
       <Route path="/impressum" component={ImpressumPage} />
       <Route path="/datenschutz" component={DatenschutzPage} />
 
@@ -133,6 +140,7 @@ function Router() {
             <Route path="/tickets"><ProtectedRoute component={TicketsPage} /></Route>
             <Route path="/kalkulation"><ProtectedRoute component={KalkulationPage} roles={["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]} /></Route>
             <Route path="/changelog"><ProtectedRoute component={ChangelogPage} /></Route>
+            <Route path="/einlagerung/:tab?"><EinlagerungRoute component={EinlagerungPage} anyOf={EINLAGERUNG_KEYS} /></Route>
             <Route path="/wissensbase"><ProtectedRoute component={ChatWissensbasePage} roles={["comet_admin"]} permission="knowledge.view" /></Route>
             <Route component={NotFound} />
           </Switch>

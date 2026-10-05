@@ -25,6 +25,16 @@ import type {
   AuthUser,
   BulkShipmentInput,
   DashboardData,
+  DeleteEinlagerungRecord200,
+  EinlagerungDataset,
+  EinlagerungImportInput,
+  EinlagerungImportPreview,
+  EinlagerungRecord,
+  EinlagerungRecordInput,
+  EinlagerungSearchResult,
+  EinlagerungSettings,
+  EinlagerungShelfStatusInput,
+  EinlagerungState,
   ErrorEnvelope,
   ExportPalletMovementsParams,
   GetDashboardParams,
@@ -44,6 +54,7 @@ import type {
   ReconciliationCommentInput,
   ReconciliationInput,
   ReconciliationUpdate,
+  SearchEinlagerungParams,
   Shipment,
   ShipmentInput,
   ShipmentUpdate,
@@ -70,6 +81,616 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
+export const getGetEinlagerungStateUrl = () => {
+
+
+
+
+  return `/api/einlagerung/state`
+}
+
+export const getEinlagerungState = async ( options?: RequestInit): Promise<EinlagerungState> => {
+
+  return customFetch<EinlagerungState>(getGetEinlagerungStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetEinlagerungStateQueryKey = () => {
+    return [
+    `/api/einlagerung/state`
+    ] as const;
+    }
+
+
+export const getGetEinlagerungStateQueryOptions = <TData = Awaited<ReturnType<typeof getEinlagerungState>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEinlagerungState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetEinlagerungStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getEinlagerungState>>> = ({ signal }) => getEinlagerungState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getEinlagerungState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetEinlagerungStateQueryResult = NonNullable<Awaited<ReturnType<typeof getEinlagerungState>>>
+export type GetEinlagerungStateQueryError = ErrorType<unknown>
+
+
+
+export function useGetEinlagerungState<TData = Awaited<ReturnType<typeof getEinlagerungState>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getEinlagerungState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetEinlagerungStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateEinlagerungRecordUrl = (kind: string,) => {
+
+
+
+
+  return `/api/einlagerung/records/${kind}`
+}
+
+export const createEinlagerungRecord = async (kind: string,
+    einlagerungRecordInput: EinlagerungRecordInput, options?: RequestInit): Promise<EinlagerungRecord> => {
+
+  return customFetch<EinlagerungRecord>(getCreateEinlagerungRecordUrl(kind),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungRecordInput,)
+  }
+);}
+
+
+
+
+export const getCreateEinlagerungRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEinlagerungRecord>>, TError,{kind: string;data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createEinlagerungRecord>>, TError,{kind: string;data: BodyType<EinlagerungRecordInput>}, TContext> => {
+
+const mutationKey = ['createEinlagerungRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createEinlagerungRecord>>, {kind: string;data: BodyType<EinlagerungRecordInput>}> = (props) => {
+          const {kind,data} = props ?? {};
+
+          return  createEinlagerungRecord(kind,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateEinlagerungRecordMutationResult = NonNullable<Awaited<ReturnType<typeof createEinlagerungRecord>>>
+    export type CreateEinlagerungRecordMutationBody = BodyType<EinlagerungRecordInput>
+    export type CreateEinlagerungRecordMutationError = ErrorType<unknown>
+
+    export const useCreateEinlagerungRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createEinlagerungRecord>>, TError,{kind: string;data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createEinlagerungRecord>>,
+        TError,
+        {kind: string;data: BodyType<EinlagerungRecordInput>},
+        TContext
+      > => {
+      return useMutation(getCreateEinlagerungRecordMutationOptions(options));
+    }
+
+export const getUpdateEinlagerungRecordUrl = (kind: string,
+    id: number,) => {
+
+
+
+
+  return `/api/einlagerung/records/${kind}/${id}`
+}
+
+export const updateEinlagerungRecord = async (kind: string,
+    id: number,
+    einlagerungRecordInput: EinlagerungRecordInput, options?: RequestInit): Promise<EinlagerungRecord> => {
+
+  return customFetch<EinlagerungRecord>(getUpdateEinlagerungRecordUrl(kind,id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungRecordInput,)
+  }
+);}
+
+
+
+
+export const getUpdateEinlagerungRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEinlagerungRecord>>, TError,{kind: string;id: number;data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEinlagerungRecord>>, TError,{kind: string;id: number;data: BodyType<EinlagerungRecordInput>}, TContext> => {
+
+const mutationKey = ['updateEinlagerungRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEinlagerungRecord>>, {kind: string;id: number;data: BodyType<EinlagerungRecordInput>}> = (props) => {
+          const {kind,id,data} = props ?? {};
+
+          return  updateEinlagerungRecord(kind,id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEinlagerungRecordMutationResult = NonNullable<Awaited<ReturnType<typeof updateEinlagerungRecord>>>
+    export type UpdateEinlagerungRecordMutationBody = BodyType<EinlagerungRecordInput>
+    export type UpdateEinlagerungRecordMutationError = ErrorType<unknown>
+
+    export const useUpdateEinlagerungRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEinlagerungRecord>>, TError,{kind: string;id: number;data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEinlagerungRecord>>,
+        TError,
+        {kind: string;id: number;data: BodyType<EinlagerungRecordInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateEinlagerungRecordMutationOptions(options));
+    }
+
+export const getDeleteEinlagerungRecordUrl = (kind: string,
+    id: number,) => {
+
+
+
+
+  return `/api/einlagerung/records/${kind}/${id}`
+}
+
+export const deleteEinlagerungRecord = async (kind: string,
+    id: number, options?: RequestInit): Promise<DeleteEinlagerungRecord200> => {
+
+  return customFetch<DeleteEinlagerungRecord200>(getDeleteEinlagerungRecordUrl(kind,id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteEinlagerungRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEinlagerungRecord>>, TError,{kind: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteEinlagerungRecord>>, TError,{kind: string;id: number}, TContext> => {
+
+const mutationKey = ['deleteEinlagerungRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteEinlagerungRecord>>, {kind: string;id: number}> = (props) => {
+          const {kind,id} = props ?? {};
+
+          return  deleteEinlagerungRecord(kind,id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteEinlagerungRecordMutationResult = NonNullable<Awaited<ReturnType<typeof deleteEinlagerungRecord>>>
+
+    export type DeleteEinlagerungRecordMutationError = ErrorType<unknown>
+
+    export const useDeleteEinlagerungRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteEinlagerungRecord>>, TError,{kind: string;id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteEinlagerungRecord>>,
+        TError,
+        {kind: string;id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteEinlagerungRecordMutationOptions(options));
+    }
+
+export const getSearchEinlagerungUrl = (params: SearchEinlagerungParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/einlagerung/search?${stringifiedParams}` : `/api/einlagerung/search`
+}
+
+export const searchEinlagerung = async (params: SearchEinlagerungParams, options?: RequestInit): Promise<EinlagerungSearchResult> => {
+
+  return customFetch<EinlagerungSearchResult>(getSearchEinlagerungUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchEinlagerungQueryKey = (params?: SearchEinlagerungParams,) => {
+    return [
+    `/api/einlagerung/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchEinlagerungQueryOptions = <TData = Awaited<ReturnType<typeof searchEinlagerung>>, TError = ErrorType<unknown>>(params: SearchEinlagerungParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchEinlagerung>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchEinlagerungQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchEinlagerung>>> = ({ signal }) => searchEinlagerung(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchEinlagerung>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchEinlagerungQueryResult = NonNullable<Awaited<ReturnType<typeof searchEinlagerung>>>
+export type SearchEinlagerungQueryError = ErrorType<unknown>
+
+
+
+export function useSearchEinlagerung<TData = Awaited<ReturnType<typeof searchEinlagerung>>, TError = ErrorType<unknown>>(
+ params: SearchEinlagerungParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchEinlagerung>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchEinlagerungQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSetEinlagerungShelfStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/einlagerung/shelves/${id}/status`
+}
+
+export const setEinlagerungShelfStatus = async (id: number,
+    einlagerungShelfStatusInput: EinlagerungShelfStatusInput, options?: RequestInit): Promise<EinlagerungRecord> => {
+
+  return customFetch<EinlagerungRecord>(getSetEinlagerungShelfStatusUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungShelfStatusInput,)
+  }
+);}
+
+
+
+
+export const getSetEinlagerungShelfStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setEinlagerungShelfStatus>>, TError,{id: number;data: BodyType<EinlagerungShelfStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setEinlagerungShelfStatus>>, TError,{id: number;data: BodyType<EinlagerungShelfStatusInput>}, TContext> => {
+
+const mutationKey = ['setEinlagerungShelfStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setEinlagerungShelfStatus>>, {id: number;data: BodyType<EinlagerungShelfStatusInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setEinlagerungShelfStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetEinlagerungShelfStatusMutationResult = NonNullable<Awaited<ReturnType<typeof setEinlagerungShelfStatus>>>
+    export type SetEinlagerungShelfStatusMutationBody = BodyType<EinlagerungShelfStatusInput>
+    export type SetEinlagerungShelfStatusMutationError = ErrorType<unknown>
+
+    export const useSetEinlagerungShelfStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setEinlagerungShelfStatus>>, TError,{id: number;data: BodyType<EinlagerungShelfStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setEinlagerungShelfStatus>>,
+        TError,
+        {id: number;data: BodyType<EinlagerungShelfStatusInput>},
+        TContext
+      > => {
+      return useMutation(getSetEinlagerungShelfStatusMutationOptions(options));
+    }
+
+export const getUpdateEinlagerungSettingsUrl = () => {
+
+
+
+
+  return `/api/einlagerung/settings`
+}
+
+export const updateEinlagerungSettings = async (einlagerungSettings: EinlagerungSettings, options?: RequestInit): Promise<EinlagerungSettings> => {
+
+  return customFetch<EinlagerungSettings>(getUpdateEinlagerungSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungSettings,)
+  }
+);}
+
+
+
+
+export const getUpdateEinlagerungSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEinlagerungSettings>>, TError,{data: BodyType<EinlagerungSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateEinlagerungSettings>>, TError,{data: BodyType<EinlagerungSettings>}, TContext> => {
+
+const mutationKey = ['updateEinlagerungSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateEinlagerungSettings>>, {data: BodyType<EinlagerungSettings>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateEinlagerungSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateEinlagerungSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateEinlagerungSettings>>>
+    export type UpdateEinlagerungSettingsMutationBody = BodyType<EinlagerungSettings>
+    export type UpdateEinlagerungSettingsMutationError = ErrorType<unknown>
+
+    export const useUpdateEinlagerungSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateEinlagerungSettings>>, TError,{data: BodyType<EinlagerungSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateEinlagerungSettings>>,
+        TError,
+        {data: BodyType<EinlagerungSettings>},
+        TContext
+      > => {
+      return useMutation(getUpdateEinlagerungSettingsMutationOptions(options));
+    }
+
+export const getPreviewEinlagerungImportUrl = () => {
+
+
+
+
+  return `/api/einlagerung/import/preview`
+}
+
+export const previewEinlagerungImport = async (einlagerungImportInput: EinlagerungImportInput, options?: RequestInit): Promise<EinlagerungImportPreview> => {
+
+  return customFetch<EinlagerungImportPreview>(getPreviewEinlagerungImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungImportInput,)
+  }
+);}
+
+
+
+
+export const getPreviewEinlagerungImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewEinlagerungImport>>, TError,{data: BodyType<EinlagerungImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewEinlagerungImport>>, TError,{data: BodyType<EinlagerungImportInput>}, TContext> => {
+
+const mutationKey = ['previewEinlagerungImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewEinlagerungImport>>, {data: BodyType<EinlagerungImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewEinlagerungImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewEinlagerungImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewEinlagerungImport>>>
+    export type PreviewEinlagerungImportMutationBody = BodyType<EinlagerungImportInput>
+    export type PreviewEinlagerungImportMutationError = ErrorType<unknown>
+
+    export const usePreviewEinlagerungImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewEinlagerungImport>>, TError,{data: BodyType<EinlagerungImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewEinlagerungImport>>,
+        TError,
+        {data: BodyType<EinlagerungImportInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewEinlagerungImportMutationOptions(options));
+    }
+
+export const getCommitEinlagerungImportUrl = () => {
+
+
+
+
+  return `/api/einlagerung/import/commit`
+}
+
+export const commitEinlagerungImport = async (einlagerungImportInput: EinlagerungImportInput, options?: RequestInit): Promise<EinlagerungDataset> => {
+
+  return customFetch<EinlagerungDataset>(getCommitEinlagerungImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungImportInput,)
+  }
+);}
+
+
+
+
+export const getCommitEinlagerungImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitEinlagerungImport>>, TError,{data: BodyType<EinlagerungImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof commitEinlagerungImport>>, TError,{data: BodyType<EinlagerungImportInput>}, TContext> => {
+
+const mutationKey = ['commitEinlagerungImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commitEinlagerungImport>>, {data: BodyType<EinlagerungImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commitEinlagerungImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommitEinlagerungImportMutationResult = NonNullable<Awaited<ReturnType<typeof commitEinlagerungImport>>>
+    export type CommitEinlagerungImportMutationBody = BodyType<EinlagerungImportInput>
+    export type CommitEinlagerungImportMutationError = ErrorType<unknown>
+
+    export const useCommitEinlagerungImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitEinlagerungImport>>, TError,{data: BodyType<EinlagerungImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof commitEinlagerungImport>>,
+        TError,
+        {data: BodyType<EinlagerungImportInput>},
+        TContext
+      > => {
+      return useMutation(getCommitEinlagerungImportMutationOptions(options));
+    }
 
 export const getHealthCheckUrl = () => {
 

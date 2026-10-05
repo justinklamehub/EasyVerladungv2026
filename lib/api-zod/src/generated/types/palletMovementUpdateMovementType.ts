@@ -12,7 +12,9 @@ export type PalletMovementUpdateMovementType = typeof PalletMovementUpdateMoveme
 export const PalletMovementUpdateMovementType = {
   eingang: 'eingang',
   ausgang: 'ausgang',
+  neutral: 'neutral',
   korrektur: 'korrektur',
   abstimmung: 'abstimmung',
   anfangsbestand: 'anfangsbestand',
+  abschreibung: 'abschreibung',
 } as const;

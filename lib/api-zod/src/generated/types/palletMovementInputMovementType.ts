@@ -12,6 +12,7 @@ export type PalletMovementInputMovementType = typeof PalletMovementInputMovement
 export const PalletMovementInputMovementType = {
   eingang: 'eingang',
   ausgang: 'ausgang',
+  neutral: 'neutral',
   korrektur: 'korrektur',
   abstimmung: 'abstimmung',
   anfangsbestand: 'anfangsbestand',

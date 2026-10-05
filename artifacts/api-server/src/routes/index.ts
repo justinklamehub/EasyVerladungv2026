@@ -28,6 +28,7 @@ import fotosRouter from "./fotos";
 import chatRouter from "./chat";
 import lkwArtenRouter from "./lkw-arten";
 import wareneingangRouter from "./wareneingang";
+import einlagerungRouter from "./einlagerung";
 
 const router: IRouter = Router();
 
@@ -60,5 +61,6 @@ router.use(storageRouter);
 router.use(fotosRouter);
 router.use(lkwArtenRouter);
 router.use(wareneingangRouter);
+router.use(einlagerungRouter);
 
 export default router;

@@ -18,6 +18,7 @@ import { ensureChatTables, setupChatSocket } from "./routes/chat";
 import { ensureLkwArtenTable } from "./routes/lkw-arten";
 import { ensureWareneingangTable } from "./routes/wareneingang";
 import { pool } from "@workspace/db";
+import { ensureWarehouseTables } from "./lib/einlagerung/model";
 
 // Load .env relative to this file (Node 20.6+ built-in, no dotenv needed).
 // Works regardless of PM2's working directory at startup.
@@ -247,6 +248,12 @@ httpServer.listen(port, async (err?: Error) => {
     process.exit(1);
   }
   logger.info({ port }, "Server listening with Socket.IO");
+  try {
+    await ensureWarehouseTables();
+    logger.info("einlagerung tables ensured");
+  } catch (e) {
+    logger.error({ err: e }, "Einlagerung tables could not be initialized");
+  }
   try {
     await ensureEmailLogTable();
     logger.info("email_log table ensured");
