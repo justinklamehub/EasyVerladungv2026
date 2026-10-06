@@ -21,8 +21,8 @@ Plus-KW bleibt bei Lieferterminen eine Zusatzangabe und verlängert die Frist ni
 
 **How to apply:** Die Regeln für Vormerkungen nicht auf die Lieferterminwarnung übertragen.
 
-Die Liefertermin-Mail soll täglich nur bei Terminen innerhalb der eingestellten Mail-Frist oder überfälligen Terminen gesendet werden und dann die gesamte aktuelle Übersicht enthalten. Empfänger und Prüfzeit gehören in die Einstellungen.
+Die Liefertermin-Mail soll täglich nur bei enthaltenen Terminen innerhalb der eingestellten Mail-Frist oder überfälligen Terminen gesendet werden. Der Mail-Inhalt ist auswählbar; standardmäßig nur kritisch/überfällig und bald fällig, nicht unkritische Termine. Die Lagerübersicht bleibt vollständig.
 
-**Why:** Der Nutzer hat zunächst den bedingten täglichen Versand gewählt und danach frei definierbare Tage vor Liefertermin sowie eine bearbeitbare Mail unter Einstellungen → E-Mail verlangt.
+**Why:** Der Nutzer hat den ursprünglichen Vollversand geändert: „Die Unkritischen müssen nicht in der Mail selbst sein, nur die Kritischen/Überfälligen oder Bald Fälligen“ und eine Einstellung vorgeschlagen. Mail-Frist und Vorlage bleiben frei konfigurierbar.
 
-**How to apply:** Die Mail-Frist unabhängig von den Lagerwarnfarben einstellen. 0 bedeutet heute bzw. überfällig; auch KW-Termine nach der bestätigten Montag-Regel mitprüfen. Betreff/Text müssen in Vorschau und Versand dieselbe gespeicherte Vorlage verwenden.
+**How to apply:** Kategorien anhand der Lagerwarnstufen auswählen; Versand nur auslösen, wenn ein enthaltener Termin die eigene Mail-Frist erfüllt. Keine leeren Mails senden. 0 bedeutet heute bzw. überfällig; KW nach Montag-Regel. Vorschau, Summen, Text und HTML müssen dieselbe gespeicherte Auswahl/Vorlage verwenden.

@@ -11,7 +11,9 @@ import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { DEFAULT_DELIVERY_MAIL_DAYS, DEFAULT_DELIVERY_MAIL_SUBJECT, DEFAULT_DELIVERY_MAIL_BODY, DELIVERY_MAIL_PLACEHOLDERS } from "@workspace/api-zod/delivery-mail";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { DEFAULT_DELIVERY_MAIL_DAYS, DEFAULT_DELIVERY_MAIL_SUBJECT, DEFAULT_DELIVERY_MAIL_BODY, DELIVERY_MAIL_PLACEHOLDERS,
+  DEFAULT_DELIVERY_MAIL_SCOPE, DELIVERY_MAIL_SCOPE_OPTIONS } from "@workspace/api-zod/delivery-mail";
 
 export function DeliveryReportCard({ settings, onSave, isSaving, showTemplates = false }: {
   settings: Record<string, string>; onSave: (key: string, value: string) => Promise<unknown>; isSaving: (key: string) => boolean; showTemplates?: boolean;
@@ -34,7 +36,7 @@ export function DeliveryReportCard({ settings, onSave, isSaving, showTemplates =
   useEffect(() => setDays(savedDays), [savedDays]);
   useEffect(() => setSubject(savedSubject), [savedSubject]);
   useEffect(() => setBody(savedBody), [savedBody]);
-  const saving = ["enabled", "email", "time", "days"].some((k) => isSaving(`report_delivery_${k}`)) ||
+  const saving = ["enabled", "email", "time", "days", "scope"].some((k) => isSaving(`report_delivery_${k}`)) ||
     isSaving("email_tpl_delivery_report_subject") || isSaving("email_tpl_delivery_report_body");
   const validEmail = !!email.trim() && email.split(/[,;]/).map((v) => v.trim()).filter(Boolean).every((v) => /^[^\s<>@,;]+@[^\s<>@,;]+\.[^\s<>@,;]+$/.test(v));
   const validDays = /^\d+$/.test(days.trim()) && Number(days) <= 3650;
@@ -65,13 +67,25 @@ export function DeliveryReportCard({ settings, onSave, isSaving, showTemplates =
   return <Card className="min-w-0" data-testid="card-delivery-report">
     <CardHeader>
       <CardTitle className="flex items-center gap-2 text-base"><Mail className="h-4 w-4" />Tägliche Lieferterminübersicht</CardTitle>
-      <CardDescription>Täglich prüfen und bei Terminen innerhalb der eingestellten Mail-Frist oder überfälligen Terminen die gesamte aktuelle Übersicht senden.</CardDescription>
+      <CardDescription>Täglich prüfen und bei passenden Terminen innerhalb der Mail-Frist oder überfälligen Terminen die gewählte Übersicht senden.</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <Label htmlFor="delivery-report-enabled">Automatische Liefertermin-Mail aktivieren</Label>
         <Switch id="delivery-report-enabled" checked={enabled} disabled={saving || working || (!enabled && (!settings.report_delivery_email?.trim() || dirty))}
           onCheckedChange={(v) => void save("report_delivery_enabled", v ? "1" : "0")} data-testid="switch-delivery-report-enabled" />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="delivery-report-scope">Welche Termine gehören in die Mail?</Label>
+        <Select value={settings.report_delivery_scope || DEFAULT_DELIVERY_MAIL_SCOPE} disabled={saving || working}
+          onValueChange={(value) => void save("report_delivery_scope", value)}>
+          <SelectTrigger id="delivery-report-scope" className="min-w-0 w-full [&>span]:truncate" data-testid="select-delivery-report-scope">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>{DELIVERY_MAIL_SCOPE_OPTIONS.map((option) =>
+            <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}</SelectContent>
+        </Select>
+        <p className="text-xs text-slate-500">Standard: nur kritisch/überfällig und bald fällig. Die Kategorien entsprechen den Warnstufen der Lagerübersicht. Die Mail-Frist entscheidet, ob ein ausgewählter Termin den Versand auslöst; bei leerer Auswahl wird keine Mail gesendet. Die Lagerübersicht bleibt vollständig.</p>
       </div>
       <div className="space-y-2">
         <Label htmlFor="delivery-report-days">Tage vor Liefertermin</Label>
@@ -120,7 +134,7 @@ export function DeliveryReportCard({ settings, onSave, isSaving, showTemplates =
           <Button size="sm" variant="outline" disabled={saving || body === savedBody}
             onClick={() => void save("email_tpl_delivery_report_body", body)} data-testid="button-save-delivery-mail-body">Text speichern</Button>
         </div>
-        <p className="text-xs text-slate-500">Leerer Betreff oder Text stellt die Standardvorlage wieder her. Die Übersichtstabelle wird automatisch angehängt, falls der Platzhalter fehlt.</p>
+        <p className="text-xs text-slate-500">Leerer Betreff oder Text stellt die Standardvorlage wieder her. Die Tabelle mit der gewählten Terminauswahl wird automatisch angehängt, falls der Platzhalter fehlt.</p>
         <div className="flex flex-wrap gap-1">{DELIVERY_MAIL_PLACEHOLDERS.map((p) =>
           <Badge key={p} variant="secondary" className="max-w-full whitespace-normal break-all font-mono text-xs">{`{{${p}}}`}</Badge>)}</div>
       </div> : <p className="text-xs text-slate-500">Betreff und Nachrichtentext sind unter Einstellungen → E-Mail → Tägliche Lieferterminübersicht bearbeitbar.</p>}

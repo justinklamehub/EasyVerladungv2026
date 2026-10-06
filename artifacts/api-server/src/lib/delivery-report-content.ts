@@ -1,6 +1,7 @@
 import { classifyDeliveryOrders, DEADLINE_TIME_ZONE, deadlineSummary, todayOrdinal } from "@workspace/api-zod/delivery-deadlines";
 import type { EinlagerungDeadlineThresholds } from "@workspace/api-zod";
-import { DEFAULT_DELIVERY_MAIL_SUBJECT, DEFAULT_DELIVERY_MAIL_BODY, DEFAULT_DELIVERY_MAIL_DAYS } from "@workspace/api-zod/delivery-mail";
+import { DEFAULT_DELIVERY_MAIL_SUBJECT, DEFAULT_DELIVERY_MAIL_BODY, DEFAULT_DELIVERY_MAIL_DAYS,
+  DEFAULT_DELIVERY_MAIL_SCOPE, DELIVERY_MAIL_SCOPE_OPTIONS, type DeliveryMailScope } from "@workspace/api-zod/delivery-mail";
 
 export const reportDate = (now: Date) => String(todayOrdinal(now));
 export const reportClock = (now: Date) => new Intl.DateTimeFormat("en-GB", {
@@ -24,17 +25,21 @@ const labels: Record<string, string> = { critical: "Kritisch / überfällig", so
 
 export function buildDeliveryReport(input: {
   orders: Record<string, any>[]; thresholds: EinlagerungDeadlineThresholds; now: Date; appName: string;
-  importedAt?: Date; filename?: string; staleHours: number; warningDays?: number; subjectTemplate?: string; bodyTemplate?: string;
+  importedAt?: Date; filename?: string; staleHours: number; warningDays?: number; subjectTemplate?: string; bodyTemplate?: string; scope?: DeliveryMailScope;
 }) {
-  const rows = classifyDeliveryOrders(input.orders, input.thresholds, input.now);
+  const allRows = classifyDeliveryOrders(input.orders, input.thresholds, input.now);
+  const scope = input.scope ?? DEFAULT_DELIVERY_MAIL_SCOPE;
+  const rows = allRows.filter((r) => scope === "all" || r.status === "critical" || (scope === "urgent" && r.status === "soon"));
   const sum = deadlineSummary(rows);
   const warningDays = input.warningDays ?? DEFAULT_DELIVERY_MAIL_DAYS;
   const dueCount = rows.filter((r) => r.days != null && r.days <= warningDays).length;
   const date = input.now.toLocaleString("de-DE", { timeZone: DEADLINE_TIME_ZONE });
   const stand = input.importedAt ? `${input.importedAt.toLocaleString("de-DE", { timeZone: DEADLINE_TIME_ZONE })} (${input.filename || ""})` : "Kein Auftragsimport vorhanden";
   const stale = input.importedAt && input.now.getTime() - input.importedAt.getTime() > input.staleHours * 3_600_000;
-  const warnings = [stale ? "Achtung: Der Auftragsimport ist veraltet." : "", sum.unknown.orders ? `${sum.unknown.orders} Termine fehlen oder sind ungültig; bitte prüfen.` : ""].filter(Boolean);
-  const explanation = `Mail-Versand bei ${warningDays} Tagen Rest oder weniger, einschließlich heute und überfällig. Resttage sind Kalendertage (${DEADLINE_TIME_ZONE}). KW-Termine: maßgeblich ist der Montag / KW-Beginn. Plus-KW wird nur angezeigt und verlängert den Termin nicht. Unabhängige Lagerwarnstufen: kritisch ≤ ${input.thresholds.criticalDays} Tage, bald fällig ≤ ${input.thresholds.soonDays}, demnächst ≤ ${input.thresholds.upcomingDays}.`;
+  const unknownCount = allRows.filter((r) => r.status === "unknown").length;
+  const warnings = [stale ? "Achtung: Der Auftragsimport ist veraltet." : "", unknownCount ? `${unknownCount} Termine fehlen oder sind ungültig; bitte in der Lagerübersicht prüfen.` : ""].filter(Boolean);
+  const scopeLabel = DELIVERY_MAIL_SCOPE_OPTIONS.find((o) => o.value === scope)!.label;
+  const explanation = `Mail-Inhalt: ${scopeLabel}. Versand nur, wenn mindestens ein enthaltener Termin ${warningDays} Tage Rest oder weniger hat, einschließlich heute und überfällig. Resttage sind Kalendertage (${DEADLINE_TIME_ZONE}). KW-Termine: maßgeblich ist der Montag / KW-Beginn. Plus-KW wird nur angezeigt und verlängert den Termin nicht. Unabhängige Lagerwarnstufen: kritisch ≤ ${input.thresholds.criticalDays} Tage, bald fällig ≤ ${input.thresholds.soonDays}, demnächst ≤ ${input.thresholds.upcomingDays}.`;
   const headers = ["Status", "Liefertermin / KW", "Rest", "Regal", "Spedition", "Relation", "Plus-KW", "Paletten"];
   const cells = rows.map((r) => [
     labels[r.status], r.dateLabel,

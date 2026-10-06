@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildDeliveryReport, deliverReportRecipients, reportClock, reportDate, reportIsDue, reportRecipients, validReportTime } from "./delivery-report-content";
 import { classifyDeliveryOrders, DEFAULT_DEADLINE_THRESHOLDS as thresholds } from "@workspace/api-zod/delivery-deadlines";
-import { deliveryMailDays } from "@workspace/api-zod/delivery-mail";
+import { deliveryMailDays, deliveryMailScope } from "@workspace/api-zod/delivery-mail";
 const now = new Date("2026-10-06T12:00:00Z");
 const order = (termin: string) => ({ termin, shelf: "10-03", spedition: "<script>evil</script>", relation: "A&B", plusKw: "2", paletten: 3 });
 const build = (orders: Record<string, any>[]) => buildDeliveryReport({ orders, thresholds, now, appName: "<COMET>", staleHours: 24,
@@ -18,10 +18,10 @@ test("KW-Resttage zum Montag, einschließlich KW 53, Jahreswechsel und Sortierun
   assert.equal(classifyDeliveryOrders([order("07.10.2026"), order("41.2026")], thresholds, now)[0].dateLabel, "KW 41.2026");
   assert.equal(classifyDeliveryOrders([order("41.2026")], { criticalDays: 5, soonDays: 7, upcomingDays: 14 }, now)[0].status, "critical");
 });
-test("Gesamte Übersicht, unbekannte Termine, Importstand und HTML sicher", () => {
+test("Standardauswahl, unbekannte Termine, Importstand und HTML sicher", () => {
   const report = build([order("05.10.2026"), order("41.2026"), order(""), order("21.10.2026")]);
   assert.equal(report.criticalCount, 2);
-  assert.equal(report.ordersCount, 4);
+  assert.equal(report.ordersCount, 2);
   assert.ok(report.text.includes("KW-Beginn: Montag"));
   assert.ok(report.text.includes("veraltet"));
   assert.ok(report.text.includes("Aufträge.csv"));
@@ -56,7 +56,7 @@ test("Versand nutzt echte Berichtsinhalte; Wiederholung überspringt bereits zug
 });
 test("Mail-Frist ist unabhängig von Lagerwarnungen; exakte Grenze, null Tage und KW-Montag", () => {
   const input = { orders: [order("09.10.2026"), order("42.2026"), order("06.10.2026"), order("05.10.2026"), order("")],
-    thresholds, now, appName: "COMET", staleHours: 24 };
+    thresholds, now, appName: "COMET", staleHours: 24, scope: "all" as const };
   assert.equal(buildDeliveryReport({ ...input, warningDays: 0 }).dueCount, 2);
   assert.equal(buildDeliveryReport({ ...input, warningDays: 3 }).dueCount, 3);
   assert.equal(buildDeliveryReport({ ...input, warningDays: 5 }).dueCount, 3);
@@ -66,6 +66,33 @@ test("Mail-Frist ist unabhängig von Lagerwarnungen; exakte Grenze, null Tage un
   assert.equal(deliveryMailDays("0"), 0);
   assert.equal(deliveryMailDays("3650"), 3650);
   for (const v of ["", "-1", "1.5", "3651", "NaN"]) assert.throws(() => deliveryMailDays(v));
+});
+test("Mail-Auswahl filtert Text, HTML, Summen und Versandgrund, ohne Lagerdaten zu verändern", () => {
+  const orders = ["05.10.2026", "08.10.2026", "09.10.2026", "20.10.2026", "21.10.2026", ""]
+    .map((date, i) => ({ ...order(date), shelf: `shelf-${i}` }));
+  const before = JSON.stringify(orders);
+  const input = { orders, thresholds, now, appName: "COMET", staleHours: 24, warningDays: 14,
+    bodyTemplate: "{{anzahl}} Gruppen / {{paletten}} Paletten\n{{tabelle}}" };
+  const urgent = buildDeliveryReport(input);
+  assert.equal(urgent.ordersCount, 3);
+  assert.equal(urgent.dueCount, 3);
+  assert.ok(urgent.text.startsWith("3 Gruppen / 9 Paletten"));
+  for (const i of [3, 4, 5]) {
+    assert.ok(!urgent.text.includes(`shelf-${i}`));
+    assert.ok(!urgent.html.includes(`shelf-${i}`));
+  }
+  const critical = buildDeliveryReport({ ...input, scope: "critical" });
+  assert.equal(critical.ordersCount, 2);
+  assert.equal(critical.dueCount, 2);
+  assert.ok(!critical.html.includes("shelf-2"));
+  assert.equal(buildDeliveryReport({ ...input, scope: "all" }).ordersCount, 6);
+  const empty = buildDeliveryReport({ ...input, orders: [order("20.10.2026")], scope: "urgent" });
+  assert.equal(empty.ordersCount, 0);
+  assert.equal(empty.dueCount, 0);
+  assert.equal(JSON.stringify(orders), before);
+  assert.equal(deliveryMailScope(), "urgent");
+  for (const v of ["urgent", "critical", "all"]) assert.equal(deliveryMailScope(v), v);
+  for (const v of ["", "safe", "unknown"]) assert.throws(() => deliveryMailScope(v));
 });
 test("Gespeicherte Vorlage, Platzhalter, automatische Tabelle und HTML-Escaping", () => {
   const report = buildDeliveryReport({ orders: [order("41.2026")], thresholds, now, appName: "<COMET>", staleHours: 24,

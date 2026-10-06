@@ -4,7 +4,7 @@ import { settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { reportRecipients, validReportTime } from "../lib/delivery-report-content";
-import { deliveryMailDays } from "@workspace/api-zod/delivery-mail";
+import { deliveryMailDays, deliveryMailScope } from "@workspace/api-zod/delivery-mail";
 
 const router = Router();
 
@@ -95,6 +95,7 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
       "report_delivery_email",
       "report_delivery_time",
       "report_delivery_days",
+      "report_delivery_scope",
       "email_tpl_delivery_report_subject",
       "email_tpl_delivery_report_body",
       "impressum_text",
@@ -129,6 +130,10 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
     if (key === "report_delivery_days") {
       try { if (typeof value !== "string") throw new Error(); deliveryMailDays(value); }
       catch { return res.status(400).json({ error: "Tage vor Liefertermin müssen eine ganze Zahl von 0 bis 3650 sein." }); }
+    }
+    if (key === "report_delivery_scope") {
+      try { if (typeof value !== "string") throw new Error(); deliveryMailScope(value); }
+      catch { return res.status(400).json({ error: "Ungültige Auswahl für den Mail-Inhalt." }); }
     }
     if (key === "email_tpl_delivery_report_subject" || key === "email_tpl_delivery_report_body") {
       if (typeof value !== "string" || value.length > (key.endsWith("_subject") ? 500 : 20000) ||

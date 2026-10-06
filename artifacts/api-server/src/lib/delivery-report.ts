@@ -3,7 +3,7 @@ import { createEmailTransport } from "./email";
 import { aggregateStock, getSettings, read, records } from "./einlagerung/model";
 import { buildDeliveryReport, deliverReportRecipients, reportDate, reportIsDue, reportRecipients } from "./delivery-report-content";
 import { logger } from "./logger";
-import { deliveryMailDays } from "@workspace/api-zod/delivery-mail";
+import { deliveryMailDays, deliveryMailScope } from "@workspace/api-zod/delivery-mail";
 
 async function appSettings() {
   return Object.fromEntries((await db.select().from(settingsTable)).map((s) => [s.key, s.value ?? ""]));
@@ -18,7 +18,8 @@ export async function previewDeliveryReport(now = new Date(), app?: Record<strin
     return buildDeliveryReport({ orders, thresholds: warehouse.deadlineThresholds,
       now, appName: settings.app_name || "COMET", importedAt: snapshot && new Date(snapshot.imported_at),
       filename: snapshot?.filename, staleHours: warehouse.staleHours, warningDays: deliveryMailDays(settings.report_delivery_days),
-      subjectTemplate: settings.email_tpl_delivery_report_subject, bodyTemplate: settings.email_tpl_delivery_report_body });
+      subjectTemplate: settings.email_tpl_delivery_report_subject, bodyTemplate: settings.email_tpl_delivery_report_body,
+      scope: deliveryMailScope(settings.report_delivery_scope) });
   });
 }
 const skipped = (message: string) => ({ ok: true, sent: false, message });
@@ -47,7 +48,7 @@ export async function runDeliveryReportCheck(manual = false, now = new Date()) {
     if (!manual && now.getTime() - lastAttempt < 15 * 60_000) return skipped("Versand wird nach einer kurzen Wartezeit erneut versucht.");
     const report = await previewDeliveryReport(now, s);
     if (!report.dueCount) {
-      const message = `Keine Liefertermine innerhalb von ${report.warningDays} Tagen oder überfällig – keine Mail versendet.`;
+      const message = `Keine Termine der gewählten Mail-Auswahl innerhalb von ${report.warningDays} Tagen oder überfällig – keine Mail versendet.`;
       // New imports and changed thresholds are picked up on the next minute.
       await check(message);
       return skipped(message);
