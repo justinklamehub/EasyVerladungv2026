@@ -43,8 +43,9 @@ test("KW-Termine bekommen keinen erfundenen Tag; ISO-Wochenjahre werden validier
   for (const value of ["KW 47.2026", "47.2026", "53.2020", "1.2021"]) assert.equal(parseDeliveryTerm(value).kind, "week");
   for (const value of ["53.2025", "54.2026", "0.2026"]) assert.equal(parseDeliveryTerm(value).kind, "unknown");
   const rows = classifyDeliveryOrders([order("47.2026"), order(""), order("unbekannt")], limits, now);
-  assert.deepEqual(rows.map((r) => r.status), ["week", "unknown", "unknown"]);
-  assert.ok(rows.every((r) => r.days === null));
+  assert.deepEqual(rows.map((r) => r.status), ["safe", "unknown", "unknown"]);
+  assert.equal(rows[0].days, 41);
+  assert.ok(rows.slice(1).every((r) => r.days === null));
 });
 test("Berliner Kalendertag berücksichtigt Mitternacht und Sommerzeit ohne Tagesbruch", () => {
   assert.equal(todayOrdinal(new Date("2026-10-06T22:30:00Z")) - todayOrdinal(now), 1);
@@ -60,7 +61,7 @@ test("Summen sind Paletten, nicht Zeilen; Quellaufträge bleiben unverändert", 
   const summary = deadlineSummary(classifyDeliveryOrders(orders, limits, now));
   assert.deepEqual(summary.soon, { orders: 3, pallets: 137 });
   assert.deepEqual(summary.upcoming, { orders: 2, pallets: 122 });
-  assert.equal(summary.week.pallets, 22);
+  assert.equal(summary.safe.pallets, 22);
   assert.equal(summary.unknown.pallets, 3);
   assert.equal(JSON.stringify(orders), before);
 });

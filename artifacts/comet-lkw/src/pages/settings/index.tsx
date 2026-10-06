@@ -19,6 +19,7 @@ import { useAuth } from "@/contexts/auth-context";
 import { Link } from "wouter";
 import { Warehouse } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
+import { DeliveryReportCard } from "./delivery-report-card";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -160,6 +161,7 @@ const EMAIL_EVENTS = [
 ];
 
 const EVENT_LABELS: Record<string, string> = {
+  delivery_report: "Lieferterminübersicht",
   shipment: "Einzel-Verladung",
   bulk: "Massen-Verladung",
   user: "Benutzer angelegt",
@@ -2462,6 +2464,8 @@ export default function SettingsPage() {
 
           {/* ── SMTP-Konfiguration ── */}
           <SmtpSettingsCard settings={s} />
+          <DeliveryReportCard settings={s} onSave={(key, value) => saveMutation.mutateAsync({ key, value })}
+            isSaving={isSavingKey} showTemplates />
 
           <Card className="shadow-sm">
             <CardHeader className="pb-3">
@@ -2566,6 +2570,7 @@ export default function SettingsPage() {
 
         {/* ── Tab: Berichte ── */}
         <TabsContent value="berichte" className="space-y-5 mt-0">
+          <DeliveryReportCard settings={s} onSave={(key, value) => saveMutation.mutateAsync({ key, value })} isSaving={isSavingKey} />
           <WeeklyReportCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
         </TabsContent>
 

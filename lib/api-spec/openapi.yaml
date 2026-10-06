@@ -30,6 +30,34 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /report/delivery/preview:
+    get:
+      operationId: previewDeliveryReport
+      responses:
+        "200":
+          description: Aktuelle Liefertermin-Mail ohne Versand
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryReportPreview"
+        "403":
+          description: Nur Administratoren
+  /report/delivery/send:
+    post:
+      operationId: sendDeliveryReport
+      responses:
+        "200":
+          description: Prüfergebnis (Versand nur bei kritischen Terminen)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeliveryReportResult"
+        "400":
+          description: Ungültige Mailkonfiguration
+        "403":
+          description: Nur Administratoren
+        "500":
+          description: Versand fehlgeschlagen
   /einlagerung/state:
     get:
       operationId: getEinlagerungState
@@ -1102,6 +1130,24 @@ paths:
 
 components:
   schemas:
+    DeliveryReportPreview:
+      type: object
+      required: [subject, html, text, criticalCount, ordersCount, dueCount, warningDays]
+      properties:
+        subject: { type: string }
+        html: { type: string }
+        text: { type: string }
+        criticalCount: { type: integer }
+        ordersCount: { type: integer }
+        dueCount: { type: integer }
+        warningDays: { type: integer }
+    DeliveryReportResult:
+      type: object
+      required: [ok, sent, message]
+      properties:
+        ok: { type: boolean }
+        sent: { type: boolean }
+        message: { type: string }
     EinlagerungShelfStatusInput:
       type: object
       required: [full]

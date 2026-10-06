@@ -5,6 +5,22 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export interface DeliveryReportPreview {
+  subject: string;
+  html: string;
+  text: string;
+  criticalCount: number;
+  ordersCount: number;
+  dueCount: number;
+  warningDays: number;
+}
+
+export interface DeliveryReportResult {
+  ok: boolean;
+  sent: boolean;
+  message: string;
+}
+
 export interface EinlagerungShelfStatusInput {
   full: boolean;
   note?: string;

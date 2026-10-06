@@ -26,6 +26,8 @@ import type {
   BulkShipmentInput,
   DashboardData,
   DeleteEinlagerungRecord200,
+  DeliveryReportPreview,
+  DeliveryReportResult,
   EinlagerungDataset,
   EinlagerungImportInput,
   EinlagerungImportPreview,
@@ -81,6 +83,141 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
+export const getPreviewDeliveryReportUrl = () => {
+
+
+
+
+  return `/api/report/delivery/preview`
+}
+
+export const previewDeliveryReport = async ( options?: RequestInit): Promise<DeliveryReportPreview> => {
+
+  return customFetch<DeliveryReportPreview>(getPreviewDeliveryReportUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getPreviewDeliveryReportQueryKey = () => {
+    return [
+    `/api/report/delivery/preview`
+    ] as const;
+    }
+
+
+export const getPreviewDeliveryReportQueryOptions = <TData = Awaited<ReturnType<typeof previewDeliveryReport>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof previewDeliveryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getPreviewDeliveryReportQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof previewDeliveryReport>>> = ({ signal }) => previewDeliveryReport({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof previewDeliveryReport>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type PreviewDeliveryReportQueryResult = NonNullable<Awaited<ReturnType<typeof previewDeliveryReport>>>
+export type PreviewDeliveryReportQueryError = ErrorType<void>
+
+
+
+export function usePreviewDeliveryReport<TData = Awaited<ReturnType<typeof previewDeliveryReport>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof previewDeliveryReport>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getPreviewDeliveryReportQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSendDeliveryReportUrl = () => {
+
+
+
+
+  return `/api/report/delivery/send`
+}
+
+export const sendDeliveryReport = async ( options?: RequestInit): Promise<DeliveryReportResult> => {
+
+  return customFetch<DeliveryReportResult>(getSendDeliveryReportUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSendDeliveryReportMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendDeliveryReport>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendDeliveryReport>>, TError,void, TContext> => {
+
+const mutationKey = ['sendDeliveryReport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendDeliveryReport>>, void> = () => {
+
+
+          return  sendDeliveryReport(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendDeliveryReportMutationResult = NonNullable<Awaited<ReturnType<typeof sendDeliveryReport>>>
+
+    export type SendDeliveryReportMutationError = ErrorType<void>
+
+    export const useSendDeliveryReport = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendDeliveryReport>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendDeliveryReport>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSendDeliveryReportMutationOptions(options));
+    }
 
 export const getGetEinlagerungStateUrl = () => {
 

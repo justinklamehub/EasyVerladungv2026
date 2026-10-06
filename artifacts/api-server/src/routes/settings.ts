@@ -3,6 +3,8 @@ import { db } from "@workspace/db";
 import { settingsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
+import { reportRecipients, validReportTime } from "../lib/delivery-report-content";
+import { deliveryMailDays } from "@workspace/api-zod/delivery-mail";
 
 const router = Router();
 
@@ -89,6 +91,12 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
       "report_weekly_email",
       "report_weekly_day",
       "report_weekly_time",
+      "report_delivery_enabled",
+      "report_delivery_email",
+      "report_delivery_time",
+      "report_delivery_days",
+      "email_tpl_delivery_report_subject",
+      "email_tpl_delivery_report_body",
       "impressum_text",
       "datenschutz_text",
       "storage_backend",
@@ -117,6 +125,38 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
 
     if (key === "storage_backend" && value !== "gcs" && value !== "local") {
       return res.status(400).json({ error: "Ungültiger Speicher-Backend-Wert" });
+    }
+    if (key === "report_delivery_days") {
+      try { if (typeof value !== "string") throw new Error(); deliveryMailDays(value); }
+      catch { return res.status(400).json({ error: "Tage vor Liefertermin müssen eine ganze Zahl von 0 bis 3650 sein." }); }
+    }
+    if (key === "email_tpl_delivery_report_subject" || key === "email_tpl_delivery_report_body") {
+      if (typeof value !== "string" || value.length > (key.endsWith("_subject") ? 500 : 20000) ||
+        (key.endsWith("_subject") && /[\r\n]/.test(value))) {
+        return res.status(400).json({ error: "Ungültige Mailvorlage: Betreff maximal 500 Zeichen ohne Zeilenumbruch, Text maximal 20000 Zeichen." });
+      }
+    }
+    if (key.startsWith("report_delivery_")) {
+      if (typeof value !== "string" ||
+        (key === "report_delivery_enabled" && !["0", "1"].includes(value)) ||
+        (key === "report_delivery_time" && !validReportTime(value))) {
+        return res.status(400).json({ error: "Ungültige Liefertermin-Mail-Einstellung" });
+      }
+      if (key === "report_delivery_email" && value.trim()) {
+        try { reportRecipients(value); } catch {
+          return res.status(400).json({ error: "Bitte gültige E-Mail-Adressen durch Komma oder Semikolon getrennt angeben." });
+        }
+      }
+      if (key === "report_delivery_enabled" && value === "1") {
+        const recipient = await db.select().from(settingsTable).where(eq(settingsTable.key, "report_delivery_email"));
+        try { reportRecipients(recipient[0]?.value || ""); } catch {
+          return res.status(400).json({ error: "Vor der Aktivierung bitte gültige Empfänger speichern." });
+        }
+      }
+      if (key === "report_delivery_email" && !value.trim()) {
+        const enabled = await db.select().from(settingsTable).where(eq(settingsTable.key, "report_delivery_enabled"));
+        if (enabled[0]?.value === "1") return res.status(400).json({ error: "Vor dem Entfernen aller Empfänger bitte die Automatik deaktivieren." });
+      }
     }
 
     await db

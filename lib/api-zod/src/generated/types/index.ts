@@ -13,6 +13,8 @@ export * from './authUserRole';
 export * from './bulkShipmentInput';
 export * from './dashboardData';
 export * from './deleteEinlagerungRecord200';
+export * from './deliveryReportPreview';
+export * from './deliveryReportResult';
 export * from './einlagerungDataset';
 export * from './einlagerungDeadlineThresholds';
 export * from './einlagerungImportInput';

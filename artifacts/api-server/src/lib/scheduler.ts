@@ -6,6 +6,7 @@ import { notify } from "./notify";
 import { logger } from "./logger";
 import { sendEventEmail } from "./email";
 import { getPasswordMaxAgeDays } from "./password-policy";
+import { runDeliveryReportCheck } from "./delivery-report";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const ABGESCHLOSSEN = ["Abgefertigt", "Storniert"];
@@ -427,6 +428,9 @@ export { ensureReportWeeklyLogTable, runPasswordExpiryReminderCheck, ensureRecon
 const SLA_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function startScheduler(io: SocketIOServer) {
+  const deliveryCheck = () => runDeliveryReportCheck().catch((err) => logger.warn({ err }, "Lieferterminprüfung fehlgeschlagen"));
+  void deliveryCheck();
+  setInterval(deliveryCheck, 60_000);
   runAllChecks(io);
   setInterval(() => runAllChecks(io), CHECK_INTERVAL_MS);
 

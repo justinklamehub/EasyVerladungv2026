@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./delivery-deadlines": "./src/delivery-deadlines.ts",
+    "./delivery-mail": "./src/delivery-mail.ts"
   },
   "dependencies": {
     "zod": "catalog:"

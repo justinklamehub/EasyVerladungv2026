@@ -37,8 +37,10 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   const rows = useMemo(() => classifyDeliveryOrders(orders ?? [], { criticalDays, soonDays, upcomingDays }, now),
     [orders, criticalDays, soonDays, upcomingDays, now]);
   const sum = useMemo(() => deadlineSummary(rows), [rows]);
+  const kwRows = rows.filter((r) => r.dateLabel.startsWith("KW "));
+  const kwSum = { orders: kwRows.length, pallets: kwRows.reduce((n, r) => n + (Number(r.order.paletten) || 0), 0) };
   const needle = search.trim().toLowerCase();
-  const shown = rows.filter((r) => (filter === "all" || r.status === filter) &&
+  const shown = rows.filter((r) => (filter === "all" || (filter === "week" ? r.dateLabel.startsWith("KW ") : r.status === filter)) &&
     (!needle || [r.order.shelf, r.order.spedition, r.order.relation].some((v) => String(v ?? "").toLowerCase().includes(needle))));
 
   const ds = datasetOf(state.datasets, "auftraege");
@@ -65,7 +67,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
           {ORDER.map((s) => (
             <button key={s} type="button" aria-pressed={filter === s} onClick={() => setFilter(filter === s ? "all" : s)}
               className={`rounded-full px-3 py-1 text-xs font-semibold ${META[s].cls} ${filter === s ? "ring-2 ring-slate-900" : ""}`} data-testid={`filter-deadline-${s}`}>
-              {META[s].label}: {nf(sum[s].pallets)} Pal. ({nf(sum[s].orders)})
+              {META[s].label}: {nf((s === "week" ? kwSum : sum[s]).pallets)} Pal. ({nf((s === "week" ? kwSum : sum[s]).orders)})
             </button>
           ))}
           {filter !== "all" && <Button size="sm" variant="ghost" onClick={() => setFilter("all")} data-testid="button-deadline-filter-reset">Alle anzeigen</Button>}
@@ -76,8 +78,8 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
         </div>
         <div className="text-xs text-slate-500 space-y-1">
           <p>Kritisch bei {criticalDays} Tagen oder weniger (inkl. überfällig), bald fällig bis {soonDays}, demnächst bis {upcomingDays} Tage. Schwellen unter Einstellungen änderbar. Tage zählen als Kalendertage ({DEADLINE_TIME_ZONE}).</p>
-          <p>Die Einstufung nutzt den Liefertermin laut Import. Plus-KW wird nur angezeigt und verschiebt Termine nicht automatisch, damit knappe Termine sichtbar bleiben. Reine Anzeige, keine Push- oder E-Mail-Benachrichtigung.</p>
-           <p>Kalenderwochen-Termine werden separat geführt, da kein genauer Liefertag vorliegt.</p>
+          <p>Die Einstufung nutzt den Liefertermin laut Import. Plus-KW wird nur angezeigt und verschiebt Termine nicht automatisch. Die Liefertermin-Mail hat eine eigene Tagesfrist unter Einstellungen → E-Mail bzw. Berichte; die Warnfarben bleiben unabhängig davon.</p>
+           <p>Bei KW-Terminen ist der Montag (KW-Beginn) maßgeblich für Resttage und Überfälligkeit. Auch diese Termine nutzen die eingestellten Warnstufen.</p>
           {ds ? <p data-testid="text-deadline-freshness" className={stale ? "text-amber-700 font-medium" : ""}>Auftragsimport: {new Date(ds.importedAt).toLocaleString("de-DE", { timeZone: DEADLINE_TIME_ZONE })} ({ds.filename}){stale && ` – veraltet (über ${state.settings.staleHours} Std.)`}</p>
             : <p data-testid="text-deadline-no-import" className="text-amber-700 font-medium">Noch kein Auftragsimport vorhanden.</p>}
         </div>
@@ -102,7 +104,8 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
                 <TableRow key={`${r.order.shelf}-${r.order.speditionId}-${i}`} data-testid={`row-deadline-${i}`}>
                   <TableCell><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${META[r.status].cls}`}>{META[r.status].label}</span></TableCell>
                   <TableCell className="whitespace-nowrap font-medium">{r.dateLabel}</TableCell>
-                  <TableCell className="whitespace-nowrap text-slate-600">{r.days == null ? "–" : r.days < 0 ? `${-r.days} Tg. überfällig` : r.days === 0 ? "Heute" : `${r.days} Tg.`}</TableCell>
+                  <TableCell className="whitespace-nowrap text-slate-600">{r.days == null ? "–" : r.days < 0 ? `${-r.days} Tg. überfällig` : r.days === 0 ? "Heute" : `${r.days} Tg.`}
+                    {r.dateLabel.startsWith("KW ") && <span className="block text-[10px]">KW-Beginn (Montag)</span>}</TableCell>
                   <TableCell>{String(r.order.shelf ?? "")}</TableCell>
                   <TableCell>{String(r.order.spedition ?? "")}</TableCell>
                   <TableCell>{String(r.order.relation ?? "")}</TableCell>

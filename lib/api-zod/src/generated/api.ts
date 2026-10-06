@@ -8,6 +8,24 @@
 import * as zod from 'zod';
 
 
+export const PreviewDeliveryReportResponse = zod.object({
+  "subject": zod.string(),
+  "html": zod.string(),
+  "text": zod.string(),
+  "criticalCount": zod.number(),
+  "ordersCount": zod.number(),
+  "dueCount": zod.number(),
+  "warningDays": zod.number()
+})
+
+
+export const SendDeliveryReportResponse = zod.object({
+  "ok": zod.boolean(),
+  "sent": zod.boolean(),
+  "message": zod.string()
+})
+
+
 export const getEinlagerungStateResponseSettingsStaleHoursMax = 8760;
 
 export const getEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMin = 0;
