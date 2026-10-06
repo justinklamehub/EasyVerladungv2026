@@ -24,21 +24,25 @@ export function ShelfMatrix({ groups, occ, assigned, colors, istImported, retImp
   const fs = (n: number) => `${Math.round(n * z * 10) / 10}px`;
   let col = 2;
   return (
-    <div ref={scrollerRef} tabIndex={0} aria-label="Lagerplan Matrix, scrollbar" data-testid="shelf-matrix" data-zoom={zoom}
+    <div ref={scrollerRef} tabIndex={0} role="region" aria-label="Lager-Matrix, horizontal und vertikal scrollbar" data-testid="shelf-matrix" data-zoom={zoom}
       className="overflow-auto rounded-xl border border-slate-300 bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-900"
-      style={{ maxHeight: fullscreen ? "100%" : "calc(100dvh - 14rem)", minHeight: "16rem" }}>
-      <div className="grid" style={{ gridTemplateColumns: `${POS_W}px repeat(${total}, ${colW}px)`, gridTemplateRows: `${HALL_H}px ${AISLE_H}px`, width: POS_W + total * colW }}>
-        <div data-matrix-corner className="sticky left-0 top-0 z-30 bg-slate-900" style={{ gridRow: "1 / span 2", gridColumn: 1, height: HALL_H + AISLE_H, width: POS_W }} />
-        {halls.map((h, hi) => {
-          const start = col; col += h.columns.length;
-          const border = hi > 0 ? "border-l-2 border-l-slate-100" : "";
-          return [
-            <div key={`h${hi}`} data-testid={`matrix-hall-${h.hall?.id ?? hi}`} className={`sticky top-0 z-20 min-w-0 truncate px-1 bg-slate-900 text-white text-center font-bold text-sm flex items-center justify-center ${border}`} style={{ gridRow: 1, gridColumn: `${start} / span ${h.columns.length}`, height: HALL_H }}>{String(h.hall?.d.name ?? "Ohne Halle")}</div>,
-            ...h.columns.map((c, ci) => (
-              <div key={`a${hi}-${c.aisle.id}`} data-testid={`matrix-aisle-${c.aisle.id}`} className={`sticky z-20 min-w-0 truncate px-1 bg-slate-700 text-white text-center text-xs font-semibold flex items-center justify-center ${ci === 0 ? border : ""}`} style={{ gridRow: 2, gridColumn: start + ci, top: HALL_H, height: AISLE_H }}>Gang {String(c.aisle.d.name)}</div>
-            )),
-          ];
-        })}
+      style={{ maxHeight: fullscreen ? "100%" : "min(70dvh, 48rem, calc(100dvh - 14rem))", minHeight: "16rem" }}>
+      <div className="grid" style={{ gridTemplateColumns: `${POS_W}px repeat(${total}, ${colW}px)`, width: POS_W + total * colW }}>
+        {/* Keep both naturally sized header rows together, including wrapped names. */}
+        <div className="sticky top-0 z-20 grid bg-slate-900" data-testid="matrix-headers"
+          style={{ gridRow: "1 / span 2", gridColumn: "1 / -1", gridTemplateColumns: "inherit", gridTemplateRows: `minmax(${HALL_H}px, auto) minmax(${AISLE_H}px, auto)` }}>
+          <div data-matrix-corner className="sticky left-0 z-30 bg-slate-900" style={{ gridRow: "1 / span 2", gridColumn: 1, width: POS_W }} />
+          {halls.map((h, hi) => {
+            const start = col; col += h.columns.length;
+            const border = hi > 0 ? "border-l-2 border-l-slate-100" : "";
+            return [
+              <div key={`h${hi}`} data-testid={`matrix-hall-${h.hall?.id ?? hi}`} className={`min-w-0 break-words px-1 py-1 bg-slate-900 text-white text-center font-bold text-sm ${border}`} style={{ gridRow: 1, gridColumn: `${start} / span ${h.columns.length}` }}>{String(h.hall?.d.name ?? "Ohne Halle")}</div>,
+              ...h.columns.map((c, ci) => (
+                <div key={`a${hi}-${c.aisle.id}`} data-testid={`matrix-aisle-${c.aisle.id}`} className={`min-w-0 break-words px-1 py-1 bg-slate-700 text-white text-center text-xs font-semibold ${ci === 0 ? border : ""}`} style={{ gridRow: 2, gridColumn: start + ci }}>Gang {String(c.aisle.d.name)}</div>
+              )),
+            ];
+          })}
+        </div>
         {positions.map((p, ri) => {
           let c0 = 2;
           return [
