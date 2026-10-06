@@ -16,7 +16,9 @@ import { datasetOf, errMsg, nf, P, toRec, type D, type Model, type Rec } from ".
 
 const STATUS = [{ value: "offen", label: "Offen" }, { value: "erledigt", label: "Erledigt" }, { value: "storniert", label: "Storniert" }];
 
-export function OrdersTab({ state, model, has }: { state: EinlagerungState; model: Model; has: (k: string) => boolean }) {
+export function OrdersTab({ state, model, has, reservationsOnly = false }: {
+  state: EinlagerungState; model: Model; has: (k: string) => boolean; reservationsOnly?: boolean;
+}) {
   const [draft, setDraft] = useState({ q: "", spedition: "", relation: "", termin: "", shelfId: "" });
   const [applied, setApplied] = useState(draft);
   const [resFilter, setResFilter] = useState("offen");
@@ -28,10 +30,10 @@ export function OrdersTab({ state, model, has }: { state: EinlagerungState; mode
 
   const params = useMemo<SearchEinlagerungParams>(() => {
     const p: SearchEinlagerungParams = { mode: "auftraege" };
-    if (applied.q) p.q = applied.q;
+    if (applied.q.trim()) p.q = applied.q.trim();
     if (applied.spedition) p.spedition = applied.spedition;
-    if (applied.relation) p.relation = applied.relation;
-    if (applied.termin) p.termin = applied.termin;
+    if (applied.relation.trim()) p.relation = applied.relation.trim();
+    if (applied.termin.trim()) p.termin = applied.termin.trim();
     if (applied.shelfId) p.shelfId = Number(applied.shelfId);
     return p;
   }, [applied]);
@@ -58,8 +60,16 @@ export function OrdersTab({ state, model, has }: { state: EinlagerungState; mode
 
   return (
     <div className="space-y-6">
-      <form className="app-filter-bar border p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2" onSubmit={(e) => { e.preventDefault(); setApplied(draft); }}>
-        <Input value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} placeholder="Suche" data-testid="input-orders-q" />
+      <form className="app-filter-bar border p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2" onSubmit={(e) => {
+        e.preventDefault();
+        const unchanged = (["q", "spedition", "relation", "termin", "shelfId"] as const)
+          .every((key) => draft[key].trim() === applied[key].trim());
+        setApplied({ ...draft });
+        if (unchanged) void q.refetch();
+      }}>
+        <Input value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })}
+          placeholder={reservationsOnly ? "Vormerkung, Regal, Hinweis oder ID" : "Suche"}
+          aria-label={reservationsOnly ? "Vormerkungen suchen" : "Aufträge und Vormerkungen suchen"} data-testid="input-orders-q" />
         <SimpleSelect value={draft.spedition} onChange={(v) => setDraft({ ...draft, spedition: v })} allLabel="Alle Speditionen" options={model.carriers.map((r) => ({ value: String(r.d.name), label: String(r.d.name) }))} testId="filter-spedition" />
         <Input value={draft.relation} onChange={(e) => setDraft({ ...draft, relation: e.target.value })} placeholder="Relation" data-testid="input-orders-relation" />
         <Input placeholder="Datum oder KW.Jahr" value={draft.termin} onChange={(e) => setDraft({ ...draft, termin: e.target.value })} data-testid="input-orders-termin" />
@@ -67,7 +77,7 @@ export function OrdersTab({ state, model, has }: { state: EinlagerungState; mode
         <Button type="submit" data-testid="button-orders-search"><Search className="w-4 h-4 mr-2" />Suchen</Button>
       </form>
 
-      <section className="rounded-xl border border-slate-200 bg-white">
+      {!reservationsOnly && <section className="rounded-xl border border-slate-200 bg-white">
         <div className="px-4 py-3 border-b border-slate-200 font-semibold text-slate-900">Aufträge</div>
         {!imported ? (
           <p className="p-8 text-center text-sm text-slate-500" data-testid="orders-not-imported">Auftragsdaten nicht importiert.</p>
@@ -90,15 +100,17 @@ export function OrdersTab({ state, model, has }: { state: EinlagerungState; mode
             </Table>
           </div>
         )}
-      </section>
+      </section>}
 
       <section className="rounded-xl border border-slate-200 bg-white">
         <div className="px-4 py-3 border-b border-slate-200 flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-slate-900 mr-auto">Reservierungen</span>
+          <span className="font-semibold text-slate-900 mr-auto">Vormerkungen</span>
           <div className="w-40"><SimpleSelect value={resFilter} onChange={setResFilter} allLabel="Alle Status" options={STATUS} testId="filter-res-status" /></div>
-          {canCreate && <Button size="sm" onClick={() => { setEdit(null); setOpen(true); }} data-testid="button-new-reservation"><Plus className="w-4 h-4 mr-1" />Neu</Button>}
+          {canCreate && <Button size="sm" onClick={() => { setEdit(null); setOpen(true); }} data-testid="button-new-reservation"><Plus className="w-4 h-4 mr-1" />Neue Vormerkung</Button>}
         </div>
-        {resv.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">Keine Reservierungen.</p> : (
+        {q.isLoading ? <div className="p-4"><Skeleton className="h-24" /></div>
+        : q.isError ? <div className="p-6 text-sm text-red-700 flex items-center gap-3">{errMsg(q.error)}<Button size="sm" variant="outline" onClick={() => q.refetch()}>Erneut versuchen</Button></div>
+        : resv.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">Keine Vormerkungen für diese Suche und diesen Status.</p> : (
           <div className="overflow-x-auto">
             <Table className="app-table">
               <TableHeader><TableRow><TableHead>Regal</TableHead><TableHead>Spedition</TableHead><TableHead>Relation</TableHead><TableHead>Termin</TableHead><TableHead>Hinweis</TableHead><TableHead>Status</TableHead><TableHead /></TableRow></TableHeader>
@@ -112,8 +124,8 @@ export function OrdersTab({ state, model, has }: { state: EinlagerungState; mode
                     <TableCell className="max-w-[16rem] truncate">{String(r.d.note ?? "")}</TableCell>
                     <TableCell>{canEdit ? <div className="w-32"><SimpleSelect value={String(r.d.status)} onChange={(v) => setStatus(r, v)} options={STATUS} testId={`select-res-status-${r.id}`} /></div> : <Badge variant="secondary">{String(r.d.status)}</Badge>}</TableCell>
                     <TableCell className="text-right whitespace-nowrap">
-                      {canEdit && <Button size="icon" variant="ghost" onClick={() => { setEdit(r); setOpen(true); }} data-testid={`button-edit-reservation-${r.id}`}><Pencil className="w-4 h-4" /></Button>}
-                      {canEdit && <Button size="icon" variant="ghost" onClick={() => setDel(r)} data-testid={`button-delete-reservation-${r.id}`}><Trash2 className="w-4 h-4" /></Button>}
+                      {canEdit && <Button size="icon" variant="ghost" aria-label="Vormerkung bearbeiten" title="Bearbeiten" onClick={() => { setEdit(r); setOpen(true); }} data-testid={`button-edit-reservation-${r.id}`}><Pencil className="w-4 h-4" /></Button>}
+                      {canEdit && <Button size="icon" variant="ghost" aria-label="Vormerkung löschen" title="Löschen" onClick={() => setDel(r)} data-testid={`button-delete-reservation-${r.id}`}><Trash2 className="w-4 h-4" /></Button>}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -123,9 +135,9 @@ export function OrdersTab({ state, model, has }: { state: EinlagerungState; mode
         )}
       </section>
 
-      <RecordDialog open={open} onOpenChange={setOpen} title={edit ? "Reservierung bearbeiten" : "Neue Reservierung"} kind="reservation" record={edit} fields={fields} defaults={{ status: "offen", plusKw: "" }} />
-      <ConfirmDelete open={!!del} onOpenChange={(o) => !o && setDel(null)} title="Reservierung löschen?" description="Die Reservierung wird dauerhaft entfernt."
-        onConfirm={async () => { if (!del) return; try { await remove("reservation", del.id); toast({ title: "Reservierung gelöscht" }); } catch (e) { toast({ title: "Löschen fehlgeschlagen", description: errMsg(e), variant: "destructive" }); } setDel(null); }} />
+      <RecordDialog open={open} onOpenChange={setOpen} title={edit ? "Vormerkung bearbeiten" : "Neue Vormerkung"} kind="reservation" record={edit} fields={fields} defaults={{ status: "offen", plusKw: "" }} />
+      <ConfirmDelete open={!!del} onOpenChange={(o) => !o && setDel(null)} title="Vormerkung löschen?" description="Die Vormerkung wird dauerhaft entfernt."
+        onConfirm={async () => { if (!del) return; try { await remove("reservation", del.id); toast({ title: "Vormerkung gelöscht" }); setDel(null); } catch (e) { toast({ title: "Löschen fehlgeschlagen", description: errMsg(e), variant: "destructive" }); } }} />
     </div>
   );
 }

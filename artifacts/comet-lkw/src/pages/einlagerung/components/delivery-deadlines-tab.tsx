@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Search } from "lucide-react";
+import { AlertTriangle, Download, Printer, Search } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { DEADLINE_LABELS, deadlineCsv, deadlinePrintHtml, filterDeadlineRows } from "./delivery-deadlines-output";
 import { errMsg, datasetOf, nf, type D } from "../lib";
 import {
   DEFAULT_DEADLINE_THRESHOLDS, DEADLINE_TIME_ZONE, classifyDeliveryOrders, deadlineSummary, validDeadlineThresholds,
@@ -13,16 +15,17 @@ import {
 } from "./delivery-deadlines";
 
 const META: Record<DeadlineStatus, { label: string; cls: string }> = {
-  critical: { label: "Kritisch", cls: "bg-red-100 text-red-800" },
-  soon: { label: "Bald fällig", cls: "bg-orange-100 text-orange-800" },
-  upcoming: { label: "Demnächst", cls: "bg-yellow-100 text-yellow-800" },
-  safe: { label: "Unkritisch", cls: "bg-green-100 text-green-800" },
-  week: { label: "KW-Termine", cls: "bg-blue-100 text-blue-800" },
-  unknown: { label: "Ohne gültigen Termin", cls: "bg-slate-200 text-slate-700" },
+  critical: { label: DEADLINE_LABELS.critical, cls: "bg-red-100 text-red-800" },
+  soon: { label: DEADLINE_LABELS.soon, cls: "bg-orange-100 text-orange-800" },
+  upcoming: { label: DEADLINE_LABELS.upcoming, cls: "bg-yellow-100 text-yellow-800" },
+  safe: { label: DEADLINE_LABELS.safe, cls: "bg-green-100 text-green-800" },
+  week: { label: DEADLINE_LABELS.week, cls: "bg-blue-100 text-blue-800" },
+  unknown: { label: DEADLINE_LABELS.unknown, cls: "bg-slate-200 text-slate-700" },
 };
 const ORDER: DeadlineStatus[] = ["critical", "soon", "upcoming", "safe", "week", "unknown"];
 
 export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
+  const { toast } = useToast();
   const params = { mode: "auftraege" } as const;
   const q = useSearchEinlagerung(params, { query: { queryKey: getSearchEinlagerungQueryKey(params), refetchInterval: 30000, refetchIntervalInBackground: false } });
   const [now, setNow] = useState(() => new Date());
@@ -39,9 +42,42 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   const sum = useMemo(() => deadlineSummary(rows), [rows]);
   const kwRows = rows.filter((r) => r.dateLabel.startsWith("KW "));
   const kwSum = { orders: kwRows.length, pallets: kwRows.reduce((n, r) => n + (Number(r.order.paletten) || 0), 0) };
-  const needle = search.trim().toLowerCase();
-  const shown = rows.filter((r) => (filter === "all" || (filter === "week" ? r.dateLabel.startsWith("KW ") : r.status === filter)) &&
-    (!needle || [r.order.shelf, r.order.spedition, r.order.relation].some((v) => String(v ?? "").toLowerCase().includes(needle))));
+  const shown = filterDeadlineRows(rows, filter, search);
+  const outputDisabled = q.isLoading || q.isError || shown.length === 0;
+  const printShown = () => {
+    if (outputDisabled) return;
+    const popup = window.open("", "_blank", "width=1100,height=800");
+    if (!popup) {
+      toast({ title: "Druckfenster blockiert", description: "Bitte Pop-ups für diese App erlauben und erneut auf Drucken klicken.", variant: "destructive" });
+      return;
+    }
+    try {
+      popup.opener = null;
+      popup.document.open();
+      popup.document.write(deadlinePrintHtml(shown, filter, search));
+      popup.document.close();
+      popup.focus();
+      popup.print();
+    } catch (error) {
+      popup.close();
+      toast({ title: "Drucken fehlgeschlagen", description: errMsg(error), variant: "destructive" });
+    }
+  };
+  const exportShown = () => {
+    if (outputDisabled) return;
+    try {
+      const url = URL.createObjectURL(new Blob([deadlineCsv(shown)], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `liefertermine-${new Date().toLocaleDateString("sv-SE", { timeZone: DEADLINE_TIME_ZONE })}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      toast({ title: "Export fehlgeschlagen", description: errMsg(error), variant: "destructive" });
+    }
+  };
 
   const ds = datasetOf(state.datasets, "auftraege");
   const ageH = ds ? (now.getTime() - new Date(ds.importedAt).getTime()) / 3600000 : 0;
@@ -52,7 +88,15 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   return (
     <section className="min-w-0 rounded-xl border border-slate-200 bg-white" data-testid="panel-delivery-deadlines">
       <div className="px-4 py-3 border-b border-slate-200 space-y-3">
-        <h2 className="font-semibold text-slate-900">Kritische Liefertermine</h2>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-semibold text-slate-900">Kritische Liefertermine</h2>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" disabled={outputDisabled} onClick={printShown}
+              title="Aktuell gefilterte Liefertermine drucken" data-testid="button-deadlines-print"><Printer className="w-4 h-4 mr-2" />Drucken</Button>
+            <Button type="button" size="sm" variant="outline" disabled={outputDisabled} onClick={exportShown}
+              title="Aktuell gefilterte Liefertermine als CSV exportieren" data-testid="button-deadlines-export"><Download className="w-4 h-4 mr-2" />Exportieren</Button>
+          </div>
+        </div>
         {urgent > 0 && (
           <div role="alert" className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800" data-testid="alert-deadline-warning">
             <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />

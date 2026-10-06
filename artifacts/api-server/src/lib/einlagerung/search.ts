@@ -94,11 +94,12 @@ export async function search(client: Client, query: Data) {
     result.reservations = all.filter((r) => {
       if (r.kind !== "reservation") return false;
       const shelf = all.find((s) => s.id === r.data.shelfId);
-      const spedition = r.data.speditionName || all.find((s) => s.kind === "carrier" && s.data.speditionId === r.data.speditionId)?.data.name || "";
+      const spedition = r.data.speditionName || all.find((s) => s.kind === "carrier" &&
+        (s.id === r.data.carrierId || (r.data.speditionId != null && s.data.speditionId === r.data.speditionId)))?.data.name || "";
       return (!query.shelfId || r.data.shelfId === Number(query.shelfId)) &&
         (!query.spedition || String(r.data.speditionId) === query.spedition || matches(spedition, query.spedition)) &&
         matches(r.data.relation, query.relation) && matchesTerm(r.data.termin, r.data.plusKw, query.termin) &&
-        matches(`${shelf?.data.name} ${spedition} ${r.data.relation} ${r.data.termin}`, query.q);
+        matches(`${r.id} ${shelf?.data.name ?? ""} ${spedition} ${r.data.relation ?? ""} ${r.data.termin ?? ""} ${r.data.plusKw ?? ""} ${r.data.note ?? ""} ${r.data.status ?? ""}`, query.q);
     });
     if (!result.orders.length && !result.reservations.length) result.message = "Keine Treffer.";
   }

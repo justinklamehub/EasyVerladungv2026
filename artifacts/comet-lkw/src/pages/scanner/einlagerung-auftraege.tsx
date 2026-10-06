@@ -43,14 +43,13 @@ export default function ScannerEinlagerungAuftraegePage() {
 
   const params = useMemo<SearchEinlagerungParams>(() => {
     const p: SearchEinlagerungParams = { mode: "auftraege" };
-    if (view === "reserve") return p;
     if (applied.q.trim()) p.q = applied.q.trim();
     if (applied.spedition) p.spedition = applied.spedition;
     if (applied.relation.trim()) p.relation = applied.relation.trim();
     if (applied.termin.trim()) p.termin = applied.termin.trim();
     if (applied.shelfId) p.shelfId = Number(applied.shelfId);
     return p;
-  }, [applied, view]);
+  }, [applied]);
   const q = useWarehouseSearch(params, allowed);
 
   const orders = (q.data?.orders ?? []) as D[];
@@ -128,7 +127,7 @@ export default function ScannerEinlagerungAuftraegePage() {
       {header}
       <main className="max-w-xl mx-auto p-4 space-y-4">
         <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 gap-1" role="tablist" aria-label="Auftrags-Scanner">
-          {([["search", "Aufträge suchen"], ["reserve", "Regal vormerken"]] as const).map(([value, label]) => (
+          {([["search", "Aufträge suchen"], ["reserve", "Vormerkungen"]] as const).map(([value, label]) => (
             <button key={value} type="button" role="tab" aria-selected={view === value}
               tabIndex={view === value ? 0 : -1}
               aria-controls={`scanner-panel-${value}`} id={`scanner-tab-${value}`}
@@ -143,9 +142,16 @@ export default function ScannerEinlagerungAuftraegePage() {
               className={`rounded-lg px-3 py-3 text-sm font-semibold ${view === value ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-50"}`}>{label}</button>
           ))}
         </div>
-        {view === "search" && <div id="scanner-panel-search" role="tabpanel" aria-labelledby="scanner-tab-search" className="space-y-4">
-        <form className="rounded-xl border border-slate-200 bg-white p-3 space-y-2" onSubmit={(e) => { e.preventDefault(); setApplied(draft); }}>
-          <Input value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })} placeholder="Auftrag, Lieferung oder HU" data-testid="input-orders-q" />
+        <form className="rounded-xl border border-slate-200 bg-white p-3 space-y-2" onSubmit={(e) => {
+          e.preventDefault();
+          const unchanged = (["q", "spedition", "relation", "termin", "shelfId"] as const)
+            .every((key) => draft[key].trim() === applied[key].trim());
+          setApplied({ ...draft });
+          if (unchanged) void q.refetch();
+        }}>
+          <Input value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })}
+            placeholder={view === "reserve" ? "Vormerkung: Regal, Spedition, Relation, Hinweis oder ID" : "Auftrag, Lieferung oder HU"}
+            aria-label={view === "reserve" ? "Vormerkungen suchen" : "Aufträge suchen"} data-testid="input-orders-q" />
           <div className="grid grid-cols-2 gap-2">
             <SimpleSelect value={draft.spedition} onChange={(v) => setDraft({ ...draft, spedition: v })} allLabel="Alle Speditionen" options={model.carriers.map((r) => ({ value: String(r.d.name), label: String(r.d.name) }))} testId="filter-spedition" />
             <SimpleSelect value={draft.shelfId} onChange={(v) => setDraft({ ...draft, shelfId: v })} allLabel="Alle Regale" options={model.shelves.map((s) => ({ value: String(s.id), label: model.shelfLabel(s) }))} testId="filter-orders-shelf" />
@@ -160,10 +166,10 @@ export default function ScannerEinlagerungAuftraegePage() {
 
         <div className="grid grid-cols-2 gap-2 text-center">
           <div className="rounded-xl border border-slate-200 bg-white py-3"><div className="text-2xl font-bold" data-testid="text-total-pallets">{nf(totalPal)}</div><div className="text-[11px] uppercase tracking-wider text-slate-500">Paletten Aufträge</div></div>
-          <div className="rounded-xl border border-slate-200 bg-white py-3"><div className="text-2xl font-bold" data-testid="text-open-reservations">{nf(openCount)}</div><div className="text-[11px] uppercase tracking-wider text-slate-500">Offene Reservierungen</div></div>
+          <div className="rounded-xl border border-slate-200 bg-white py-3"><div className="text-2xl font-bold" data-testid="text-open-reservations">{nf(openCount)}</div><div className="text-[11px] uppercase tracking-wider text-slate-500">Offene Vormerkungen</div></div>
         </div>
 
-        <section className="rounded-xl border border-slate-200 bg-white">
+        {view === "search" && <section id="scanner-panel-search" role="tabpanel" aria-labelledby="scanner-tab-search" className="rounded-xl border border-slate-200 bg-white">
           <div className="px-4 py-3 border-b border-slate-200 font-semibold">Aufträge (gruppiert)</div>
           {q.isLoading ? <div className="p-4"><Skeleton className="h-24" /></div>
           : q.isError ? <div className="p-4 text-sm text-red-700 space-y-2">{errMsg(q.error)}<div><Button size="sm" variant="outline" onClick={() => q.refetch()}>Erneut versuchen</Button></div></div>
@@ -179,19 +185,18 @@ export default function ScannerEinlagerungAuftraegePage() {
                 </li>
               ))}
             </ul>}
-        </section>
-        </div>}
+        </section>}
 
         {view === "reserve" && <section id="scanner-panel-reserve" role="tabpanel" aria-labelledby="scanner-tab-reserve" className="rounded-xl border border-slate-200 bg-white">
           {!canCreate && <p className="px-4 pt-3 text-sm text-slate-500">Keine Berechtigung für neue Vormerkungen.</p>}
           <div className="px-4 py-3 border-b border-slate-200 flex items-center gap-2">
-            <span className="font-semibold mr-auto">Reservierungen</span>
+            <span className="font-semibold mr-auto">Vormerkungen</span>
             <div className="w-32"><SimpleSelect value={resFilter} onChange={setResFilter} allLabel="Alle" options={STATUS} testId="filter-res-status" /></div>
             {canCreate && <Button size="sm" onClick={() => { setEdit(null); setOpen(true); }} data-testid="button-new-reservation"><Plus className="w-4 h-4 mr-1" />Vormerken</Button>}
           </div>
           {q.isLoading ? <div className="p-4"><Skeleton className="h-24" /></div>
           : q.isError ? <div className="p-4 text-sm text-red-700 space-y-2">{errMsg(q.error)}<div><Button size="sm" variant="outline" onClick={() => q.refetch()}>Erneut versuchen</Button></div></div>
-          : resv.length === 0 ? <p className="p-6 text-center text-sm text-slate-500" data-testid="reservations-empty">Keine Reservierungen.</p>
+          : resv.length === 0 ? <p className="p-6 text-center text-sm text-slate-500" data-testid="reservations-empty">Keine Vormerkungen für diese Suche und diesen Status.</p>
           : <ul className="divide-y divide-slate-100">
               {resv.map((r) => (
                 <li key={r.id} className="px-4 py-3 space-y-2" data-testid={`row-reservation-${r.id}`}>
@@ -219,7 +224,7 @@ export default function ScannerEinlagerungAuftraegePage() {
         </section>}
       </main>
 
-      <RecordDialog open={open} onOpenChange={setOpen} title={edit ? "Reservierung bearbeiten" : "Neue Reservierung"} kind="reservation" record={edit} fields={fields}
+      <RecordDialog open={open} onOpenChange={setOpen} title={edit ? "Vormerkung bearbeiten" : "Neue Vormerkung"} kind="reservation" record={edit} fields={fields}
         defaults={{ status: "offen", plusKw: "", termin: applied.termin.trim() || currentKw(), relation: applied.relation.trim(),
           shelfId: proposedShelf?.id,
           carrierId: model.carriers.find((c) => c.d.name === applied.spedition)?.id }} />

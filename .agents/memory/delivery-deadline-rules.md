@@ -26,3 +26,9 @@ Die Liefertermin-Mail soll täglich nur bei enthaltenen Terminen innerhalb der e
 **Why:** Der Nutzer hat den ursprünglichen Vollversand geändert: „Die Unkritischen müssen nicht in der Mail selbst sein, nur die Kritischen/Überfälligen oder Bald Fälligen“ und eine Einstellung vorgeschlagen. Mail-Frist und Vorlage bleiben frei konfigurierbar.
 
 **How to apply:** Kategorien anhand der Lagerwarnstufen auswählen; Versand nur auslösen, wenn ein enthaltener Termin die eigene Mail-Frist erfüllt. Keine leeren Mails senden. 0 bedeutet heute bzw. überfällig; KW nach Montag-Regel. Vorschau, Summen, Text und HTML müssen dieselbe gespeicherte Auswahl/Vorlage verwenden.
+
+„Gedruckt/exportiert soll immer nur das, was gerade aktiv gefiltert ist.“
+
+**Why:** Der Nutzer verlangt ausdrücklich, dass Drucken und Exportieren in der Ansicht „Liefertermine“ die aktive Auswahl respektieren.
+
+**How to apply:** Status-/KW-Filter und Textsuche gemeinsam berücksichtigen. Druck-/Exportsummen ausschließlich aus dieser Auswahl bilden, nicht aus allen geladenen Aufträgen.
