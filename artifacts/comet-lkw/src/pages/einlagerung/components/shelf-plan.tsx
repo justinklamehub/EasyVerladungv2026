@@ -20,8 +20,9 @@ import { ShelfStatusDialog, type ShelfAction } from "./shelf-status-dialog";
 import { ShelfLegend } from "./shelf-legend";
 import { ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, clampZoom, filtersActive, matrixCounts, nextTarget, orderedShelves, scrollToShelf, shelfMatches, type Art, type MatrixFilters, type StatusFilter } from "./matrix-model";
 import { DATASET_LABELS, datasetOf, errMsg, type Model, type Rec } from "../lib";
-import { contentRows, loadSearchText, type ContentMode, type LoadView } from "./shelf-load-content";
+import { contentRows, loadSearchText, type LoadView } from "./shelf-load-content";
 import { openReservationsByShelf } from "./shelf-reservations";
+import { useShelfPlanPreference } from "./use-shelf-plan-preference";
 
 function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null; model: Model; state: EinlagerungState; has: (k: string) => boolean; onClose: () => void }) {
   const params = useMemo<SearchEinlagerungParams>(() => ({ mode: "regal", shelfId: shelf?.id }), [shelf?.id]);
@@ -65,8 +66,8 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
   const [hideFull, setHideFull] = useState(state.settings.hideFull);
   const [sel, setSel] = useState<Rec | null>(null);
   const [action, setAction] = useState<ShelfAction | null>(null);
-  const [view, setView] = useState<"matrix" | "tiles">("matrix");
-  const [contentMode, setContentMode] = useState<ContentMode>("planned");
+  const preference = useShelfPlanPreference();
+  const { view, contentMode } = preference;
   const [zoom, setZoom] = useState(ZOOM_DEFAULT);
   const [fs, setFs] = useState(false);
   const [targetId, setTargetId] = useState<number | null>(null);
@@ -224,12 +225,12 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
         <div className="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Regalinhalt">
           {([["planned", "Geplante Artikel"], ["orders", "Aufträge"], ["returns", "Retouren"], ["reservations", "Offene Reservierungen"]] as const).map(([mode, label]) =>
             <button key={mode} type="button" aria-pressed={contentMode === mode} data-testid={`content-${mode}`}
-              onClick={() => setContentMode(mode)}
+              disabled={preference.disabled} onClick={() => preference.update({ contentMode: mode })}
               className={`px-3 py-1 rounded ${contentMode === mode ? "bg-slate-900 text-white" : "text-slate-700"}`}>{label}</button>)}
         </div>
         <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Ansicht">
           {([["matrix", "Matrix"], ["tiles", "Kacheln"]] as const).map(([v, l]) => (
-            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} data-testid={`view-${v}`}
+            <button key={v} type="button" aria-pressed={view === v} disabled={preference.disabled} onClick={() => preference.update({ view: v })} data-testid={`view-${v}`}
               className={`px-3 py-1 rounded ${view === v ? "bg-slate-900 text-white" : "text-slate-700"}`}>{l}</button>
           ))}
         </div>
@@ -246,6 +247,13 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
           {fs ? <Minimize2 className="w-4 h-4 mr-1.5" /> : <Maximize2 className="w-4 h-4 mr-1.5" />}{fs ? "Vollbild beenden" : "Vollbild"}
         </Button>
       </div>
+      {(preference.loading || preference.saving) && <p role="status" className="text-sm text-slate-500">
+        {preference.saving ? "Lageransicht wird gespeichert …" : "Gespeicherte Lageransicht wird geladen …"}
+      </p>}
+      {(preference.loadError || preference.saveError) && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        {preference.loadError || preference.saveError}
+        {preference.loadError && <Button size="sm" variant="outline" className="ml-2" onClick={preference.retry}>Erneut versuchen</Button>}
+      </div>}
       <ShelfLegend colors={state.settings.colors} mode={contentMode} />
       {(contentMode === "orders" || contentMode === "returns") && loadsQ.isError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
         Aufträge und Retouren konnten nicht geladen werden: {errMsg(loadsQ.error)}

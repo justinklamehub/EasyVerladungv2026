@@ -2,6 +2,7 @@ import { Router } from "express";
 import { requireAuth } from "../lib/auth";
 import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
+import { DEFAULT_SHELF_PLAN_PREFERENCE, SHELF_PLAN_PREFERENCE_KEY, shelfPlanPreferenceSchema } from "../lib/shelf-plan-preference";
 
 const router = Router();
 
@@ -28,7 +29,12 @@ router.get("/user-preferences/:key", requireAuth, async (req, res) => {
     if (rows.rows.length === 0) {
       return res.status(404).json({ error: "not_found" });
     }
-    return res.json({ value: (rows.rows[0] as any).value });
+    const value = (rows.rows[0] as { value: unknown }).value;
+    if (key === SHELF_PLAN_PREFERENCE_KEY) {
+      const parsed = shelfPlanPreferenceSchema.safeParse(value);
+      return res.json({ value: parsed.success ? parsed.data : DEFAULT_SHELF_PLAN_PREFERENCE });
+    }
+    return res.json({ value });
   } catch (err) {
     console.error("GET user-preferences failed", err);
     return res.status(500).json({ error: "internal" });
@@ -38,9 +44,16 @@ router.get("/user-preferences/:key", requireAuth, async (req, res) => {
 router.put("/user-preferences/:key", requireAuth, async (req, res) => {
   const userId = req.session.userId!;
   const { key } = req.params;
-  const { value } = req.body;
+  let { value } = req.body ?? {};
   if (value === undefined) {
     return res.status(400).json({ error: "value required" });
+  }
+  if (key === SHELF_PLAN_PREFERENCE_KEY) {
+    const parsed = shelfPlanPreferenceSchema.safeParse(value);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "invalid shelf plan preference" });
+    }
+    value = parsed.data;
   }
   try {
     await db.execute(sql`
