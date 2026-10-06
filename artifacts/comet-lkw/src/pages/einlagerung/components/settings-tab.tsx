@@ -11,11 +11,18 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useRefreshEinlagerung } from "../use-einlagerung";
 import { errMsg } from "../lib";
+import { DEFAULT_DEADLINE_THRESHOLDS, validDeadlineThresholds } from "./delivery-deadlines";
 
 export function SettingsTab({ state }: { state: EinlagerungState }) {
   const [hideFull, setHideFull] = useState(state.settings.hideFull);
   const [hours, setHours] = useState(String(state.settings.staleHours));
   const [colors, setColors] = useState(state.settings.colors);
+  const dt = state.settings.deadlineThresholds ?? DEFAULT_DEADLINE_THRESHOLDS;
+  const [crit, setCrit] = useState(String(dt.criticalDays));
+  const [soon, setSoon] = useState(String(dt.soonDays));
+  const [upc, setUpc] = useState(String(dt.upcomingDays));
+  useEffect(() => { setCrit(String(dt.criticalDays)); setSoon(String(dt.soonDays)); setUpc(String(dt.upcomingDays)); },
+    [dt.criticalDays, dt.soonDays, dt.upcomingDays]);
   const m = useUpdateEinlagerungSettings();
   const refresh = useRefreshEinlagerung();
   const { toast } = useToast();
@@ -28,7 +35,13 @@ export function SettingsTab({ state }: { state: EinlagerungState }) {
     if (Object.values(colors).some((c) => !/^#[0-9a-fA-F]{6}$/.test(c))) {
       toast({ title: "Bitte gültige Farben im Format #RRGGBB eingeben", variant: "destructive" }); return;
     }
-    m.mutate({ data: { hideFull, staleHours: n, profiles: state.settings.profiles, colors } }, {
+    const raw = [crit, soon, upc];
+    const nums = raw.map((v) => (v.trim() === "" ? NaN : Number(v)));
+    const deadlineThresholds = { criticalDays: nums[0], soonDays: nums[1], upcomingDays: nums[2] };
+    if (!validDeadlineThresholds(deadlineThresholds)) {
+      toast({ title: "Liefertermin-Schwellen ungültig", description: "Ganze Zahlen von 0 bis 3650, streng aufsteigend: kritisch < bald fällig < demnächst.", variant: "destructive" }); return;
+    }
+    m.mutate({ data: { hideFull, staleHours: n, profiles: state.settings.profiles, deadlineThresholds, colors } }, {
       onSuccess: () => { toast({ title: "Einstellungen gespeichert" }); refresh(); },
       onError: (e) => toast({ title: "Speichern fehlgeschlagen", description: errMsg(e), variant: "destructive" }),
     });
@@ -55,6 +68,14 @@ export function SettingsTab({ state }: { state: EinlagerungState }) {
                 className="h-9 w-12 rounded border border-input bg-transparent p-1 cursor-pointer" data-testid={`picker-color-${key}`} />
               <Input id={`color-${key}`} value={colors[key]} maxLength={7} onChange={(e) => setColors((prev) => ({ ...prev, [key]: e.target.value }))}
                 className="w-28 font-mono" data-testid={`input-color-${key}`} />
+            </div>)}
+        </div>
+        <div className="space-y-2 border-t pt-4">
+          <div><span className="text-sm font-medium">Schwellen für Liefertermine</span><p className="text-xs text-slate-500">Restlaufzeit in Kalendertagen (Europe/Berlin), streng aufsteigend. Überfällige Termine bleiben kritisch.</p></div>
+          {([{ id: "crit", label: "Kritisch bis (Tage)", v: crit, set: setCrit }, { id: "soon", label: "Bald fällig bis (Tage)", v: soon, set: setSoon }, { id: "upc", label: "Demnächst bis (Tage)", v: upc, set: setUpc }]).map((f) =>
+            <div key={f.id} className="flex items-center gap-3">
+              <Label htmlFor={`s-dl-${f.id}`} className="w-40 sm:w-44 shrink-0">{f.label}</Label>
+              <Input id={`s-dl-${f.id}`} type="number" inputMode="numeric" min={f.id === "crit" ? 0 : f.id === "soon" ? 1 : 2} max={3650} step={1} value={f.v} onChange={(e) => f.set(e.target.value)} className="min-w-0 max-w-[8rem]" data-testid={`input-deadline-${f.id}`} />
             </div>)}
         </div>
         <Button onClick={save} disabled={m.isPending} data-testid="button-save-settings">{m.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}Speichern</Button>

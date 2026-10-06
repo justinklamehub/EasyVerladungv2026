@@ -14,6 +14,7 @@ export * from './bulkShipmentInput';
 export * from './dashboardData';
 export * from './deleteEinlagerungRecord200';
 export * from './einlagerungDataset';
+export * from './einlagerungDeadlineThresholds';
 export * from './einlagerungImportInput';
 export * from './einlagerungImportInputMapping';
 export * from './einlagerungImportInputMode';

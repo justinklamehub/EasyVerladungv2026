@@ -11,6 +11,7 @@ import { OrdersTab } from "./components/orders-tab";
 import { StrategyTab } from "./components/strategy-tab";
 import { MasterTab } from "./components/master-tab";
 import { ImportTab } from "./components/import-tab";
+import { DeliveryDeadlinesTab } from "./components/delivery-deadlines-tab";
 import { SettingsTab } from "./components/settings-tab";
 
 export default function EinlagerungPage() {
@@ -24,6 +25,7 @@ export default function EinlagerungPage() {
     { id: "lagerplan", label: "Lagerübersicht", ok: has(P.view) },
     { id: "artikel", label: "Artikelsuche", ok: has(P.view) || has(P.scan) },
     { id: "auftraege", label: "Aufträge", ok: has(P.view) || has(P.resCreate) || has(P.resEdit) },
+    { id: "liefertermine", label: "Liefertermine", ok: has(P.view) },
     { id: "strategie", label: "Strategie", ok: has(P.strategy) },
     { id: "stammdaten", label: "Stammdaten", ok: has(P.master) },
     { id: "import", label: "Import", ok: has(P.import) },
@@ -60,6 +62,7 @@ export default function EinlagerungPage() {
       {state && active === "lagerplan" && <ShelfPlan state={state} model={model} has={has} />}
       {state && active === "artikel" && <div className="max-w-3xl"><ArticleLookup has={has} /></div>}
       {state && active === "auftraege" && <OrdersTab state={state} model={model} has={has} />}
+      {state && active === "liefertermine" && <DeliveryDeadlinesTab state={state} />}
       {state && active === "strategie" && <StrategyTab state={state} model={model} has={has} />}
       {state && active === "stammdaten" && <MasterTab state={state} model={model} has={has} />}
       {state && active === "import" && <ImportTab state={state} has={has} />}

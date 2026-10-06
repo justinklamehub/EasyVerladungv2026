@@ -10,6 +10,14 @@ import * as zod from 'zod';
 
 export const getEinlagerungStateResponseSettingsStaleHoursMax = 8760;
 
+export const getEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMin = 0;
+export const getEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMax = 3650;
+
+export const getEinlagerungStateResponseSettingsDeadlineThresholdsSoonDaysMax = 3650;
+
+export const getEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMin = 2;
+export const getEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMax = 3650;
+
 export const getEinlagerungStateResponseSettingsColorsFreeRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 export const getEinlagerungStateResponseSettingsColorsOccupiedRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 export const getEinlagerungStateResponseSettingsColorsFullRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
@@ -34,6 +42,11 @@ export const GetEinlagerungStateResponse = zod.object({
   "hideFull": zod.boolean(),
   "staleHours": zod.number().min(1).max(getEinlagerungStateResponseSettingsStaleHoursMax),
   "profiles": zod.record(zod.string(), zod.unknown()),
+  "deadlineThresholds": zod.object({
+  "criticalDays": zod.number().min(getEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMin).max(getEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMax),
+  "soonDays": zod.number().min(1).max(getEinlagerungStateResponseSettingsDeadlineThresholdsSoonDaysMax),
+  "upcomingDays": zod.number().min(getEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMin).max(getEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMax)
+}).optional().describe('Aufsteigende Tagesgrenzen: criticalDays < soonDays < upcomingDays.'),
   "colors": zod.object({
   "free": zod.string().regex(getEinlagerungStateResponseSettingsColorsFreeRegExp),
   "occupied": zod.string().regex(getEinlagerungStateResponseSettingsColorsOccupiedRegExp),
@@ -159,6 +172,14 @@ export const SetEinlagerungShelfStatusResponse = zod.object({
 
 export const updateEinlagerungSettingsBodyStaleHoursMax = 8760;
 
+export const updateEinlagerungSettingsBodyDeadlineThresholdsCriticalDaysMin = 0;
+export const updateEinlagerungSettingsBodyDeadlineThresholdsCriticalDaysMax = 3650;
+
+export const updateEinlagerungSettingsBodyDeadlineThresholdsSoonDaysMax = 3650;
+
+export const updateEinlagerungSettingsBodyDeadlineThresholdsUpcomingDaysMin = 2;
+export const updateEinlagerungSettingsBodyDeadlineThresholdsUpcomingDaysMax = 3650;
+
 export const updateEinlagerungSettingsBodyColorsFreeRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 export const updateEinlagerungSettingsBodyColorsOccupiedRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 export const updateEinlagerungSettingsBodyColorsFullRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
@@ -168,6 +189,11 @@ export const UpdateEinlagerungSettingsBody = zod.object({
   "hideFull": zod.boolean(),
   "staleHours": zod.number().min(1).max(updateEinlagerungSettingsBodyStaleHoursMax),
   "profiles": zod.record(zod.string(), zod.unknown()),
+  "deadlineThresholds": zod.object({
+  "criticalDays": zod.number().min(updateEinlagerungSettingsBodyDeadlineThresholdsCriticalDaysMin).max(updateEinlagerungSettingsBodyDeadlineThresholdsCriticalDaysMax),
+  "soonDays": zod.number().min(1).max(updateEinlagerungSettingsBodyDeadlineThresholdsSoonDaysMax),
+  "upcomingDays": zod.number().min(updateEinlagerungSettingsBodyDeadlineThresholdsUpcomingDaysMin).max(updateEinlagerungSettingsBodyDeadlineThresholdsUpcomingDaysMax)
+}).optional().describe('Aufsteigende Tagesgrenzen: criticalDays < soonDays < upcomingDays.'),
   "colors": zod.object({
   "free": zod.string().regex(updateEinlagerungSettingsBodyColorsFreeRegExp),
   "occupied": zod.string().regex(updateEinlagerungSettingsBodyColorsOccupiedRegExp),
@@ -176,6 +202,14 @@ export const UpdateEinlagerungSettingsBody = zod.object({
 })
 
 export const updateEinlagerungSettingsResponseStaleHoursMax = 8760;
+
+export const updateEinlagerungSettingsResponseDeadlineThresholdsCriticalDaysMin = 0;
+export const updateEinlagerungSettingsResponseDeadlineThresholdsCriticalDaysMax = 3650;
+
+export const updateEinlagerungSettingsResponseDeadlineThresholdsSoonDaysMax = 3650;
+
+export const updateEinlagerungSettingsResponseDeadlineThresholdsUpcomingDaysMin = 2;
+export const updateEinlagerungSettingsResponseDeadlineThresholdsUpcomingDaysMax = 3650;
 
 export const updateEinlagerungSettingsResponseColorsFreeRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 export const updateEinlagerungSettingsResponseColorsOccupiedRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
@@ -186,6 +220,11 @@ export const UpdateEinlagerungSettingsResponse = zod.object({
   "hideFull": zod.boolean(),
   "staleHours": zod.number().min(1).max(updateEinlagerungSettingsResponseStaleHoursMax),
   "profiles": zod.record(zod.string(), zod.unknown()),
+  "deadlineThresholds": zod.object({
+  "criticalDays": zod.number().min(updateEinlagerungSettingsResponseDeadlineThresholdsCriticalDaysMin).max(updateEinlagerungSettingsResponseDeadlineThresholdsCriticalDaysMax),
+  "soonDays": zod.number().min(1).max(updateEinlagerungSettingsResponseDeadlineThresholdsSoonDaysMax),
+  "upcomingDays": zod.number().min(updateEinlagerungSettingsResponseDeadlineThresholdsUpcomingDaysMin).max(updateEinlagerungSettingsResponseDeadlineThresholdsUpcomingDaysMax)
+}).optional().describe('Aufsteigende Tagesgrenzen: criticalDays < soonDays < upcomingDays.'),
   "colors": zod.object({
   "free": zod.string().regex(updateEinlagerungSettingsResponseColorsFreeRegExp),
   "occupied": zod.string().regex(updateEinlagerungSettingsResponseColorsOccupiedRegExp),

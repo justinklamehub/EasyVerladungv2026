@@ -1129,6 +1129,8 @@ components:
         hideFull: {type: boolean}
         staleHours: {type: integer, minimum: 1, maximum: 8760}
         profiles: {type: object, additionalProperties: true}
+        deadlineThresholds:
+          $ref: "#/components/schemas/EinlagerungDeadlineThresholds"
         colors:
           type: object
           required: [free, occupied, full]
@@ -1136,6 +1138,14 @@ components:
             free: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
             occupied: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
             full: {type: string, pattern: '^#[0-9a-fA-F]{6}$'}
+    EinlagerungDeadlineThresholds:
+      type: object
+      description: "Aufsteigende Tagesgrenzen: criticalDays < soonDays < upcomingDays."
+      required: [criticalDays, soonDays, upcomingDays]
+      properties:
+        criticalDays: {type: integer, minimum: 0, maximum: 3650}
+        soonDays: {type: integer, minimum: 1, maximum: 3650}
+        upcomingDays: {type: integer, minimum: 2, maximum: 3650}
     EinlagerungDataset:
       type: object
       required: [id, type, filename, importedAt, importedBy, rowCount]

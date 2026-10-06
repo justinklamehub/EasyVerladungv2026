@@ -30,7 +30,15 @@ export const schemas: Record<string, z.ZodType<any>> = {
     .refine((d) => d.carrierId || d.speditionId || d.speditionName, "Spedition fehlt."),
   carrier: z.object({ name, number: z.string().max(100).default(""), speditionId: id.nullable().default(null), color, textColor: color.default("#ffffff"), active }),
 };
+export const deadlineThresholdsSchema = z.object({
+  criticalDays: z.number().int().min(0).max(3650),
+  soonDays: z.number().int().min(1).max(3650),
+  upcomingDays: z.number().int().min(2).max(3650),
+}).refine((d) => d.criticalDays < d.soonDays && d.soonDays < d.upcomingDays,
+  "Tagesgrenzen müssen aufsteigend sein: kritisch < bald fällig < demnächst.");
+
 export const settingsSchema = z.object({
+  deadlineThresholds: deadlineThresholdsSchema.default({ criticalDays: 2, soonDays: 7, upcomingDays: 14 }),
   hideFull: z.boolean(), staleHours: z.number().int().min(1).max(8760),
   colors: z.object({ free: tileColor, occupied: tileColor, full: tileColor })
     .default({ free: "#f8fafc", occupied: "#ffffff", full: "#fef2f2" }),
@@ -38,6 +46,7 @@ export const settingsSchema = z.object({
     .refine((p) => Object.keys(p).every((k) => ["strategie", "istbestand", "retouren", "auftraege", "artikel"].includes(k)), "Unbekanntes Importprofil").default({}),
 });
 export const defaults: z.infer<typeof settingsSchema> = { hideFull: false, staleHours: 24, profiles: {},
+  deadlineThresholds: { criticalDays: 2, soonDays: 7, upcomingDays: 14 },
   colors: { free: "#f8fafc", occupied: "#ffffff", full: "#fef2f2" } };
 
 // Match the schema on existing/self-hosted installations without touching

@@ -51,6 +51,27 @@ export type EinlagerungSettingsColors = {
   full: string;
 };
 
+/**
+ * Aufsteigende Tagesgrenzen: criticalDays < soonDays < upcomingDays.
+ */
+export interface EinlagerungDeadlineThresholds {
+  /**
+     * @minimum 0
+     * @maximum 3650
+     */
+  criticalDays: number;
+  /**
+     * @minimum 1
+     * @maximum 3650
+     */
+  soonDays: number;
+  /**
+     * @minimum 2
+     * @maximum 3650
+     */
+  upcomingDays: number;
+}
+
 export interface EinlagerungSettings {
   hideFull: boolean;
   /**
@@ -59,6 +80,7 @@ export interface EinlagerungSettings {
      */
   staleHours: number;
   profiles: EinlagerungSettingsProfiles;
+  deadlineThresholds?: EinlagerungDeadlineThresholds;
   colors: EinlagerungSettingsColors;
 }
 

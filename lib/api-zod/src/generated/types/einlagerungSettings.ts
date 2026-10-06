@@ -5,6 +5,7 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+import type { EinlagerungDeadlineThresholds } from './einlagerungDeadlineThresholds';
 import type { EinlagerungSettingsColors } from './einlagerungSettingsColors';
 import type { EinlagerungSettingsProfiles } from './einlagerungSettingsProfiles';
 
@@ -16,5 +17,6 @@ export interface EinlagerungSettings {
      */
   staleHours: number;
   profiles: EinlagerungSettingsProfiles;
+  deadlineThresholds?: EinlagerungDeadlineThresholds;
   colors: EinlagerungSettingsColors;
 }
