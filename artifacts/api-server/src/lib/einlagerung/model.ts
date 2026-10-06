@@ -158,7 +158,7 @@ export async function snapshots(client: Client) {
   const { rows } = await client.query("SELECT DISTINCT ON (type) * FROM einlagerung_datasets WHERE type IN ('istbestand','retouren','auftraege','artikel','strategie') ORDER BY type, id DESC");
   return rows;
 }
-export function aggregateStock(rows: Data[], type: string, all: WarehouseRecord[]): Data[] {
+export function aggregateStock(rows: Data[], type: string, all: WarehouseRecord[], groupByDelivery = false): Data[] {
   const groups = new Map<string, Data>();
   const carriers = all.filter((r) => r.kind === "carrier" && r.data.active);
   for (const row of rows) {
@@ -166,9 +166,12 @@ export function aggregateStock(rows: Data[], type: string, all: WarehouseRecord[
     const carrier = carriers.find((r) => (row.spediteur && r.data.number === row.spediteur) || r.data.name === row.spediteur_name1);
     const speditionId = carrier?.data.speditionId ?? null;
     const spedition = row.spediteur_name1 || row.spediteur || "";
+    const deliveryNumber = [row.beleg, row.verkaufsbeleg]
+      .map((value) => String(value ?? "").trim()).find((value) => /^8\d+$/.test(value)) || "";
     const keyParts = type === "istbestand" ? [shelf, row.material]
       : type === "retouren" ? [shelf, row.parcours || row.name]
       : [shelf, speditionId || spedition, row.relation, row.lfdat, row.plus_kw];
+    if (type === "auftraege" && groupByDelivery) keyParts.push(deliveryNumber);
     const key = JSON.stringify(keyParts);
     const unit = type === "istbestand" ? row.lagereinh : type === "retouren" ? row.hu : row.handling_unit;
     let group = groups.get(key);
@@ -176,6 +179,7 @@ export function aggregateStock(rows: Data[], type: string, all: WarehouseRecord[
       group = { shelf, material: row.material || "", kunde: row.parcours || row.name || "", spedition,
         speditionId, relation: row.relation || "", termin: row.lfdat || "", calendarWeek: calendarWeek(row.lfdat),
         plusKw: row.plus_kw || "", units: new Set<string>(), belege: new Set<string>() };
+      if (type === "auftraege" && groupByDelivery) group.deliveryNumber = deliveryNumber;
       groups.set(key, group);
     }
     group.units.add(unit);

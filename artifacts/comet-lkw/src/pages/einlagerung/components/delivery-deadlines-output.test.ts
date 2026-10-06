@@ -52,16 +52,34 @@ test("Importtexte bleiben Excel-Text, keine Formeln; HTML wird maskiert", async 
     spedition: 'Name; "Zitat"\nZeile', relation: " =HYPERLINK(\"bad\")", paletten: 1.5,
   } }];
   const sheet = await readExcel(special);
-  assert.equal(sheet.getCell("E2").value, special[0].order.spedition);
-  assert.equal(sheet.getCell("F2").value, special[0].order.relation);
-  assert.equal(sheet.getCell("F2").type, ExcelJS.ValueType.String);
-  assert.equal(sheet.getCell("H2").value, 1.5);
-  assert.equal(sheet.getCell("H2").type, ExcelJS.ValueType.Number);
+  assert.equal(sheet.getCell("F2").value, special[0].order.spedition);
+  assert.equal(sheet.getCell("G2").value, special[0].order.relation);
+  assert.equal(sheet.getCell("G2").type, ExcelJS.ValueType.String);
+  assert.equal(sheet.getCell("I2").value, 1.5);
+  assert.equal(sheet.getCell("I2").type, ExcelJS.ValueType.Number);
   const html = deadlinePrintHtml(special, "all", "<img src=x onerror=alert(1)>", now);
   assert.ok(!html.includes("<script>"));
   assert.ok(!html.includes("<img"));
   assert.ok(html.includes("&lt;script&gt;"));
   assert.ok(html.includes("&lt;img"));
+});
+
+test("Lieferungsnummer wird gesucht und in Druck/Excel als Text separat ausgegeben", async () => {
+  const deliveries = ["80000001", "80000002"].map((deliveryNumber, i) => ({
+    ...rows[0], order: { ...rows[0].order, deliveryNumber, paletten: i + 1 },
+  }));
+  const shown = filterDeadlineRows(deliveries, "critical", "80000002");
+  assert.equal(shown.length, 1);
+  const sheet = await readExcel(shown);
+  assert.equal(sheet.getCell("E1").value, "Lieferungsnummer");
+  assert.equal(sheet.getCell("E2").value, "80000002");
+  assert.equal(sheet.getCell("E2").numFmt, "@");
+  assert.equal(sheet.getCell("I2").value, 2);
+  const html = deadlinePrintHtml(shown, "critical", "80000002", now);
+  assert.match(html, /Lieferungsnummer/);
+  assert.match(html, /80000002/);
+  assert.ok(!html.includes("80000001"));
+  assert.match(html, /1 Aufträge · 2 Paletten/);
 });
 
 test("Datumsähnliche Regalnamen und führende Nullen bleiben nach XLSX-Roundtrip Text", async () => {

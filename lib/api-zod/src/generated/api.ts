@@ -283,6 +283,7 @@ export const DeleteEinlagerungRecordResponse = zod.object({
 
 export const SearchEinlagerungQueryParams = zod.object({
   "mode": zod.enum(['artikel', 'auftraege', 'regal', 'lagerplan']),
+  "groupByDelivery": zod.coerce.boolean().optional().describe('Aufträge nach Lieferungsnummer getrennt aggregieren'),
   "q": zod.coerce.string().optional(),
   "shelfId": zod.coerce.number().optional(),
   "spedition": zod.coerce.string().optional(),

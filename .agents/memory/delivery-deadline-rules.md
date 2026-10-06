@@ -38,3 +38,9 @@ Regalnamen dürfen beim Öffnen eines Liefertermin-Exports in Excel nicht als Da
 **Why:** Der Nutzer meldete, dass Excel Regalnamen im CSV-Export als Datum formatiert. CSV-Anführungszeichen verhindern Excels automatische Typerkennung nicht.
 
 **How to apply:** Excel-Exporte mit expliziten Textzellen für Regalbezeichnungen erzeugen; führende Nullen und datumsähnliche Namen unverändert erhalten.
+
+„Bei Liefertermine und beim Export/Druck muss es auch noch unterteilt nach Lieferungsnummer (die mit 8 Anfängt) aufgelistet sein.“
+
+**Why:** Der Nutzer verlangt die Trennung nach Lieferung auch bei ansonsten gleichem Regal und Termin.
+
+**How to apply:** Lieferungen anhand der mit 8 beginnenden Nummer unterscheiden und Paletten je Lieferung zählen; Verkaufsbelege nicht mit Lieferungsnummern verwechseln. Dieselbe Aufteilung in Ansicht, Export und Druck verwenden.

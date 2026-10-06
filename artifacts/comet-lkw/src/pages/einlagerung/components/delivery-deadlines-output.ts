@@ -4,14 +4,14 @@ export const DEADLINE_LABELS: Record<DeadlineStatus, string> = {
   critical: "Kritisch", soon: "Bald fällig", upcoming: "Demnächst",
   safe: "Unkritisch", week: "KW-Termine", unknown: "Ohne gültigen Termin",
 };
-const HEADERS = ["Status", "Termin", "Rest", "Regal", "Spedition", "Relation", "Plus-KW", "Paletten"];
+const HEADERS = ["Status", "Termin", "Rest", "Regal", "Lieferungsnummer", "Spedition", "Relation", "Plus-KW", "Paletten"];
 
 // The table, printout and export must all use this exact selection, in the same order.
 export function filterDeadlineRows(rows: DeadlineOrder[], filter: DeadlineStatus | "all", search: string) {
   const needle = search.trim().toLowerCase();
   return rows.filter((r) =>
     (filter === "all" || (filter === "week" ? r.dateLabel.startsWith("KW ") : r.status === filter)) &&
-    (!needle || [r.order.shelf, r.order.spedition, r.order.relation]
+    (!needle || [r.order.deliveryNumber, r.order.shelf, r.order.spedition, r.order.relation]
       .some((v) => String(v ?? "").toLowerCase().includes(needle))));
 }
 
@@ -21,7 +21,7 @@ function cells(r: DeadlineOrder): string[] {
   return [
     DEADLINE_LABELS[r.status], r.dateLabel,
     rest + (r.dateLabel.startsWith("KW ") ? " · KW-Beginn (Montag)" : ""),
-    String(r.order.shelf ?? ""), String(r.order.spedition ?? ""), String(r.order.relation ?? ""),
+    String(r.order.shelf ?? ""), String(r.order.deliveryNumber || "–"), String(r.order.spedition ?? ""), String(r.order.relation ?? ""),
     r.order.plusKw ? String(r.order.plusKw) : "–",
     (Number(r.order.paletten) || 0).toLocaleString("de-DE", { useGrouping: false }),
   ];
@@ -34,20 +34,20 @@ export async function deadlineExcel(shown: DeadlineOrder[]) {
   sheet.addRow(HEADERS);
   sheet.getRow(1).font = { bold: true };
   sheet.views = [{ state: "frozen", ySplit: 1 }];
-  const widths = [24, 22, 38, 20, 32, 22, 12, 14];
+  const widths = [24, 22, 38, 20, 22, 32, 22, 12, 14];
   widths.forEach((width, i) => {
     const column = sheet.getColumn(i + 1);
     column.width = width;
     // Explicit string values + text formatting prevent Excel's date/number
     // inference for shelf names, relations, KW labels and leading zeroes.
-    column.numFmt = i < 7 ? "@" : "#,##0.###";
+    column.numFmt = i < 8 ? "@" : "#,##0.###";
   });
   for (const item of shown) {
     const values: (string | number)[] = cells(item);
-    values[7] = Number(item.order.paletten) || 0;
+    values[8] = Number(item.order.paletten) || 0;
     sheet.addRow(values);
   }
-  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: sheet.rowCount, column: 8 } };
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: sheet.rowCount, column: 9 } };
   return workbook.xlsx.writeBuffer();
 }
 

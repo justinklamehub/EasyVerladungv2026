@@ -9,6 +9,10 @@ import type { SearchEinlagerungMode } from './searchEinlagerungMode';
 
 export type SearchEinlagerungParams = {
 mode: SearchEinlagerungMode;
+/**
+ * Aufträge nach Lieferungsnummer getrennt aggregieren
+ */
+groupByDelivery?: boolean;
 q?: string;
 shelfId?: number;
 spedition?: string;

@@ -83,9 +83,9 @@ export async function search(client: Client, query: Data) {
     const shelf = all.find((s) => s.kind === "shelf" && s.id === Number(query.shelfId));
     // Filter individual order/HU rows before grouping; scanning one Beleg
     // must not include unrelated orders sharing the same carrier and week.
-    const orders = query.q ? aggregateStock(
+    const orders = query.q || query.groupByDelivery ? aggregateStock(
       (latest.find((s) => s.type === "auftraege")?.rows || []).filter((r: Data) =>
-        matches(Object.values(r).join(" "), query.q)), "auftraege", all) : stock.auftraege!;
+        matches(Object.values(r).join(" "), query.q)), "auftraege", all, query.groupByDelivery === true) : stock.auftraege!;
     result.orders = orders.filter((r) =>
       (!query.shelfId || r.shelf === shelf?.data.name) &&
       (!query.spedition || String(r.speditionId) === query.spedition || matches(r.spedition, query.spedition)) &&

@@ -218,6 +218,7 @@ paths:
       tags: [einlagerung]
       parameters:
         - {name: mode, in: query, required: true, schema: {type: string, enum: [artikel, auftraege, regal, lagerplan]}}
+        - {name: groupByDelivery, in: query, description: Aufträge nach Lieferungsnummer getrennt aggregieren, schema: {type: boolean}}
         - {name: q, in: query, schema: {type: string}}
         - {name: shelfId, in: query, schema: {type: integer}}
         - {name: spedition, in: query, schema: {type: string}}

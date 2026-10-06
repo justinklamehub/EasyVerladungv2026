@@ -26,7 +26,7 @@ const ORDER: DeadlineStatus[] = ["critical", "soon", "upcoming", "safe", "week",
 
 export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   const { toast } = useToast();
-  const params = { mode: "auftraege" } as const;
+  const params = { mode: "auftraege", groupByDelivery: true } as const;
   const q = useSearchEinlagerung(params, { query: { queryKey: getSearchEinlagerungQueryKey(params), refetchInterval: 30000, refetchIntervalInBackground: false } });
   const [now, setNow] = useState(() => new Date());
   const [filter, setFilter] = useState<DeadlineStatus | "all">("all");
@@ -124,7 +124,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
         </div>
         <div className="relative max-w-sm">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" />
-          <Input aria-label="Regal, Spedition oder Relation suchen" placeholder="Regal, Spedition, Relation" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" data-testid="input-deadline-search" />
+          <Input aria-label="Lieferungsnummer, Regal, Spedition oder Relation suchen" placeholder="Lieferungsnr., Regal, Spedition, Relation" value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" data-testid="input-deadline-search" />
         </div>
         <div className="text-xs text-slate-500 space-y-1">
           <p>Kritisch bei {criticalDays} Tagen oder weniger (inkl. überfällig), bald fällig bis {soonDays}, demnächst bis {upcomingDays} Tage. Schwellen unter Einstellungen änderbar. Tage zählen als Kalendertage ({DEADLINE_TIME_ZONE}).</p>
@@ -145,9 +145,9 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
         ) : (
            <div className="min-w-0 [&>div]:max-h-[60vh]">
             <Table className="app-table">
-              <caption className="sr-only">Aufträge nach Liefertermin aufsteigend sortiert</caption>
+              <caption className="sr-only">Aufträge nach Lieferungsnummer getrennt, nach Liefertermin aufsteigend sortiert</caption>
                <TableHeader className="sticky top-0 z-10"><TableRow>
-                <TableHead scope="col">Status</TableHead><TableHead scope="col">Termin</TableHead><TableHead scope="col">Rest</TableHead><TableHead scope="col">Regal</TableHead>
+                <TableHead scope="col">Status</TableHead><TableHead scope="col">Termin</TableHead><TableHead scope="col">Rest</TableHead><TableHead scope="col">Regal</TableHead><TableHead scope="col">Lieferungsnummer</TableHead>
                 <TableHead scope="col">Spedition</TableHead><TableHead scope="col">Relation</TableHead><TableHead scope="col">Plus-KW</TableHead><TableHead scope="col" className="text-right">Paletten</TableHead>
               </TableRow></TableHeader>
               <TableBody>{shown.map((r, i) => (
@@ -157,6 +157,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
                   <TableCell className="whitespace-nowrap text-slate-600">{r.days == null ? "–" : r.days < 0 ? `${-r.days} Tg. überfällig` : r.days === 0 ? "Heute" : `${r.days} Tg.`}
                     {r.dateLabel.startsWith("KW ") && <span className="block text-[10px]">KW-Beginn (Montag)</span>}</TableCell>
                   <TableCell>{String(r.order.shelf ?? "")}</TableCell>
+                  <TableCell className="whitespace-nowrap font-medium">{String(r.order.deliveryNumber || "–")}</TableCell>
                   <TableCell>{String(r.order.spedition ?? "")}</TableCell>
                   <TableCell>{String(r.order.relation ?? "")}</TableCell>
                   <TableCell className="whitespace-nowrap">{r.order.plusKw ? String(r.order.plusKw) : "–"}</TableCell>

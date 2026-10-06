@@ -135,7 +135,10 @@ router.delete("/einlagerung/records/:kind/:id", requireAuth, handler(async (req,
   res.json({ ok: true });
 }));
 router.get(["/einlagerung/search", "/einlagerung/scanner/search"], scannerOrAuth, handler(async (req, res) => {
-  const query = SearchEinlagerungQueryParams.parse(req.query);
+  const query = SearchEinlagerungQueryParams.parse({
+    ...req.query,
+    ...(req.query.groupByDelivery !== undefined ? { groupByDelivery: req.query.groupByDelivery === "true" } : {}),
+  });
   if (isScanner(req) && !["artikel", "auftraege"].includes(query.mode))
     throw new WarehouseError("Im öffentlichen Scanner sind nur Artikel- und Auftragssuche verfügbar.", 403);
   await permission(req, query.mode === "artikel" ? ["einlagerung.scan", "einlagerung.view"]
