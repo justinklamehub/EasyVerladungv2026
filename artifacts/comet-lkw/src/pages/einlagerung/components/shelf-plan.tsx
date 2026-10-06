@@ -13,6 +13,7 @@ import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { SimpleSelect } from "./simple-select";
 import { LocationCard } from "./location-card";
+import { ShelfPlannedArticles } from "./shelf-planned-articles";
 import { ShelfMatrix } from "./shelf-matrix";
 import { compareShelvesDescending } from "./shelf-layout";
 import { ShelfTiles } from "./shelf-tiles";
@@ -38,11 +39,12 @@ function ShelfDetail({ shelf, model, state, has, onClose, today }: { shelf: Rec 
       <DialogContent className="max-w-xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Regal {String(shelf?.d.name ?? "")}</DialogTitle>
-          <DialogDescription className="sr-only">IST-Bestand, Retouren und Aufträge des ausgewählten Regals.</DialogDescription>
+          <DialogDescription className="sr-only">Geplante Artikel, IST-Bestand, Retouren und Aufträge des ausgewählten Regals.</DialogDescription>
         </DialogHeader>
         {q.isLoading && <Skeleton className="h-40" />}
         {q.isError && <p className="text-sm text-red-700">Details konnten nicht geladen werden.</p>}
         {loc && <LocationCard loc={loc} has={has} imported={imported} label={model.shelfLabel(shelf ?? undefined)} separateStock />}
+        {shelf && <ShelfPlannedArticles key={shelf.id} shelf={model.shelfById.get(shelf.id) ?? shelf} model={model} has={has} />}
         {!q.isLoading && !q.isError && q.data && !loc && <p className="text-sm text-slate-500">{q.data.message || "Keine Daten für dieses Regal gefunden."}</p>}
         {resv.length > 0 && (
           <div className="space-y-1">
