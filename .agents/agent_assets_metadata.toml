@@ -91,3 +91,17 @@ mtime_ms = 1791280523274
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:7ff45556-65b3-42a8-8e14-2ac3c5498ac5/cc7b00a8-3c74-4c6f-9a72-d61f23d75dec/e34ac3cf-b072-46e5-bf93-3cb2c79aaf7f"
 storage_version_token = "1791280535285005"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "pF3Q9MSYu3vbNDRkFxviu"
+uri = "file://exports/einlagerung-transfer/COMET-Einlagerung-import.sql"
+type = "unspecified"
+title = "SQL-Datenexport – komplette Einlagerung für PostgreSQL"
+description = "Direkte SQL-Datei mit allen exportierten Einlagerungsdaten, geeignet für Adminer. Kein ZIP, keine Node.js-Befehle. Vor dem vollständigen Austausch die Sicherheitsbestätigung von FALSE auf TRUE ändern."
+logical_id = "cb168a06-6dc2-47c9-b246-5b9171c4c8d7"
+content_hash = "sha256:27252ea05abcad9fa62f3f405ac092712ef6d03ca6e3a86abcc7913eb657bed0"
+size = 7778142
+mtime_ms = 1791280522462
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:7ff45556-65b3-42a8-8e14-2ac3c5498ac5/cb168a06-6dc2-47c9-b246-5b9171c4c8d7/1fe93484-ffd9-4263-9962-5c22993052ff"
+storage_version_token = "1791280678245741"
+content_type = "application/octet-stream"

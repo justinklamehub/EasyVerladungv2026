@@ -11,6 +11,12 @@ Der Nutzer hat bestätigt: Das produktive COMET-System läuft „auf meinem eige
 
 **How to apply:** Serverkonfiguration und vorhandene Produktionsdaten beibehalten. Für Einlagerungsübernahmen nur diesen Bereich übertragen, fremde Speditions-IDs nicht ungeprüft übernehmen und eine Sicherung vor dem Austausch verlangen. Eine bereitgestellte Datei bedeutet nicht, dass auf dem Produktivserver bereits importiert wurde.
 
+Für Einlagerungsübernahmen verlangt der Nutzer die Daten als PostgreSQL-SQL für „SQL Kommando“ in Adminer, nicht nur ein Node-Werkzeug oder eine ZIP-Datei.
+
+**Why:** Der Nutzer hat die Bitte um direkt verwendbare SQL-Daten mehrfach wiederholt und Adminer für PostgreSQL ausdrücklich genannt.
+
+**How to apply:** Eine direkt herunterladbare SQL-Datendatei bereitstellen. SQL-Dialekt PostgreSQL verwenden; phpMyAdmin nicht als PostgreSQL-Verwaltung darstellen.
+
 ## Missing tables not in Drizzle schema
 
 `roles` and `role_permissions` are raw SQL tables — `drizzle-kit push` does NOT create them.
