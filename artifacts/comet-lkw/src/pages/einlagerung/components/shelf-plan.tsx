@@ -20,7 +20,8 @@ import { ShelfStatusDialog, type ShelfAction } from "./shelf-status-dialog";
 import { ShelfLegend } from "./shelf-legend";
 import { ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, clampZoom, filtersActive, matrixCounts, nextTarget, orderedShelves, scrollToShelf, shelfMatches, type Art, type MatrixFilters, type StatusFilter } from "./matrix-model";
 import { DATASET_LABELS, datasetOf, errMsg, type Model, type Rec } from "../lib";
-import { loadSearchText, type ContentMode, type LoadView } from "./shelf-load-content";
+import { contentRows, loadSearchText, type ContentMode, type LoadView } from "./shelf-load-content";
+import { openReservationsByShelf } from "./shelf-reservations";
 
 function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null; model: Model; state: EinlagerungState; has: (k: string) => boolean; onClose: () => void }) {
   const params = useMemo<SearchEinlagerungParams>(() => ({ mode: "regal", shelfId: shelf?.id }), [shelf?.id]);
@@ -44,7 +45,7 @@ function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null;
             <div className="text-xs uppercase tracking-wider text-slate-500">Offene Reservierungen</div>
             {resv.map((r) => (
               <div key={r.id} className="text-sm rounded-md border border-slate-200 px-3 py-2">
-                {model.spedName(r.d.speditionId) || "-"} / {String(r.d.relation ?? "")} / {String(r.d.termin ?? "")}{r.d.note ? ` - ${r.d.note}` : ""}
+                <span className="font-semibold">Vorgemerkt: </span>{String(r.d.speditionName || model.carriers.find((c) => c.id === Number(r.d.carrierId))?.d.name || model.spedName(r.d.speditionId) || "-")} / {String(r.d.relation ?? "")} / {String(r.d.termin ?? "")}{r.d.note ? ` - ${r.d.note}` : ""}
               </div>
             ))}
           </div>
@@ -92,14 +93,16 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
     return byShelf;
   }, [model.rules, model.articleById, model.groupById]);
   const ds = { ist: datasetOf(state.datasets, "istbestand"), ret: datasetOf(state.datasets, "retouren"), auf: datasetOf(state.datasets, "auftraege") };
+  const reservations = useMemo(() => openReservationsByShelf(model.reservations, model.carriers, model.spedName),
+    [model.reservations, model.carriers, model.spedName]);
   const loadParams = { mode: "lagerplan" } as const;
   const loadsQ = useSearchEinlagerung(loadParams, { query: {
-    queryKey: getSearchEinlagerungQueryKey(loadParams), enabled: contentMode !== "planned",
+    queryKey: getSearchEinlagerungQueryKey(loadParams), enabled: contentMode === "orders" || contentMode === "returns",
     refetchInterval: 30_000, refetchIntervalInBackground: false,
   } });
   const loads = useMemo(() => new Map((loadsQ.data?.locations ?? []).map((loc) =>
     [loc.shelf.id, { orders: loc.orders, retouren: loc.retouren }])), [loadsQ.data]);
-  const loadView: LoadView = { mode: contentMode, byShelf: loads, carriers: model.carriers,
+  const loadView: LoadView = { mode: contentMode, byShelf: loads, carriers: model.carriers, reservations,
     imported: !!(contentMode === "orders" ? ds.auf : ds.ret),
     loading: loadsQ.isLoading, error: loadsQ.isError };
 
@@ -116,8 +119,8 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
   const matches = useMemo(() => all.filter((s) => shelfMatches(s, occ.get(String(s.d.name)),
     contentMode === "planned" ? assigned.get(s.id) ?? [] : [],
     { status, orders, returns, hideFull, q },
-    contentMode === "planned" ? "" : loadSearchText(loads.get(s.id)?.[contentMode === "orders" ? "orders" : "retouren"] ?? []))),
-    [all, occ, assigned, status, orders, returns, hideFull, q, contentMode, loads]);
+    contentMode === "planned" ? "" : loadSearchText(contentRows(loadView, s.id)))),
+    [all, occ, assigned, status, orders, returns, hideFull, q, contentMode, loads, reservations]);
   const matchIds = useMemo(() => (active ? new Set(matches.map((s) => s.id)) : null), [active, matches]);
   const matchIdList = useMemo(() => matches.map((s) => s.id), [matches]);
   const counts = useMemo(() => matrixCounts(all, occ, assigned), [all, occ, assigned]);
@@ -147,7 +150,7 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
     if (idsRef.current.length > 0) jump(1, false);
   }, [q, contentMode, jump]);
   useEffect(() => {
-    if (contentMode !== "planned" && q.trim() && target == null && loadsQ.data && matchIdList.length > 0) jump(1, false);
+    if (contentMode !== "planned" && q.trim() && target == null && (contentMode === "reservations" || loadsQ.data) && matchIdList.length > 0) jump(1, false);
   }, [contentMode, q, target, loadsQ.data, matchIdList, jump]);
 
   useEffect(() => {
@@ -208,8 +211,8 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
         <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-2">{tog(orders, setOrders, "Mit Aufträgen", "filter-orders")}{tog(returns, setReturns, "Mit Retouren", "filter-returns")}</div>
         <div className="flex min-w-0 items-center gap-1.5 sm:col-span-2 lg:col-span-2">
           <Input type="search" className="min-w-0 flex-1" value={q} onChange={(e) => setQ(e.target.value)}
-            aria-label={contentMode === "planned" ? "Regal oder Artikel suchen" : contentMode === "orders" ? "Regal oder Auftrag suchen" : "Regal oder Retoure suchen"}
-            placeholder={contentMode === "planned" ? "Regal oder Artikel suchen" : contentMode === "orders" ? "Regal, Spedition, Relation oder Termin" : "Regal, Kunde oder Parcours"}
+            aria-label={contentMode === "planned" ? "Regal oder Artikel suchen" : contentMode === "orders" ? "Regal oder Auftrag suchen" : contentMode === "reservations" ? "Regal oder Reservierung suchen" : "Regal oder Retoure suchen"}
+            placeholder={contentMode === "planned" ? "Regal oder Artikel suchen" : contentMode === "orders" || contentMode === "reservations" ? "Regal, Spedition, Relation oder Termin" : "Regal, Kunde oder Parcours"}
             onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); jump(e.shiftKey ? -1 : 1); } }} data-testid="filter-shelf-q" />
           <Button type="button" variant="outline" size="icon" aria-label="Vorheriger Treffer" disabled={matches.length === 0} onClick={() => jump(-1)} data-testid="button-match-prev"><ChevronUp className="w-4 h-4" /></Button>
           <Button type="button" variant="outline" size="icon" aria-label="Nächster Treffer" disabled={matches.length === 0} onClick={() => jump(1)} data-testid="button-match-next"><ChevronDown className="w-4 h-4" /></Button>
@@ -219,7 +222,7 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
 
       <div className="flex flex-wrap items-center gap-2">
         <div className="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Regalinhalt">
-          {([["planned", "Geplante Artikel"], ["orders", "Aufträge"], ["returns", "Retouren"]] as const).map(([mode, label]) =>
+          {([["planned", "Geplante Artikel"], ["orders", "Aufträge"], ["returns", "Retouren"], ["reservations", "Offene Reservierungen"]] as const).map(([mode, label]) =>
             <button key={mode} type="button" aria-pressed={contentMode === mode} data-testid={`content-${mode}`}
               onClick={() => setContentMode(mode)}
               className={`px-3 py-1 rounded ${contentMode === mode ? "bg-slate-900 text-white" : "text-slate-700"}`}>{label}</button>)}
@@ -244,12 +247,16 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
         </Button>
       </div>
       <ShelfLegend colors={state.settings.colors} mode={contentMode} />
-      {contentMode !== "planned" && loadsQ.isError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+      {(contentMode === "orders" || contentMode === "returns") && loadsQ.isError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
         Aufträge und Retouren konnten nicht geladen werden: {errMsg(loadsQ.error)}
         <Button size="sm" variant="outline" className="ml-2" onClick={() => loadsQ.refetch()}>Erneut versuchen</Button>
       </div>}
-      {contentMode !== "planned" && !loadView.imported && <p className="text-sm text-slate-500">
+      {(contentMode === "orders" || contentMode === "returns") && !loadView.imported && <p className="text-sm text-slate-500">
         {contentMode === "orders" ? "Aufträge" : "Retouren"} wurden noch nicht importiert.
+      </p>}
+      {contentMode === "reservations" && <p className="text-sm text-slate-500" data-testid="reservation-notice">
+        Nur offene Reservierungen: vorgemerkt, noch nicht eingelagert. Belegung und Palettenzahlen bleiben unverändert.
+        {!all.some((s) => reservations.has(s.id)) && " Keine offenen Reservierungen in dieser Hallen- und Gangauswahl."}
       </p>}
 
       {groups.length === 0 && <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500" data-testid="empty-groups">Keine Regale für diese Hallen- und Gangauswahl.</div>}

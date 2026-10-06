@@ -5,7 +5,7 @@ import { ArticleStrip, articleTextColor } from "./article-strip";
 import { buildShelfMatrix, shelfPosition, type ShelfAisle } from "./shelf-layout";
 import { shelfStatus, type Art, type Occ } from "./matrix-model";
 import { ShelfActionMenu } from "./shelf-action-menu";
-import { ShelfLoadContent, type LoadView } from "./shelf-load-content";
+import { contentRows, ShelfLoadContent, type LoadView } from "./shelf-load-content";
 
 const HALL_H = 30, AISLE_H = 26, POS_W = 44;
 
@@ -68,7 +68,7 @@ export function ShelfMatrix({ groups, occ, assigned, colors, istImported, retImp
                           aria-label={`Regal ${name}, Position ${shelfPosition(s)}, ${st === "full" ? "voll" : st === "occupied" ? "belegt" : "frei"}${o && istImported ? `, IST ${o.ist} Paletten` : ""}${arts.length === 0 ? ", nicht verplant" : ""}${dim ? ", ausgeblendet durch Filter" : ""}`}
                           className={`w-full text-left rounded border p-0.5 pr-5 space-y-0.5 flex flex-col ${st === "full" ? "border-red-600 border-2" : "border-slate-400"} hover:border-slate-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-slate-900`}
                           style={{ backgroundColor: bg, color: fg, minHeight: minH,
-                            ...((showLoads ? !(loadView.byShelf.get(s.id)?.[loadView.mode === "orders" ? "orders" : "retouren"].length) : arts.length === 0) ? { backgroundImage: "repeating-linear-gradient(135deg, transparent, transparent 4px, rgba(100,116,139,0.14) 4px, rgba(100,116,139,0.14) 8px)" } : {}) }}>
+                            ...((showLoads ? contentRows(loadView, s.id).length === 0 : arts.length === 0) ? { backgroundImage: "repeating-linear-gradient(135deg, transparent, transparent 4px, rgba(100,116,139,0.14) 4px, rgba(100,116,139,0.14) 8px)" } : {}) }}>
                           <span className="block font-bold leading-tight truncate" style={{ fontSize: fs(11) }}>{name}{st === "full" && <span className="ml-1 uppercase" style={{ fontSize: fs(8) }}>voll</span>}</span>
                           {showLoads ? <ShelfLoadContent shelfId={s.id} view={loadView} scale={z} /> : <>
                             {arts.length === 0 && <span className="block leading-tight" style={{ fontSize: fs(8), opacity: 0.8 }}>nicht verplant</span>}
