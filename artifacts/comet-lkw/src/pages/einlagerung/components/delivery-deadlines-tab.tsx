@@ -5,9 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AlertTriangle, Download, Printer, Search } from "lucide-react";
+import { AlertTriangle, Download, Loader2, Printer, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { DEADLINE_LABELS, deadlineCsv, deadlinePrintHtml, filterDeadlineRows } from "./delivery-deadlines-output";
+import { DEADLINE_LABELS, deadlineExcel, deadlinePrintHtml, filterDeadlineRows } from "./delivery-deadlines-output";
 import { errMsg, datasetOf, nf, type D } from "../lib";
 import {
   DEFAULT_DEADLINE_THRESHOLDS, DEADLINE_TIME_ZONE, classifyDeliveryOrders, deadlineSummary, validDeadlineThresholds,
@@ -31,6 +31,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   const [now, setNow] = useState(() => new Date());
   const [filter, setFilter] = useState<DeadlineStatus | "all">("all");
   const [search, setSearch] = useState("");
+  const [exporting, setExporting] = useState(false);
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t); }, []);
 
   const saved = state.settings.deadlineThresholds;
@@ -63,19 +64,23 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
       toast({ title: "Drucken fehlgeschlagen", description: errMsg(error), variant: "destructive" });
     }
   };
-  const exportShown = () => {
-    if (outputDisabled) return;
+  const exportShown = async () => {
+    if (outputDisabled || exporting) return;
+    setExporting(true);
     try {
-      const url = URL.createObjectURL(new Blob([deadlineCsv(shown)], { type: "text/csv;charset=utf-8" }));
+      const buffer = await deadlineExcel(shown);
+      const url = URL.createObjectURL(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
       const link = document.createElement("a");
       link.href = url;
-      link.download = `liefertermine-${new Date().toLocaleDateString("sv-SE", { timeZone: DEADLINE_TIME_ZONE })}.csv`;
+      link.download = `liefertermine-${new Date().toLocaleDateString("sv-SE", { timeZone: DEADLINE_TIME_ZONE })}.xlsx`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
       toast({ title: "Export fehlgeschlagen", description: errMsg(error), variant: "destructive" });
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -93,8 +98,9 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
           <div className="flex flex-wrap gap-2">
             <Button type="button" size="sm" variant="outline" disabled={outputDisabled} onClick={printShown}
               title="Aktuell gefilterte Liefertermine drucken" data-testid="button-deadlines-print"><Printer className="w-4 h-4 mr-2" />Drucken</Button>
-            <Button type="button" size="sm" variant="outline" disabled={outputDisabled} onClick={exportShown}
-              title="Aktuell gefilterte Liefertermine als CSV exportieren" data-testid="button-deadlines-export"><Download className="w-4 h-4 mr-2" />Exportieren</Button>
+            <Button type="button" size="sm" variant="outline" disabled={outputDisabled || exporting} onClick={exportShown}
+              title="Aktuell gefilterte Liefertermine als Excel-Datei exportieren" data-testid="button-deadlines-export">
+              {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}Exportieren</Button>
           </div>
         </div>
         {urgent > 0 && (

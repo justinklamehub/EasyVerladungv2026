@@ -27,15 +27,28 @@ function cells(r: DeadlineOrder): string[] {
   ];
 }
 
-function csvCell(value: string) {
-  // Imported names can contain spreadsheet formulas. Treat those as text.
-  const safe = /^[\s\u0000-\u001f]*[=+\-@]/.test(value) ? `'${value}` : value;
-  return `"${safe.replace(/"/g, '""')}"`;
-}
-
-export function deadlineCsv(shown: DeadlineOrder[]): string {
-  return "\uFEFF" + [HEADERS, ...shown.map(cells)]
-    .map((row) => row.map(csvCell).join(";")).join("\r\n") + "\r\n";
+export async function deadlineExcel(shown: DeadlineOrder[]) {
+  const ExcelJS = (await import("exceljs")).default;
+  const workbook = new ExcelJS.Workbook();
+  const sheet = workbook.addWorksheet("Liefertermine");
+  sheet.addRow(HEADERS);
+  sheet.getRow(1).font = { bold: true };
+  sheet.views = [{ state: "frozen", ySplit: 1 }];
+  const widths = [24, 22, 38, 20, 32, 22, 12, 14];
+  widths.forEach((width, i) => {
+    const column = sheet.getColumn(i + 1);
+    column.width = width;
+    // Explicit string values + text formatting prevent Excel's date/number
+    // inference for shelf names, relations, KW labels and leading zeroes.
+    column.numFmt = i < 7 ? "@" : "#,##0.###";
+  });
+  for (const item of shown) {
+    const values: (string | number)[] = cells(item);
+    values[7] = Number(item.order.paletten) || 0;
+    sheet.addRow(values);
+  }
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: sheet.rowCount, column: 8 } };
+  return workbook.xlsx.writeBuffer();
 }
 
 function escapeHtml(value: string) {

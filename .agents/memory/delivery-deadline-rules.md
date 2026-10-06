@@ -32,3 +32,9 @@ Die Liefertermin-Mail soll täglich nur bei enthaltenen Terminen innerhalb der e
 **Why:** Der Nutzer verlangt ausdrücklich, dass Drucken und Exportieren in der Ansicht „Liefertermine“ die aktive Auswahl respektieren.
 
 **How to apply:** Status-/KW-Filter und Textsuche gemeinsam berücksichtigen. Druck-/Exportsummen ausschließlich aus dieser Auswahl bilden, nicht aus allen geladenen Aufträgen.
+
+Regalnamen dürfen beim Öffnen eines Liefertermin-Exports in Excel nicht als Datum interpretiert werden.
+
+**Why:** Der Nutzer meldete, dass Excel Regalnamen im CSV-Export als Datum formatiert. CSV-Anführungszeichen verhindern Excels automatische Typerkennung nicht.
+
+**How to apply:** Excel-Exporte mit expliziten Textzellen für Regalbezeichnungen erzeugen; führende Nullen und datumsähnliche Namen unverändert erhalten.
