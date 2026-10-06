@@ -6,6 +6,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { envelope, validate, mapCarriers, remapRecord } from "./model.mjs";
 import { exportSnapshot, importSnapshot } from "./database.mjs";
+import { renderSQL } from "./sql.mjs";
 
 const stamp = "2026-10-06T10:00:00.000Z";
 const row = (id, kind, data) => ({ id, kind, data, updated_at: stamp });
@@ -121,6 +122,28 @@ test("isolated PostgreSQL: dry-run, backup, atomic rollback, replacement and ret
     assert.equal(await count(), 1);
     assert.equal((await client.query("SELECT data FROM einlagerung_records")).rows[0].data.name, "Existing");
     assert.equal((await client.query("SELECT value FROM settings WHERE key='einlagerung_settings'")).rows[0].value, '{"hideFull":false}');
+    // Exercise the downloadable PostgreSQL-only alternative in the same isolated schema.
+    await assert.rejects(client.query(renderSQL(fixture())), /Keine Daten geändert/);
+    await client.query("ROLLBACK");
+    assert.equal(await count(), 1);
+    await assert.rejects(client.query(renderSQL(envelope(rejected), { confirmed: true })), /nicht eindeutig/);
+    await client.query("ROLLBACK");
+    assert.equal(await count(), 1);
+    await client.query(renderSQL(fixture(), { confirmed: true }));
+    assert.equal(await count(), 8);
+    const sqlRecords = (await client.query("SELECT id,kind,data FROM einlagerung_records")).rows;
+    const reservation = sqlRecords.find((r) => r.kind === "reservation");
+    assert.equal(reservation.data.speditionId, 37);
+    assert.equal(reservation.data.shelfId, sqlRecords.find((r) => r.kind === "shelf").id);
+    const saved = (await client.query("SELECT payload FROM einlagerung_transfer_sicherungen WHERE id=1")).rows[0].payload;
+    assert.equal(saved.records[0].data.name, "Existing");
+    assert.equal((await client.query("SELECT value FROM unrelated_productive_data")).rows[0].value, "must remain");
+    assert.equal((await client.query("SELECT value FROM settings WHERE key='other-setting'")).rows[0].value, "untouched");
+    const restoreSQL = renderSQL(fixture(), { restore: true, confirmed: true }).replace("WHERE id = 0;", "WHERE id = 1;");
+    await client.query(restoreSQL);
+    assert.equal(await count(), 1);
+    assert.equal((await client.query("SELECT data FROM einlagerung_records")).rows[0].data.name, "Existing");
+    assert.equal((await client.query("SELECT COUNT(*)::int AS n FROM einlagerung_transfer_sicherungen")).rows[0].n, 2);
   } finally {
     if (created) await client.query(`DROP SCHEMA "${schema}" CASCADE`);
     await client.end(); await rm(dir, { recursive: true, force: true });

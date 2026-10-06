@@ -1,0 +1,49 @@
+COMET – Einlagerungsstand direkt per PostgreSQL übernehmen
+
+Keine Node.js-Befehle und kein JSON-Import nötig.
+Die Import-SQL-Datei enthält den vollständigen exportierten Datenstand.
+
+Voraussetzung: aktuelle COMET-Version und ihre Einlagerungstabellen auf dem Server.
+
+1. ZIP entpacken.
+2. In pgAdmin oder DBeaver ausdrücklich die richtige COMET-Produktionsdatenbank
+   auswählen und COMET-Einlagerung-import.sql im SQL-Editor öffnen.
+3. Oben im DECLARE-Abschnitt ändern:
+      bestaetigt boolean := FALSE;
+   zu:
+      bestaetigt boolean := TRUE;
+4. Die GESAMTE Datei ausführen, nicht nur einzelne markierte Anweisungen.
+5. Bei Erfolg COMET neu laden und Lagerplan, Vormerkungen und Aufträge kontrollieren.
+
+ACHTUNG:
+Der Einlagerungsstand der Zieldatenbank wird vollständig ersetzt, nicht ergänzt.
+Benutzer, globale Speditionen, Verladungen und Palettenkonten bleiben unverändert.
+Speditionen werden nach eindeutigem Kürzel, sonst nach eindeutigem Namen zugeordnet.
+Bei fehlender/mehrdeutiger Zuordnung wird abgebrochen: erst in COMET abgleichen.
+Während des Imports darf die Einlagerung nicht bearbeitet werden.
+Die Dateien enthalten Geschäftsdaten und gehören nicht in ein öffentliches Webverzeichnis.
+
+SICHERUNG:
+Vor dem Austausch wird der bisherige Einlagerungsstand in der Datenbanktabelle
+einlagerung_transfer_sicherungen gespeichert. Nach erfolgreicher Ausführung zeigt
+die letzte Abfrage die Sicherungs-IDs. Sicherung bleibt auch nach dem Import erhalten.
+Diese Tabelle ist eine Einlagerungssicherung, kein vollständiges Datenbankbackup.
+Vor größeren Produktionsänderungen ist zusätzlich ein vollständiges DB-Backup sinnvoll.
+
+FEHLER:
+Wenn die Ausführung mit einem Fehler abbricht, sind die Änderungen nicht committed.
+Falls dein SQL-Programm die fehlgeschlagene Transaktion offen lässt, ausführen:
+  ROLLBACK;
+Dann Ursache beheben. Nicht einzelne Teile der Importdatei erneut ausführen.
+
+RÜCKNAHME:
+In COMET-Einlagerung-zurueck.sql ebenfalls bestaetigt := TRUE setzen.
+In der Zeile "WHERE id = 0;" die 0 durch die gewünschte Sicherungs-ID ersetzen.
+Die ganze Datei ausführen. Auch die Rücknahme ersetzt den Einlagerungsstand
+und sichert vorher den dann aktuellen Stand. Änderungen nach dem Import gehen
+bei einer Rücknahme aus der aktiven Einlagerung verloren.
+
+VERWENDUNG MIT psql (Alternative zum SQL-Editor):
+Nachdem die Sicherheitsbestätigung in der Datei auf TRUE gesetzt wurde:
+  \i '/vollstaendiger/pfad/COMET-Einlagerung-import.sql'
+Das ist ein psql-Befehl, kein SQL-Befehl für pgAdmin.
