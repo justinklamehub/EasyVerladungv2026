@@ -3,6 +3,14 @@ name: Production deployment gotchas
 description: Self-hosted deployment issues specific to COMET LKW on Debian/Apache2
 ---
 
+## Produktionsumgebung und Einlagerungsübernahme
+
+Der Nutzer hat bestätigt: Das produktive COMET-System läuft „auf meinem eigenen Server außerhalb von Replit“.
+
+**Why:** Der Nutzer hat die eigene Serverumgebung ausdrücklich bestätigt; Hinweise für Replits verwaltete Produktionsdatenbank sind dafür nicht der passende Übertragungsweg.
+
+**How to apply:** Serverkonfiguration und vorhandene Produktionsdaten beibehalten. Für Einlagerungsübernahmen nur diesen Bereich übertragen, fremde Speditions-IDs nicht ungeprüft übernehmen und eine Sicherung vor dem Austausch verlangen. Eine bereitgestellte Datei bedeutet nicht, dass auf dem Produktivserver bereits importiert wurde.
+
 ## Missing tables not in Drizzle schema
 
 `roles` and `role_permissions` are raw SQL tables — `drizzle-kit push` does NOT create them.

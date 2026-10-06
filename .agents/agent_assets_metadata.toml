@@ -6,51 +6,74 @@ id = "JvGWM5Ub9Xx4qDyunqeZy"
 uri = "file://DEPLOYMENT.md"
 type = "text"
 title = "Deployment-Anleitung (VPS / Nginx / PM2)"
+logical_id = "bd39125a-0565-4d9a-9c42-8946b77e86aa"
 
 [[outputs]]
 id = "BSnQT5c7gHRCetz1DHWUP"
 uri = "file://DEPLOYMENT_RHEL.md"
 type = "text"
 title = "Deployment-Anleitung (RHEL 7.9)"
+logical_id = "fd00993e-772c-4807-84f6-4c01ac248718"
 
 [[outputs]]
 id = "YDiPd8AVAmMDAm9CvN0RC"
 uri = "file://comet_lkw_export.sql.gz"
 type = "unspecified"
 title = "comet_lkw_export.sql.gz — Datenbankexport"
+logical_id = "47d5eef7-e7e7-4bf2-ad49-397147c302ad"
 
 [[outputs]]
 id = "fY9BoCCf6DWPJFvltRuwa"
 uri = "file://DEPLOYMENT_DEBIAN_APACHE.md"
 type = "text"
 title = "Deployment-Anleitung (Debian 12 + Apache2)"
+logical_id = "dbbc76f4-115f-4eb9-8a89-5c9047d1a73f"
 
 [[outputs]]
 id = "MzONsIgMjarGrnB8X-Auc"
 uri = "file://.local/outputs/COMET-LKW-Praesentation.pptx"
 type = "slides"
 title = "COMET LKW – Verladungsverwaltung (korrigiert + Bilder)"
+logical_id = "dbd3e60a-3f0f-44f2-852a-d74749ba5f97"
 
 [[outputs]]
 id = "i0VSTjIVv5ZmHhLbOem9k"
 uri = "file://attached_assets/stock_images/truck-loading-dock.jpg"
 type = "image"
 title = "truck logistics loading dock freight warehouse industrial Germany"
+logical_id = "1f9950f6-23b7-4d1f-8aec-72a931c874c7"
 
 [[outputs]]
 id = "XB924d3Vzsp8PY80gwp_d"
 uri = "file://attached_assets/stock_images/warehouse-mobile.jpg"
 type = "image"
 title = "warehouse worker using tablet mobile device scanning logistics operations"
+logical_id = "83c761f2-46fb-440d-9200-fe73cadb79ed"
 
 [[outputs]]
 id = "yTVhVJnTbH0PgcB6NIIww"
 uri = "file://.local/projektübersicht.md"
 type = "text"
 title = "COMET Easy-Verladung – Projektübersicht"
+logical_id = "96654ac5-6fe2-4358-8822-41da69d4c064"
 
 [[outputs]]
 id = "0S1Ba80s5rDuvilBrtmG-"
 uri = "file://projektübersicht.docx"
 type = "word_document"
 title = "COMET Easy-Verladung – Projektübersicht (Word)"
+logical_id = "7d16fec2-82f3-4666-882a-4b36ba286124"
+
+[[outputs]]
+id = "DA6dpgaz11VdWD7TnOpvx"
+uri = "file://exports/einlagerung-transfer/COMET-Einlagerung-Transfer.zip"
+type = "unspecified"
+title = "COMET – vollständiger Einlagerungsstand für deinen Server"
+description = "Aktueller Datenstand, Importwerkzeug und deutsche Anleitung. Mit Prüfmodus, verpflichtender Sicherung, Speditionsabgleich und Rücknahme. Der Import ersetzt nur die Einlagerung; andere COMET-Bereiche bleiben unverändert."
+logical_id = "e39e1c82-3129-4622-9504-314d609e28e4"
+content_hash = "sha256:379d6df8f998e50132909f33eebde0fea43b52e3c8b123bdc1a8c3e2a317f3de"
+size = 481507
+mtime_ms = 1791279965930
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:7ff45556-65b3-42a8-8e14-2ac3c5498ac5/e39e1c82-3129-4622-9504-314d609e28e4/4cb8bee7-a7b3-47cb-8b61-18e33ea07981"
+storage_version_token = "1791280012511011"
+content_type = "application/octet-stream"
