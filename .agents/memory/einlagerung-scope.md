@@ -62,3 +62,21 @@ Die primäre Lagerübersicht soll die Matrix der Bildvorlage verwenden: Hallen n
 **Why:** Der Nutzer hat diese Ansichten und die absteigende Sortierung ausdrücklich vorgegeben.
 
 **How to apply:** Nach tatsächlicher Regalposition absteigend sortieren, nicht nach Importreihenfolge; Hallen, Gänge und Positionen weiterhin aus den gepflegten Daten ableiten.
+
+Die Matrix soll professioneller aussehen und Zoom/Vollbild, Belegungs- und Auftragsfilter, Regalsuche mit direktem Sprung sowie Vollmelden und Freigeben direkt am Regal bieten.
+
+**Why:** Der Nutzer hat alle vier Funktionsbereiche ausdrücklich ausgewählt.
+
+**How to apply:** Bei Weiterentwicklungen diese operativen Funktionen und die getrennten Berechtigungen für Vollmelden und Freigeben erhalten.
+
+In der Matrix Such- und Belegungsfilter über Hervorheben und Abblenden darstellen; nur die Hallen- und Gangauswahl verändert den angezeigten Ausschnitt.
+
+**Why:** Entfernte Zeilen und Spalten würden die räumliche Orientierung zwischen realen Lagerplätzen während der Suche verändern.
+
+**How to apply:** Treffer weiterhin an ihren tatsächlichen Positionen zeigen und die Treffernavigation auf passende Regale begrenzen.
+
+In der Lageransicht soll zwischen geplanten Artikeln und Aufträgen / Retouren umgeschaltet werden können. Die importierten Aufträge sollen direkt je Regal mit Spedition, Relation, Termin und Palettenzahl sichtbar sein.
+
+**Why:** Der Nutzer hat den Inhaltswechsel ausdrücklich verlangt und dafür die Artikelbalken und Speditionskarten seiner bisherigen Ansicht als Bildvorlagen gezeigt.
+
+**How to apply:** Die Inhaltsauswahl getrennt von Matrix/Kacheln und Belegungsfiltern behandeln; geplante Artikelzuordnungen nicht durch tatsächliche Aufträge oder Retouren ersetzen.

@@ -27,3 +27,15 @@ test("Kompakte Matrixbalken behalten auch lange Artikelnummern vollständig", ()
   assert.ok(!html.includes("overflow-hidden"));
   assert.ok(html.includes("title=\"603231033"));
 });
+
+test("Matrixzoom skaliert auch Artikelnummern und Zeilenhöhe, ohne Gruppenfarbe zu ändern", () => {
+  for (const [scale, font, line] of [[0.6, 5.4, 9.6], [1.6, 14.4, 25.6]]) {
+    const html = renderToStaticMarkup(createElement(ArticleStrip, {
+      number: "1714800", name: "Artikel", group: "Gruppe", color: "#8ed047", priority: 1, compact: true, scale,
+    }));
+    assert.ok(html.includes(`font-size:${font}px`));
+    assert.ok(html.includes(`line-height:${line}px`));
+    assert.ok(html.includes("background-color:#8ed047"));
+    assert.ok(html.includes("1714800"));
+  }
+});

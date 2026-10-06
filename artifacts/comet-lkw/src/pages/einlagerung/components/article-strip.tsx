@@ -6,14 +6,15 @@ export function articleTextColor(background: string) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b > 0.179 ? "#0f172a" : "#ffffff";
 }
 
-export function ArticleStrip({ number, name, group, color, priority, compact = false }: {
-  number: string; name: string; group: string; color: string; priority: number; compact?: boolean;
+export function ArticleStrip({ number, name, group, color, priority, compact = false, scale = 1 }: {
+  number: string; name: string; group: string; color: string; priority: number; compact?: boolean; scale?: number;
 }) {
   return (
     <span
       className={compact ? "block w-full rounded-full px-0.5 text-[9px] leading-4 font-bold text-center tracking-tight break-all" : "block w-full rounded-full px-2 py-0.5 text-[11px] leading-4 font-bold break-all"}
       style={{ backgroundColor: color, color: articleTextColor(color),
-        ...(compact ? { fontSize: `${Math.max(7, Math.min(9, 67.5 / Math.max(1, number.length)))}px` } : {}) }}
+        ...(compact ? { fontSize: `${Math.round(Math.max(7, Math.min(9, 67.5 / Math.max(1, number.length))) * scale * 100) / 100}px`,
+          ...(scale !== 1 ? { lineHeight: `${16 * scale}px` } : {}) } : {}) }}
       title={[number, name, group || "Ohne Gruppe", `Priorität ${priority}`].filter(Boolean).join(" · ")}
       aria-label={`Artikel ${number}, ${group || "ohne Gruppe"}, Priorität ${priority}`}
       data-testid={`article-strip-${number}`}

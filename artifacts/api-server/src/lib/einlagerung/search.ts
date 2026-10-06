@@ -36,7 +36,23 @@ export async function search(client: Client, query: Data) {
       retouren: stock.retouren!.filter((r) => r.shelf === shelf.data.name),
       orders: stock.auftraege!.filter((r) => r.shelf === shelf.data.name) };
   };
-  if (query.mode === "artikel") {
+  if (query.mode === "lagerplan") {
+    // One bulk read, indexed by shelf; never a request per matrix cell.
+    const indexed = new Map<string, { ist: Data[]; retouren: Data[]; orders: Data[] }>();
+    for (const [type, field] of [["istbestand", "ist"], ["retouren", "retouren"], ["auftraege", "orders"]] as const) {
+      for (const row of stock[type]!) {
+        const entry = indexed.get(row.shelf) ?? { ist: [], retouren: [], orders: [] };
+        entry[field].push(row);
+        indexed.set(row.shelf, entry);
+      }
+    }
+    result.locations = all.filter((s) => s.kind === "shelf" && isShelfActive(s, all))
+      .flatMap((shelf) => {
+        const entry = indexed.get(shelf.data.name);
+        return entry && (entry.orders.length || entry.retouren.length)
+          ? [{ shelf, priority: 1, note: "", group: "", color: "#64748b", ...entry }] : [];
+      });
+  } else if (query.mode === "artikel") {
     const article = all.find((r) => r.kind === "article" && r.data.active &&
       (r.data.number === query.q || (r.data.ean && r.data.ean === query.q)));
     if (!article) { result.message = "Artikel wurde nicht gefunden."; return result; }

@@ -857,6 +857,7 @@ export const SearchEinlagerungMode = {
   artikel: 'artikel',
   auftraege: 'auftraege',
   regal: 'regal',
+  lagerplan: 'lagerplan',
 } as const;
 
 export type ListUsersParams = {

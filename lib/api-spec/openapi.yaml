@@ -97,7 +97,7 @@ paths:
       operationId: searchEinlagerung
       tags: [einlagerung]
       parameters:
-        - {name: mode, in: query, required: true, schema: {type: string, enum: [artikel, auftraege, regal]}}
+        - {name: mode, in: query, required: true, schema: {type: string, enum: [artikel, auftraege, regal, lagerplan]}}
         - {name: q, in: query, schema: {type: string}}
         - {name: shelfId, in: query, schema: {type: integer}}
         - {name: spedition, in: query, schema: {type: string}}

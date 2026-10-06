@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronDown, ChevronUp, Maximize2, Minimize2, Minus, Plus, RotateCcw } from "lucide-react";
 import { useSearchEinlagerung, getSearchEinlagerungQueryKey } from "@workspace/api-client-react";
 import type { EinlagerungState, SearchEinlagerungParams } from "@workspace/api-client-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -6,15 +7,20 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { SimpleSelect } from "./simple-select";
 import { LocationCard } from "./location-card";
-import { ArticleStrip } from "./article-strip";
 import { ShelfMatrix } from "./shelf-matrix";
 import { compareShelvesDescending } from "./shelf-layout";
-import { DATASET_LABELS, datasetOf, nf, type Model, type Rec } from "../lib";
+import { ShelfTiles } from "./shelf-tiles";
+import { ShelfStatusDialog, type ShelfAction } from "./shelf-status-dialog";
+import { ShelfLegend } from "./shelf-legend";
+import { ZOOM_DEFAULT, ZOOM_MAX, ZOOM_MIN, ZOOM_STEP, clampZoom, filtersActive, matrixCounts, nextTarget, orderedShelves, scrollToShelf, shelfMatches, type Art, type MatrixFilters, type StatusFilter } from "./matrix-model";
+import { DATASET_LABELS, datasetOf, errMsg, type Model, type Rec } from "../lib";
+import { loadSearchText, type ContentMode, type LoadView } from "./shelf-load-content";
 
 function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null; model: Model; state: EinlagerungState; has: (k: string) => boolean; onClose: () => void }) {
   const params = useMemo<SearchEinlagerungParams>(() => ({ mode: "regal", shelfId: shelf?.id }), [shelf?.id]);
@@ -51,15 +57,26 @@ function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null;
 export function ShelfPlan({ state, model, has }: { state: EinlagerungState; model: Model; has: (k: string) => boolean }) {
   const [hall, setHall] = useState("");
   const [aisle, setAisle] = useState("");
-  const [status, setStatus] = useState("");
+  const [status, setStatus] = useState<StatusFilter>("");
+  const [orders, setOrders] = useState(false);
+  const [returns, setReturns] = useState(false);
   const [q, setQ] = useState("");
   const [hideFull, setHideFull] = useState(state.settings.hideFull);
   const [sel, setSel] = useState<Rec | null>(null);
+  const [action, setAction] = useState<ShelfAction | null>(null);
   const [view, setView] = useState<"matrix" | "tiles">("matrix");
+  const [contentMode, setContentMode] = useState<ContentMode>("planned");
+  const [zoom, setZoom] = useState(ZOOM_DEFAULT);
+  const [fs, setFs] = useState(false);
+  const [targetId, setTargetId] = useState<number | null>(null);
+  const [nonce, setNonce] = useState(0);
+  const jumpFocus = useRef(false);
+  const scroller = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
 
   const occ = useMemo(() => new Map(state.occupancy.map((o) => [o.shelf, o])), [state.occupancy]);
   const assigned = useMemo(() => {
-    const byShelf = new Map<number, { id: number; number: string; name: string; priority: number; color: string; group: string }[]>();
+    const byShelf = new Map<number, Art[]>();
     for (const rule of model.rules) {
       if (rule.d.active === false) continue;
       const article = model.articleById.get(Number(rule.d.articleId));
@@ -75,23 +92,79 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
     return byShelf;
   }, [model.rules, model.articleById, model.groupById]);
   const ds = { ist: datasetOf(state.datasets, "istbestand"), ret: datasetOf(state.datasets, "retouren"), auf: datasetOf(state.datasets, "auftraege") };
+  const loadParams = { mode: "lagerplan" } as const;
+  const loadsQ = useSearchEinlagerung(loadParams, { query: {
+    queryKey: getSearchEinlagerungQueryKey(loadParams), enabled: contentMode !== "planned",
+    refetchInterval: 30_000, refetchIntervalInBackground: false,
+  } });
+  const loads = useMemo(() => new Map((loadsQ.data?.locations ?? []).map((loc) =>
+    [loc.shelf.id, { orders: loc.orders, retouren: loc.retouren }])), [loadsQ.data]);
+  const loadView: LoadView = { mode: contentMode, byShelf: loads, carriers: model.carriers,
+    imported: !!(contentMode === "orders" ? ds.auf : ds.ret),
+    loading: loadsQ.isLoading, error: loadsQ.isError };
 
   const aisles = model.aisles.filter((a) => a.d.active !== false && (!hall || String(a.d.hallId) === hall));
-  const groups = aisles.filter((a) => !aisle || String(a.id) === aisle).map((a) => ({
-    aisle: a,
-    hall: model.hallById.get(Number(a.d.hallId)),
-    shelves: model.shelves.filter((s) => Number(s.d.aisleId) === a.id && s.d.active !== false).filter((s) => {
-      const o = occ.get(String(s.d.name));
-      const used = !!o && (o.ist > 0 || o.retouren > 0 || o.auftraege > 0);
-      if (hideFull && s.d.full) return false;
-      if (status === "full" && !s.d.full) return false;
-      if (status === "occupied" && !used) return false;
-      if (status === "free" && (used || s.d.full)) return false;
-      if (q && !String(s.d.name).toLowerCase().includes(q.toLowerCase()) &&
-        !(assigned.get(s.id) ?? []).some((a) => a.number.toLowerCase().includes(q.toLowerCase()))) return false;
-      return true;
-    }).sort(compareShelvesDescending),
-  })).filter((g) => g.shelves.length > 0 && g.hall?.d.active !== false);
+  const groups = useMemo(() => model.aisles
+    .filter((a) => a.d.active !== false && (!hall || String(a.d.hallId) === hall) && (!aisle || String(a.id) === aisle))
+    .map((a) => ({ aisle: a, hall: model.hallById.get(Number(a.d.hallId)),
+      shelves: model.shelves.filter((s) => Number(s.d.aisleId) === a.id && s.d.active !== false).sort(compareShelvesDescending) }))
+    .filter((g) => g.shelves.length > 0 && g.hall?.d.active !== false), [model.aisles, model.shelves, model.hallById, hall, aisle]);
+
+  const filters: MatrixFilters = { status, orders, returns, hideFull, q };
+  const active = filtersActive(filters);
+  const all = useMemo(() => orderedShelves(groups), [groups]);
+  const matches = useMemo(() => all.filter((s) => shelfMatches(s, occ.get(String(s.d.name)),
+    contentMode === "planned" ? assigned.get(s.id) ?? [] : [],
+    { status, orders, returns, hideFull, q },
+    contentMode === "planned" ? "" : loadSearchText(loads.get(s.id)?.[contentMode === "orders" ? "orders" : "retouren"] ?? []))),
+    [all, occ, assigned, status, orders, returns, hideFull, q, contentMode, loads]);
+  const matchIds = useMemo(() => (active ? new Set(matches.map((s) => s.id)) : null), [active, matches]);
+  const matchIdList = useMemo(() => matches.map((s) => s.id), [matches]);
+  const counts = useMemo(() => matrixCounts(all, occ, assigned), [all, occ, assigned]);
+  const target = targetId != null && matchIdList.includes(targetId) ? targetId : null;
+  const targetPos = target != null ? matchIdList.indexOf(target) + 1 : 0;
+  const idsRef = useRef(matchIdList); idsRef.current = matchIdList;
+
+  const jump = useCallback((dir: 1 | -1, focus = true) => {
+    setTargetId((cur) => nextTarget(idsRef.current, cur != null && idsRef.current.includes(cur) ? cur : null, dir));
+    jumpFocus.current = focus; setNonce((n) => n + 1);
+  }, []);
+
+  useEffect(() => {
+    if (nonce === 0 || target == null) return;
+    const el = root.current?.querySelector<HTMLElement>(`[data-shelf-id="${target}"]`);
+    if (!el) return;
+    if (view === "matrix" && scroller.current) scrollToShelf(scroller.current, el);
+    else el.scrollIntoView({ block: "center", inline: "center" });
+    if (jumpFocus.current) el.focus({ preventScroll: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nonce, contentMode]);
+
+  // Typing a search jumps to the first hit without stealing input focus.
+  useEffect(() => {
+    if (!q.trim()) { setTargetId(null); return; }
+    setTargetId(null);
+    if (idsRef.current.length > 0) jump(1, false);
+  }, [q, contentMode, jump]);
+  useEffect(() => {
+    if (contentMode !== "planned" && q.trim() && target == null && loadsQ.data && matchIdList.length > 0) jump(1, false);
+  }, [contentMode, q, target, loadsQ.data, matchIdList, jump]);
+
+  useEffect(() => {
+    if (!fs) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (document.querySelector('[role="dialog"],[role="alertdialog"],[role="menu"],[role="listbox"]')) return;
+      setFs(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey, true); };
+  }, [fs]);
+
+  const reset = () => { setHall(""); setAisle(""); setStatus(""); setOrders(false); setReturns(false); setHideFull(false); setQ(""); setTargetId(null); };
+  const openAction = (s: Rec, full: boolean) => setAction({ shelfId: s.id, full });
 
   const staleMs = state.settings.staleHours * 3600_000;
   const chip = (label: string, d?: { importedAt: string }) => {
@@ -107,74 +180,97 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
     return <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500" data-testid="empty-plan">Noch keine Regale angelegt. Hallen, Gänge und Regale werden unter Stammdaten gepflegt.</div>;
   }
 
+  const tog = (on: boolean, set: (v: boolean) => void, label: string, id: string) => (
+    <button type="button" aria-pressed={on} onClick={() => set(!on)} data-testid={id}
+      className={`h-9 px-3 rounded-md border text-sm ${on ? "bg-slate-900 text-white border-slate-900" : "bg-white text-slate-700 border-slate-300"}`}>{label}</button>
+  );
+  const stat = (label: string, n: number, id: string) => (
+    <div className="px-2.5 py-1 rounded-md border border-slate-200 bg-white" data-testid={id}><span className="font-semibold text-slate-900 tabular-nums">{n}</span> <span className="text-xs text-slate-500">{label}</span></div>
+  );
+
   return (
-    <div className="space-y-4">
+    <div ref={root} className={fs ? "fixed inset-0 z-40 bg-slate-50 p-3 flex flex-col gap-2 overflow-y-auto" : "min-w-0 space-y-3"} data-testid="shelf-plan" data-fullscreen={fs || undefined}>
       <div className="flex flex-wrap gap-2">
         {chip(DATASET_LABELS.istbestand, ds.ist)}{chip(DATASET_LABELS.retouren, ds.ret)}{chip(DATASET_LABELS.auftraege, ds.auf)}
       </div>
-      <div className="app-filter-bar border p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2 items-center">
+      <div className="flex flex-wrap gap-1.5 text-sm" aria-label="Kennzahlen" data-testid="matrix-counts">
+        {stat("Regale", counts.total, "count-total")}{stat("frei", counts.free, "count-free")}{stat("belegt", counts.occupied, "count-occupied")}
+        {stat("voll", counts.full, "count-full")}{stat("mit Aufträgen", counts.orders, "count-orders")}{stat("mit Retouren", counts.returns, "count-returns")}{stat("nicht verplant", counts.unplanned, "count-unplanned")}
+      </div>
+      <div className="app-filter-bar border p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 items-center">
         <SimpleSelect value={hall} onChange={(v) => { setHall(v); setAisle(""); }} allLabel="Alle Hallen" options={model.halls.map((h) => ({ value: String(h.id), label: String(h.d.name) }))} testId="filter-hall" />
         <SimpleSelect value={aisle} onChange={setAisle} allLabel="Alle Gänge" options={aisles.map((a) => ({ value: String(a.id), label: String(a.d.name) }))} testId="filter-aisle" />
-        <SimpleSelect value={status} onChange={setStatus} allLabel="Alle Status" options={[{ value: "free", label: "Frei" }, { value: "occupied", label: "Belegt" }, { value: "full", label: "Voll" }]} testId="filter-status" />
-        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Regal oder Artikelnummer" data-testid="filter-shelf-q" />
+        <SimpleSelect value={status} onChange={(v) => setStatus(v as StatusFilter)} allLabel="Alle Status" options={[{ value: "free", label: "Frei" }, { value: "occupied", label: "Belegt" }, { value: "full", label: "Voll" }]} testId="filter-status" />
         <div className="flex items-center gap-2">
           <Switch id="hf" checked={hideFull} onCheckedChange={setHideFull} data-testid="switch-hide-full" />
-          <Label htmlFor="hf" className="text-sm">Volle ausblenden</Label>
+          <Label htmlFor="hf" className="text-sm">Volle abblenden</Label>
+        </div>
+        <div className="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-2">{tog(orders, setOrders, "Mit Aufträgen", "filter-orders")}{tog(returns, setReturns, "Mit Retouren", "filter-returns")}</div>
+        <div className="flex min-w-0 items-center gap-1.5 sm:col-span-2 lg:col-span-2">
+          <Input type="search" className="min-w-0 flex-1" value={q} onChange={(e) => setQ(e.target.value)}
+            aria-label={contentMode === "planned" ? "Regal oder Artikel suchen" : contentMode === "orders" ? "Regal oder Auftrag suchen" : "Regal oder Retoure suchen"}
+            placeholder={contentMode === "planned" ? "Regal oder Artikel suchen" : contentMode === "orders" ? "Regal, Spedition, Relation oder Termin" : "Regal, Kunde oder Parcours"}
+            onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); jump(e.shiftKey ? -1 : 1); } }} data-testid="filter-shelf-q" />
+          <Button type="button" variant="outline" size="icon" aria-label="Vorheriger Treffer" disabled={matches.length === 0} onClick={() => jump(-1)} data-testid="button-match-prev"><ChevronUp className="w-4 h-4" /></Button>
+          <Button type="button" variant="outline" size="icon" aria-label="Nächster Treffer" disabled={matches.length === 0} onClick={() => jump(1)} data-testid="button-match-next"><ChevronDown className="w-4 h-4" /></Button>
+          <span className="text-xs text-slate-600 whitespace-nowrap tabular-nums" aria-live="polite" data-testid="text-match-count">{active ? `${targetPos ? `${targetPos} von ` : ""}${matches.length} Treffer` : ""}</span>
         </div>
       </div>
 
-      <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Ansicht">
-        {([["matrix", "Matrix"], ["tiles", "Kacheln"]] as const).map(([v, l]) => (
-          <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} data-testid={`view-${v}`}
-            className={`px-3 py-1 rounded ${view === v ? "bg-slate-900 text-white" : "text-slate-700"}`}>{l}</button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="inline-flex flex-wrap rounded-md border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Regalinhalt">
+          {([["planned", "Geplante Artikel"], ["orders", "Aufträge"], ["returns", "Retouren"]] as const).map(([mode, label]) =>
+            <button key={mode} type="button" aria-pressed={contentMode === mode} data-testid={`content-${mode}`}
+              onClick={() => setContentMode(mode)}
+              className={`px-3 py-1 rounded ${contentMode === mode ? "bg-slate-900 text-white" : "text-slate-700"}`}>{label}</button>)}
+        </div>
+        <div className="inline-flex rounded-md border border-slate-300 bg-white p-0.5 text-sm" role="group" aria-label="Ansicht">
+          {([["matrix", "Matrix"], ["tiles", "Kacheln"]] as const).map(([v, l]) => (
+            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)} data-testid={`view-${v}`}
+              className={`px-3 py-1 rounded ${view === v ? "bg-slate-900 text-white" : "text-slate-700"}`}>{l}</button>
+          ))}
+        </div>
+        {view === "matrix" && (
+          <div className="inline-flex items-center gap-1 rounded-md border border-slate-300 bg-white p-0.5" role="group" aria-label="Zoom">
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label="Verkleinern" disabled={zoom <= ZOOM_MIN} onClick={() => setZoom((z) => clampZoom(z - ZOOM_STEP))} data-testid="button-zoom-out"><Minus className="w-4 h-4" /></Button>
+            <input type="range" min={ZOOM_MIN} max={ZOOM_MAX} step={ZOOM_STEP} value={zoom} onChange={(e) => setZoom(clampZoom(Number(e.target.value)))} aria-label="Zoom in Prozent" aria-valuetext={`${zoom} Prozent`} className="w-24 accent-slate-900" data-testid="range-zoom" />
+            <Button type="button" variant="ghost" size="icon" className="h-7 w-7" aria-label="Vergrößern" disabled={zoom >= ZOOM_MAX} onClick={() => setZoom((z) => clampZoom(z + ZOOM_STEP))} data-testid="button-zoom-in"><Plus className="w-4 h-4" /></Button>
+            <button type="button" className="px-1.5 text-xs tabular-nums text-slate-700 min-w-[3rem]" onClick={() => setZoom(ZOOM_DEFAULT)} aria-label="Zoom auf 100 Prozent zurücksetzen" data-testid="button-zoom-reset">{zoom}%</button>
+          </div>
+        )}
+        <Button type="button" variant="outline" size="sm" onClick={reset} disabled={!active && !hall && !aisle} data-testid="button-reset-filters"><RotateCcw className="w-4 h-4 mr-1.5" />Filter zurücksetzen</Button>
+        <Button type="button" variant="outline" size="sm" className="ml-auto" aria-pressed={fs} onClick={() => setFs((v) => !v)} data-testid="button-fullscreen">
+          {fs ? <Minimize2 className="w-4 h-4 mr-1.5" /> : <Maximize2 className="w-4 h-4 mr-1.5" />}{fs ? "Vollbild beenden" : "Vollbild"}
+        </Button>
       </div>
-      {groups.length === 0 && <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500">Keine Regale für diese Filter.</div>}
-      {view === "matrix" && groups.length > 0 && (
-        <ShelfMatrix groups={groups} occ={occ} assigned={assigned} colors={state.settings.colors} istImported={!!ds.ist} onSelect={setSel} />
+      <ShelfLegend colors={state.settings.colors} mode={contentMode} />
+      {contentMode !== "planned" && loadsQ.isError && <div role="alert" className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+        Aufträge und Retouren konnten nicht geladen werden: {errMsg(loadsQ.error)}
+        <Button size="sm" variant="outline" className="ml-2" onClick={() => loadsQ.refetch()}>Erneut versuchen</Button>
+      </div>}
+      {contentMode !== "planned" && !loadView.imported && <p className="text-sm text-slate-500">
+        {contentMode === "orders" ? "Aufträge" : "Retouren"} wurden noch nicht importiert.
+      </p>}
+
+      {groups.length === 0 && <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500" data-testid="empty-groups">Keine Regale für diese Hallen- und Gangauswahl.</div>}
+      {groups.length > 0 && active && matches.length === 0 && (
+        <div role="status" className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 flex flex-wrap items-center gap-3" data-testid="empty-matches">
+          Kein Regal entspricht den Filtern. Die Matrix bleibt unverändert, alle Regale sind abgeblendet.
+          <Button type="button" size="sm" variant="outline" onClick={reset}>Filter zurücksetzen</Button>
+        </div>
       )}
-      {view === "tiles" && groups.map(({ aisle: a, hall: h, shelves }) => (
-        <section key={a.id} className="rounded-xl border border-slate-200 bg-white">
-          <div className="px-4 py-2.5 border-b border-slate-200 flex items-baseline gap-2">
-            <span className="text-xs uppercase tracking-wider text-slate-500">{String(h?.d.name ?? "")}</span>
-            <span className="font-semibold text-slate-900">Gang {String(a.d.name)}</span>
-            <span className="text-xs text-slate-400 ml-auto">{shelves.length} Regale</span>
-          </div>
-          <div className="p-3 grid gap-2 grid-cols-[repeat(auto-fill,minmax(9rem,1fr))]">
-            {shelves.map((s) => {
-              const o = occ.get(String(s.d.name));
-              const used = !!o && (o.ist > 0 || o.retouren > 0 || o.auftraege > 0);
-              const articles = assigned.get(s.id) ?? [];
-              const tileStatus = s.d.full ? "full" : used ? "occupied" : "free";
-              const background = state.settings.colors[tileStatus];
-              const hex = [1, 3, 5].map((i) => parseInt(background.slice(i, i + 2), 16) / 255);
-              const luminance = hex.map((c) => c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
-              const foreground = luminance[0] * 0.2126 + luminance[1] * 0.7152 + luminance[2] * 0.0722 > 0.179 ? "#0f172a" : "#ffffff";
-              const secondary = foreground === "#ffffff" ? "#e2e8f0" : "#475569";
-              const cell = (label: string, v: number | undefined, on: boolean) => (
-                <div className="flex justify-between text-[11px]"><span style={{ color: secondary }}>{label}</span><span className={on ? "font-semibold" : ""} style={{ color: on ? foreground : secondary }}>{on ? nf(v ?? 0) : "-"}</span></div>
-              );
-              return (
-                <button key={s.id} onClick={() => setSel(s)} data-testid={`tile-shelf-${s.id}`}
-                   className={`text-left rounded-lg border p-2.5 transition-colors hover:border-slate-900 ${s.d.full ? "border-red-200" : used ? "border-slate-300" : "border-slate-200"}`}
-                   style={{ backgroundColor: background, color: foreground }}>
-                  <div className="flex items-center justify-between mb-1.5">
-                     <span className="font-semibold text-sm" style={{ color: foreground }}>{String(s.d.name)}</span>
-                     {s.d.full ? <span className="text-[10px] font-semibold uppercase" style={{ color: foreground }}>Voll</span> : null}
-                  </div>
-                   {articles.length > 0 && <div className="mb-2 space-y-1" data-testid={`articles-shelf-${s.id}`}>
-                     {articles.map((article) => <ArticleStrip key={article.id} {...article} />)}
-                   </div>}
-                  {cell("IST", o?.ist, !!ds.ist)}
-                  {cell("Retouren", o?.retouren, !!ds.ret)}
-                  {cell("Aufträge", o?.auftraege, !!ds.auf)}
-                </button>
-              );
-            })}
-          </div>
-        </section>
-      ))}
+      {view === "matrix" && groups.length > 0 && (
+        <div className={fs ? "flex-1 min-h-0" : ""}>
+          <ShelfMatrix groups={groups} occ={occ} assigned={assigned} colors={state.settings.colors} istImported={!!ds.ist} retImported={!!ds.ret} aufImported={!!ds.auf}
+            zoom={zoom} matchIds={matchIds} targetId={target} has={has} onSelect={setSel} onAction={openAction} scrollerRef={scroller} fullscreen={fs} loadView={loadView} />
+        </div>
+      )}
+      {view === "tiles" && groups.length > 0 && (
+        <ShelfTiles groups={groups} occ={occ} assigned={assigned} colors={state.settings.colors} imported={{ ist: !!ds.ist, ret: !!ds.ret, auf: !!ds.auf }}
+          matchIds={matchIds} targetId={target} has={has} onSelect={setSel} onAction={openAction} loadView={loadView} />
+      )}
       <ShelfDetail shelf={sel} model={model} state={state} has={has} onClose={() => setSel(null)} />
+      <ShelfStatusDialog action={action} model={model} has={has} onClose={() => setAction(null)} />
     </div>
   );
 }
