@@ -1,12 +1,11 @@
 import { useState } from "react";
 import type { EinlagerungSearchResultLocationsItem } from "@workspace/api-client-react";
-import { useSetEinlagerungShelfStatus } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useRefreshEinlagerung, useEinlagerungState } from "../use-einlagerung";
+import { useRefreshEinlagerung, useEinlagerungState, useWarehouseShelfStatus } from "../use-einlagerung";
 import { errMsg, nf, P, type D } from "../lib";
 import { ShelfStockDrops } from "./shelf-stock-drops";
 
@@ -30,7 +29,7 @@ export function LocationCard({ loc, label, has, imported, highlight, separateSto
   const { data: state } = useEinlagerungState();
   const total = state?.occupancy.find((x) => x.shelf === String(loc.shelf.data.name));
   const [note, setNote] = useState("");
-  const status = useSetEinlagerungShelfStatus();
+  const status = useWarehouseShelfStatus();
   const refresh = useRefreshEinlagerung();
   const { toast } = useToast();
   const sd = loc.shelf.data as D;

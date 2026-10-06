@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { ChevronLeft, Pencil, Plus, Search, Ban, Check, ScanLine, Loader2 } from "lucide-react";
-import { useSearchEinlagerung, getSearchEinlagerungQueryKey } from "@workspace/api-client-react";
 import type { SearchEinlagerungParams } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -9,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { SimpleSelect } from "@/pages/einlagerung/components/simple-select";
 import { RecordDialog, type FieldSpec } from "@/pages/einlagerung/components/record-dialog";
-import { useEinlagerungState, useRecordActions } from "@/pages/einlagerung/use-einlagerung";
+import { useEinlagerungState, useRecordActions, useWarehouseSearch } from "@/pages/einlagerung/use-einlagerung";
 import { errMsg, nf, P, toRec, useEinlagerungAccess, useModel, type D, type Rec } from "@/pages/einlagerung/lib";
 import { suggestReservationShelf } from "@/pages/einlagerung/components/reservation-suggestion";
 
@@ -52,7 +51,7 @@ export default function ScannerEinlagerungAuftraegePage() {
     if (applied.shelfId) p.shelfId = Number(applied.shelfId);
     return p;
   }, [applied, view]);
-  const q = useSearchEinlagerung(params, { query: { queryKey: getSearchEinlagerungQueryKey(params), enabled: allowed, refetchInterval: 30_000, refetchIntervalInBackground: false } });
+  const q = useWarehouseSearch(params, allowed);
 
   const orders = (q.data?.orders ?? []) as D[];
   const grouped = useMemo(() => {

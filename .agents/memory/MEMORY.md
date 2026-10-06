@@ -1,6 +1,7 @@
 - [COMET LKW session-based auth](comet-lkw-auth.md) — express-session with connect-pg-simple; session table must be manually created; credentials:include required in custom-fetch.
 - [COMET LKW Vite proxy](comet-lkw-vite-proxy.md) — frontend at port 18454 proxies /api/ to API server at port 8080 via vite.config.ts server.proxy.
 - [Auth public routes](auth-public-routes.md) — AuthProvider in auth-context.tsx redirects unauthenticated users to /login; scanner/public pages must be added to the isPublicRoute check.
+- [Öffentliche Einlagerungsscanner](public-warehouse-scanners.md) — Ohne Anmeldung auch Vollmeldungen/Freigaben und Reservierungen anlegen/ändern ausdrücklich erlaubt.
 - [Wouter catch-all routing](wouter-catchall-routing.md) — use path="*" not path="/:path*" for multi-segment catch-all routes; regexparam treats /:path* as single-segment only.
 - [Production deployment gotchas](production-deployment.md) — roles/role_permissions tables missing from Drizzle schema; COOKIE_SECURE required for HTTPS; PM2 env not refreshed without --update-env.
 - [COMET LKW permission refactor pattern](comet-lkw-permissions-pattern.md) — shared usePermissions hook; role checks stay only for data-scope; actions use permissions API.

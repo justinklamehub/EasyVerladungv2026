@@ -26,6 +26,158 @@ export const SendDeliveryReportResponse = zod.object({
 })
 
 
+export const getScannerEinlagerungStateResponseSettingsStaleHoursMax = 8760;
+
+export const getScannerEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMin = 0;
+export const getScannerEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMax = 3650;
+
+export const getScannerEinlagerungStateResponseSettingsDeadlineThresholdsSoonDaysMax = 3650;
+
+export const getScannerEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMin = 2;
+export const getScannerEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMax = 3650;
+
+export const getScannerEinlagerungStateResponseSettingsColorsFreeRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const getScannerEinlagerungStateResponseSettingsColorsOccupiedRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+export const getScannerEinlagerungStateResponseSettingsColorsFullRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
+
+
+export const GetScannerEinlagerungStateResponse = zod.object({
+  "records": zod.array(zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+})),
+  "datasets": zod.array(zod.object({
+  "id": zod.number(),
+  "type": zod.string(),
+  "filename": zod.string(),
+  "importedAt": zod.string(),
+  "importedBy": zod.string(),
+  "rowCount": zod.number()
+})),
+  "settings": zod.object({
+  "hideFull": zod.boolean(),
+  "staleHours": zod.number().min(1).max(getScannerEinlagerungStateResponseSettingsStaleHoursMax),
+  "profiles": zod.record(zod.string(), zod.unknown()),
+  "deadlineThresholds": zod.object({
+  "criticalDays": zod.number().min(getScannerEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMin).max(getScannerEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMax),
+  "soonDays": zod.number().min(1).max(getScannerEinlagerungStateResponseSettingsDeadlineThresholdsSoonDaysMax),
+  "upcomingDays": zod.number().min(getScannerEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMin).max(getScannerEinlagerungStateResponseSettingsDeadlineThresholdsUpcomingDaysMax)
+}).optional().describe('Aufsteigende Tagesgrenzen: criticalDays < soonDays < upcomingDays.'),
+  "colors": zod.object({
+  "free": zod.string().regex(getScannerEinlagerungStateResponseSettingsColorsFreeRegExp),
+  "occupied": zod.string().regex(getScannerEinlagerungStateResponseSettingsColorsOccupiedRegExp),
+  "full": zod.string().regex(getScannerEinlagerungStateResponseSettingsColorsFullRegExp)
+})
+}),
+  "occupancy": zod.array(zod.object({
+  "shelf": zod.string(),
+  "ist": zod.number(),
+  "retouren": zod.number(),
+  "auftraege": zod.number()
+})),
+  "events": zod.array(zod.object({
+  "id": zod.number(),
+  "action": zod.string(),
+  "createdAt": zod.string(),
+  "username": zod.string(),
+  "detail": zod.string()
+})),
+  "speditionen": zod.array(zod.object({
+  "id": zod.number(),
+  "name": zod.string()
+}))
+})
+
+
+export const SearchScannerEinlagerungQueryParams = zod.object({
+  "mode": zod.enum(['artikel', 'auftraege']),
+  "q": zod.coerce.string().optional(),
+  "shelfId": zod.coerce.number().optional(),
+  "spedition": zod.coerce.string().optional(),
+  "relation": zod.coerce.string().optional(),
+  "termin": zod.coerce.string().optional()
+})
+
+export const SearchScannerEinlagerungResponse = zod.object({
+  "article": zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+}).optional(),
+  "message": zod.string(),
+  "locations": zod.array(zod.object({
+  "shelf": zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+}),
+  "priority": zod.number(),
+  "note": zod.string(),
+  "group": zod.string(),
+  "color": zod.string(),
+  "ist": zod.array(zod.record(zod.string(), zod.unknown())),
+  "retouren": zod.array(zod.record(zod.string(), zod.unknown())),
+  "orders": zod.array(zod.record(zod.string(), zod.unknown()))
+})),
+  "orders": zod.array(zod.record(zod.string(), zod.unknown())),
+  "reservations": zod.array(zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+}))
+})
+
+
+export const CreateScannerEinlagerungRecordParams = zod.object({
+  "kind": zod.enum(['reservation'])
+})
+
+export const CreateScannerEinlagerungRecordBody = zod.object({
+  "data": zod.record(zod.string(), zod.unknown()),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+
+export const UpdateScannerEinlagerungRecordParams = zod.object({
+  "kind": zod.enum(['reservation']),
+  "id": zod.coerce.number()
+})
+
+export const UpdateScannerEinlagerungRecordBody = zod.object({
+  "data": zod.record(zod.string(), zod.unknown()),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+export const UpdateScannerEinlagerungRecordResponse = zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+})
+
+
+export const SetScannerEinlagerungShelfStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const SetScannerEinlagerungShelfStatusBody = zod.object({
+  "full": zod.boolean(),
+  "note": zod.string().optional()
+})
+
+export const SetScannerEinlagerungShelfStatusResponse = zod.object({
+  "id": zod.number(),
+  "kind": zod.enum(['hall', 'aisle', 'shelf', 'article', 'group', 'rule', 'reservation', 'carrier']),
+  "data": zod.record(zod.string(), zod.unknown()),
+  "updatedAt": zod.string()
+})
+
+
 export const getEinlagerungStateResponseSettingsStaleHoursMax = 8760;
 
 export const getEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMin = 0;

@@ -1,5 +1,4 @@
 import { useMemo, useRef, useState } from "react";
-import { useSearchEinlagerung, getSearchEinlagerungQueryKey } from "@workspace/api-client-react";
 import type { SearchEinlagerungParams } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -7,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, ScanLine, Search } from "lucide-react";
 import { LocationCard } from "./location-card";
 import { datasetOf, DATASET_LABELS, errMsg, useModel } from "../lib";
-import { useEinlagerungState } from "../use-einlagerung";
+import { useEinlagerungState, useWarehouseSearch } from "../use-einlagerung";
 
 export function ArticleLookup({ has, large }: { has: (k: string) => boolean; large?: boolean }) {
   const [text, setText] = useState("");
@@ -16,7 +15,7 @@ export function ArticleLookup({ has, large }: { has: (k: string) => boolean; lar
   const { data: state } = useEinlagerungState();
   const model = useModel(state);
   const params = useMemo<SearchEinlagerungParams>(() => ({ mode: "artikel", q: submitted }), [submitted]);
-  const q = useSearchEinlagerung(params, { query: { enabled: !!submitted, queryKey: getSearchEinlagerungQueryKey(params), refetchInterval: 30_000, refetchIntervalInBackground: false } });
+  const q = useWarehouseSearch(params, !!submitted);
   const imported = {
     ist: !!datasetOf(state?.datasets, "istbestand"),
     retouren: !!datasetOf(state?.datasets, "retouren"),

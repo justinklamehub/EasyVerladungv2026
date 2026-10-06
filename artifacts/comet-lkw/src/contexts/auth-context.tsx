@@ -27,13 +27,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const publicScanner = location.startsWith("/scanner") && !location.startsWith("/scanner/einlagerung");
+    const publicScanner = location.startsWith("/scanner");
     const isPublicRoute = location === "/login" || location === "/forgot-password" || location.startsWith("/reset-password") || publicScanner || location === "/impressum" || location === "/datenschutz";
     if (!isLoading && (isError || !user) && !isPublicRoute) {
       setLocation("/login");
       return;
     }
-    if (!isLoading && user && (user as any).passwordChangeRequired && location !== "/passwort-aendern") {
+    if (!isLoading && user && (user as any).passwordChangeRequired && location !== "/passwort-aendern" && !publicScanner) {
       setLocation("/passwort-aendern");
     }
   }, [isLoading, isError, user, location, setLocation]);

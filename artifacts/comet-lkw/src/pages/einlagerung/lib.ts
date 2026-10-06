@@ -4,6 +4,8 @@ import { customFetch } from "@workspace/api-client-react";
 import type { EinlagerungRecord, EinlagerungState, EinlagerungDataset } from "@workspace/api-client-react";
 import { PERMISSIONS_QUERY_KEY } from "@/hooks/use-permissions";
 import { useAuth } from "@/contexts/auth-context";
+import { useLocation } from "wouter";
+import { isWarehouseScannerRoute, PUBLIC_SCANNER_PERMISSIONS } from "@/lib/scanner-access";
 
 export const P = {
   view: "einlagerung.view",
@@ -26,17 +28,19 @@ export function hasEinlagerungAccess(isAdmin: boolean, perms: Record<string, boo
 }
 
 export function useEinlagerungAccess() {
+  const [location] = useLocation();
+  const scanner = isWarehouseScannerRoute(location);
   const { user, isLoading: authLoading } = useAuth();
   const q = useQuery<Record<string, boolean>>({
     queryKey: PERMISSIONS_QUERY_KEY,
     queryFn: () => customFetch("/api/auth/permissions"),
     staleTime: 60_000,
-    enabled: !!user,
+    enabled: !!user && !scanner,
   });
   const perms = q.data ?? {};
   const admin = user?.role === "comet_admin";
-  const has = (k: string) => admin || !!perms[k];
-  return { isLoading: authLoading || q.isLoading, user, has, any: hasEinlagerungAccess(admin, perms) };
+  const has = (k: string) => scanner ? PUBLIC_SCANNER_PERMISSIONS.includes(k) : admin || !!perms[k];
+  return { isLoading: !scanner && (authLoading || q.isLoading), user, has, any: scanner || hasEinlagerungAccess(admin, perms) };
 }
 
 export type D = Record<string, any>;

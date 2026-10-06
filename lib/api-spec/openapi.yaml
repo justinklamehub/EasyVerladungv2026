@@ -58,6 +58,98 @@ paths:
           description: Nur Administratoren
         "500":
           description: Versand fehlgeschlagen
+  /einlagerung/scanner/state:
+    get:
+      operationId: getScannerEinlagerungState
+      tags: [einlagerung]
+      security: []
+      responses:
+        "200":
+          description: Öffentliche Scanner-Daten ohne Ereignisprotokoll und Importhistorie
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungState"
+  /einlagerung/scanner/search:
+    get:
+      operationId: searchScannerEinlagerung
+      tags: [einlagerung]
+      security: []
+      parameters:
+        - {name: mode, in: query, required: true, schema: {type: string, enum: [artikel, auftraege]}}
+        - {name: q, in: query, schema: {type: string}}
+        - {name: shelfId, in: query, schema: {type: integer}}
+        - {name: spedition, in: query, schema: {type: string}}
+        - {name: relation, in: query, schema: {type: string}}
+        - {name: termin, in: query, schema: {type: string}}
+      responses:
+        "200":
+          description: Artikel- oder Auftragssuche
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungSearchResult"
+  /einlagerung/scanner/records/{kind}:
+    post:
+      operationId: createScannerEinlagerungRecord
+      tags: [einlagerung]
+      security: []
+      parameters:
+        - {name: kind, in: path, required: true, schema: {type: string, enum: [reservation]}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungRecordInput"
+      responses:
+        "201":
+          description: Reservierung angelegt
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungRecord"
+  /einlagerung/scanner/records/{kind}/{id}:
+    put:
+      operationId: updateScannerEinlagerungRecord
+      tags: [einlagerung]
+      security: []
+      parameters:
+        - {name: kind, in: path, required: true, schema: {type: string, enum: [reservation]}}
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungRecordInput"
+      responses:
+        "200":
+          description: Reservierung aktualisiert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungRecord"
+  /einlagerung/scanner/shelves/{id}/status:
+    post:
+      operationId: setScannerEinlagerungShelfStatus
+      tags: [einlagerung]
+      security: []
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: integer}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EinlagerungShelfStatusInput"
+      responses:
+        "200":
+          description: Vollmeldung oder Freigabe gespeichert
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EinlagerungRecord"
   /einlagerung/state:
     get:
       operationId: getEinlagerungState

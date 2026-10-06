@@ -105,8 +105,8 @@ function Router() {
       <Route path="/scanner" component={ScannerLandingPage} />
       <Route path="/scanner/gefahrgut" component={ScannerGefahrgutPage} />
       <Route path="/scanner/wareneingang" component={ScannerWareneingangPage} />
-      <Route path="/scanner/einlagerung"><EinlagerungRoute component={ScannerEinlagerungPage} anyOf={[EP.scan]} /></Route>
-      <Route path="/scanner/einlagerung-auftraege"><EinlagerungRoute component={ScannerEinlagerungAuftraegePage} anyOf={[EP.scan, EP.view, EP.resCreate, EP.resEdit]} /></Route>
+      <Route path="/scanner/einlagerung" component={ScannerEinlagerungPage} />
+      <Route path="/scanner/einlagerung-auftraege" component={ScannerEinlagerungAuftraegePage} />
       <Route path="/impressum" component={ImpressumPage} />
       <Route path="/datenschutz" component={DatenschutzPage} />
 

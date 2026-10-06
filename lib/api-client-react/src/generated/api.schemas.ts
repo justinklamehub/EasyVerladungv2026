@@ -875,6 +875,23 @@ export interface AuditLogPage {
   limit: number;
 }
 
+export type SearchScannerEinlagerungParams = {
+mode: SearchScannerEinlagerungMode;
+q?: string;
+shelfId?: number;
+spedition?: string;
+relation?: string;
+termin?: string;
+};
+
+export type SearchScannerEinlagerungMode = typeof SearchScannerEinlagerungMode[keyof typeof SearchScannerEinlagerungMode];
+
+
+export const SearchScannerEinlagerungMode = {
+  artikel: 'artikel',
+  auftraege: 'auftraege',
+} as const;
+
 export type DeleteEinlagerungRecord200 = {
   ok: boolean;
 };

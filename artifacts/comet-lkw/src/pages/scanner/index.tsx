@@ -1,7 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
-import { usePermissions } from "@/hooks/use-permissions";
-import { useAuth } from "@/contexts/auth-context";
 import { Loader2, Search, Truck, AlertTriangle, CheckCircle2, ClipboardCheck, ChevronDown, ChevronUp, Save } from "lucide-react";
 
 const API = "/api";
@@ -177,10 +175,8 @@ export default function ScannerLandingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [matchedTyp, setMatchedTyp] = useState<string | null>(null);
   const [, setLocation] = useLocation();
-  const { user: scanUser } = useAuth();
-  const scanPerms = usePermissions();
-  const canEinlagerung = scanUser?.role === "comet_admin" || !!scanPerms["einlagerung.scan"];
-  const canEinlagerungAuftraege = canEinlagerung || !!scanPerms["einlagerung.view"] || !!scanPerms["einlagerung.reservation.create"] || !!scanPerms["einlagerung.reservation.edit"];
+  const canEinlagerung = true;
+  const canEinlagerungAuftraege = true;
 
   async function doFetch(val: string) {
     setIsSearching(true);

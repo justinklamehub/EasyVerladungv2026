@@ -1,4 +1,4 @@
-import { Router, type Request, type Response } from "express";
+import { Router, type Request, type Response, type RequestHandler } from "express";
 import {
   GetEinlagerungStateResponse, CreateEinlagerungRecordBody, UpdateEinlagerungRecordBody,
   UpdateEinlagerungRecordResponse, SearchEinlagerungQueryParams, SearchEinlagerungResponse,
@@ -12,9 +12,15 @@ import { commitImport, importSchema, prepareImport } from "../lib/einlagerung/im
 import { loadWarehouse, occupancy, search } from "../lib/einlagerung/search";
 
 const router = Router();
+// Only explicitly registered scanner aliases bypass authentication.
+const isScanner = (req: Request) => req.path.startsWith("/einlagerung/scanner/");
+const scannerOrAuth: RequestHandler = (req, res, next) =>
+  isScanner(req) ? next() : requireAuth(req, res, next);
+const actor = (req: Request) => req.session.username || "Öffentlicher Scanner";
 const manage: Permission[] = ["einlagerung.view", "einlagerung.scan", "einlagerung.strategy", "einlagerung.master",
   "einlagerung.reservation.create", "einlagerung.reservation.edit", "einlagerung.import", "einlagerung.settings"];
 async function permission(req: Request, permissions: Permission[]) {
+  if (isScanner(req)) return;
   for (const p of permissions) if (await can(req.session.role!, p)) return;
   throw new WarehouseError("Keine Berechtigung für diese Aktion.", 403);
 }
@@ -33,6 +39,8 @@ function handler(fn: (req: Request, res: Response) => Promise<void>) {
 }
 const kindParam = (req: Request) => {
   const kind = String(req.params.kind);
+  if (isScanner(req) && kind !== "reservation")
+    throw new WarehouseError("Im öffentlichen Scanner sind nur Reservierungen änderbar.", 403);
   if (!Object.hasOwn(schemas, kind)) throw new WarehouseError("Unbekannter Datentyp.");
   return kind;
 };
@@ -45,21 +53,22 @@ function requiredPermission(kind: string, creating: boolean): Permission {
   return kind === "rule" ? "einlagerung.strategy" : kind === "reservation" ?
     (creating ? "einlagerung.reservation.create" : "einlagerung.reservation.edit") : "einlagerung.master";
 }
-router.get("/einlagerung/state", requireAuth, handler(async (req, res) => {
+router.get(["/einlagerung/state", "/einlagerung/scanner/state"], scannerOrAuth, handler(async (req, res) => {
   await permission(req, manage);
   const result = await read(async (client) => {
     const { all, latest } = await loadWarehouse(client);
-    const history = await client.query("SELECT id,type,filename,row_count,imported_by,imported_at FROM einlagerung_datasets ORDER BY id DESC LIMIT 50");
-    const events = await client.query("SELECT * FROM einlagerung_events ORDER BY id DESC LIMIT 1000");
+    const history = isScanner(req) ? { rows: [] } : await client.query("SELECT id,type,filename,row_count,imported_by,imported_at FROM einlagerung_datasets ORDER BY id DESC LIMIT 50");
+    const events = isScanner(req) ? { rows: [] } : await client.query("SELECT * FROM einlagerung_events ORDER BY id DESC LIMIT 1000");
     const speditionen = await client.query("SELECT id,name FROM speditionen ORDER BY name");
-    const datasets = [...new Map([...history.rows, ...latest].map((s) => [s.id, dataset(s)])).values()];
+    const datasets = [...new Map([...history.rows, ...latest].map((s) => [s.id,
+      isScanner(req) ? { ...dataset(s), importedBy: "" } : dataset(s)])).values()];
     return { records: all, datasets, settings: await getSettings(client), occupancy: occupancy(latest),
       events: events.rows.map((e) => ({ id: e.id, action: e.action, username: e.username, detail: e.detail, createdAt: new Date(e.created_at).toISOString() })),
       speditionen: speditionen.rows };
   });
   res.json(GetEinlagerungStateResponse.parse(result));
 }));
-router.post("/einlagerung/records/:kind", requireAuth, handler(async (req, res) => {
+router.post(["/einlagerung/records/:kind", "/einlagerung/scanner/records/:kind"], scannerOrAuth, handler(async (req, res) => {
   const kind = kindParam(req);
   await permission(req, [requiredPermission(kind, true)]);
   const body = CreateEinlagerungRecordBody.parse(req.body);
@@ -72,12 +81,12 @@ router.post("/einlagerung/records/:kind", requireAuth, handler(async (req, res) 
     }
     if (kind === "shelf") Object.assign(data, { full: false, fullNote: "", fullAt: null });
     const result = await client.query("INSERT INTO einlagerung_records (kind,data) VALUES ($1,$2) RETURNING *", [kind, JSON.stringify(data)]);
-    await event(client, req.session.username, "Angelegt", `${kind}: ${data.name || data.number || `#${result.rows[0].id}`}`);
+    await event(client, actor(req), "Angelegt", `${kind}: ${data.name || data.number || `#${result.rows[0].id}`}`);
     return record(result.rows[0]);
   });
   res.status(201).json(UpdateEinlagerungRecordResponse.parse(row));
 }));
-router.put("/einlagerung/records/:kind/:id", requireAuth, handler(async (req, res) => {
+router.put(["/einlagerung/records/:kind/:id", "/einlagerung/scanner/records/:kind/:id"], scannerOrAuth, handler(async (req, res) => {
   const kind = kindParam(req), id = idParam(req);
   await permission(req, [requiredPermission(kind, false)]);
   const body = UpdateEinlagerungRecordBody.parse(req.body);
@@ -100,7 +109,7 @@ router.put("/einlagerung/records/:kind/:id", requireAuth, handler(async (req, re
       }
     }
     const result = await client.query("UPDATE einlagerung_records SET data=$1,updated_at=clock_timestamp() WHERE id=$2 RETURNING *", [JSON.stringify(data), id]);
-    await event(client, req.session.username, "Geändert", `${kind} #${id}: ${JSON.stringify(existing.data)} → ${JSON.stringify(data)}`);
+    await event(client, actor(req), "Geändert", `${kind} #${id}: ${JSON.stringify(existing.data)} → ${JSON.stringify(data)}`);
     return record(result.rows[0]);
   });
   res.json(UpdateEinlagerungRecordResponse.parse(row));
@@ -125,14 +134,16 @@ router.delete("/einlagerung/records/:kind/:id", requireAuth, handler(async (req,
   });
   res.json({ ok: true });
 }));
-router.get("/einlagerung/search", requireAuth, handler(async (req, res) => {
+router.get(["/einlagerung/search", "/einlagerung/scanner/search"], scannerOrAuth, handler(async (req, res) => {
   const query = SearchEinlagerungQueryParams.parse(req.query);
+  if (isScanner(req) && !["artikel", "auftraege"].includes(query.mode))
+    throw new WarehouseError("Im öffentlichen Scanner sind nur Artikel- und Auftragssuche verfügbar.", 403);
   await permission(req, query.mode === "artikel" ? ["einlagerung.scan", "einlagerung.view"]
     : query.mode === "auftraege" ? ["einlagerung.view", "einlagerung.scan", "einlagerung.reservation.create", "einlagerung.reservation.edit"]
     : ["einlagerung.view"]);
   res.json(SearchEinlagerungResponse.parse(await read((client) => search(client, query))));
 }));
-router.post("/einlagerung/shelves/:id/status", requireAuth, handler(async (req, res) => {
+router.post(["/einlagerung/shelves/:id/status", "/einlagerung/scanner/shelves/:id/status"], scannerOrAuth, handler(async (req, res) => {
   const id = idParam(req), body = SetEinlagerungShelfStatusBody.parse(req.body);
   await permission(req, [body.full ? "einlagerung.full" : "einlagerung.release"]);
   if ((body.note?.length ?? 0) > 2000) throw new WarehouseError("Bemerkung ist zu lang.");
@@ -141,7 +152,7 @@ router.post("/einlagerung/shelves/:id/status", requireAuth, handler(async (req, 
     if (!existing) throw new WarehouseError("Regal wurde nicht gefunden.", 404);
     const data = { ...existing.data, full: body.full, fullNote: body.full ? body.note || "" : "", fullAt: body.full ? new Date().toISOString() : null };
     const result = await client.query("UPDATE einlagerung_records SET data=$1,updated_at=clock_timestamp() WHERE id=$2 RETURNING *", [JSON.stringify(data), id]);
-    await event(client, req.session.username, body.full ? "Regal voll gemeldet" : "Regal freigegeben", `${existing.data.name}: ${body.note || ""}`);
+    await event(client, actor(req), body.full ? "Regal voll gemeldet" : "Regal freigegeben", `${existing.data.name}: ${body.note || ""}`);
     return record(result.rows[0]);
   });
   res.json(SetEinlagerungShelfStatusResponse.parse(row));

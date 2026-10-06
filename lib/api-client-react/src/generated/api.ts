@@ -57,6 +57,7 @@ import type {
   ReconciliationInput,
   ReconciliationUpdate,
   SearchEinlagerungParams,
+  SearchScannerEinlagerungParams,
   Shipment,
   ShipmentInput,
   ShipmentUpdate,
@@ -217,6 +218,355 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getSendDeliveryReportMutationOptions(options));
+    }
+
+export const getGetScannerEinlagerungStateUrl = () => {
+
+
+
+
+  return `/api/einlagerung/scanner/state`
+}
+
+export const getScannerEinlagerungState = async ( options?: RequestInit): Promise<EinlagerungState> => {
+
+  return customFetch<EinlagerungState>(getGetScannerEinlagerungStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetScannerEinlagerungStateQueryKey = () => {
+    return [
+    `/api/einlagerung/scanner/state`
+    ] as const;
+    }
+
+
+export const getGetScannerEinlagerungStateQueryOptions = <TData = Awaited<ReturnType<typeof getScannerEinlagerungState>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScannerEinlagerungState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetScannerEinlagerungStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getScannerEinlagerungState>>> = ({ signal }) => getScannerEinlagerungState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getScannerEinlagerungState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetScannerEinlagerungStateQueryResult = NonNullable<Awaited<ReturnType<typeof getScannerEinlagerungState>>>
+export type GetScannerEinlagerungStateQueryError = ErrorType<unknown>
+
+
+
+export function useGetScannerEinlagerungState<TData = Awaited<ReturnType<typeof getScannerEinlagerungState>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getScannerEinlagerungState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetScannerEinlagerungStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSearchScannerEinlagerungUrl = (params: SearchScannerEinlagerungParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/einlagerung/scanner/search?${stringifiedParams}` : `/api/einlagerung/scanner/search`
+}
+
+export const searchScannerEinlagerung = async (params: SearchScannerEinlagerungParams, options?: RequestInit): Promise<EinlagerungSearchResult> => {
+
+  return customFetch<EinlagerungSearchResult>(getSearchScannerEinlagerungUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getSearchScannerEinlagerungQueryKey = (params?: SearchScannerEinlagerungParams,) => {
+    return [
+    `/api/einlagerung/scanner/search`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getSearchScannerEinlagerungQueryOptions = <TData = Awaited<ReturnType<typeof searchScannerEinlagerung>>, TError = ErrorType<unknown>>(params: SearchScannerEinlagerungParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchScannerEinlagerung>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getSearchScannerEinlagerungQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof searchScannerEinlagerung>>> = ({ signal }) => searchScannerEinlagerung(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof searchScannerEinlagerung>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type SearchScannerEinlagerungQueryResult = NonNullable<Awaited<ReturnType<typeof searchScannerEinlagerung>>>
+export type SearchScannerEinlagerungQueryError = ErrorType<unknown>
+
+
+
+export function useSearchScannerEinlagerung<TData = Awaited<ReturnType<typeof searchScannerEinlagerung>>, TError = ErrorType<unknown>>(
+ params: SearchScannerEinlagerungParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof searchScannerEinlagerung>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getSearchScannerEinlagerungQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateScannerEinlagerungRecordUrl = (kind: 'reservation',) => {
+
+
+
+
+  return `/api/einlagerung/scanner/records/${kind}`
+}
+
+export const createScannerEinlagerungRecord = async (kind: 'reservation',
+    einlagerungRecordInput: EinlagerungRecordInput, options?: RequestInit): Promise<EinlagerungRecord> => {
+
+  return customFetch<EinlagerungRecord>(getCreateScannerEinlagerungRecordUrl(kind),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungRecordInput,)
+  }
+);}
+
+
+
+
+export const getCreateScannerEinlagerungRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createScannerEinlagerungRecord>>, TError,{kind: 'reservation';data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createScannerEinlagerungRecord>>, TError,{kind: 'reservation';data: BodyType<EinlagerungRecordInput>}, TContext> => {
+
+const mutationKey = ['createScannerEinlagerungRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createScannerEinlagerungRecord>>, {kind: 'reservation';data: BodyType<EinlagerungRecordInput>}> = (props) => {
+          const {kind,data} = props ?? {};
+
+          return  createScannerEinlagerungRecord(kind,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateScannerEinlagerungRecordMutationResult = NonNullable<Awaited<ReturnType<typeof createScannerEinlagerungRecord>>>
+    export type CreateScannerEinlagerungRecordMutationBody = BodyType<EinlagerungRecordInput>
+    export type CreateScannerEinlagerungRecordMutationError = ErrorType<unknown>
+
+    export const useCreateScannerEinlagerungRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createScannerEinlagerungRecord>>, TError,{kind: 'reservation';data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createScannerEinlagerungRecord>>,
+        TError,
+        {kind: 'reservation';data: BodyType<EinlagerungRecordInput>},
+        TContext
+      > => {
+      return useMutation(getCreateScannerEinlagerungRecordMutationOptions(options));
+    }
+
+export const getUpdateScannerEinlagerungRecordUrl = (kind: 'reservation',
+    id: number,) => {
+
+
+
+
+  return `/api/einlagerung/scanner/records/${kind}/${id}`
+}
+
+export const updateScannerEinlagerungRecord = async (kind: 'reservation',
+    id: number,
+    einlagerungRecordInput: EinlagerungRecordInput, options?: RequestInit): Promise<EinlagerungRecord> => {
+
+  return customFetch<EinlagerungRecord>(getUpdateScannerEinlagerungRecordUrl(kind,id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungRecordInput,)
+  }
+);}
+
+
+
+
+export const getUpdateScannerEinlagerungRecordMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateScannerEinlagerungRecord>>, TError,{kind: 'reservation';id: number;data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateScannerEinlagerungRecord>>, TError,{kind: 'reservation';id: number;data: BodyType<EinlagerungRecordInput>}, TContext> => {
+
+const mutationKey = ['updateScannerEinlagerungRecord'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateScannerEinlagerungRecord>>, {kind: 'reservation';id: number;data: BodyType<EinlagerungRecordInput>}> = (props) => {
+          const {kind,id,data} = props ?? {};
+
+          return  updateScannerEinlagerungRecord(kind,id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateScannerEinlagerungRecordMutationResult = NonNullable<Awaited<ReturnType<typeof updateScannerEinlagerungRecord>>>
+    export type UpdateScannerEinlagerungRecordMutationBody = BodyType<EinlagerungRecordInput>
+    export type UpdateScannerEinlagerungRecordMutationError = ErrorType<unknown>
+
+    export const useUpdateScannerEinlagerungRecord = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateScannerEinlagerungRecord>>, TError,{kind: 'reservation';id: number;data: BodyType<EinlagerungRecordInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateScannerEinlagerungRecord>>,
+        TError,
+        {kind: 'reservation';id: number;data: BodyType<EinlagerungRecordInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateScannerEinlagerungRecordMutationOptions(options));
+    }
+
+export const getSetScannerEinlagerungShelfStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/einlagerung/scanner/shelves/${id}/status`
+}
+
+export const setScannerEinlagerungShelfStatus = async (id: number,
+    einlagerungShelfStatusInput: EinlagerungShelfStatusInput, options?: RequestInit): Promise<EinlagerungRecord> => {
+
+  return customFetch<EinlagerungRecord>(getSetScannerEinlagerungShelfStatusUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      einlagerungShelfStatusInput,)
+  }
+);}
+
+
+
+
+export const getSetScannerEinlagerungShelfStatusMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setScannerEinlagerungShelfStatus>>, TError,{id: number;data: BodyType<EinlagerungShelfStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof setScannerEinlagerungShelfStatus>>, TError,{id: number;data: BodyType<EinlagerungShelfStatusInput>}, TContext> => {
+
+const mutationKey = ['setScannerEinlagerungShelfStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof setScannerEinlagerungShelfStatus>>, {id: number;data: BodyType<EinlagerungShelfStatusInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  setScannerEinlagerungShelfStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SetScannerEinlagerungShelfStatusMutationResult = NonNullable<Awaited<ReturnType<typeof setScannerEinlagerungShelfStatus>>>
+    export type SetScannerEinlagerungShelfStatusMutationBody = BodyType<EinlagerungShelfStatusInput>
+    export type SetScannerEinlagerungShelfStatusMutationError = ErrorType<unknown>
+
+    export const useSetScannerEinlagerungShelfStatus = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof setScannerEinlagerungShelfStatus>>, TError,{id: number;data: BodyType<EinlagerungShelfStatusInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof setScannerEinlagerungShelfStatus>>,
+        TError,
+        {id: number;data: BodyType<EinlagerungShelfStatusInput>},
+        TContext
+      > => {
+      return useMutation(getSetScannerEinlagerungShelfStatusMutationOptions(options));
     }
 
 export const getGetEinlagerungStateUrl = () => {

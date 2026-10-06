@@ -68,6 +68,8 @@ export * from './reconciliationUpdate';
 export * from './reconciliationUpdateStatus';
 export * from './searchEinlagerungMode';
 export * from './searchEinlagerungParams';
+export * from './searchScannerEinlagerungMode';
+export * from './searchScannerEinlagerungParams';
 export * from './shipment';
 export * from './shipmentInput';
 export * from './shipmentInputLkwArt';
