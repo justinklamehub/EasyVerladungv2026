@@ -7,6 +7,7 @@ import { ShelfTiles } from "./shelf-tiles";
 import type { LoadView } from "./shelf-load-content";
 import { openReservationsByShelf } from "./shelf-reservations";
 import { matrixCounts } from "./matrix-model";
+import { todayOrdinal } from "./delivery-deadlines";
 
 // Direct tsx uses classic JSX for these Vite components.
 Object.assign(globalThis, { React });
@@ -49,4 +50,28 @@ test("Beide Darstellungen erklären Regale ohne offene Reservierung", () => {
     React.createElement(ShelfMatrix, { ...emptyProps, istImported: false }),
     React.createElement(ShelfTiles, { ...emptyProps, imported: { ist: false, ret: false, auf: false } }),
   ]) assert.ok(renderToStaticMarkup(element).includes("Keine offenen Reservierungen"));
+});
+
+test("Matrix und Kacheln warnen lesbar bei offenen überfälligen Vormerkungen; Alttermine bleiben unklar", () => {
+  const data = [
+    { id: 31, kind: "reservation", updatedAt: "", d: { status: "offen", shelfId: 3, speditionName: "Überfälliger Termin", termin: "40.2026", plusKw: "0" } },
+    { id: 32, kind: "reservation", updatedAt: "", d: { status: "offen", shelfId: 3, speditionName: "Verlängerter Termin", termin: "40.2026", plusKw: "2" } },
+    { id: 33, kind: "reservation", updatedAt: "", d: { status: "offen", shelfId: 3, speditionName: "Alttermin", termin: "KW 40", plusKw: "" } },
+    { id: 34, kind: "reservation", updatedAt: "", d: { status: "erledigt", shelfId: 3, speditionName: "Erledigt", termin: "1.2020" } },
+    { id: 35, kind: "reservation", updatedAt: "", d: { status: "storniert", shelfId: 3, speditionName: "Storniert", termin: "1.2020" } },
+  ];
+  const before = JSON.stringify({ data, occupancy: [...occ], assigned: [...assigned] });
+  const reservations = openReservationsByShelf(data, [], () => "", todayOrdinal(new Date("2026-10-06T12:00:00Z")));
+  const warningProps = { ...props, loadView: { ...loadView, reservations } };
+  for (const element of [
+    React.createElement(ShelfMatrix, { ...warningProps, istImported: true }),
+    React.createElement(ShelfTiles, { ...warningProps, imported: { ist: true, ret: true, auf: true } }),
+  ]) {
+    const output = renderToStaticMarkup(element);
+    assert.equal((output.match(/data-testid="reservation-overdue"/g) ?? []).length, 1);
+    assert.equal((output.match(/data-testid="reservation-unknown"/g) ?? []).length, 1);
+    for (const text of ["Überfällig", "Termin unklar", "KW-Ende", "18.10.2026", "+2 KW"]) assert.ok(output.includes(text), text);
+    for (const text of [">Erledigt<", ">Storniert<"]) assert.ok(!output.includes(text), text);
+  }
+  assert.equal(JSON.stringify({ data, occupancy: [...occ], assigned: [...assigned] }), before);
 });

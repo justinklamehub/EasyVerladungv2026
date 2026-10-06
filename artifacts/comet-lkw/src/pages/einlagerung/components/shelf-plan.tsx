@@ -23,8 +23,11 @@ import { DATASET_LABELS, datasetOf, errMsg, type Model, type Rec } from "../lib"
 import { contentRows, loadSearchText, type LoadView } from "./shelf-load-content";
 import { openReservationsByShelf } from "./shelf-reservations";
 import { useShelfPlanPreference } from "./use-shelf-plan-preference";
+import { todayOrdinal } from "./delivery-deadlines";
+import { hasOverdueReservation, reservationDeadline } from "./reservation-deadlines";
+import { ReservationDeadlineBadge } from "./reservation-deadline-badge";
 
-function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null; model: Model; state: EinlagerungState; has: (k: string) => boolean; onClose: () => void }) {
+function ShelfDetail({ shelf, model, state, has, onClose, today }: { shelf: Rec | null; model: Model; state: EinlagerungState; has: (k: string) => boolean; onClose: () => void; today: number }) {
   const params = useMemo<SearchEinlagerungParams>(() => ({ mode: "regal", shelfId: shelf?.id }), [shelf?.id]);
   const q = useSearchEinlagerung(params, { query: { enabled: !!shelf, queryKey: getSearchEinlagerungQueryKey(params), refetchInterval: 30_000, refetchIntervalInBackground: false } });
   const imported = { ist: !!datasetOf(state.datasets, "istbestand"), retouren: !!datasetOf(state.datasets, "retouren"), auftraege: !!datasetOf(state.datasets, "auftraege") };
@@ -46,7 +49,8 @@ function ShelfDetail({ shelf, model, state, has, onClose }: { shelf: Rec | null;
             <div className="text-xs uppercase tracking-wider text-slate-500">Offene Reservierungen</div>
             {resv.map((r) => (
               <div key={r.id} className="text-sm rounded-md border border-slate-200 px-3 py-2">
-                <span className="font-semibold">Vorgemerkt: </span>{String(r.d.speditionName || model.carriers.find((c) => c.id === Number(r.d.carrierId))?.d.name || model.spedName(r.d.speditionId) || "-")} / {String(r.d.relation ?? "")} / {String(r.d.termin ?? "")}{r.d.note ? ` - ${r.d.note}` : ""}
+                <span className="font-semibold">Vorgemerkt: </span>{String(r.d.speditionName || model.carriers.find((c) => c.id === Number(r.d.carrierId))?.d.name || model.spedName(r.d.speditionId) || "-")} / {String(r.d.relation ?? "")} / {String(r.d.termin ?? "")}{r.d.plusKw ? ` (+${r.d.plusKw} KW)` : ""}{r.d.note ? ` - ${r.d.note}` : ""}
+                <ReservationDeadlineBadge deadline={reservationDeadline(r.d, today)} scale={1.3} />
               </div>
             ))}
           </div>
@@ -62,6 +66,19 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
   const [status, setStatus] = useState<StatusFilter>("");
   const [orders, setOrders] = useState(false);
   const [returns, setReturns] = useState(false);
+  const [overdueOnly, setOverdueOnly] = useState(false);
+  const [today, setToday] = useState(() => todayOrdinal());
+  useEffect(() => {
+    const refresh = () => setToday(todayOrdinal());
+    const timer = window.setInterval(refresh, 30_000);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, []);
   const [q, setQ] = useState("");
   const [hideFull, setHideFull] = useState(state.settings.hideFull);
   const [sel, setSel] = useState<Rec | null>(null);
@@ -94,8 +111,8 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
     return byShelf;
   }, [model.rules, model.articleById, model.groupById]);
   const ds = { ist: datasetOf(state.datasets, "istbestand"), ret: datasetOf(state.datasets, "retouren"), auf: datasetOf(state.datasets, "auftraege") };
-  const reservations = useMemo(() => openReservationsByShelf(model.reservations, model.carriers, model.spedName),
-    [model.reservations, model.carriers, model.spedName]);
+  const reservations = useMemo(() => openReservationsByShelf(model.reservations, model.carriers, model.spedName, today),
+    [model.reservations, model.carriers, model.spedName, today]);
   const loadParams = { mode: "lagerplan" } as const;
   const loadsQ = useSearchEinlagerung(loadParams, { query: {
     queryKey: getSearchEinlagerungQueryKey(loadParams), enabled: contentMode === "orders" || contentMode === "returns",
@@ -115,13 +132,20 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
     .filter((g) => g.shelves.length > 0 && g.hall?.d.active !== false), [model.aisles, model.shelves, model.hallById, hall, aisle]);
 
   const filters: MatrixFilters = { status, orders, returns, hideFull, q };
-  const active = filtersActive(filters);
+  const overdueFilter = contentMode === "reservations" && overdueOnly;
+  const active = filtersActive(filters) || overdueFilter;
   const all = useMemo(() => orderedShelves(groups), [groups]);
   const matches = useMemo(() => all.filter((s) => shelfMatches(s, occ.get(String(s.d.name)),
     contentMode === "planned" ? assigned.get(s.id) ?? [] : [],
     { status, orders, returns, hideFull, q },
-    contentMode === "planned" ? "" : loadSearchText(contentRows(loadView, s.id)))),
-    [all, occ, assigned, status, orders, returns, hideFull, q, contentMode, loads, reservations]);
+    contentMode === "planned" ? "" : loadSearchText(contentRows(loadView, s.id))) &&
+    (!overdueFilter || hasOverdueReservation(reservations.get(s.id) ?? []))),
+    [all, occ, assigned, status, orders, returns, hideFull, q, contentMode, loads, reservations, overdueFilter]);
+  const reservationTotals = useMemo(() => {
+    const rows = all.flatMap((s) => reservations.get(s.id) ?? []);
+    return { overdue: rows.filter((r) => r.reservationDeadline.status === "overdue").length,
+      unknown: rows.filter((r) => r.reservationDeadline.status === "unknown").length };
+  }, [all, reservations]);
   const matchIds = useMemo(() => (active ? new Set(matches.map((s) => s.id)) : null), [active, matches]);
   const matchIdList = useMemo(() => matches.map((s) => s.id), [matches]);
   const counts = useMemo(() => matrixCounts(all, occ, assigned), [all, occ, assigned]);
@@ -167,7 +191,7 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
     return () => { document.body.style.overflow = prev; window.removeEventListener("keydown", onKey, true); };
   }, [fs]);
 
-  const reset = () => { setHall(""); setAisle(""); setStatus(""); setOrders(false); setReturns(false); setHideFull(false); setQ(""); setTargetId(null); };
+  const reset = () => { setHall(""); setAisle(""); setStatus(""); setOrders(false); setReturns(false); setOverdueOnly(false); setHideFull(false); setQ(""); setTargetId(null); };
   const openAction = (s: Rec, full: boolean) => setAction({ shelfId: s.id, full });
 
   const staleMs = state.settings.staleHours * 3600_000;
@@ -266,6 +290,17 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
         Nur offene Reservierungen: vorgemerkt, noch nicht eingelagert. Belegung und Palettenzahlen bleiben unverändert.
         {!all.some((s) => reservations.has(s.id)) && " Keine offenen Reservierungen in dieser Hallen- und Gangauswahl."}
       </p>}
+      {contentMode === "reservations" && <div className="rounded-lg border border-slate-200 bg-white p-3 text-sm space-y-2" data-testid="reservation-deadline-summary">
+        <p aria-live="polite">
+          <span className={reservationTotals.overdue ? "font-semibold text-red-800" : ""}>{reservationTotals.overdue} überfällige offene Vormerkungen</span>
+          {" · "}{reservationTotals.unknown} mit unklarem Termin in dieser Hallen- und Gangauswahl.
+        </p>
+        <p className="text-xs text-slate-600">Überfällig nach Ablauf des Datums bzw. der gesamten KW, jeweils zuzüglich Plus-KW (Berliner Zeit). Unklare Termine werden nicht als überfällig eingestuft.</p>
+        <div className="flex items-center gap-2">
+          <Switch id="overdue-reservations" checked={overdueOnly} onCheckedChange={setOverdueOnly} data-testid="filter-overdue-reservations" />
+          <Label htmlFor="overdue-reservations">Nur Regale mit überfälligen Vormerkungen hervorheben</Label>
+        </div>
+      </div>}
 
       {groups.length === 0 && <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center text-sm text-slate-500" data-testid="empty-groups">Keine Regale für diese Hallen- und Gangauswahl.</div>}
       {groups.length > 0 && active && matches.length === 0 && (
@@ -284,7 +319,7 @@ export function ShelfPlan({ state, model, has }: { state: EinlagerungState; mode
         <ShelfTiles groups={groups} occ={occ} assigned={assigned} colors={state.settings.colors} imported={{ ist: !!ds.ist, ret: !!ds.ret, auf: !!ds.auf }}
           matchIds={matchIds} targetId={target} has={has} onSelect={setSel} onAction={openAction} loadView={loadView} />
       )}
-      <ShelfDetail shelf={sel} model={model} state={state} has={has} onClose={() => setSel(null)} />
+      <ShelfDetail shelf={sel} model={model} state={state} has={has} onClose={() => setSel(null)} today={today} />
       <ShelfStatusDialog action={action} model={model} has={has} onClose={() => setAction(null)} />
     </div>
   );

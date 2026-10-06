@@ -1,6 +1,8 @@
 import * as React from "react";
 import { articleTextColor } from "./article-strip";
 import { nf, type D, type Rec } from "../lib";
+import { reservationDeadline } from "./reservation-deadlines";
+import { ReservationDeadlineBadge } from "./reservation-deadline-badge";
 
 export type ContentMode = "planned" | "orders" | "returns" | "reservations";
 export type ShelfLoads = { orders: D[]; retouren: D[] };
@@ -44,8 +46,9 @@ export function ShelfLoadContent({ shelfId, view, scale = 1 }: { shelfId: number
         ? [row.relation, row.termin || row.calendarWeek, row.plusKw && `+${row.plusKw} KW`].filter(Boolean).join(" · ")
         : String(row.material || "");
       const count = Number(row.paletten) || 0;
+      const deadline = reserved ? row.reservationDeadline ?? reservationDeadline(row) : undefined;
       return <span key={i} className="block rounded-lg px-1 py-1 text-left" style={{ backgroundColor: bg, color: fg }}
-        title={`${title}${meta ? ` · ${meta}` : ""} · ${reserved ? "Vorgemerkt – kein Bestand" : `${nf(count)} Paletten`}`}
+        title={`${title}${meta ? ` · ${meta}` : ""} · ${reserved ? `Vorgemerkt – kein Bestand · ${deadline?.detail}` : `${nf(count)} Paletten`}`}
         data-testid={`load-row-${shelfId}-${i}`}>
         <span className="flex items-start justify-between gap-1 font-bold" style={{ fontSize: 10 * scale, lineHeight: 1.3 }}>
           <span className="min-w-0 break-words">{title}</span>
@@ -53,6 +56,7 @@ export function ShelfLoadContent({ shelfId, view, scale = 1 }: { shelfId: number
         </span>
         {reserved && <span className="block font-semibold" style={{ fontSize: 8 * scale }}>Vorgemerkt</span>}
         {meta && <span className="block break-words mt-0.5" style={{ fontSize: 8 * scale, lineHeight: 1.3 }}>{meta}</span>}
+        {reserved && row.status === "offen" && deadline && <ReservationDeadlineBadge deadline={deadline} scale={scale} />}
       </span>;
     })}
   </span>;

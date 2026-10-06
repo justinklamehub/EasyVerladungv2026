@@ -18,3 +18,4 @@
 - [Frontend JSX tests](frontend-jsx-tests.md) — Vite and plain tsx component tests can use different JSX runtimes; align them before treating SSR failures as app bugs.
 - [Browser preview resets](browser-preview-recovery.md) — after a testing notebook reset and HTTP 502, check stopped workflows before diagnosing an app regression.
 - [Lieferterminwarnungen](delivery-deadline-rules.md) — Tagesgrenzen dynamisch in Einstellungen; KW-Termine separat, Plus-KW nicht ungefragt als Terminverlängerung behandeln.
+- [Überfällige Vormerkungen](reservation-deadline-rules.md) — Für Vormerkungen bestätigt: Plus-KW verlängert Datum bzw. KW-Ende um die angegebene Anzahl Wochen.
