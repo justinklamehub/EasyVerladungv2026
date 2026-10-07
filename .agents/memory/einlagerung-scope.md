@@ -80,3 +80,21 @@ In der Lageransicht soll zwischen geplanten Artikeln und Aufträgen / Retouren u
 **Why:** Der Nutzer hat den Inhaltswechsel ausdrücklich verlangt und dafür die Artikelbalken und Speditionskarten seiner bisherigen Ansicht als Bildvorlagen gezeigt.
 
 **How to apply:** Die Inhaltsauswahl getrennt von Matrix/Kacheln und Belegungsfiltern behandeln; geplante Artikelzuordnungen nicht durch tatsächliche Aufträge oder Retouren ersetzen.
+
+Bei Mengenübersichten in der Auftragssuche eine Lieferung beziehungsweise HU über mehrere Regalpositionen hinweg nur einmal zählen. Positionen ohne Liefernummer gesondert kenntlich machen.
+
+**Why:** Gruppierte Importzeilen können dieselbe Lieferung oder Palette in mehreren Tabellenpositionen abbilden; die gewünschte Mengenübersicht soll dadurch nicht künstlich größer werden.
+
+**How to apply:** Eindeutige Liefer- und HU-Nummern für die Zählung nutzen und die Zahl der sichtbaren Positionen separat ausweisen. Fehlende Kennungen nicht stillschweigend als sicher bekannte Lieferungen darstellen.
+
+In „Einlagerung → Aufträge“ sollen Export und Druck die aktuell gefilterte Auswahl ausgeben.
+
+**Why:** Der Nutzer hat ausdrücklich „mit den aktuellen Filtern“ verlangt; eine ungefilterte Ausgabe wäre für operative Auswertungen irreführend.
+
+**How to apply:** Tabelle, Export und Druck aus derselben gefilterten Auswahl erstellen. Angewendete Filter und Mengenübersicht mitgeben; während einer noch ausstehenden Suchaktualisierung keine veraltete Auswahl ausgeben.
+
+„Die Vormerkungen bei Aufträge kann weg, da es einen eigenen Tab gibt.“
+
+**Why:** Der Nutzer möchte die beiden Bereiche getrennt halten, statt Vormerkungen doppelt anzuzeigen.
+
+**How to apply:** Im Tab „Aufträge“ nur Aufträge anzeigen und zählen; Filteroptionen ausschließlich aus Aufträgen ableiten. Vormerkungen samt Bearbeitung im eigenen Tab erhalten.

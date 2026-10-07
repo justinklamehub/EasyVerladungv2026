@@ -1,4 +1,5 @@
 import { DEADLINE_TIME_ZONE, type DeadlineOrder, type DeadlineStatus } from "./delivery-deadlines";
+import { summarizeOrders } from "./orders-filters";
 
 export const DEADLINE_LABELS: Record<DeadlineStatus, string> = {
   critical: "Kritisch", soon: "Bald fällig", upcoming: "Demnächst",
@@ -27,7 +28,7 @@ function cells(r: DeadlineOrder): string[] {
   ];
 }
 
-export async function deadlineExcel(shown: DeadlineOrder[]) {
+export async function deadlineExcel(shown: DeadlineOrder[], details?: string[][], createdAt = new Date()) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   const sheet = workbook.addWorksheet("Liefertermine");
@@ -48,6 +49,17 @@ export async function deadlineExcel(shown: DeadlineOrder[]) {
     sheet.addRow(values);
   }
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: sheet.rowCount, column: 9 } };
+  if (details) {
+    const info = workbook.addWorksheet("Filter und Summen");
+    info.getColumn(1).width = 28;
+    info.getColumn(2).width = 80;
+    info.addRow(["Stand", createdAt.toLocaleString("de-DE", { timeZone: DEADLINE_TIME_ZONE })]);
+    details.forEach((row) => info.addRow(row));
+    const sum = summarizeOrders(shown.map((r) => r.order));
+    [["Aufträge", sum.orders], ["Auftragspositionen", sum.positions], ["Paletten", sum.pallets],
+      ["Regale", sum.shelves], ["Speditionen", sum.carriers]].forEach((row) => info.addRow(row));
+    info.addRow(["Zählweise", "Lieferungen und HU-Nummern nur einmal; Positionen ohne Liefernummer separat."]);
+  }
   return workbook.xlsx.writeBuffer();
 }
 
@@ -57,10 +69,12 @@ function escapeHtml(value: string) {
 }
 
 export function deadlinePrintHtml(
-  shown: DeadlineOrder[], filter: DeadlineStatus | "all", search: string, createdAt = new Date(),
+  shown: DeadlineOrder[], filter: DeadlineStatus | "all" | DeadlineStatus[], search: string, createdAt = new Date(), details?: string[][],
 ): string {
-  const selection = filter === "all" ? "Alle Status" : DEADLINE_LABELS[filter];
-  const pallets = shown.reduce((n, r) => n + (Number(r.order.paletten) || 0), 0);
+  const selection = Array.isArray(filter) ? filter.length ? filter.map((s) => DEADLINE_LABELS[s]).join(" oder ") : "Alle Status"
+    : filter === "all" ? "Alle Status" : DEADLINE_LABELS[filter];
+  const totals = summarizeOrders(shown.map((r) => r.order));
+  const pallets = totals.pallets;
   const stamp = createdAt.toLocaleString("de-DE", { timeZone: DEADLINE_TIME_ZONE });
   return `<!doctype html><html lang="de"><head><meta charset="utf-8">
 <title>COMET LKW – Liefertermine</title><style>
@@ -73,7 +87,10 @@ th, td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; overflow-wra
 th { background: #f1f5f9; } th:last-child, td:last-child { text-align: right; }
 </style></head><body><h1>COMET LKW – Liefertermine</h1>
 <p>Auswahl: ${escapeHtml(selection)}${search.trim() ? ` · Suche: ${escapeHtml(search.trim())}` : ""}</p>
-<p>${shown.length.toLocaleString("de-DE")} Aufträge · ${pallets.toLocaleString("de-DE")} Paletten · Stand: ${escapeHtml(stamp)} (${DEADLINE_TIME_ZONE})</p>
+${(details ?? []).filter(([key]) => key !== "Status" && key !== "Suche").map(([key, value]) =>
+    `<p>${escapeHtml(key)}: ${escapeHtml(value)}</p>`).join("")}
+<p>${totals.orders.toLocaleString("de-DE")} Aufträge · ${pallets.toLocaleString("de-DE")} Paletten · Stand: ${escapeHtml(stamp)} (${DEADLINE_TIME_ZONE})</p>
+<p>${totals.positions.toLocaleString("de-DE")} Auftragspositionen. Liefernummern und HU-Nummern werden nur einmal gezählt.${totals.unidentified ? ` ${totals.unidentified} Positionen ohne Liefernummer separat gezählt.` : ""}</p>
 <table><thead><tr>${HEADERS.map((h) => `<th scope="col">${escapeHtml(h)}</th>`).join("")}</tr></thead>
 <tbody>${shown.map((r) => `<tr>${cells(r).map((v) => `<td>${escapeHtml(v)}</td>`).join("")}</tr>`).join("")}</tbody></table>
 </body></html>`;

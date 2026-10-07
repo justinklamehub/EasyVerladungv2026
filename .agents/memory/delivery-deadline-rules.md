@@ -31,7 +31,7 @@ Die Liefertermin-Mail soll täglich nur bei enthaltenen Terminen innerhalb der e
 
 **Why:** Der Nutzer verlangt ausdrücklich, dass Drucken und Exportieren in der Ansicht „Liefertermine“ die aktive Auswahl respektieren.
 
-**How to apply:** Status-/KW-Filter und Textsuche gemeinsam berücksichtigen. Druck-/Exportsummen ausschließlich aus dieser Auswahl bilden, nicht aus allen geladenen Aufträgen.
+**How to apply:** Sämtliche aktiven Filter gemeinsam berücksichtigen, nicht nur Status/KW und Textsuche. Tabelle, Druck und Export müssen dieselbe Auswahl verwenden; Druck-/Exportsummen ausschließlich daraus bilden.
 
 Regalnamen dürfen beim Öffnen eines Liefertermin-Exports in Excel nicht als Datum interpretiert werden.
 
