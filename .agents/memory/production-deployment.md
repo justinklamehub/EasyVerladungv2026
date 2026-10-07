@@ -75,6 +75,12 @@ Die vom Nutzer gelieferte Bestandsprüfung bestätigt Nginx als aktiven Webserve
 
 Die Quell-Datenbank auf Debian verwendet PostgreSQL 18.4. Für die Migration PostgreSQL 18 auf RHEL vorsehen; nicht ungeprüft ein älteres Zielsystem nehmen.
 
+Das Ziel-RHEL bietet PostgreSQL 18 bereits über seine freigegebene AppStream/RHUI-Paketquelle an; die externe PostgreSQL-Repository-Adresse ist wie die npm-Registry per TLS nicht erreichbar.
+
+**Why:** Ein externer Repository-Download oder Offline-RPM-Transfer ist für PostgreSQL hier unnötig und würde an der Netzbeschränkung scheitern.
+
+**How to apply:** PostgreSQL 18 aus dem vorhandenen RHEL-Modul installieren, ohne an der bestehenden MariaDB oder den beiden anderen Websites zu arbeiten.
+
 **Why:** Der Nutzer hat den gemeinsamen Betrieb ausdrücklich als Randbedingung der Migration genannt.
 
 **How to apply:** Erst vorhandenen Webserver, Dienste und Portbelegung prüfen. Einen eigenen namensbasierten VirtualHost/server-Block und separaten App-Dienst ergänzen; keine globale IP-Weiterleitung aus der obigen Einzelserver-Anleitung übernehmen. Vorhandene Datenbanken nicht neu initialisieren. Datenbank und lokalen Dateispeicher gemeinsam migrieren, vor DNS-Wechsel testen. Die vorhandene RHEL-Anleitung bezieht sich auf RHEL 7.9 und darf nicht ungeprüft für RHEL 9.7 verwendet werden.
