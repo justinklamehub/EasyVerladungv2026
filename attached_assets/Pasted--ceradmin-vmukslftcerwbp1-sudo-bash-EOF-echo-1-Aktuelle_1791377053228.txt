@@ -1,0 +1,68 @@
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+echo "1. Aktuelle Dienstmeldungen:"
+journalctl -u easy-verladung.service -n 80 --no-pager
+
+echo "2. Nginx-Konfiguration prüfen:"
+nginx -t
+
+echo "3. Konfigurationsdateien, Domains und Zertifikatspfade:"
+nginx -T 2>&1 | grep -E \
+'^# configuration file |^[[:space:]]*(include|listen|server_name|root|ssl_certificate|ssl_certificate_key)[[:space:]]'
+
+echo "4. SELinux:"
+getenforce
+getsebool httpd_can_network_connect httpd_can_network_relay
+
+echo "5. Sicherheitskontext des neuen Frontends:"
+ls -Zd /opt/easy-verladung/app/artifacts/comet-lkw/dist/public
+EOF
+1. Aktuelle Dienstmeldungen:
+Okt 07 14:42:45 vmukslftcerwbp1.rhidm.net systemd[1]: Started Easy Verladung API.
+2. Nginx-Konfiguration prüfen:
+nginx: [warn] low address bits of 172.18.0.0/12 are meaningless in /etc/nginx/conf.d/easyretoure.conf:31
+nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/easydispo.conf:12
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+3. Konfigurationsdateien, Domains und Zertifikatspfade:
+# configuration file /etc/nginx/nginx.conf:
+    include       mime.types;
+include /etc/nginx/conf.d/easyretoure.conf;
+include /etc/nginx/conf.d/easydispo.conf;
+    listen       80;
+    server_name  _;
+    root   /var/www/html;
+        include        fastcgi_params;
+        root /usr/share;
+        root /usr/share;
+        include fastcgi_params;
+# configuration file /etc/nginx/mime.types:
+# configuration file /etc/nginx/conf.d/easyretoure.conf:
+    listen 80;
+    server_name easy-retoure.de www.easy-retoure.de;
+    listen 443 ssl;
+    server_name easy-retoure.de www.easy-retoure.de;
+    root /var/www/html/easyretoure;
+    ssl_certificate /etc/pki/tls/certs/easy-retoure/easy-retoure_de_fullchain.crt;
+    ssl_certificate_key /etc/pki/tls/certs/easy-retoure/easy-retoure_de.key;
+            include fastcgi_params;
+                include fastcgi_params;
+         include fastcgi_params;
+            include fastcgi_params;
+                include fastcgi_params;
+        include fastcgi_params;
+# configuration file /etc/nginx/fastcgi_params:
+# configuration file /etc/nginx/conf.d/easydispo.conf:
+    listen 80;
+    server_name easy-dispo.de www.easy-dispo.de;
+    listen 443 ssl http2;
+    server_name easy-dispo.de www.easy-dispo.de;
+    root /var/www/html/easydispo;
+    ssl_certificate     /etc/pki/tls/certs/easy-dispo/easy-dispo_de_fullchain.crt;
+    ssl_certificate_key /etc/pki/tls/certs/easy-dispo/easy-dispo_de.key;
+        include fastcgi_params;
+4. SELinux:
+Disabled
+getsebool:  SELinux is disabled
+5. Sicherheitskontext des neuen Frontends:
+? /opt/easy-verladung/app/artifacts/comet-lkw/dist/public
+[ceradmin@vmukslftcerwbp1 ~]$

@@ -114,3 +114,9 @@ Während der parallelen Migration darf der neue Testserver keine automatischen J
 **Why:** Eine kopierte Datenbank enthält weiterhin aktive Berichts- und Erinnerungseinstellungen. Ein zweiter normaler Serverstart könnte echte Empfänger doppelt benachrichtigen; öffentliche Scanner-Schreibzugriffe sollen nicht über einen ungeschützten Backend-Port möglich sein.
 
 **How to apply:** Automatische Jobs auf dem Testserver vor dessen erstem Start deaktivieren und das Backend an localhost binden. Beim endgültigen Umschalten Jobs erst nach Stilllegung der alten Instanz aktivieren.
+
+Der Ziel-Nginx bindet die beiden bestehenden Website-Konfigurationen einzeln ein, nicht über ein allgemeines `conf.d/*.conf`-Muster. SELinux ist auf dem Zielserver deaktiviert.
+
+**Why:** Eine zusätzliche Konfigurationsdatei allein würde nicht geladen; unnötige globale Änderungen könnten die bestehenden Websites beeinträchtigen.
+
+**How to apply:** Für die Verladungsdomain genau eine zusätzliche Include-Zeile im passenden Nginx-Kontext ergänzen, bestehende Includes erhalten und vor Reload prüfen. SELinux nicht im Zuge dieser Migration umstellen.
