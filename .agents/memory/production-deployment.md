@@ -126,3 +126,9 @@ Für den RHEL-Betrieb hat der Nutzer ausdrücklich die neue Domain `easy-verladu
 **Why:** Der Nutzer bestätigte die neue Domain nach Prüfung des bisherigen Zertifikats.
 
 **How to apply:** Endgültige Domain- und HTTPS-Konfiguration auf die neue Domain ausrichten. Das bisherige Zertifikat ohne Bindestrich deckt sie nicht ab und darf nicht als passendes Zertifikat wiederverwendet werden.
+
+Beim vorläufigen Zugriff über die Server-IP können HTTP und HTTPS unterschiedliche Apps zeigen: Der namensbasierte HTTP-Testzugang zur Verladung funktioniert, während HTTPS über dieselbe IP weiterhin die bestehende RETOURE-Seite liefert.
+
+**Why:** Ein zuvor ausgegebener permanenter HTTP-Redirect auf HTTPS kann im Browser weiterwirken, obwohl der direkte HTTP-Abruf längst die richtige Anwendung liefert. Ein erfolgreicher HTTP-Status allein zeigte die Verwechslung nicht.
+
+**How to apply:** Bei scheinbar falscher App zuerst Schema und vollständige Adresszeile prüfen und mit einem direkten HTTP-Abruf inklusive HTML-Titel vergleichen; bestehende HTTPS-Sites nicht auf Verdacht umkonfigurieren.
