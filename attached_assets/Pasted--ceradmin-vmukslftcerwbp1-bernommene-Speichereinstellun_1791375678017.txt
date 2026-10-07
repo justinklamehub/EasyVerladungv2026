@@ -1,0 +1,76 @@
+[ceradmin@vmukslftcerwbp1 ~]$ # Übernommene Speichereinstellungen
+sudo -u postgres psql -d comet_lkw -Atc \
+  "SELECT key || ': ' || value
+   FROM settings
+   WHERE key IN ('storage_backend', 'storage_local_path')
+   ORDER BY key;"
+
+# Aktuelle lokale PostgreSQL-Anmelderegeln
+sudo grep -E '^[[:space:]]*(local|host)[[:space:]]' \
+  /var/lib/pgsql/data/pg_hba.conf
+
+sudo -u postgres psql -d postgres -Atc \
+  "SHOW password_encryption;"
+storage_backend: local
+storage_local_path: /opt/comet/app/pictures
+local   all             all                                     peer
+host    all             all             127.0.0.1/32            ident
+host    all             all             ::1/128                 ident
+local   replication     all                                     peer
+host    replication     all             127.0.0.1/32            ident
+host    replication     all             ::1/128                 ident
+scram-sha-256
+[ceradmin@vmukslftcerwbp1 ~]$ sudo -u postgres psql -d postgres -c '\password comet_app'
+Neues Passwort für Benutzer »comet_app« eingeben:
+Geben Sie es noch einmal ein:
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+set -e
+
+HBA="/var/lib/pgsql/data/pg_hba.conf"
+BACKUP="$HBA.before-easy-verladung"
+
+if [ -e "$BACKUP" ]; then
+  echo "Stopp: Sicherungsdatei existiert bereits."
+  exit 1
+fi
+
+if grep -Eq '^[[:space:]]*host[[:space:]]+comet_lkw[[:space:]]+comet_app[[:space:]]+127[.]0[.]0[.]1/32' "$HBA"; then
+  echo "Stopp: Eine passende Regel existiert bereits."
+  exit 1
+fi
+
+runuser -u postgres -- cp -p "$HBA" "$BACKUP"
+
+runuser -u postgres -- sed -i \
+  '1i host    comet_lkw    comet_app    127.0.0.1/32    scram-sha-256' \
+  "$HBA"
+
+echo "Konfiguration neu laden:"
+runuser -u postgres -- psql -d postgres -Atc \
+  "SELECT pg_reload_conf();"
+
+echo "Fehler in Anmelderegeln (bei Erfolg keine Ausgabe):"
+runuser -u postgres -- psql -d postgres -Atc \
+  "SELECT error FROM pg_hba_file_rules WHERE error IS NOT NULL;"
+
+echo "PostgreSQL-Dienst:"
+systemctl is-active postgresql.service
+EOF
+Konfiguration neu laden:
+t
+Fehler in Anmelderegeln (bei Erfolg keine Ausgabe):
+PostgreSQL-Dienst:
+active
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+PICTURES="/opt/comet/app/pictures"
+
+if [ -d "$PICTURES" ]; then
+  du -sh "$PICTURES"
+  printf "Dateien: "
+  find "$PICTURES" -type f | wc -l
+else
+  echo "Bilderverzeichnis an diesem Pfad nicht vorhanden."
+fi
+EOF
+Bilderverzeichnis an diesem Pfad nicht vorhanden.
+[ceradmin@vmukslftcerwbp1 ~]$
