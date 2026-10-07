@@ -81,6 +81,12 @@ Das Ziel-RHEL bietet PostgreSQL 18 bereits über seine freigegebene AppStream/RH
 
 **How to apply:** PostgreSQL 18 aus dem vorhandenen RHEL-Modul installieren, ohne an der bestehenden MariaDB oder den beiden anderen Websites zu arbeiten.
 
+Beim selbst gehosteten Umzug den absoluten lokalen Bilderpfad aus der Quell-Datenbank zunächst auf dem neuen Server beibehalten, statt die gespeicherte Pfadeinstellung für den Testimport umzuschreiben.
+
+**Why:** Ein frischer Datenbankimport zum endgültigen Umschalten würde eine vorab geänderte Zieleinstellung wieder durch den Quellpfad ersetzen; bestehende Bildreferenzen sollen erhalten bleiben.
+
+**How to apply:** Bilder an denselben absoluten Pfad übertragen, getrennt vom Anwendungscode und geschützt vor allgemeinem Dateizugriff. Vor dem Start die Lesbarkeit für den eigenen App-Dienst prüfen; kurz vor Umschaltung letzte Dateisynchronisation durchführen.
+
 **Why:** Der Nutzer hat den gemeinsamen Betrieb ausdrücklich als Randbedingung der Migration genannt.
 
 **How to apply:** Erst vorhandenen Webserver, Dienste und Portbelegung prüfen. Einen eigenen namensbasierten VirtualHost/server-Block und separaten App-Dienst ergänzen; keine globale IP-Weiterleitung aus der obigen Einzelserver-Anleitung übernehmen. Vorhandene Datenbanken nicht neu initialisieren. Datenbank und lokalen Dateispeicher gemeinsam migrieren, vor DNS-Wechsel testen. Die vorhandene RHEL-Anleitung bezieht sich auf RHEL 7.9 und darf nicht ungeprüft für RHEL 9.7 verwendet werden.
