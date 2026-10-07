@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useRefreshEinlagerung, useEinlagerungState, useWarehouseShelfStatus } from "../use-einlagerung";
 import { errMsg, nf, P, type D } from "../lib";
 import { ShelfStockDrops } from "./shelf-stock-drops";
+import { ScannerIstDetails } from "./scanner-ist-details";
 
 function Count({ label, n, pal, imported }: { label: string; n: number; pal: number; imported: boolean }) {
   return (
@@ -66,8 +67,9 @@ export function LocationCard({ loc, label, has, imported, highlight, separateSto
         <Count label="Aufträge" n={ord.length} pal={total?.auftraege ?? 0} imported={imported.auftraege} />
       </div>)}
       {!separateStock && (ist.length > 0 || ret.length > 0 || ord.length > 0) && (
-        scannerDetails ? <div className="text-xs text-slate-600 space-y-1" data-testid={`scanner-details-${loc.shelf.id}`}>
-          {stockDetails(ist, ret, ord)}
+        scannerDetails ? <div className="text-xs text-slate-600 space-y-2" data-testid={`scanner-details-${loc.shelf.id}`}>
+          <ScannerIstDetails rows={ist} testId={`scanner-ist-${loc.shelf.id}`} />
+          <div className="space-y-1">{stockDetails([], ret, ord)}</div>
         </div> : <details className="text-xs text-slate-600">
           <summary className="cursor-pointer text-slate-500 hover:text-slate-900">Details anzeigen</summary>
           <div className="mt-2 space-y-1">{stockDetails(ist, ret, ord)}</div>
