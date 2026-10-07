@@ -428,6 +428,10 @@ export { ensureReportWeeklyLogTable, runPasswordExpiryReminderCheck, ensureRecon
 const SLA_CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 export function startScheduler(io: SocketIOServer) {
+  if (process.env.DISABLE_SCHEDULER === "true") {
+    logger.info("Scheduler disabled by DISABLE_SCHEDULER");
+    return;
+  }
   const deliveryCheck = () => runDeliveryReportCheck().catch((err) => logger.warn({ err }, "Lieferterminprüfung fehlgeschlagen"));
   void deliveryCheck();
   setInterval(deliveryCheck, 60_000);

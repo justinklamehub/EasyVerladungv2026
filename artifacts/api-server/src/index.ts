@@ -242,7 +242,7 @@ io.on("connection", (socket) => {
   });
 });
 
-httpServer.listen(port, async (err?: Error) => {
+httpServer.listen({ port, ...(process.env.HOST ? { host: process.env.HOST } : {}) }, async (err?: Error) => {
   if (err) {
     logger.error({ err }, "Error listening on port");
     process.exit(1);

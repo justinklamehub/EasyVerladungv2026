@@ -108,3 +108,9 @@ Eine erfolgreiche globale npm-Installation bedeutet auf dem Zielserver nicht, da
 **Why:** pnpm war installiert und direkt ausführbar, wurde aber unter seinem Befehlsnamen von der sudo-Shell nicht gefunden.
 
 **How to apply:** Den Installationsort ermitteln und direkte Aufrufe verwenden, statt Pakete erneut zu installieren oder die globale sudo-Konfiguration zu ändern.
+
+Während der parallelen Migration darf der neue Testserver keine automatischen Jobs oder Benachrichtigungen ausführen; sein Backend soll nur auf localhost erreichbar sein.
+
+**Why:** Eine kopierte Datenbank enthält weiterhin aktive Berichts- und Erinnerungseinstellungen. Ein zweiter normaler Serverstart könnte echte Empfänger doppelt benachrichtigen; öffentliche Scanner-Schreibzugriffe sollen nicht über einen ungeschützten Backend-Port möglich sein.
+
+**How to apply:** Automatische Jobs auf dem Testserver vor dessen erstem Start deaktivieren und das Backend an localhost binden. Beim endgültigen Umschalten Jobs erst nach Stilllegung der alten Instanz aktivieren.

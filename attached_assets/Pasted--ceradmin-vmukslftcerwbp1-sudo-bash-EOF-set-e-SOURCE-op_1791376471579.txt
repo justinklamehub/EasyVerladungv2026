@@ -1,0 +1,96 @@
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+set -e
+
+SOURCE="/opt/easy-verladung/transfer/server.env"
+CONFIG_DIR="/etc/easy-verladung"
+PICTURES="/opt/comet/app/pictures"
+API="/opt/easy-verladung/app/artifacts/api-server"
+
+test -f "$SOURCE"
+test -d "$PICTURES"
+test -f "$API/dist/index.mjs"
+
+if getent passwd easyverladung >/dev/null ||
+   getent group easyverladung >/dev/null; then
+  echo "Stopp: Benutzer oder Gruppe easyverladung existiert bereits."
+  exit 1
+fi
+
+if [ -e "$CONFIG_DIR" ]; then
+  echo "Stopp: Konfigurationsverzeichnis existiert bereits."
+  exit 1
+fi
+
+# Eigenes Systemkonto ohne interaktive Anmeldung
+useradd --system --user-group --no-create-home \
+  --home-dir /nonexistent \
+  --shell /sbin/nologin \
+  easyverladung
+
+# Geschützte Betriebsdatei
+install -d -o root -g easyverladung -m 0750 "$CONFIG_DIR"
+install -o root -g easyverladung -m 0640 \
+  "$SOURCE" "$CONFIG_DIR/server.env"
+
+# Nur der eigene Dienstbenutzer erhält Zugriff auf die Bilder
+chown -R easyverladung:easyverladung "$PICTURES"
+
+# Rechte prüfen, ohne vertrauliche Inhalte auszugeben
+runuser -u easyverladung -- test -r "$CONFIG_DIR/server.env"
+runuser -u easyverladung -- test -r "$API/dist/index.mjs"
+runuser -u easyverladung -- test -w "$PICTURES"
+
+echo "Dienstbenutzer und Zugriffsrechte erfolgreich vorbereitet."
+echo "Node.js-Pfad:"
+command -v node
+EOF
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+set -e
+
+SOURCE="/opt/easy-verladung/transfer/server.env"
+CONFIG_DIR="/etc/easy-verladung"
+PICTURES="/opt/comet/app/pictures"
+API="/opt/easy-verladung/app/artifacts/api-server"
+
+test -f "$SOURCE"
+test -d "$PICTURES"
+test -f "$API/dist/index.mjs"
+
+if getent passwd easyverladung >/dev/null ||
+   getent group easyverladung >/dev/null; then
+  echo "Stopp: Benutzer oder Gruppe easyverladung existiert bereits."
+  exit 1
+fi
+
+if [ -e "$CONFIG_DIR" ]; then
+  echo "Stopp: Konfigurationsverzeichnis existiert bereits."
+  exit 1
+fi
+
+# Eigenes Systemkonto ohne interaktive Anmeldung
+useradd --system --user-group --no-create-home \
+  --home-dir /nonexistent \
+  --shell /sbin/nologin \
+  easyverladung
+
+# Geschützte Betriebsdatei
+install -d -o root -g easyverladung -m 0750 "$CONFIG_DIR"
+install -o root -g easyverladung -m 0640 \
+  "$SOURCE" "$CONFIG_DIR/server.env"
+
+# Nur der eigene Dienstbenutzer erhält Zugriff auf die Bilder
+chown -R easyverladung:easyverladung "$PICTURES"
+
+# Rechte prüfen, ohne vertrauliche Inhalte auszugeben
+runuser -u easyverladung -- test -r "$CONFIG_DIR/server.env"
+runuser -u easyverladung -- test -r "$API/dist/index.mjs"
+runuser -u easyverladung -- test -w "$PICTURES"
+
+echo "Dienstbenutzer und Zugriffsrechte erfolgreich vorbereitet."
+echo "Node.js-Pfad:"
+command -v node
+EOF
+Dienstbenutzer und Zugriffsrechte erfolgreich vorbereitet.
+Node.js-Pfad:
+/bin/node
+[ceradmin@vmukslftcerwbp1 ~]$
