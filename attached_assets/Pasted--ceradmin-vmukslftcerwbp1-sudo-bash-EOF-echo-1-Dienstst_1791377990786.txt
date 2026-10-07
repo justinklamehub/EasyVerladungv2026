@@ -1,0 +1,56 @@
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+echo "1. Dienststatus:"
+systemctl is-active nginx easy-verladung.service
+
+echo "2. Listener:"
+ss -ltnp '( sport = :8082 or sport = :8083 )'
+
+echo "3. Frontend lokal über Nginx:"
+curl --noproxy '*' --connect-timeout 5 --max-time 10 \
+  --silent --show-error --head http://10.106.4.13:8083/
+
+echo "4. API lokal über Nginx:"
+curl --noproxy '*' --connect-timeout 5 --max-time 10 \
+  --silent --show-error http://10.106.4.13:8083/api/healthz
+printf '\n'
+
+echo "5. Firewall-Freigabe für deinen PC:"
+RULE='rule family="ipv4" source address="172.16.193.202/32" destination address="10.106.4.13/32" port port="8083" protocol="tcp" accept'
+firewall-cmd --zone=public --query-rich-rule="$RULE"
+
+echo "6. Neue Nginx-Include-Zeile:"
+grep -n 'easy-verladung-test.conf' /etc/nginx/nginx.conf
+
+echo "7. Nginx-Konfigurationsprüfung:"
+nginx -t
+EOF
+1. Dienststatus:
+active
+active
+2. Listener:
+State             Recv-Q            Send-Q                       Local Address:Port                       Peer Address:Port           Process
+LISTEN            0                 511                              127.0.0.1:8082                            0.0.0.0:*               users:(("node",pid=689858,fd=18))
+LISTEN            0                 511                            10.106.4.13:8083                            0.0.0.0:*               users:(("nginx",pid=1079961,fd=15),("nginx",pid=689903,fd=15))
+3. Frontend lokal über Nginx:
+HTTP/1.1 200 OK
+Server: nginx/1.26.3
+Date: Wed, 07 Oct 2026 12:58:47 GMT
+Content-Type: text/html
+Content-Length: 2181
+Last-Modified: Wed, 07 Oct 2026 12:08:50 GMT
+Connection: keep-alive
+ETag: "6ac63652-885"
+Accept-Ranges: bytes
+
+4. API lokal über Nginx:
+{"status":"ok"}
+5. Firewall-Freigabe für deinen PC:
+yes
+6. Neue Nginx-Include-Zeile:
+21:include /etc/nginx/conf.d/easy-verladung-test.conf;
+7. Nginx-Konfigurationsprüfung:
+nginx: [warn] low address bits of 172.18.0.0/12 are meaningless in /etc/nginx/conf.d/easyretoure.conf:31
+nginx: [warn] the "listen ... http2" directive is deprecated, use the "http2" directive instead in /etc/nginx/conf.d/easydispo.conf:12
+nginx: the configuration file /etc/nginx/nginx.conf syntax is ok
+nginx: configuration file /etc/nginx/nginx.conf test is successful
+[ceradmin@vmukslftcerwbp1 ~]$
