@@ -14,3 +14,9 @@ Vormerkungen müssen im Scanner suchbar sein. In der Einlagerungsmaske der angem
 **Why:** Der Nutzer hat die Vormerkungssuche im Scanner und die vollständige Verwaltung in der App ausdrücklich verlangt.
 
 **How to apply:** Die Suchfilter auch im Vormerkungsbereich anbieten und anwenden. Löschen wurde für die App verlangt, nicht als Erweiterung des anonymen Scanner-Zugriffs.
+
+In Scanneransichten keine „Zurück“-Knöpfe anzeigen. Nach dem Start einer Suche das Scaneingabefeld leeren. Bei der Scanner-Artikelsuche die Übersicht „IST, RETOUREN und AUFTRÄGE“ weglassen und stattdessen die Details direkt anzeigen.
+
+**Why:** Der Nutzer hat diese Vereinfachungen ausdrücklich für die Scanneransicht verlangt.
+
+**How to apply:** Den übermittelten Suchbegriff unabhängig vom geleerten Eingabefeld erhalten, sodass Ergebnisse und erneute Scans funktionieren. Die Darstellung der angemeldeten Artikelsuche nicht ungefragt ändern.

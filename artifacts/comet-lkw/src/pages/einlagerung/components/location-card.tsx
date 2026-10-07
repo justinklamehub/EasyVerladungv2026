@@ -22,9 +22,9 @@ function Count({ label, n, pal, imported }: { label: string; n: number; pal: num
   );
 }
 
-export function LocationCard({ loc, label, has, imported, highlight, separateStock = false }: {
+export function LocationCard({ loc, label, has, imported, highlight, separateStock = false, scannerDetails = false }: {
   loc: EinlagerungSearchResultLocationsItem; label?: string; has: (k: string) => boolean;
-  imported: { ist: boolean; retouren: boolean; auftraege: boolean }; highlight?: boolean; separateStock?: boolean;
+  imported: { ist: boolean; retouren: boolean; auftraege: boolean }; highlight?: boolean; separateStock?: boolean; scannerDetails?: boolean;
 }) {
   const { data: state } = useEinlagerungState();
   const total = state?.occupancy.find((x) => x.shelf === String(loc.shelf.data.name));
@@ -60,19 +60,17 @@ export function LocationCard({ loc, label, has, imported, highlight, separateSto
       </div>
       {loc.note && <p className="text-sm text-slate-700 bg-slate-50 rounded-md px-3 py-2">{loc.note}</p>}
       {full && sd.fullNote ? <p className="text-xs text-red-700">Vollmeldung: {String(sd.fullNote)}</p> : null}
-      {separateStock ? <ShelfStockDrops shelfId={loc.shelf.id} ist={ist} retouren={ret} auftraege={ord} imported={imported} totals={total} /> : <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+      {!scannerDetails && (separateStock ? <ShelfStockDrops shelfId={loc.shelf.id} ist={ist} retouren={ret} auftraege={ord} imported={imported} totals={total} /> : <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
         <Count label="IST" n={ist.length} pal={total?.ist ?? 0} imported={imported.ist} />
         <Count label="Retouren" n={ret.length} pal={total?.retouren ?? 0} imported={imported.retouren} />
         <Count label="Aufträge" n={ord.length} pal={total?.auftraege ?? 0} imported={imported.auftraege} />
-      </div>}
+      </div>)}
       {!separateStock && (ist.length > 0 || ret.length > 0 || ord.length > 0) && (
-        <details className="text-xs text-slate-600">
+        scannerDetails ? <div className="text-xs text-slate-600 space-y-1" data-testid={`scanner-details-${loc.shelf.id}`}>
+          {stockDetails(ist, ret, ord)}
+        </div> : <details className="text-xs text-slate-600">
           <summary className="cursor-pointer text-slate-500 hover:text-slate-900">Details anzeigen</summary>
-          <div className="mt-2 space-y-1">
-            {ist.map((x, i) => <div key={`i${i}`}>IST: {String(x.material)} - {nf(Number(x.paletten) || 0)} Pal.</div>)}
-            {ret.map((x, i) => <div key={`r${i}`}>Retoure: {String(x.kunde)} - {nf(Number(x.paletten) || 0)} Pal.</div>)}
-            {ord.map((x, i) => <div key={`o${i}`}>Auftrag: {String(x.spedition)} / {String(x.relation)} / {String(x.termin)} - {nf(Number(x.paletten) || 0)} Pal.</div>)}
-          </div>
+          <div className="mt-2 space-y-1">{stockDetails(ist, ret, ord)}</div>
         </details>
       )}
       {((!full && has(P.full)) || (full && has(P.release))) && (
@@ -91,4 +89,12 @@ export function LocationCard({ loc, label, has, imported, highlight, separateSto
       )}
     </div>
   );
+}
+
+function stockDetails(ist: D[], ret: D[], ord: D[]) {
+  return <>
+    {ist.map((x, i) => <div key={`i${i}`}>IST: {String(x.material)} - {nf(Number(x.paletten) || 0)} Pal.</div>)}
+    {ret.map((x, i) => <div key={`r${i}`}>Retoure: {String(x.kunde)} - {nf(Number(x.paletten) || 0)} Pal.</div>)}
+    {ord.map((x, i) => <div key={`o${i}`}>Auftrag: {String(x.spedition)} / {String(x.relation)} / {String(x.termin)} - {nf(Number(x.paletten) || 0)} Pal.</div>)}
+  </>;
 }

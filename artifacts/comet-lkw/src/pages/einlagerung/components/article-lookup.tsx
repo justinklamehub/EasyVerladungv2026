@@ -8,7 +8,7 @@ import { LocationCard } from "./location-card";
 import { datasetOf, DATASET_LABELS, errMsg, useModel } from "../lib";
 import { useEinlagerungState, useWarehouseSearch } from "../use-einlagerung";
 
-export function ArticleLookup({ has, large }: { has: (k: string) => boolean; large?: boolean }) {
+export function ArticleLookup({ has, large, scannerMode = false }: { has: (k: string) => boolean; large?: boolean; scannerMode?: boolean }) {
   const [text, setText] = useState("");
   const [submitted, setSubmitted] = useState("");
   const ref = useRef<HTMLInputElement>(null);
@@ -32,7 +32,12 @@ export function ArticleLookup({ has, large }: { has: (k: string) => boolean; lar
     if (!v) return;
     setSubmitted(v);
     if (v === submitted) q.refetch();
-    ref.current?.select();
+    if (scannerMode) {
+      setText("");
+      ref.current?.focus();
+    } else {
+      ref.current?.select();
+    }
   };
 
   const res = q.data;
@@ -78,7 +83,7 @@ export function ArticleLookup({ has, large }: { has: (k: string) => boolean; lar
             <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6 text-center text-sm text-slate-500">Kein Lagerplatz für diese Eingabe gefunden.</div>
           )}
           {res.locations.map((loc, i) => (
-            <LocationCard key={loc.shelf.id} loc={loc} has={has} imported={imported} highlight={i === 0}
+            <LocationCard key={loc.shelf.id} loc={loc} has={has} imported={imported} highlight={i === 0} scannerDetails={scannerMode}
               label={`${i === 0 ? "Erste Wahl - " : ""}${model.shelfLabel(model.shelfById.get(loc.shelf.id))}`} />
           ))}
         </div>

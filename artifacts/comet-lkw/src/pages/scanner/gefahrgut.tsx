@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocation, useSearch } from "wouter";
 import {
-  CheckSquare, Square, ChevronLeft, Send, RotateCcw,
+  CheckSquare, Square, Send, RotateCcw,
   PenTool, CheckCircle2, AlertCircle, Loader2, Camera, X, ImagePlus,
 } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
@@ -853,9 +853,6 @@ export default function ScannerGefahrgutPage() {
       )}
 
       <div style={S.header}>
-        <button style={S.backBtn} onClick={() => setLocation("/scanner")}>
-          <ChevronLeft size={16} /> Zurück
-        </button>
         <div style={S.headerTitle}>
           <div style={{ fontSize: 10, color: "#475569", letterSpacing: "0.1em", textTransform: "uppercase" }}>
             FB LOG – 016
@@ -1222,9 +1219,6 @@ export default function ScannerGefahrgutPage() {
             ? <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
             : <Send size={18} />}
           {isSubmitting ? "WIRD GESENDET..." : "CHECKLISTE ABSCHICKEN"}
-        </button>
-        <button style={S.resetBtn} onClick={() => setLocation("/scanner")}>
-          <ChevronLeft size={16} /> ZURÜCK
         </button>
       </div>
 

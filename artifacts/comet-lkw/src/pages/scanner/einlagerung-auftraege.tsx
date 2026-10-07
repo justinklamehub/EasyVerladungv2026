@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, Pencil, Plus, Search, Ban, Check, ScanLine, Loader2 } from "lucide-react";
+import { Pencil, Plus, Search, Ban, Check, ScanLine, Loader2 } from "lucide-react";
 import type { SearchEinlagerungParams } from "@workspace/api-client-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export default function ScannerEinlagerungAuftraegePage() {
   const stateQ = useEinlagerungState(allowed);
   const model = useModel(stateQ.data);
   const [draft, setDraft] = useState(EMPTY);
+  const searchRef = useRef<HTMLInputElement>(null);
   const [applied, setApplied] = useState(EMPTY);
   const [resFilter, setResFilter] = useState("offen");
   const [edit, setEdit] = useState<Rec | null>(null);
@@ -99,9 +100,6 @@ export default function ScannerEinlagerungAuftraegePage() {
 
   const header = (
     <header className="sticky top-0 z-10 bg-white border-b border-slate-200 px-4 py-3 flex items-center gap-3">
-      <button onClick={() => setLocation("/scanner")} className="flex items-center gap-1 text-sm text-slate-600 border border-slate-200 rounded-md px-2.5 py-1.5" data-testid="button-scanner-back">
-        <ChevronLeft className="w-4 h-4" />Zurück
-      </button>
       <div className="flex-1">
         <div className="text-[11px] uppercase tracking-[0.15em] text-slate-500">COMET LKW - Scanner</div>
         <div className="font-bold">Einlagerung Aufträge</div>
@@ -147,9 +145,11 @@ export default function ScannerEinlagerungAuftraegePage() {
           const unchanged = (["q", "spedition", "relation", "termin", "shelfId"] as const)
             .every((key) => draft[key].trim() === applied[key].trim());
           setApplied({ ...draft });
+          setDraft((current) => ({ ...current, q: "" }));
+          searchRef.current?.focus();
           if (unchanged) void q.refetch();
         }}>
-          <Input value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })}
+          <Input ref={searchRef} value={draft.q} onChange={(e) => setDraft({ ...draft, q: e.target.value })}
             placeholder={view === "reserve" ? "Vormerkung: Regal, Spedition, Relation, Hinweis oder ID" : "Auftrag, Lieferung oder HU"}
             aria-label={view === "reserve" ? "Vormerkungen suchen" : "Aufträge suchen"} data-testid="input-orders-q" />
           <div className="grid grid-cols-2 gap-2">

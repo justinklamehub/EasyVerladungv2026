@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useLocation, useSearch } from "wouter";
-import { ChevronLeft, Send, RotateCcw, CheckCircle2, AlertCircle, Loader2, PenTool, Camera, ImagePlus, X } from "lucide-react";
+import { useSearch } from "wouter";
+import { Send, RotateCcw, CheckCircle2, AlertCircle, Loader2, PenTool, Camera, ImagePlus, X } from "lucide-react";
 import { useUpload } from "@workspace/object-storage-web";
 
 const BASE = import.meta.env.BASE_URL.replace(/\/$/, "");
@@ -461,7 +461,6 @@ function LiveCamera({
 type PendingPhoto = { previewUrl: string; objectPath: string; fileName: string; contentType: string };
 
 export default function ScannerWareneingangPage() {
-  const [, setLocation] = useLocation();
   const search = useSearch();
   const params = new URLSearchParams(search);
   const shipmentId = params.get("shipmentId") || "";
@@ -629,12 +628,6 @@ export default function ScannerWareneingangPage() {
             {submitError}
           </div>
         )}
-        <button
-          style={{ ...S.submitBtn, marginTop: 8, width: "auto", padding: "12px 28px" }}
-          onClick={() => setLocation("/scanner")}
-        >
-          Zurück zum Scanner
-        </button>
       </div>
     );
   }
@@ -667,9 +660,6 @@ export default function ScannerWareneingangPage() {
 
       {/* Header */}
       <div style={S.header}>
-        <button style={S.backBtn} onClick={() => setLocation("/scanner")}>
-          <ChevronLeft size={15} /> Zurück
-        </button>
         <div style={{ flex: 1, textAlign: "center" }}>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>Wareneingangsprotokoll</div>
           {(shipmentId || bezeichnung) && (
