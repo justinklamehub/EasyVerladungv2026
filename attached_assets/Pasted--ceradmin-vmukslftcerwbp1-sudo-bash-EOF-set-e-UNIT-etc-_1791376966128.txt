@@ -1,0 +1,64 @@
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+set -e
+
+UNIT="/etc/systemd/system/easy-verladung.service"
+API="/opt/easy-verladung/app/artifacts/api-server"
+
+if systemctl cat easy-verladung.service >/dev/null 2>&1 ||
+   [ -e "$UNIT" ] || [ -L "$UNIT" ]; then
+  echo "Stopp: Der Dienst existiert bereits."
+  exit 1
+fi
+
+if ss -H -ltn 'sport = :8082' | grep -q .; then
+  echo "Stopp: Port 8082 ist bereits belegt."
+  exit 1
+fi
+
+cd "$API"
+
+# Einstellungen prüfen, ohne Zugangsdaten auszugeben
+runuser -u easyverladung -- /bin/node \
+  --env-file=/etc/easy-verladung/server.env \
+  -e '
+const expected = {
+  NODE_ENV: "production",
+  HOST: "127.0.0.1",
+  PORT: "8082",
+  DISABLE_SCHEDULER: "true",
+  COOKIE_SECURE: "true"
+};
+
+for (const [key, value] of Object.entries(expected)) {
+  if (process.env[key] !== value) {
+    console.error("Stopp: Einstellung prüfen: " + key);
+    process.exit(1);
+  }
+}
+
+for (const key of ["DATABASE_URL", "SESSION_SECRET"]) {
+  if (!process.env[key]) {
+    console.error("Stopp: Einstellung fehlt: " + key);
+    process.exit(1);
+  }
+}
+
+console.log("Sicherheitswerte geprüft.");
+'
+
+cat > "$UNIT" <<'UNITFILE'
+[Unit]
+Description=Easy Verladung API
+EOFrnalctl -u easy-verladung.service -n 40 --no-pagerernr.env --enable-source-maps /opt/easy-verladung/app/artifacts/api-server/dist/index.mjs
+Sicherheitswerte geprüft.
+Created symlink /etc/systemd/system/multi-user.target.wants/easy-verladung.service → /etc/systemd/system/easy-verladung.service.
+Dienststatus:
+active
+Lokale API-Antwort:
+{"status":"ok"}
+Gebundener Port:
+State                Recv-Q               Send-Q                               Local Address:Port                               Peer Address:Port               Process
+LISTEN               0                    511                                      127.0.0.1:8082                                    0.0.0.0:*                   users:(("node",pid=688796,fd=18))
+Letzte Dienstmeldungen:
+Okt 07 14:42:45 vmukslftcerwbp1.rhidm.net systemd[1]: Started Easy Verladung API.
+[ceradmin@vmukslftcerwbp1 ~]$
