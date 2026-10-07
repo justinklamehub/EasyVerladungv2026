@@ -82,3 +82,9 @@ Auf dem RHEL-Zielserver ist `/home` ein separates Dateisystem mit nur etwa 1 GB 
 **Why:** Der Offline-Paketimport erschöpfte den Platz in `/home`, obwohl andere Dateisysteme noch frei waren.
 
 **How to apply:** Vor dem Transfer Platz und Inodes des tatsächlichen Zieldateisystems prüfen. Paketspeicher, Caches und Projektverzeichnis auf einem ausreichend großen Dateisystem planen; freien Platz für die bestehenden Websites und Datenbanken berücksichtigen.
+
+Für die Servermigration gilt die Nutzervorgabe: „Es muss alles über sudo laufen.“
+
+**Why:** Der Nutzer verlangt dies ausdrücklich für die Arbeit auf dem Zielserver.
+
+**How to apply:** Weitere Serverbefehle mit `sudo` angeben; bei Befehlsblöcken auch Umleitungen und Shell-Operationen unter einer passenden sudo-Shell ausführen. Der dauerhafte App-Dienst benötigt deswegen keine Root-Rechte; bei Bedarf `sudo -u` für dessen Dienstbenutzer verwenden.
