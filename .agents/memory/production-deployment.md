@@ -121,11 +121,11 @@ Der Ziel-Nginx bindet die beiden bestehenden Website-Konfigurationen einzeln ein
 
 **How to apply:** Für die Verladungsdomain genau eine zusätzliche Include-Zeile im passenden Nginx-Kontext ergänzen, bestehende Includes erhalten und vor Reload prüfen. SELinux nicht im Zuge dieser Migration umstellen.
 
-Für den RHEL-Betrieb hat der Nutzer ausdrücklich die neue Domain `easy-verladung.de` mit Bindestrich gewählt; die bisherige Domain lautet `easyverladung.de`.
+Für den RHEL-Betrieb hat der Nutzer ausdrücklich die neue Domain `easy-verladung.de` mit Bindestrich gewählt und `www.easy-verladung.de` als geplanten Zertifikatsnamen genannt; die bisherige Domain lautet `easyverladung.de`.
 
 **Why:** Der Nutzer bestätigte die neue Domain nach Prüfung des bisherigen Zertifikats.
 
-**How to apply:** Endgültige Domain- und HTTPS-Konfiguration auf die neue Domain ausrichten. Das bisherige Zertifikat ohne Bindestrich deckt sie nicht ab und darf nicht als passendes Zertifikat wiederverwendet werden.
+**How to apply:** Endgültige Domain- und HTTPS-Konfiguration auf die neue Domain ausrichten; für `www` und die Apex-Domain jeweils nur dann Zugriff einrichten, wenn DNS und Zertifikat den jeweiligen Namen tatsächlich abdecken. Das bisherige Zertifikat ohne Bindestrich deckt die neue Domain nicht ab und darf nicht als passendes Zertifikat wiederverwendet werden.
 
 Beim vorläufigen Zugriff über die Server-IP können HTTP und HTTPS unterschiedliche Apps zeigen: Der namensbasierte HTTP-Testzugang zur Verladung funktioniert, während HTTPS über dieselbe IP weiterhin die bestehende RETOURE-Seite liefert.
 
