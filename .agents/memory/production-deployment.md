@@ -88,3 +88,9 @@ Für die Servermigration gilt die Nutzervorgabe: „Es muss alles über sudo lau
 **Why:** Der Nutzer verlangt dies ausdrücklich für die Arbeit auf dem Zielserver.
 
 **How to apply:** Weitere Serverbefehle mit `sudo` angeben; bei Befehlsblöcken auch Umleitungen und Shell-Operationen unter einer passenden sudo-Shell ausführen. Der dauerhafte App-Dienst benötigt deswegen keine Root-Rechte; bei Bedarf `sudo -u` für dessen Dienstbenutzer verwenden.
+
+Eine erfolgreiche globale npm-Installation bedeutet auf dem Zielserver nicht, dass deren Befehle im Suchpfad der sudo-Shell liegen.
+
+**Why:** pnpm war installiert und direkt ausführbar, wurde aber unter seinem Befehlsnamen von der sudo-Shell nicht gefunden.
+
+**How to apply:** Den Installationsort ermitteln und direkte Aufrufe verwenden, statt Pakete erneut zu installieren oder die globale sudo-Konfiguration zu ändern.
