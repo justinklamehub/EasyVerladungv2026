@@ -71,8 +71,14 @@ Fix: redirect all IP traffic to HTTPS domain in Apache `000-default.conf`:
 
 Der Nutzer möchte die selbst gehostete Verladungsanwendung von Debian 12 auf RHEL 9.7 übertragen. Auf dem Zielserver laufen bereits zwei andere Websites; sie müssen unverändert weiterlaufen.
 
-Die vom Nutzer gelieferte Bestandsprüfung bestätigt Nginx als aktiven Webserver und eine bestehende MariaDB. Apache ist inaktiv; Node.js, pnpm und der PostgreSQL-Client sind nicht installiert. PostgreSQL für die Verladungsanwendung zusätzlich und getrennt einrichten, MariaDB nicht ersetzen.
+Die vom Nutzer gelieferte Bestandsprüfung bestätigt Nginx als aktiven Webserver und eine bestehende MariaDB. PostgreSQL für die Verladungsanwendung zusätzlich und getrennt einrichten, MariaDB nicht ersetzen.
 
 **Why:** Der Nutzer hat den gemeinsamen Betrieb ausdrücklich als Randbedingung der Migration genannt.
 
 **How to apply:** Erst vorhandenen Webserver, Dienste und Portbelegung prüfen. Einen eigenen namensbasierten VirtualHost/server-Block und separaten App-Dienst ergänzen; keine globale IP-Weiterleitung aus der obigen Einzelserver-Anleitung übernehmen. Vorhandene Datenbanken nicht neu initialisieren. Datenbank und lokalen Dateispeicher gemeinsam migrieren, vor DNS-Wechsel testen. Die vorhandene RHEL-Anleitung bezieht sich auf RHEL 7.9 und darf nicht ungeprüft für RHEL 9.7 verwendet werden.
+
+Auf dem RHEL-Zielserver ist `/home` ein separates Dateisystem mit nur etwa 1 GB Kapazität. Große Offline-Paketspeicher und Build-Dateien nicht im Home-Verzeichnis vorbereiten.
+
+**Why:** Der Offline-Paketimport erschöpfte den Platz in `/home`, obwohl andere Dateisysteme noch frei waren.
+
+**How to apply:** Vor dem Transfer Platz und Inodes des tatsächlichen Zieldateisystems prüfen. Paketspeicher, Caches und Projektverzeichnis auf einem ausreichend großen Dateisystem planen; freien Platz für die bestehenden Websites und Datenbanken berücksichtigen.
