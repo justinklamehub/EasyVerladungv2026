@@ -1,0 +1,83 @@
+root@crimson-snake-71460:/opt/comet/app# sudo bash <<'EOF'
+set -e
+
+SOURCE="/opt/comet/app/artifacts/api-server/.env"
+COPY="/root/easy-verladung-server.env"
+
+test -f "$SOURCE"
+
+if [ -e "$COPY" ]; then
+  echo "Stopp: Die geschützte Kopie existiert bereits."
+  exit 1
+fi
+
+install -o root -g root -m 0600 "$SOURCE" "$COPY"
+
+echo "Geschützte Kopie erstellt. Inhalt wird nicht ausgegeben."
+EOF
+Geschützte Kopie erstellt. Inhalt wird nicht ausgegeben.
+root@crimson-snake-71460:/opt/comet/app# sudo bash <<'EOF'
+echo "Server:"
+hostname
+
+if [ "$(hostname -s)" != "crimson-snake-71460" ]; then
+  echo "Stopp: Diese Prüfung gehört auf den alten Debian-Server."
+  exit 1
+fi
+
+if [ ! -d /etc/apache2/sites-enabled ]; then
+  echo "Apache-Konfigurationsverzeichnis nicht vorhanden."
+  exit 1
+fi
+
+echo "Domains und Zertifikatspfade:"
+grep -RHE \
+  '^[[:space:]]*(ServerName|ServerAlias|SSLCertificateFile|SSLCertificateKeyFile|SSLCertificateChainFile)[[:space:]]' \
+  /etc/apache2/sites-enabled
+
+echo "Öffentliche Zertifikatsinformationen:"
+grep -RhE \
+  '^[[:space:]]*SSLCertificateFile[[:space:]]' \
+  /etc/apache2/sites-enabled |
+  awk '{print $2}' |
+  sort -u |
+  while IFS= read -r CERT; do
+    CERT="${CERT#\"}"
+    CERT="${CERT%\"}"
+    if [ -f "$CERT" ]; then
+      echo "Zertifikat: $CERT"
+      openssl x509 -in "$CERT" -noout -dates -ext subjectAltName
+    fi
+  done
+EOF
+Server:
+crimson-snake-71460
+Domains und Zertifikatspfade:
+/etc/apache2/sites-enabled/easyverladung-le-ssl.conf:        ServerName easyverladung.de
+/etc/apache2/sites-enabled/easyverladung-le-ssl.conf:        ServerAlias www.easyverladung.de
+/etc/apache2/sites-enabled/easyverladung-le-ssl.conf:        SSLCertificateFile /etc/letsencrypt/live/easyverladung.de/fullchain.pem
+/etc/apache2/sites-enabled/easyverladung-le-ssl.conf:        SSLCertificateKeyFile /etc/letsencrypt/live/easyverladung.de/privkey.pem
+/etc/apache2/sites-enabled/comet.conf:    ServerName 87.237.54.218
+/etc/apache2/sites-enabled/code5gaming.eu.conf:    ServerName code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:    ServerAlias www.code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:    ServerName code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:    ServerAlias www.code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:    SSLCertificateFile /etc/letsencrypt/live/rda-tool.de/fullchain.pem
+/etc/apache2/sites-enabled/code5gaming.eu.conf:    SSLCertificateKeyFile /etc/letsencrypt/live/rda-tool.de/privkey.pem
+/etc/apache2/sites-enabled/easyverladung.conf:    ServerName easyverladung.de
+/etc/apache2/sites-enabled/easyverladung.conf:    ServerAlias www.easyverladung.de
+/etc/apache2/sites-enabled/000-default-le-ssl.conf:ServerName rda-tool.de
+/etc/apache2/sites-enabled/000-default-le-ssl.conf:SSLCertificateFile /etc/letsencrypt/live/rda-tool.de/fullchain.pem
+/etc/apache2/sites-enabled/000-default-le-ssl.conf:SSLCertificateKeyFile /etc/letsencrypt/live/rda-tool.de/privkey.pem
+Öffentliche Zertifikatsinformationen:
+Zertifikat: /etc/letsencrypt/live/easyverladung.de/fullchain.pem
+notBefore=Aug 28 10:09:42 2026 GMT
+notAfter=Nov 26 10:09:41 2026 GMT
+X509v3 Subject Alternative Name:
+    DNS:easyverladung.de, DNS:www.easyverladung.de
+Zertifikat: /etc/letsencrypt/live/rda-tool.de/fullchain.pem
+notBefore=Apr  2 15:19:28 2026 GMT
+notAfter=Jul  1 15:19:27 2026 GMT
+X509v3 Subject Alternative Name:
+    DNS:code5gaming.eu, DNS:rda-tool.de, DNS:www.code5gaming.eu
+root@crimson-snake-71460:/opt/comet/app#
