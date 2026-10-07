@@ -1,0 +1,77 @@
+[ceradmin@vmukslftcerwbp1 ~]$ sudo bash <<'EOF'
+set -e
+
+cd /opt/easy-verladung/app
+PNPM_CLI="$(npm root -g)/pnpm/bin/pnpm.cjs"
+
+node <<'NODE'
+const fs = require("node:fs");
+
+const changes = [
+  {
+    file: "artifacts/api-server/src/index.ts",
+    old: "httpServer.listen(port, async (err?: Error) => {",
+    replacement:
+      "httpServer.listen({ port, ...(process.env.HOST ? { host: process.env.HOST } : {}) }, async (err?: Error) => {"
+  },
+  {
+    file: "artifacts/api-server/src/lib/scheduler.ts",
+    old: "export function startScheduler(io: SocketIOServer) {\n",
+    replacement:
+      "export function startScheduler(io: SocketIOServer) {\n" +
+      '  if (process.env.DISABLE_SCHEDULER === "true") {\n' +
+      '    logger.info("Scheduler disabled by DISABLE_SCHEDULER");\n' +
+      "    return;\n" +
+      "  }\n"
+  }
+];
+
+const pending = [];
+
+// Beide Änderungen prüfen, bevor eine Datei verändert wird
+for (const change of changes) {
+  const source = fs.readFileSync(change.file, "utf8");
+
+  if (source.includes(change.replacement)) {
+    console.log("Bereits vorbereitet: " + change.file);
+    continue;
+  }
+
+  if (source.split(change.old).length !== 2) {
+    throw new Error("Unerwarteter Quellcode. Nichts erzwingen: " + change.file);
+  }
+
+  const backup = change.file + ".before-rhel-safety";
+  if (fs.existsSync(backup)) {
+    throw new Error("Sicherung existiert bereits: " + backup);
+  }
+
+  pending.push({
+    ...change,
+    backup,
+EOFo "Sicherheitsoptionen eingebaut. Backend noch nicht gestartet."_EXCL);
+Vorbereitet und gesichert: artifacts/api-server/src/index.ts
+Vorbereitet und gesichert: artifacts/api-server/src/lib/scheduler.ts
+
+> @workspace/api-server@0.0.0 typecheck /opt/easy-verladung/app/artifacts/api-server
+> tsc -p tsconfig.json --noEmit
+
+
+> @workspace/api-server@0.0.0 build /opt/easy-verladung/app/artifacts/api-server
+> node ./build.mjs
+
+
+  dist/index.mjs                       3.8mb ⚠️
+  dist/pino-worker.mjs               153.4kb
+  dist/pino-file.mjs                 142.1kb
+  dist/pino-pretty.mjs               114.6kb
+  dist/thread-stream-worker.mjs        7.3kb
+  dist/index.mjs.map                   6.5mb
+  dist/pino-worker.mjs.map           256.9kb
+  dist/pino-file.mjs.map             229.0kb
+  dist/pino-pretty.mjs.map           204.0kb
+  dist/thread-stream-worker.mjs.map   12.0kb
+
+⚡ Done in 240ms
+Sicherheitsoptionen eingebaut. Backend noch nicht gestartet.
+[ceradmin@vmukslftcerwbp1 ~]$
