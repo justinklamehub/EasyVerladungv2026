@@ -30,6 +30,38 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /user-preferences/shipments_work_views:
+    get:
+      operationId: getShipmentWorkViews
+      tags: [shipments]
+      summary: Persönliche Arbeitsansichten des angemeldeten Benutzers
+      responses:
+        "200":
+          description: Gespeicherte Ansichten oder eine leere Sammlung
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipmentWorkViewsPreference" }
+        "401": { description: Anmeldung erforderlich }
+        "422": { description: Gespeicherte Daten ungültig }
+    put:
+      operationId: putShipmentWorkViews
+      tags: [shipments]
+      summary: Persönliche Arbeitsansichten mit Versionsprüfung speichern
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ShipmentWorkViewsPreferenceInput" }
+      responses:
+        "200":
+          description: Gespeicherte Sammlung mit erhöhter Revision
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ShipmentWorkViewsPreferenceResult" }
+        "400": { description: Ungültige Ansichten }
+        "401": { description: Anmeldung erforderlich }
+        "409": { description: Sammlung zwischenzeitlich geändert }
+        "500": { description: Speicherung fehlgeschlagen }
   /admin/system/operations:
     get:
       operationId: getAdminSystemOperations
@@ -1275,6 +1307,70 @@ paths:
 
 components:
   schemas:
+    ShipmentWorkViewDateRange:
+      oneOf:
+        - type: object
+          additionalProperties: false
+          required: [mode]
+          properties:
+            mode: { type: string, enum: [today, tomorrow, thisWeek, all] }
+        - type: object
+          additionalProperties: false
+          required: [mode, from, to]
+          properties:
+            mode: { type: string, enum: [custom] }
+            from: { type: string, pattern: '^(?:[1-9]\d{3}-\d{2}-\d{2})?$' }
+            to: { type: string, pattern: '^(?:[1-9]\d{3}-\d{2}-\d{2})?$' }
+    ShipmentWorkViewFilterValues:
+      type: object
+      additionalProperties: false
+      required: [search, status, speditionId, lkwArt, tor, date, sortField, sortDir, showAbgefertigt, showStorniert]
+      properties:
+        search: { type: string, maxLength: 200 }
+        status: { type: string, enum: ["__all__", Angemeldet, Erwartet, Angekommen, "in Verladung", Verladen, Abgefertigt, Storniert] }
+        speditionId: { type: string, pattern: '^(?:__all__|[1-9]\d{0,9})$' }
+        lkwArt: { type: string, minLength: 1, maxLength: 100 }
+        tor: { type: string, minLength: 1, maxLength: 100 }
+        date: { $ref: "#/components/schemas/ShipmentWorkViewDateRange" }
+        sortField: { type: string, enum: [kennzeichen, etaDate, status, tor, speditionName] }
+        sortDir: { type: string, enum: [asc, desc] }
+        showAbgefertigt: { type: boolean }
+        showStorniert: { type: boolean }
+    ShipmentWorkViewEntry:
+      type: object
+      additionalProperties: false
+      required: [id, name, filters]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 60 }
+        filters: { $ref: "#/components/schemas/ShipmentWorkViewFilterValues" }
+    ShipmentWorkViewsCollection:
+      type: object
+      additionalProperties: false
+      required: [version, revision, views]
+      properties:
+        version: { type: integer, enum: [1] }
+        revision: { type: integer, minimum: 0, maximum: 2147483647 }
+        views:
+          type: array
+          maxItems: 30
+          items: { $ref: "#/components/schemas/ShipmentWorkViewEntry" }
+    ShipmentWorkViewsPreference:
+      type: object
+      required: [value]
+      properties:
+        value: { $ref: "#/components/schemas/ShipmentWorkViewsCollection" }
+    ShipmentWorkViewsPreferenceInput:
+      type: object
+      required: [value]
+      properties:
+        value: { $ref: "#/components/schemas/ShipmentWorkViewsCollection" }
+    ShipmentWorkViewsPreferenceResult:
+      type: object
+      required: [ok, value]
+      properties:
+        ok: { type: boolean }
+        value: { $ref: "#/components/schemas/ShipmentWorkViewsCollection" }
     SystemUpdateConfirmation:
       type: object
       required: [confirm]

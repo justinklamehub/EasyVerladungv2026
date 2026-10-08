@@ -5,6 +5,113 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export type ShipmentWorkViewDateRange = {
+  mode: 'today' | 'tomorrow' | 'thisWeek' | 'all';
+} | {
+  mode: 'custom';
+  /** @pattern ^(?:[1-9]\d{3}-\d{2}-\d{2})?$ */
+  from: string;
+  /** @pattern ^(?:[1-9]\d{3}-\d{2}-\d{2})?$ */
+  to: string;
+};
+
+export type ShipmentWorkViewFilterValuesStatus = typeof ShipmentWorkViewFilterValuesStatus[keyof typeof ShipmentWorkViewFilterValuesStatus];
+
+
+export const ShipmentWorkViewFilterValuesStatus = {
+  __all__: '__all__',
+  Angemeldet: 'Angemeldet',
+  Erwartet: 'Erwartet',
+  Angekommen: 'Angekommen',
+  in_Verladung: 'in Verladung',
+  Verladen: 'Verladen',
+  Abgefertigt: 'Abgefertigt',
+  Storniert: 'Storniert',
+} as const;
+
+export type ShipmentWorkViewFilterValuesSortField = typeof ShipmentWorkViewFilterValuesSortField[keyof typeof ShipmentWorkViewFilterValuesSortField];
+
+
+export const ShipmentWorkViewFilterValuesSortField = {
+  kennzeichen: 'kennzeichen',
+  etaDate: 'etaDate',
+  status: 'status',
+  tor: 'tor',
+  speditionName: 'speditionName',
+} as const;
+
+export type ShipmentWorkViewFilterValuesSortDir = typeof ShipmentWorkViewFilterValuesSortDir[keyof typeof ShipmentWorkViewFilterValuesSortDir];
+
+
+export const ShipmentWorkViewFilterValuesSortDir = {
+  asc: 'asc',
+  desc: 'desc',
+} as const;
+
+export interface ShipmentWorkViewFilterValues {
+  /** @maxLength 200 */
+  search: string;
+  status: ShipmentWorkViewFilterValuesStatus;
+  /** @pattern ^(?:__all__|[1-9]\d{0,9})$ */
+  speditionId: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  lkwArt: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  tor: string;
+  date: ShipmentWorkViewDateRange;
+  sortField: ShipmentWorkViewFilterValuesSortField;
+  sortDir: ShipmentWorkViewFilterValuesSortDir;
+  showAbgefertigt: boolean;
+  showStorniert: boolean;
+}
+
+export interface ShipmentWorkViewEntry {
+  id: string;
+  /**
+     * @minLength 1
+     * @maxLength 60
+     */
+  name: string;
+  filters: ShipmentWorkViewFilterValues;
+}
+
+export type ShipmentWorkViewsCollectionVersion = typeof ShipmentWorkViewsCollectionVersion[keyof typeof ShipmentWorkViewsCollectionVersion];
+
+
+export const ShipmentWorkViewsCollectionVersion = {
+  NUMBER_1: 1,
+} as const;
+
+export interface ShipmentWorkViewsCollection {
+  version: ShipmentWorkViewsCollectionVersion;
+  /**
+     * @minimum 0
+     * @maximum 2147483647
+     */
+  revision: number;
+  /** @maxItems 30 */
+  views: ShipmentWorkViewEntry[];
+}
+
+export interface ShipmentWorkViewsPreference {
+  value: ShipmentWorkViewsCollection;
+}
+
+export interface ShipmentWorkViewsPreferenceInput {
+  value: ShipmentWorkViewsCollection;
+}
+
+export interface ShipmentWorkViewsPreferenceResult {
+  ok: boolean;
+  value: ShipmentWorkViewsCollection;
+}
+
 export interface SystemUpdateConfirmation {
   confirm: boolean;
 }

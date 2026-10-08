@@ -9,6 +9,156 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Persönliche Arbeitsansichten des angemeldeten Benutzers
+ */
+export const getShipmentWorkViewsResponseValueRevisionMin = 0;
+export const getShipmentWorkViewsResponseValueRevisionMax = 2147483647;
+
+export const getShipmentWorkViewsResponseValueViewsItemNameMax = 60;
+
+export const getShipmentWorkViewsResponseValueViewsItemFiltersSearchMax = 200;
+
+export const getShipmentWorkViewsResponseValueViewsItemFiltersSpeditionIdRegExp = new RegExp('^(?:__all__|[1-9]\\d{0,9})$');
+export const getShipmentWorkViewsResponseValueViewsItemFiltersLkwArtMax = 100;
+
+export const getShipmentWorkViewsResponseValueViewsItemFiltersTorMax = 100;
+
+export const getShipmentWorkViewsResponseValueViewsItemFiltersDateTwoFromRegExp = new RegExp('^(?:[1-9]\\d{3}-\\d{2}-\\d{2})?$');
+export const getShipmentWorkViewsResponseValueViewsItemFiltersDateTwoToRegExp = new RegExp('^(?:[1-9]\\d{3}-\\d{2}-\\d{2})?$');
+export const getShipmentWorkViewsResponseValueViewsMax = 30;
+
+
+
+export const GetShipmentWorkViewsResponse = zod.object({
+  "value": zod.object({
+  "version": zod.literal(1),
+  "revision": zod.number().min(getShipmentWorkViewsResponseValueRevisionMin).max(getShipmentWorkViewsResponseValueRevisionMax),
+  "views": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string().min(1).max(getShipmentWorkViewsResponseValueViewsItemNameMax),
+  "filters": zod.object({
+  "search": zod.string().max(getShipmentWorkViewsResponseValueViewsItemFiltersSearchMax),
+  "status": zod.enum(['__all__', 'Angemeldet', 'Erwartet', 'Angekommen', 'in Verladung', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "speditionId": zod.string().regex(getShipmentWorkViewsResponseValueViewsItemFiltersSpeditionIdRegExp),
+  "lkwArt": zod.string().min(1).max(getShipmentWorkViewsResponseValueViewsItemFiltersLkwArtMax),
+  "tor": zod.string().min(1).max(getShipmentWorkViewsResponseValueViewsItemFiltersTorMax),
+  "date": zod.union([zod.object({
+  "mode": zod.enum(['today', 'tomorrow', 'thisWeek', 'all'])
+}),zod.object({
+  "mode": zod.enum(['custom']),
+  "from": zod.string().regex(getShipmentWorkViewsResponseValueViewsItemFiltersDateTwoFromRegExp),
+  "to": zod.string().regex(getShipmentWorkViewsResponseValueViewsItemFiltersDateTwoToRegExp)
+})]),
+  "sortField": zod.enum(['kennzeichen', 'etaDate', 'status', 'tor', 'speditionName']),
+  "sortDir": zod.enum(['asc', 'desc']),
+  "showAbgefertigt": zod.boolean(),
+  "showStorniert": zod.boolean()
+})
+})).max(getShipmentWorkViewsResponseValueViewsMax)
+})
+})
+
+
+/**
+ * @summary Persönliche Arbeitsansichten mit Versionsprüfung speichern
+ */
+export const putShipmentWorkViewsBodyValueRevisionMin = 0;
+export const putShipmentWorkViewsBodyValueRevisionMax = 2147483647;
+
+export const putShipmentWorkViewsBodyValueViewsItemNameMax = 60;
+
+export const putShipmentWorkViewsBodyValueViewsItemFiltersSearchMax = 200;
+
+export const putShipmentWorkViewsBodyValueViewsItemFiltersSpeditionIdRegExp = new RegExp('^(?:__all__|[1-9]\\d{0,9})$');
+export const putShipmentWorkViewsBodyValueViewsItemFiltersLkwArtMax = 100;
+
+export const putShipmentWorkViewsBodyValueViewsItemFiltersTorMax = 100;
+
+export const putShipmentWorkViewsBodyValueViewsItemFiltersDateTwoFromRegExp = new RegExp('^(?:[1-9]\\d{3}-\\d{2}-\\d{2})?$');
+export const putShipmentWorkViewsBodyValueViewsItemFiltersDateTwoToRegExp = new RegExp('^(?:[1-9]\\d{3}-\\d{2}-\\d{2})?$');
+export const putShipmentWorkViewsBodyValueViewsMax = 30;
+
+
+
+export const PutShipmentWorkViewsBody = zod.object({
+  "value": zod.object({
+  "version": zod.literal(1),
+  "revision": zod.number().min(putShipmentWorkViewsBodyValueRevisionMin).max(putShipmentWorkViewsBodyValueRevisionMax),
+  "views": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string().min(1).max(putShipmentWorkViewsBodyValueViewsItemNameMax),
+  "filters": zod.object({
+  "search": zod.string().max(putShipmentWorkViewsBodyValueViewsItemFiltersSearchMax),
+  "status": zod.enum(['__all__', 'Angemeldet', 'Erwartet', 'Angekommen', 'in Verladung', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "speditionId": zod.string().regex(putShipmentWorkViewsBodyValueViewsItemFiltersSpeditionIdRegExp),
+  "lkwArt": zod.string().min(1).max(putShipmentWorkViewsBodyValueViewsItemFiltersLkwArtMax),
+  "tor": zod.string().min(1).max(putShipmentWorkViewsBodyValueViewsItemFiltersTorMax),
+  "date": zod.union([zod.object({
+  "mode": zod.enum(['today', 'tomorrow', 'thisWeek', 'all'])
+}),zod.object({
+  "mode": zod.enum(['custom']),
+  "from": zod.string().regex(putShipmentWorkViewsBodyValueViewsItemFiltersDateTwoFromRegExp),
+  "to": zod.string().regex(putShipmentWorkViewsBodyValueViewsItemFiltersDateTwoToRegExp)
+})]),
+  "sortField": zod.enum(['kennzeichen', 'etaDate', 'status', 'tor', 'speditionName']),
+  "sortDir": zod.enum(['asc', 'desc']),
+  "showAbgefertigt": zod.boolean(),
+  "showStorniert": zod.boolean()
+})
+})).max(putShipmentWorkViewsBodyValueViewsMax)
+})
+})
+
+export const putShipmentWorkViewsResponseValueRevisionMin = 0;
+export const putShipmentWorkViewsResponseValueRevisionMax = 2147483647;
+
+export const putShipmentWorkViewsResponseValueViewsItemNameMax = 60;
+
+export const putShipmentWorkViewsResponseValueViewsItemFiltersSearchMax = 200;
+
+export const putShipmentWorkViewsResponseValueViewsItemFiltersSpeditionIdRegExp = new RegExp('^(?:__all__|[1-9]\\d{0,9})$');
+export const putShipmentWorkViewsResponseValueViewsItemFiltersLkwArtMax = 100;
+
+export const putShipmentWorkViewsResponseValueViewsItemFiltersTorMax = 100;
+
+export const putShipmentWorkViewsResponseValueViewsItemFiltersDateTwoFromRegExp = new RegExp('^(?:[1-9]\\d{3}-\\d{2}-\\d{2})?$');
+export const putShipmentWorkViewsResponseValueViewsItemFiltersDateTwoToRegExp = new RegExp('^(?:[1-9]\\d{3}-\\d{2}-\\d{2})?$');
+export const putShipmentWorkViewsResponseValueViewsMax = 30;
+
+
+
+export const PutShipmentWorkViewsResponse = zod.object({
+  "ok": zod.boolean(),
+  "value": zod.object({
+  "version": zod.literal(1),
+  "revision": zod.number().min(putShipmentWorkViewsResponseValueRevisionMin).max(putShipmentWorkViewsResponseValueRevisionMax),
+  "views": zod.array(zod.object({
+  "id": zod.string().uuid(),
+  "name": zod.string().min(1).max(putShipmentWorkViewsResponseValueViewsItemNameMax),
+  "filters": zod.object({
+  "search": zod.string().max(putShipmentWorkViewsResponseValueViewsItemFiltersSearchMax),
+  "status": zod.enum(['__all__', 'Angemeldet', 'Erwartet', 'Angekommen', 'in Verladung', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "speditionId": zod.string().regex(putShipmentWorkViewsResponseValueViewsItemFiltersSpeditionIdRegExp),
+  "lkwArt": zod.string().min(1).max(putShipmentWorkViewsResponseValueViewsItemFiltersLkwArtMax),
+  "tor": zod.string().min(1).max(putShipmentWorkViewsResponseValueViewsItemFiltersTorMax),
+  "date": zod.union([zod.object({
+  "mode": zod.enum(['today', 'tomorrow', 'thisWeek', 'all'])
+}),zod.object({
+  "mode": zod.enum(['custom']),
+  "from": zod.string().regex(putShipmentWorkViewsResponseValueViewsItemFiltersDateTwoFromRegExp),
+  "to": zod.string().regex(putShipmentWorkViewsResponseValueViewsItemFiltersDateTwoToRegExp)
+})]),
+  "sortField": zod.enum(['kennzeichen', 'etaDate', 'status', 'tor', 'speditionName']),
+  "sortDir": zod.enum(['asc', 'desc']),
+  "showAbgefertigt": zod.boolean(),
+  "showStorniert": zod.boolean()
+})
+})).max(putShipmentWorkViewsResponseValueViewsMax)
+})
+})
+
+
+/**
  * @summary Update-Fortschritt und letzte gemeinsame Sicherung
  */
 export const getAdminSystemOperationsResponseBackupOneImageCountMin = 0;

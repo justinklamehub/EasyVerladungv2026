@@ -20,6 +20,8 @@ import { getListShipmentsQueryKey } from "@workspace/api-client-react";
 import { useSocketStatus } from "@/hooks/use-socket";
 import { usePermissions } from "@/hooks/use-permissions";
 import { slaWarning, SlaThresholds, SLA_DEFAULTS } from "@/lib/sla";
+import { resolveWorkViewDates, type ShipmentWorkViewFilters, type WorkViewDate } from "@workspace/api-zod/shipment-work-views";
+import { WorkViewsBar } from "./components/work-views-bar";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
@@ -140,14 +142,35 @@ export default function ShipmentsPage() {
   const [filterSpeditionId, setFilterSpeditionId] = useState("__all__");
   const [filterLkwArt, setFilterLkwArt] = useState("__all__");
   const [filterTor, setFilterTor] = useState("__all__");
-  const today = new Date().toISOString().slice(0, 10);
+  const today = resolveWorkViewDates({ mode: "today" }).from;
+  const [dateMode, setDateMode] = useState<WorkViewDate["mode"]>("today");
+  const [calendarNow, setCalendarNow] = useState(() => new Date());
   const [filterDateFrom, setFilterDateFrom] = useState(today);
   const [filterDateTo, setFilterDateTo] = useState(today);
   const [sortField, setSortField] = useState<SortField>("etaDate");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [showAbgefertigt, setShowAbgefertigt] = useState(false);
   const [showStorniert, setShowStorniert] = useState(false);
+  const workDate: WorkViewDate = dateMode === "custom"
+    ? { mode: "custom", from: filterDateFrom, to: filterDateTo }
+    : { mode: dateMode };
+  const effectiveDates = resolveWorkViewDates(workDate, calendarNow);
+  const workViewFilters = {
+    search, status: filterStatus, speditionId: filterSpeditionId,
+    lkwArt: filterLkwArt, tor: filterTor, date: workDate,
+    sortField, sortDir, showAbgefertigt, showStorniert,
+  } as ShipmentWorkViewFilters;
+  useEffect(() => {
+    const refresh = () => setCalendarNow(new Date());
+    const timer = setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    return () => { clearInterval(timer); window.removeEventListener("focus", refresh); };
+  }, []);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    // A relative range can advance at midnight without an explicit view switch.
+    setSelectedIds(new Set());
+  }, [effectiveDates.from, effectiveDates.to]);
   const [bulkStatus, setBulkStatus] = useState("__none__");
   const [bulkWareStatus, setBulkWareStatus] = useState("__none__");
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
@@ -258,8 +281,8 @@ export default function ShipmentsPage() {
     speditionId: filterSpeditionId !== "__all__" ? Number(filterSpeditionId) : undefined,
     lkwArt: filterLkwArt !== "__all__" ? filterLkwArt : undefined,
     tor: filterTor !== "__all__" ? filterTor : undefined,
-    dateFrom: filterDateFrom || undefined,
-    dateTo: filterDateTo || undefined,
+    dateFrom: effectiveDates.from || undefined,
+    dateTo: effectiveDates.to || undefined,
   };
 
   const { data: shipments, isLoading } = useListShipments(queryParams);
@@ -420,6 +443,27 @@ export default function ShipmentsPage() {
     setFilterTor("__all__");
     setFilterDateFrom("");
     setFilterDateTo("");
+    setDateMode("all");
+    setSelectedIds(new Set());
+  }
+
+  function applyWorkView(filters: ShipmentWorkViewFilters) {
+    // Do not keep hidden rows selected for bulk actions after switching working sets.
+    setSelectedIds(new Set());
+    setSearch(filters.search);
+    setFilterStatus(filters.status);
+    setFilterSpeditionId(isCometUser ? filters.speditionId : "__all__");
+    setFilterLkwArt(filters.lkwArt);
+    setFilterTor(filters.tor);
+    setSortField(filters.sortField);
+    setSortDir(filters.sortDir);
+    setShowAbgefertigt(filters.showAbgefertigt);
+    setShowStorniert(filters.showStorniert);
+    setDateMode(filters.date.mode);
+    const dates = resolveWorkViewDates(filters.date);
+    setFilterDateFrom(dates.from);
+    setFilterDateTo(dates.to);
+    setCalendarNow(new Date());
   }
 
   function buildExportRows(rows: Shipment[]) {
@@ -474,8 +518,8 @@ export default function ShipmentsPage() {
     filterSpeditionId !== "__all__" ||
     filterLkwArt !== "__all__" ||
     filterTor !== "__all__" ||
-    filterDateFrom !== "" ||
-    filterDateTo !== "";
+    effectiveDates.from !== "" ||
+    effectiveDates.to !== "";
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -537,6 +581,7 @@ export default function ShipmentsPage() {
       </div>
 
       <div className="app-filter-bar p-4 border shadow-sm space-y-3">
+        <WorkViewsBar key={user?.id} filters={workViewFilters} onApply={applyWorkView} />
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative flex-1 min-w-[180px] max-w-sm">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -658,12 +703,34 @@ export default function ShipmentsPage() {
 
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2 text-sm text-slate-600">
+            <span>Zeitraum:</span>
+            <Select value={dateMode} onValueChange={(mode: WorkViewDate["mode"]) => {
+              const dates = resolveWorkViewDates(mode === "custom"
+                ? { mode, from: effectiveDates.from, to: effectiveDates.to } : { mode });
+              setDateMode(mode);
+              setFilterDateFrom(dates.from);
+              setFilterDateTo(dates.to);
+            }}>
+              <SelectTrigger className="w-[160px] h-8" aria-label="ETA-Zeitraum" data-testid="shipment-date-preset">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="today">Heute</SelectItem>
+                <SelectItem value="tomorrow">Morgen</SelectItem>
+                <SelectItem value="thisWeek">Diese Woche</SelectItem>
+                <SelectItem value="all">Alle Zeiträume</SelectItem>
+                <SelectItem value="custom">Fester Zeitraum</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-2 text-sm text-slate-600">
             <span>ETA von:</span>
             <Input
               type="date"
               className="w-[145px] h-8 text-sm"
-              value={filterDateFrom}
-              onChange={(e) => setFilterDateFrom(e.target.value)}
+              aria-label="ETA von"
+              value={effectiveDates.from}
+              onChange={(e) => { setDateMode("custom"); setFilterDateFrom(e.target.value); setFilterDateTo(effectiveDates.to); }}
             />
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -671,8 +738,9 @@ export default function ShipmentsPage() {
             <Input
               type="date"
               className="w-[145px] h-8 text-sm"
-              value={filterDateTo}
-              onChange={(e) => setFilterDateTo(e.target.value)}
+              aria-label="ETA bis"
+              value={effectiveDates.to}
+              onChange={(e) => { setDateMode("custom"); setFilterDateTo(e.target.value); setFilterDateFrom(effectiveDates.from); }}
             />
           </div>
 

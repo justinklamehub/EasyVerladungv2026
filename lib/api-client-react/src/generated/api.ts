@@ -61,6 +61,9 @@ import type {
   Shipment,
   ShipmentInput,
   ShipmentUpdate,
+  ShipmentWorkViewsPreference,
+  ShipmentWorkViewsPreferenceInput,
+  ShipmentWorkViewsPreferenceResult,
   Spedition,
   SpeditionInput,
   SpeditionPermission,
@@ -88,6 +91,154 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
+export const getGetShipmentWorkViewsUrl = () => {
+
+
+
+
+  return `/api/user-preferences/shipments_work_views`
+}
+
+/**
+ * @summary Persönliche Arbeitsansichten des angemeldeten Benutzers
+ */
+export const getShipmentWorkViews = async ( options?: RequestInit): Promise<ShipmentWorkViewsPreference> => {
+
+  return customFetch<ShipmentWorkViewsPreference>(getGetShipmentWorkViewsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetShipmentWorkViewsQueryKey = () => {
+    return [
+    `/api/user-preferences/shipments_work_views`
+    ] as const;
+    }
+
+
+export const getGetShipmentWorkViewsQueryOptions = <TData = Awaited<ReturnType<typeof getShipmentWorkViews>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentWorkViews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetShipmentWorkViewsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShipmentWorkViews>>> = ({ signal }) => getShipmentWorkViews({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShipmentWorkViews>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetShipmentWorkViewsQueryResult = NonNullable<Awaited<ReturnType<typeof getShipmentWorkViews>>>
+export type GetShipmentWorkViewsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Persönliche Arbeitsansichten des angemeldeten Benutzers
+ */
+
+export function useGetShipmentWorkViews<TData = Awaited<ReturnType<typeof getShipmentWorkViews>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentWorkViews>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetShipmentWorkViewsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getPutShipmentWorkViewsUrl = () => {
+
+
+
+
+  return `/api/user-preferences/shipments_work_views`
+}
+
+/**
+ * @summary Persönliche Arbeitsansichten mit Versionsprüfung speichern
+ */
+export const putShipmentWorkViews = async (shipmentWorkViewsPreferenceInput: ShipmentWorkViewsPreferenceInput, options?: RequestInit): Promise<ShipmentWorkViewsPreferenceResult> => {
+
+  return customFetch<ShipmentWorkViewsPreferenceResult>(getPutShipmentWorkViewsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      shipmentWorkViewsPreferenceInput,)
+  }
+);}
+
+
+
+
+export const getPutShipmentWorkViewsMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putShipmentWorkViews>>, TError,{data: BodyType<ShipmentWorkViewsPreferenceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof putShipmentWorkViews>>, TError,{data: BodyType<ShipmentWorkViewsPreferenceInput>}, TContext> => {
+
+const mutationKey = ['putShipmentWorkViews'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof putShipmentWorkViews>>, {data: BodyType<ShipmentWorkViewsPreferenceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  putShipmentWorkViews(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PutShipmentWorkViewsMutationResult = NonNullable<Awaited<ReturnType<typeof putShipmentWorkViews>>>
+    export type PutShipmentWorkViewsMutationBody = BodyType<ShipmentWorkViewsPreferenceInput>
+    export type PutShipmentWorkViewsMutationError = ErrorType<void>
+
+    /**
+ * @summary Persönliche Arbeitsansichten mit Versionsprüfung speichern
+ */
+export const usePutShipmentWorkViews = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof putShipmentWorkViews>>, TError,{data: BodyType<ShipmentWorkViewsPreferenceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof putShipmentWorkViews>>,
+        TError,
+        {data: BodyType<ShipmentWorkViewsPreferenceInput>},
+        TContext
+      > => {
+      return useMutation(getPutShipmentWorkViewsMutationOptions(options));
+    }
 
 export const getGetAdminSystemOperationsUrl = () => {
 
