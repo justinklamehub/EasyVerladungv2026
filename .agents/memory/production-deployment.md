@@ -35,6 +35,12 @@ Die vorhandene PM2-Systemd-Unit separat prüfen: `enabled` bedeutet nicht, dass 
 
 **How to apply:** Aktiven Listener, Service-Status und Pfade gemeinsam prüfen. Die alte root-API erst nach geprüftem Start im korrigierten comet-Dienst aus dessen PM2-Liste und gespeichertem Boot-Stand entfernen; andere root-Anwendungen nicht neu starten.
 
+Für Debian wurde der comet-Dienst ausdrücklich auf globale zugängliche Node-/PM2-Binaries, `/opt/comet/.pm2` und das ursprüngliche App-CWD abgestimmt. Er startet die API mit ihrer vorhandenen Env-Datei, statt den falschen alten PM2-Stand wiederherzustellen.
+
+**Why:** Der explizit korrigierte Dienst wurde erfolgreich aktiv, die API lief unter comet und der root-Boot-Stand enthielt anschließend nur die unberührten anderen Anwendungen. Die automatische alte Unit war trotz aktiviertem Autostart nicht verwendbar.
+
+**How to apply:** Den funktionierenden comet-Dienst nicht ungeprüft durch eine aus der root-NVM-Umgebung erzeugte PM2-Startup-Unit ersetzen. Dienstkonfigurationssicherungen nicht als Datenbank-/Bildsicherungen darstellen; eine bestätigte Service-Inbetriebnahme ist noch kein getesteter vollständiger Server-Reboot.
+
 ## Produktionsumgebung und Einlagerungsübernahme
 
 Der Nutzer hat bestätigt: Das produktive COMET-System läuft „auf meinem eigenen Server außerhalb von Replit“.
