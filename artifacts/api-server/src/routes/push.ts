@@ -1,7 +1,7 @@
 import { Router } from "express";
 import webpush from "web-push";
-import { pool, db, notifications, usersTable } from "@workspace/db";
-import { eq } from "drizzle-orm";
+import { pool, db, notifications, usersTable, speditionenTable } from "@workspace/db";
+import { asc, eq } from "drizzle-orm";
 import { requireAuth, requireCometAdmin, requireRoles } from "../lib/auth";
 import { can } from "../lib/permissions";
 
@@ -348,6 +348,29 @@ export async function sendPushToUsers(
 }
 
 // ── Custom (Ad-hoc) Push von Admin/Leitstand ────────────────────────────────
+
+// The management /users route has different permissions and scope. This minimal
+// directory follows send-custom's existing permission and global recipient scope.
+router.get("/push/recipients", requireAuth, async (req, res) => {
+  try {
+    if (!(await can(req.session.role!, "push.send_custom"))) {
+      return res.status(403).json({ error: "Keine Berechtigung zum Senden von Nachrichten" });
+    }
+    const recipients = await db.select({
+      id: usersTable.id,
+      username: usersTable.username,
+      role: usersTable.role,
+      isActive: usersTable.isActive,
+      speditionName: speditionenTable.name,
+    }).from(usersTable)
+      .leftJoin(speditionenTable, eq(usersTable.speditionId, speditionenTable.id))
+      .orderBy(asc(usersTable.username), asc(usersTable.id));
+    return res.json(recipients);
+  } catch (err) {
+    req.log.error({ err }, "Nachrichtenempfänger konnten nicht geladen werden");
+    return res.status(500).json({ error: "Empfänger konnten nicht geladen werden" });
+  }
+});
 
 router.post("/push/send-custom", requireAuth, async (req: any, res) => {
   try {

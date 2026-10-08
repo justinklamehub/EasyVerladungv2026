@@ -8,34 +8,36 @@ import {
   settingsTable,
 } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
+import { and, or, gte, lte, eq } from "drizzle-orm";
+import { buildDashboardAnalytics, dashboardRange } from "../lib/dashboard-analytics";
 
 const router = Router();
 
 router.get("/dashboard", requireAuth, async (req, res) => {
   try {
-    const { dateFrom, dateTo } = req.query as Record<string, string>;
+    const { dateFrom, dateTo } = req.query;
     const role = req.session.role!;
     const sessionSpeditionId = req.session.speditionId;
 
-    const today = new Date().toISOString().split("T")[0];
-    const from = dateFrom || today;
-    const to = dateTo || today;
-
-    let shipments = await db.select().from(shipmentsTable);
-
-    // Filter by date range
-    shipments = shipments.filter(
-      (s) =>
-        (s.etaDate && s.etaDate >= from && s.etaDate <= to) ||
-        (s.ataDate && s.ataDate >= from && s.ataDate <= to)
-    );
-
-    // Spedition users see only their own
-    if (["speditions_admin", "speditions_bearbeiter", "speditions_viewer"].includes(role)) {
-      shipments = shipments.filter((s) => s.speditionId === sessionSpeditionId);
-    }
-
     const now = new Date();
+    const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    let range;
+    try {
+      range = dashboardRange(dateFrom, dateTo, today);
+    } catch (error) {
+      return res.status(400).json({ error: error instanceof Error ? error.message : "Ungültiger Zeitraum" });
+    }
+    const { from, to } = range;
+    const scoped = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"].includes(role);
+    if (scoped && sessionSpeditionId == null) return res.status(403).json({ error: "Keine Spedition zugeordnet." });
+    const shipments = await db.select().from(shipmentsTable).where(and(
+      or(
+        and(gte(shipmentsTable.etaDate, from), lte(shipmentsTable.etaDate, to)),
+        and(gte(shipmentsTable.ataDate, from), lte(shipmentsTable.ataDate, to)),
+      ),
+      scoped ? eq(shipmentsTable.speditionId, sessionSpeditionId!) : undefined,
+    ));
+
     const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
 
     const totalShipments = shipments.length;
@@ -45,6 +47,7 @@ router.get("/dashboard", requireAuth, async (req, res) => {
 
     // Late: etaDate is today or earlier, etaTime is past, not yet arrived
     const lateShipments = shipments.filter((s) => {
+      if (["Abgefertigt", "Storniert"].includes(s.status)) return false;
       if (s.ataDate) return false;
       if (!s.etaDate || !s.etaTime) return false;
       return s.etaDate < today || (s.etaDate === today && s.etaTime < currentTime);
@@ -113,9 +116,10 @@ router.get("/dashboard", requireAuth, async (req, res) => {
       bySpedition,
       palletBalances,
       openReconciliations: filteredRecs.length,
+      analytics: buildDashboardAnalytics(shipments, from, to),
     });
   } catch (err) {
-    console.error(err);
+    req.log.error({ err }, "Dashboard-Auswertung fehlgeschlagen");
     return res.status(500).json({ error: "Internal server error" });
   }
 });

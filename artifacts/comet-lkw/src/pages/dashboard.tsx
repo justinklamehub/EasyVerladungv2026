@@ -1,388 +1,186 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useGetDashboard, customFetch } from "@workspace/api-client-react";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { format, subDays, startOfDay, endOfDay } from "date-fns";
-import { de } from "date-fns/locale";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from "recharts";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
-import { Calendar as CalendarIcon, Loader2, AlertCircle, AlertTriangle, CheckCircle2, Clock, RefreshCw } from "lucide-react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshCw, TriangleAlert } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useAuth } from "@/contexts/auth-context";
+import { LiveAlerts, type LiveAlert } from "./dashboard/live-alerts";
+import { Empty, FlowChart, HBar, Kpi, Panel, Punctuality, STATUS_COLORS } from "./dashboard/panels";
+import { PRESETS, fmtRange, resolvePreset, validateRange, type Preset } from "./dashboard/range";
 
-interface LiveAlert {
-  id: number;
-  bezeichnung: string | null;
-  kennzeichen: string | null;
-  status: string;
-  tor: string | null;
-  speditionName: string;
-  level: "warn" | "danger";
-  minutesWaiting: number;
-  alertReason: "timeInStatus" | "etaOverdue";
-}
-
-function fmtMinutes(min: number): string {
-  const h = Math.floor(min / 60);
-  const m = min % 60;
-  if (h > 0) return `${h}h ${m}min`;
-  return `${m}min`;
-}
+const TOP_N = 10;
 
 export default function DashboardPage() {
-  const [dateFilter, setDateFilter] = useState("today");
+  const { user } = useAuth();
+  const uid = user?.id ?? null;
+  const [preset, setPreset] = useState<Preset>("today");
+  const [applied, setApplied] = useState(() => resolvePreset("today"));
+  const [draft, setDraft] = useState(applied);
+  const draftError = validateRange(draft.from, draft.to);
+  const effective = preset === "custom" ? applied : resolvePreset(preset);
 
-  let dateFrom = format(startOfDay(new Date()), "yyyy-MM-dd");
-  let dateTo = format(endOfDay(new Date()), "yyyy-MM-dd");
+  const pick = (p: Preset) => {
+    setPreset(p);
+    const r = p === "custom" ? effective : resolvePreset(p);
+    setApplied(r); setDraft(r);
+  };
+  const params = { dateFrom: effective.from, dateTo: effective.to };
 
-  if (dateFilter === "tomorrow") {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    dateFrom = format(startOfDay(tomorrow), "yyyy-MM-dd");
-    dateTo = format(endOfDay(tomorrow), "yyyy-MM-dd");
-  } else if (dateFilter === "week") {
-    const start = new Date();
-    start.setDate(start.getDate() - start.getDay() + 1);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    dateFrom = format(startOfDay(start), "yyyy-MM-dd");
-    dateTo = format(endOfDay(end), "yyyy-MM-dd");
-  }
-
-  const { data, isLoading } = useGetDashboard({ dateFrom, dateTo });
-
-  const { data: liveData, dataUpdatedAt, isFetching: liveLoading } = useQuery<{
-    alerts: LiveAlert[];
-    checkedAt: string;
-  }>({
-    queryKey: ["dashboard-live-alerts"],
-    queryFn: () => customFetch("/api/dashboard/live-alerts"),
-    refetchInterval: 30_000,
+  const dash = useGetDashboard(params, {
+    query: {
+      queryKey: ["dashboard", uid, params.dateFrom, params.dateTo],
+      staleTime: 5 * 60_000, refetchOnWindowFocus: false, enabled: uid !== null,
+    },
+  });
+  const live = useQuery<{ alerts: LiveAlert[]; checkedAt: string }>({
+    queryKey: ["dashboard-live-alerts", uid],
+    queryFn: ({ signal }) => customFetch("/api/dashboard/live-alerts", { signal }),
+    refetchInterval: 30_000, enabled: uid !== null,
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex h-[50vh] items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!data) {
-    return (
-      <div className="flex h-[50vh] flex-col items-center justify-center text-slate-500">
-        <AlertCircle className="w-12 h-12 mb-4 text-slate-300" />
-        <p>Keine Daten verfügbar.</p>
-      </div>
-    );
-  }
-
-  const STATUS_COLORS: Record<string, string> = {
-    Angemeldet: "hsl(215.4 16.3% 46.9%)",
-    Erwartet: "hsl(220 70% 50%)",
-    Angekommen: "hsl(160 60% 45%)",
-    "in Verladung": "hsl(25 90% 55%)",
-    Verladen: "hsl(45 80% 50%)",
-    Abgefertigt: "hsl(173 58% 39%)",
-    Storniert: "hsl(0 84.2% 60.2%)",
-  };
-
-  const alerts = liveData?.alerts ?? [];
-  const dangerCount = alerts.filter((a) => a.level === "danger").length;
-  const warnCount = alerts.filter((a) => a.level === "warn").length;
-
-  const checkedAtStr = liveData?.checkedAt
-    ? format(new Date(liveData.checkedAt), "HH:mm", { locale: de })
-    : null;
+  const data = dash.data;
+  const a = data?.analytics;
+  const refresh = () => { void dash.refetch(); void live.refetch(); };
+  const spedTop = (data?.bySpedition ?? []).map((s) => ({ name: s.speditionName, count: s.count }))
+    .sort((x, y) => y.count - x.count || x.name.localeCompare(y.name, "de")).slice(0, TOP_N);
+  const spedCut = (data?.bySpedition.length ?? 0) > TOP_N;
+  const statusData = (data?.byStatus ?? []).map((s) => ({ name: s.status, count: s.count }));
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="mx-auto max-w-[1400px] space-y-4 overflow-x-hidden">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            Überblick und aktuelle Kennzahlen
+          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="text-sm text-muted-foreground" data-testid="text-effective-range">
+            Zeitraum: {fmtRange(effective.from, effective.to)}
           </p>
+          <p className="mt-1 text-xs text-muted-foreground">Verladungen mit ETA oder ATA im Zeitraum; Status zum aktuellen Stand.</p>
         </div>
-
-        <div className="flex items-center gap-2">
-          <Select value={dateFilter} onValueChange={setDateFilter}>
-            <SelectTrigger className="w-[180px] bg-white">
-              <CalendarIcon className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Zeitraum wählen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="today">Heute</SelectItem>
-              <SelectItem value="tomorrow">Morgen</SelectItem>
-              <SelectItem value="week">Diese Woche</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Zeitraum">
+          {PRESETS.map((p) => (
+            <Button key={p.id} size="sm" variant={preset === p.id ? "default" : "outline"} aria-pressed={preset === p.id}
+              onClick={() => pick(p.id)} data-testid={`button-range-${p.id}`}>{p.label}</Button>
+          ))}
+          <Button size="sm" variant="ghost" onClick={refresh} data-testid="button-refresh" aria-label="Aktualisieren">
+            <RefreshCw className={`mr-1.5 h-3.5 w-3.5 ${dash.isFetching || live.isFetching ? "animate-spin" : ""}`} />Aktualisieren
+          </Button>
         </div>
       </div>
 
-      {/* ── KPI Cards ── */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Gesamt</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-900">{data.totalShipments}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Erwartet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-blue-600">{data.expectedShipments}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Angekommen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-green-600">{data.arrivedShipments}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Offen</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-slate-700">{data.openShipments}</div>
-          </CardContent>
-        </Card>
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Verspätet</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold text-red-600">{data.lateShipments}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {preset === "custom" && (
+        <div className="flex flex-wrap items-end gap-2 rounded-lg border p-3" data-testid="panel-custom-range">
+          <label className="text-xs text-muted-foreground">Von
+            <Input type="date" value={draft.from} onChange={(e) => setDraft({ ...draft, from: e.target.value })} className="mt-1 w-40" data-testid="input-range-from" />
+          </label>
+          <label className="text-xs text-muted-foreground">Bis
+            <Input type="date" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} className="mt-1 w-40" data-testid="input-range-to" />
+          </label>
+          <Button size="sm" disabled={!!draftError} onClick={() => setApplied({ ...draft })} data-testid="button-range-apply">Anwenden</Button>
+          {draftError && <p role="alert" className="basis-full text-xs text-red-600" data-testid="error-range">{draftError}</p>}
+        </div>
+      )}
 
-      {/* ── Brennpunkt: Live SLA Alerts ── */}
-      <Card className={`shadow-sm border ${
-        dangerCount > 0 ? "border-red-200 bg-red-50/30 dark:border-red-800/60 dark:bg-red-950/20" :
-        warnCount > 0  ? "border-orange-200 bg-orange-50/20 dark:border-orange-800/60 dark:bg-orange-950/20" :
-        "border-slate-200 bg-white"
-      }`}>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              {dangerCount > 0
-                ? <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-                : warnCount > 0
-                ? <AlertTriangle className="w-5 h-5 text-orange-500 shrink-0" />
-                : <CheckCircle2 className="w-5 h-5 text-green-500 shrink-0" />
-              }
-              <CardTitle className="text-base">Handlungsbedarf</CardTitle>
-              {alerts.length > 0 && (
-                <div className="flex items-center gap-1">
-                  {dangerCount > 0 && (
-                    <Badge className="bg-red-500 text-white border-0 text-xs px-1.5">{dangerCount} kritisch</Badge>
-                  )}
-                  {warnCount > 0 && (
-                    <Badge className="bg-orange-400 text-white border-0 text-xs px-1.5">{warnCount} Warnung</Badge>
-                  )}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-400">
-              {liveLoading && <Loader2 className="w-3 h-3 animate-spin" />}
-              {checkedAtStr && (
-                <span className="flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3" />
-                  {checkedAtStr} Uhr
-                </span>
-              )}
-              <CardDescription className="text-xs">alle 30 Sek. aktualisiert</CardDescription>
-            </div>
+      <LiveAlerts alerts={live.data?.alerts} checkedAt={live.data?.checkedAt} loading={live.isLoading}
+        fetching={live.isFetching} error={live.isError} onRetry={() => void live.refetch()} />
+
+      {dash.isError && (
+        <div role="alert" data-testid="error-dashboard" className="flex flex-wrap items-center gap-2 rounded-md border border-red-300/70 bg-red-50/50 px-3 py-2 text-sm text-red-800 dark:bg-red-950/30 dark:text-red-200">
+          <TriangleAlert className="h-4 w-4" />
+          {data ? "Aktualisierung der Auswertung fehlgeschlagen – letzter erfolgreicher Stand wird angezeigt." : "Die Auswertung konnte nicht geladen werden."}
+          <Button size="sm" variant="outline" className="ml-auto" onClick={() => void dash.refetch()} data-testid="button-retry-dashboard">Erneut versuchen</Button>
+        </div>
+      )}
+
+      {dash.isLoading && (
+        <div className="space-y-3" data-testid="loading-dashboard">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">{Array.from({ length: 5 }, (_, i) => <div key={i} className="h-20 animate-pulse rounded-lg bg-muted" />)}</div>
+          <div className="h-64 animate-pulse rounded-lg bg-muted" />
+        </div>
+      )}
+      {data && !a && (
+        <div role="alert" data-testid="error-dashboard-contract" className="rounded-md border border-amber-300 p-3 text-sm">
+          Die API liefert keine Auswertungsdaten. Bitte Frontend und API gemeinsam aktualisieren.
+        </div>
+      )}
+
+      {data && a && (
+        <>
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            <Kpi testid="card-kpi-total" label="Gesamt" value={data.totalShipments} />
+            <Kpi testid="card-kpi-expected" label="Erwartet" value={data.expectedShipments} tone="text-blue-700 dark:text-blue-400" />
+            <Kpi testid="card-kpi-arrived" label="Angekommen" value={data.arrivedShipments} tone="text-emerald-700 dark:text-emerald-400" />
+            <Kpi testid="card-kpi-open" label="Offen" value={data.openShipments} />
+            <Kpi testid="card-kpi-late" label="Verspätet" value={data.lateShipments} tone="text-red-700 dark:text-red-400" />
           </div>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {alerts.length === 0 ? (
-            <div className="flex items-center gap-2 py-3 text-sm text-green-700">
-              <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0" />
-              Alle LKWs sind im Plan – keine SLA-Überschreitungen.
-            </div>
-          ) : (
-            <div className="rounded-md border border-slate-200 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead className="w-2"></TableHead>
-                    <TableHead>LKW</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Tor</TableHead>
-                    <TableHead>Spedition</TableHead>
-                    <TableHead className="text-right">Wartezeit</TableHead>
-                    <TableHead className="text-right">Grund</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {alerts.map((alert) => (
-                    <TableRow key={alert.id} className={alert.level === "danger" ? "bg-red-50/40 dark:bg-red-950/30" : "bg-orange-50/30 dark:bg-orange-950/30"}>
-                      <TableCell className="py-2 pr-0">
-                        <div className={`w-2 h-2 rounded-full mx-auto ${alert.level === "danger" ? "bg-red-500" : "bg-orange-400"}`} />
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <div className="flex flex-col">
-                          <span className="font-medium text-sm">{alert.bezeichnung || alert.kennzeichen || `#${alert.id}`}</span>
-                          {alert.bezeichnung && alert.kennzeichen && (
-                            <span className="text-xs text-slate-400">{alert.kennzeichen}</span>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell className="py-2">
-                        <Badge variant="outline" className={`text-xs ${
-                          alert.status === "Angekommen"   ? "bg-green-50 text-green-700 border-green-200" :
-                          alert.status === "in Verladung" ? "bg-orange-50 text-orange-700 border-orange-200" :
-                          "bg-slate-50 text-slate-700 border-slate-200"
-                        }`}>
-                          {alert.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="py-2 text-slate-600 text-sm">{alert.tor ?? "–"}</TableCell>
-                      <TableCell className="py-2 text-slate-600 text-sm">{alert.speditionName}</TableCell>
-                      <TableCell className="py-2 text-right">
-                        <span className={`font-semibold text-sm flex items-center justify-end gap-1 ${
-                          alert.level === "danger" ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"
-                        }`}>
-                          <Clock className="w-3 h-3 shrink-0" />
-                          {fmtMinutes(alert.minutesWaiting)}
-                        </span>
-                      </TableCell>
-                      <TableCell className="py-2 text-right">
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
-                          {alert.alertReason === "timeInStatus" ? "Wartezeit" : "nach ETA"}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
-      {/* ── Charts ── */}
-      <div className="grid gap-6 md:grid-cols-2">
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle>Statusübersicht</CardTitle>
-            <CardDescription>Verteilung nach aktuellem Status</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            {data.byStatus.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.byStatus} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" />
-                  <XAxis dataKey="status" axisLine={false} tickLine={false} />
-                  <YAxis axisLine={false} tickLine={false} allowDecimals={false} />
-                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {data.byStatus.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.status] || STATUS_COLORS.Angemeldet} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-400">Keine Daten für diesen Zeitraum</div>
-            )}
-          </CardContent>
-        </Card>
+          <div className="grid gap-3 lg:grid-cols-3">
+            <Panel testid="chart-flow" className="lg:col-span-2"
+              title={a.grain === "hour" ? "ETA und ATA nach Uhrzeit" : "ETA und ATA nach Tag"}
+              desc="Getrennte Ereigniszählung: ETA am erwarteten Tag, ATA am Ankunftstag. Eine Verladung kann in beiden Reihen erscheinen.">
+              <FlowChart data={a.activity} hourly={a.grain === "hour"} />
+              {a.grain === "hour" && (
+                <p className="mt-2 text-xs text-muted-foreground" data-testid="text-unplaced">
+                  Ohne Uhrzeit nicht im Diagramm: {a.unplacedEta} ETA, {a.unplacedAta} ATA.
+                </p>
+              )}
+            </Panel>
+            <Panel testid="chart-punctuality" title="Pünktlichkeit der Ankünfte"
+              desc="Nicht stornierte Ankünfte im Zeitraum, ATA gegen ETA.">
+              <Punctuality p={a.punctuality} />
+            </Panel>
+          </div>
 
-        <Card className="bg-white shadow-sm border-slate-200">
-          <CardHeader>
-            <CardTitle>Nach Spedition</CardTitle>
-            <CardDescription>Top Speditionen in diesem Zeitraum</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-             {data.bySpedition.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={data.bySpedition} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
-                  <XAxis type="number" axisLine={false} tickLine={false} allowDecimals={false} />
-                  <YAxis dataKey="speditionName" type="category" axisLine={false} tickLine={false} width={100} />
-                  <Tooltip cursor={{fill: '#f1f5f9'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                  <Bar dataKey="count" fill="hsl(222 47% 11%)" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-             ) : (
-               <div className="h-full flex items-center justify-center text-slate-400">Keine Daten für diesen Zeitraum</div>
-             )}
-          </CardContent>
-        </Card>
-      </div>
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            <Panel testid="chart-status" title="Status" desc="Aktueller Status im Zeitraum">
+              <HBar testid="status" data={statusData} color={(n) => STATUS_COLORS[n] ?? STATUS_COLORS.Angemeldet} />
+            </Panel>
+            <Panel testid="chart-lkw-art" title="LKW-Arten" desc="Verladungen inkl. stornierter; ohne Angabe separat">
+              <HBar testid="lkw-art" data={a.byLkwArt} />
+            </Panel>
+            <Panel testid="chart-spedition" title="Nach Spedition"
+              desc={`Nur zugeordnete Speditionen${spedCut ? `; Top ${TOP_N} von ${data.bySpedition.length}` : ""}`}>
+              <HBar testid="spedition" data={spedTop} />
+            </Panel>
+          </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card className="col-span-2 bg-white shadow-sm border-slate-200 flex flex-col">
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <div className="space-y-1">
-              <CardTitle>Palettensalden</CardTitle>
-              <CardDescription>Aktuelle Kontostände der Speditionen</CardDescription>
-            </div>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/paletten">Alle ansehen</Link>
-            </Button>
-          </CardHeader>
-          <CardContent className="flex-1">
-            <div className="rounded-md border border-slate-200 overflow-hidden">
-              <Table>
-                <TableHeader className="bg-slate-50">
-                  <TableRow>
-                    <TableHead>Spedition</TableHead>
-                    <TableHead>Kürzel</TableHead>
-                    <TableHead className="text-right">Saldo</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.palletBalances.length > 0 ? (
-                    data.palletBalances.slice(0, 5).map((balance) => (
-                      <TableRow key={balance.speditionId}>
-                        <TableCell className="font-medium">{balance.speditionName}</TableCell>
-                        <TableCell>{balance.kuerzel || "-"}</TableCell>
-                        <TableCell className="text-right">
-                          <span className={balance.balance < 0 ? "text-red-600 font-semibold" : balance.balance > 0 ? "text-green-600 font-semibold" : "text-slate-600"}>
-                            {balance.balance > 0 ? "+" : ""}{balance.balance}
+          <div className="grid gap-3 lg:grid-cols-3">
+            <Panel testid="card-pallets" className="lg:col-span-2" title="Palettensalden"
+              desc="Aktueller Stand, unabhängig vom gewählten Zeitraum">
+              <div className="mb-2 flex justify-end">
+                <Button asChild size="sm" variant="outline"><Link href="/paletten" data-testid="link-paletten">Alle ansehen</Link></Button>
+              </div>
+              <div className="overflow-x-auto rounded-md border">
+                <Table>
+                  <TableHeader><TableRow><TableHead>Spedition</TableHead><TableHead>Kürzel</TableHead><TableHead className="text-right">Saldo</TableHead></TableRow></TableHeader>
+                  <TableBody>
+                    {data.palletBalances.length ? data.palletBalances.slice(0, 5).map((b) => (
+                      <TableRow key={b.speditionId}>
+                        <TableCell className="font-medium">{b.speditionName}</TableCell>
+                        <TableCell>{b.kuerzel || "-"}</TableCell>
+                        <TableCell className="text-right tabular-nums">
+                          <span className={b.balance < 0 ? "font-semibold text-red-600" : b.balance > 0 ? "font-semibold text-emerald-600" : "text-muted-foreground"}>
+                            {b.balance > 0 ? "+" : ""}{b.balance}
                           </span>
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={3} className="text-center py-6 text-slate-500">Keine Salden vorhanden</TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-slate-900 text-slate-50 border-slate-800 flex flex-col justify-between">
-          <CardHeader>
-            <CardTitle className="text-slate-100">Offene Abstimmungen</CardTitle>
-            <CardDescription className="text-slate-400">Palettenkonto-Abstimmungen, die Aufmerksamkeit benötigen</CardDescription>
-          </CardHeader>
-          <CardContent className="flex-1 flex flex-col items-center justify-center py-8">
-            <div className="text-7xl font-bold text-slate-50 mb-6">
-              {data.openReconciliations}
-            </div>
-            <Button asChild variant="secondary" className="w-full">
-              <Link href="/abstimmungen">Zu den Abstimmungen</Link>
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+                    )) : <TableRow><TableCell colSpan={3} className="py-6 text-center text-muted-foreground">Keine Salden vorhanden</TableCell></TableRow>}
+                  </TableBody>
+                </Table>
+              </div>
+            </Panel>
+            <Panel testid="card-reconciliations" title="Offene Abstimmungen" desc="Aktueller Stand, unabhängig vom Zeitraum">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-4xl font-semibold tabular-nums" data-testid="text-open-reconciliations">{data.openReconciliations}</span>
+                <Button asChild variant="outline" size="sm"><Link href="/abstimmungen" data-testid="link-abstimmungen">Zu den Abstimmungen</Link></Button>
+              </div>
+              {data.openReconciliations === 0 && <div className="mt-3"><Empty testid="empty-reconciliations" text="Keine offenen Abstimmungen." /></div>}
+            </Panel>
+          </div>
+        </>
+      )}
     </div>
   );
 }

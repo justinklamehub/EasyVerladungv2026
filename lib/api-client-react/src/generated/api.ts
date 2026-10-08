@@ -47,6 +47,7 @@ import type {
   ListShipmentsParams,
   ListUsersParams,
   LoginInput,
+  MessageRecipient,
   PalletBalance,
   PalletMovement,
   PalletMovementInput,
@@ -1843,6 +1844,83 @@ export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = Err
  ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
 
   const queryOptions = getGetMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getListMessageRecipientsUrl = () => {
+
+
+
+
+  return `/api/push/recipients`
+}
+
+/**
+ * @summary List recipients available to users with push.send_custom permission
+ */
+export const listMessageRecipients = async ( options?: RequestInit): Promise<MessageRecipient[]> => {
+
+  return customFetch<MessageRecipient[]>(getListMessageRecipientsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListMessageRecipientsQueryKey = () => {
+    return [
+    `/api/push/recipients`
+    ] as const;
+    }
+
+
+export const getListMessageRecipientsQueryOptions = <TData = Awaited<ReturnType<typeof listMessageRecipients>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMessageRecipients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListMessageRecipientsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listMessageRecipients>>> = ({ signal }) => listMessageRecipients({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listMessageRecipients>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListMessageRecipientsQueryResult = NonNullable<Awaited<ReturnType<typeof listMessageRecipients>>>
+export type ListMessageRecipientsQueryError = ErrorType<void>
+
+
+/**
+ * @summary List recipients available to users with push.send_custom permission
+ */
+
+export function useListMessageRecipients<TData = Awaited<ReturnType<typeof listMessageRecipients>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listMessageRecipients>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListMessageRecipientsQueryOptions(options)
 
   const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
 

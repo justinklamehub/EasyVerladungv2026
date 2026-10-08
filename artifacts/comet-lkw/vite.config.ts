@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import { randomUUID } from "node:crypto";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 const rawPort = process.env.PORT;
@@ -26,9 +27,18 @@ if (!basePath) {
   );
 }
 
-export default defineConfig({
+export default defineConfig(async ({ command }) => {
+  const appBuildId = command === "build" ? randomUUID() : "development";
+  return {
   base: basePath,
+  define: { __APP_BUILD_ID__: JSON.stringify(appBuildId) },
   plugins: [
+    {
+      name: "comet-build-identity",
+      generateBundle() {
+        this.emitFile({ type: "asset", fileName: "build-info.json", source: JSON.stringify({ buildId: appBuildId }) });
+      },
+    },
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
@@ -82,4 +92,5 @@ export default defineConfig({
     host: "0.0.0.0",
     allowedHosts: true,
   },
+  };
 });

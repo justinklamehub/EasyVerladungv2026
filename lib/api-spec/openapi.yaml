@@ -444,6 +444,22 @@ paths:
         "401":
           description: Not authenticated
 
+  /push/recipients:
+    get:
+      operationId: listMessageRecipients
+      tags: [push]
+      summary: List recipients available to users with push.send_custom permission
+      responses:
+        "200":
+          description: Recipient directory matching the existing global custom-message sending capability
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MessageRecipient"
+        "403":
+          description: No permission to send custom messages
   /users:
     get:
       operationId: listUsers
@@ -1720,6 +1736,20 @@ components:
         passwordChangeRequired:
           type: boolean
 
+    MessageRecipient:
+      type: object
+      required: [id, username, role, speditionName, isActive]
+      properties:
+        id:
+          type: integer
+        username:
+          type: string
+        role:
+          type: string
+        speditionName:
+          type: ["string", "null"]
+        isActive:
+          type: boolean
     User:
       type: object
       required: [id, username, email, role, isActive, createdAt]
@@ -2192,7 +2222,7 @@ components:
 
     DashboardData:
       type: object
-      required: [totalShipments, expectedShipments, arrivedShipments, openShipments, lateShipments, byStatus, bySpedition, palletBalances, openReconciliations]
+      required: [totalShipments, expectedShipments, arrivedShipments, openShipments, lateShipments, byStatus, bySpedition, palletBalances, openReconciliations, analytics]
       properties:
         totalShipments:
           type: integer
@@ -2218,6 +2248,67 @@ components:
             $ref: "#/components/schemas/PalletBalance"
         openReconciliations:
           type: integer
+        analytics:
+          $ref: "#/components/schemas/DashboardAnalytics"
+
+    DashboardAnalytics:
+      type: object
+      required: [dateFrom, dateTo, grain, activity, unplacedEta, unplacedAta, byLkwArt, punctuality]
+      properties:
+        dateFrom:
+          type: string
+        dateTo:
+          type: string
+        grain:
+          type: string
+          enum: [hour, day]
+        activity:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardActivityPoint"
+        unplacedEta:
+          type: integer
+        unplacedAta:
+          type: integer
+        byLkwArt:
+          type: array
+          items:
+            $ref: "#/components/schemas/DashboardLkwArtCount"
+        punctuality:
+          $ref: "#/components/schemas/DashboardPunctuality"
+
+    DashboardActivityPoint:
+      type: object
+      required: [label, eta, ata]
+      properties:
+        label:
+          type: string
+        eta:
+          type: integer
+        ata:
+          type: integer
+
+    DashboardLkwArtCount:
+      type: object
+      required: [name, count]
+      properties:
+        name:
+          type: string
+        count:
+          type: integer
+
+    DashboardPunctuality:
+      type: object
+      required: [onTime, delayed, unknown, onTimePercent]
+      properties:
+        onTime:
+          type: integer
+        delayed:
+          type: integer
+        unknown:
+          type: integer
+        onTimePercent:
+          type: ["number", "null"]
 
     StatusCount:
       type: object

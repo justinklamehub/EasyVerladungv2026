@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 
 const BASE = (import.meta as any).env.BASE_URL as string;
 const API = BASE.replace(/\/$/, "") + "/api";
-const SW_PATH = "/sw.js";
+const SW_PATH = `${BASE}sw.js`;
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -71,7 +71,7 @@ export function usePushNotifications() {
       // SW registrieren falls noch nicht vorhanden
       let reg = await navigator.serviceWorker.getRegistration(SW_PATH);
       if (!reg) {
-        reg = await navigator.serviceWorker.register(SW_PATH, { scope: "/" });
+        reg = await navigator.serviceWorker.register(SW_PATH, { scope: BASE, updateViaCache: "none" });
       }
       await navigator.serviceWorker.ready;
 

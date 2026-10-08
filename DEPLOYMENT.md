@@ -294,6 +294,13 @@ server {
     gzip_types text/plain text/css application/javascript application/json image/svg+xml;
     gzip_min_length 1024;
 
+    # Veränderliche HTML/PWA-Dateien: vor dem allgemeinen Asset-Cache behandeln.
+    location ~ ^/(index\.html|sw\.js|build-info\.json|manifest\.json)$ {
+        expires off;
+        add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+        try_files $uri =404;
+    }
+
     # Cache für Assets (Vite erzeugt Content-Hashes)
     location ~* \.(js|css|png|jpg|svg|ico|woff2?)$ {
         expires 1y;

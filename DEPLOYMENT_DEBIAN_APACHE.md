@@ -378,11 +378,20 @@ sudo tee /etc/apache2/sites-available/comet.conf >/dev/null << 'EOF'
         AllowOverride None
         Require all granted
 
-        # Cache für statische Assets (JS/CSS/Bilder)
+        # Nur gehashte Assets dürfen langfristig gecacht werden.
         <FilesMatch "\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$">
             ExpiresActive On
             ExpiresDefault "access plus 1 year"
             Header set Cache-Control "public, immutable"
+        </FilesMatch>
+
+        # Veränderliche PWA-Dateien und HTML müssen immer frisch geprüft werden.
+        # Dieser Block muss NACH dem Asset-Cache-Block stehen (auch im HTTPS-VHost).
+        <FilesMatch "^(index\.html|sw\.js|build-info\.json|manifest\.json)$">
+            ExpiresActive Off
+            Header always set Cache-Control "no-store, no-cache, must-revalidate"
+            Header always set Pragma "no-cache"
+            Header always set Expires "0"
         </FilesMatch>
 
         # SPA-Fallback: Alle unbekannten Pfade → index.html

@@ -429,6 +429,14 @@ server {
     root /opt/comet/app/artifacts/comet-lkw/dist/public;
     index index.html;
 
+    # PWA-Einstieg und Build-Kennung dürfen nicht langfristig gecacht werden.
+    # Vor allen allgemeineren Regex-Locations für JS/JSON anordnen.
+    location ~ ^/(index\.html|sw\.js|build-info\.json|manifest\.json)$ {
+        expires off;
+        add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+        try_files $uri =404;
+    }
+
     # Statische Assets mit langem Cache
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;

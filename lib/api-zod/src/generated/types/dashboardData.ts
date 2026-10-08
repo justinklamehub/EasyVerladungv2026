@@ -5,6 +5,7 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+import type { DashboardAnalytics } from './dashboardAnalytics';
 import type { PalletBalance } from './palletBalance';
 import type { SpeditionCount } from './speditionCount';
 import type { StatusCount } from './statusCount';
@@ -19,4 +20,5 @@ export interface DashboardData {
   bySpedition: SpeditionCount[];
   palletBalances: PalletBalance[];
   openReconciliations: number;
+  analytics: DashboardAnalytics;
 }

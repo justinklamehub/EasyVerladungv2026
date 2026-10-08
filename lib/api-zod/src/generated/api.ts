@@ -714,6 +714,19 @@ export const GetMeResponse = zod.object({
 
 
 /**
+ * @summary List recipients available to users with push.send_custom permission
+ */
+export const ListMessageRecipientsResponseItem = zod.object({
+  "id": zod.number(),
+  "username": zod.string(),
+  "role": zod.string(),
+  "speditionName": zod.string().nullable(),
+  "isActive": zod.boolean()
+})
+export const ListMessageRecipientsResponse = zod.array(ListMessageRecipientsResponseItem)
+
+
+/**
  * @summary List users
  */
 export const ListUsersQueryParams = zod.object({
@@ -1484,7 +1497,29 @@ export const GetDashboardResponse = zod.object({
   "palletFaktor": zod.number().optional(),
   "lastMovementDate": zod.string().nullish()
 })),
-  "openReconciliations": zod.number()
+  "openReconciliations": zod.number(),
+  "analytics": zod.object({
+  "dateFrom": zod.string(),
+  "dateTo": zod.string(),
+  "grain": zod.enum(['hour', 'day']),
+  "activity": zod.array(zod.object({
+  "label": zod.string(),
+  "eta": zod.number(),
+  "ata": zod.number()
+})),
+  "unplacedEta": zod.number(),
+  "unplacedAta": zod.number(),
+  "byLkwArt": zod.array(zod.object({
+  "name": zod.string(),
+  "count": zod.number()
+})),
+  "punctuality": zod.object({
+  "onTime": zod.number(),
+  "delayed": zod.number(),
+  "unknown": zod.number(),
+  "onTimePercent": zod.number().nullable()
+})
+})
 })
 
 

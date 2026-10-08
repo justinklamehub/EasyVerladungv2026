@@ -38,3 +38,13 @@ self.addEventListener("notificationclick", (event) => {
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", (event) => event.waitUntil(clients.claim()));
+
+// Never serve the app shell or version identity from the browser HTTP cache.
+// Hashed JS/CSS retain their normal caching; APIs and push handlers are untouched.
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+  if (url.origin !== self.location.origin || event.request.method !== "GET") return;
+  if (event.request.mode === "navigate" || url.pathname.endsWith("/build-info.json")) {
+    event.respondWith(fetch(event.request, { cache: "no-store" }));
+  }
+});

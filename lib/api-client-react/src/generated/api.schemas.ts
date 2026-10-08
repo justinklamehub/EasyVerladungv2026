@@ -526,6 +526,15 @@ export interface AuthUser {
   passwordChangeRequired?: boolean;
 }
 
+export interface MessageRecipient {
+  id: number;
+  username: string;
+  role: string;
+  /** @nullable */
+  speditionName: string | null;
+  isActive: boolean;
+}
+
 export type UserRole = typeof UserRole[keyof typeof UserRole];
 
 
@@ -1094,6 +1103,44 @@ export interface SpeditionCount {
   count: number;
 }
 
+export type DashboardAnalyticsGrain = typeof DashboardAnalyticsGrain[keyof typeof DashboardAnalyticsGrain];
+
+
+export const DashboardAnalyticsGrain = {
+  hour: 'hour',
+  day: 'day',
+} as const;
+
+export interface DashboardActivityPoint {
+  label: string;
+  eta: number;
+  ata: number;
+}
+
+export interface DashboardLkwArtCount {
+  name: string;
+  count: number;
+}
+
+export interface DashboardPunctuality {
+  onTime: number;
+  delayed: number;
+  unknown: number;
+  /** @nullable */
+  onTimePercent: number | null;
+}
+
+export interface DashboardAnalytics {
+  dateFrom: string;
+  dateTo: string;
+  grain: DashboardAnalyticsGrain;
+  activity: DashboardActivityPoint[];
+  unplacedEta: number;
+  unplacedAta: number;
+  byLkwArt: DashboardLkwArtCount[];
+  punctuality: DashboardPunctuality;
+}
+
 export interface DashboardData {
   totalShipments: number;
   expectedShipments: number;
@@ -1104,6 +1151,7 @@ export interface DashboardData {
   bySpedition: SpeditionCount[];
   palletBalances: PalletBalance[];
   openReconciliations: number;
+  analytics: DashboardAnalytics;
 }
 
 export interface AuditEntry {

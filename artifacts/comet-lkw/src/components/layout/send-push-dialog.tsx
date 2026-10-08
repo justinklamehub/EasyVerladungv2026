@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { getListUsersQueryKey, useListUsers } from "@workspace/api-client-react";
+import { getListMessageRecipientsQueryKey, useListMessageRecipients } from "@workspace/api-client-react";
+import { useAuth } from "@/contexts/auth-context";
+import { MessageRecipientPicker } from "./message-recipient-picker";
 import {
   Dialog,
   DialogContent,
@@ -46,8 +48,14 @@ export function SendPushDialog({ open, onOpenChange }: SendPushDialogProps) {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const { toast } = useToast();
+  const { user } = useAuth();
 
-  const { data: users } = useListUsers(undefined, { query: { queryKey: getListUsersQueryKey(), enabled: open && targetType === "user" } });
+  const recipients = useListMessageRecipients({ query: {
+    queryKey: [...getListMessageRecipientsQueryKey(), user?.id, user?.role],
+    enabled: open && targetType === "user" && !!user,
+    staleTime: 0,
+  } });
+  const users = recipients.data ?? [];
 
   const reset = () => {
     setTargetType("all");
@@ -88,11 +96,11 @@ export function SendPushDialog({ open, onOpenChange }: SendPushDialogProps) {
   const canSend =
     title.trim().length > 0 &&
     message.trim().length > 0 &&
-    (targetType !== "user" || targetUserId);
+    (targetType !== "user" || (!recipients.isError && !recipients.isFetching && users.some((u) => String(u.id) === targetUserId)));
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) reset(); onOpenChange(v); }}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Nachricht senden</DialogTitle>
           <DialogDescription>
@@ -132,19 +140,8 @@ export function SendPushDialog({ open, onOpenChange }: SendPushDialogProps) {
           )}
 
           {targetType === "user" && (
-            <div className="space-y-2">
-              <Label>Benutzer</Label>
-              <Select value={targetUserId} onValueChange={setTargetUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Benutzer auswählen" />
-                </SelectTrigger>
-                <SelectContent>
-                  {(users ?? []).map((u) => (
-                    <SelectItem key={u.id} value={String(u.id)}>{u.username}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <MessageRecipientPicker users={users} selectedId={targetUserId} onSelect={setTargetUserId}
+              loading={recipients.isLoading} error={recipients.isError} onRetry={() => void recipients.refetch()} />
           )}
 
           <div className="space-y-2">
