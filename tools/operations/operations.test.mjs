@@ -46,7 +46,7 @@ async function updateFixture(mode) {
   const template = path.join(base, "template");
   await fs.mkdir(template);
   await write(path.join(app, "update.sh"), await fs.readFile(path.join(root, "update.sh")));
-  for (const file of ["common.mjs", "run-update.mjs", "update-state.mjs", "validate-frontend.mjs", "swap.py"]) {
+  for (const file of ["common.mjs", "run-update.mjs", "update-state.mjs", "update-command.mjs", "update-diagnostics.mjs", "validate-frontend.mjs", "swap.py"]) {
     await write(path.join(app, "tools/operations", file), await fs.readFile(path.join(root, "tools/operations", file)));
   }
   await write(path.join(app, "tools/operations/backup.mjs"), 'if(process.env.TEST_MODE==="backup-fail")process.exit(1);');
@@ -64,7 +64,17 @@ async function updateFixture(mode) {
     if(a[0]==="archive")process.stdout.write(execFileSync("tar",["-cf","-","-C",process.env.TEST_TEMPLATE,"."]));
   `, true);
   await write(path.join(bin, "pnpm"), header + `
-    const dir=a[a.indexOf("--dir")+1];if(!a.includes("build"))process.exit(0);
+    const dir=a[a.indexOf("--dir")+1];
+    const codes={"ignored-builds":"ERR_PNPM_IGNORED_BUILDS","outdated-lockfile":"ERR_PNPM_OUTDATED_LOCKFILE",
+      "incompatible-lockfile":"ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE"};
+    if(!a.includes("build")){
+      if(codes[mode]){
+        process.stderr.write("\\x1b[31m"+codes[mode]+"\\x1b[0m secret-token-fixture postgresql://user:password@db/private\\n");
+        process.exit(1);
+      }
+      if(mode==="unknown-install"){console.error("DATABASE_URL=secret-token-fixture");process.exit(1);}
+      process.exit(0);
+    }
     const backend=a.includes("@workspace/api-server");
     if(!backend&&mode==="frontend-fail")process.exit(1);
     const out=path.join(dir,"artifacts",backend?"api-server/dist":"comet-lkw/dist/public");
@@ -86,7 +96,7 @@ async function updateFixture(mode) {
   });
   return { base, app, result, oldHtml };
 }
-for (const mode of ["fetch-fail", "frontend-fail", "backup-fail", "restore-fail", "health-fail", "delivery-fail", "success"]) {
+for (const mode of ["ignored-builds", "outdated-lockfile", "incompatible-lockfile", "unknown-install", "fetch-fail", "frontend-fail", "backup-fail", "restore-fail", "health-fail", "delivery-fail", "success"]) {
   test(`Update isoliert: ${mode}`, async () => {
     const fixture = await updateFixture(mode);
     try {
@@ -94,6 +104,12 @@ for (const mode of ["fetch-fail", "frontend-fail", "backup-fail", "restore-fail"
       const state = JSON.parse(await fs.readFile(path.join(app, ".comet-operations/update.json"), "utf8"));
       assert.equal(result.status, mode === "success" ? 0 : 1, `${result.stdout}\n${result.stderr}`);
       assert.equal(state.status, mode === "success" ? "done" : "failed");
+      const codes = { "ignored-builds": "ERR_PNPM_IGNORED_BUILDS", "outdated-lockfile": "ERR_PNPM_OUTDATED_LOCKFILE",
+        "incompatible-lockfile": "ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE" };
+      assert.equal(state.diagnostic?.code ?? null, mode === "success" ? null : codes[mode] ?? "UNKNOWN");
+      if (codes[mode] || mode === "unknown-install") assert.equal(state.phase, "dependencies");
+      assert.ok(!JSON.stringify(state).includes("secret-token-fixture"));
+      assert.ok(!JSON.stringify(state).includes("postgresql://"));
       const html = await fs.readFile(path.join(app, "artifacts/comet-lkw/dist/public/index.html"), "utf8");
       const backend = await fs.readFile(path.join(app, "artifacts/api-server/dist/index.mjs"), "utf8");
       if (mode === "success") {
@@ -102,7 +118,7 @@ for (const mode of ["fetch-fail", "frontend-fail", "backup-fail", "restore-fail"
       } else { assert.equal(html, oldHtml); assert.ok(backend.includes('"old"')); }
       let calls = "";
       try { calls = await fs.readFile(path.join(app, "pm2-calls"), "utf8"); } catch {}
-      if (["fetch-fail", "frontend-fail", "backup-fail", "restore-fail"].includes(mode)) assert.ok(!calls.includes("restart"));
+      if (["ignored-builds", "outdated-lockfile", "incompatible-lockfile", "unknown-install", "fetch-fail", "frontend-fail", "backup-fail", "restore-fail"].includes(mode)) assert.ok(!calls.includes("restart"));
       assert.ok(!calls.includes("stop") && !calls.includes("delete"));
     } finally { await fs.rm(fixture.base, { recursive: true, force: true }); }
   });

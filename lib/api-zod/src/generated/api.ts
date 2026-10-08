@@ -25,6 +25,12 @@ export const GetAdminSystemOperationsResponse = zod.object({
   "status": zod.enum(['idle', 'queued', 'running', 'done', 'failed', 'unknown']),
   "phase": zod.string(),
   "message": zod.string(),
+  "recovery": zod.union([zod.literal('preserved'),zod.literal('failed'),zod.literal(null)]).nullish().describe('Previous builds retained\/restored, or automatic recovery failed. Not a database rollback.'),
+  "diagnostic": zod.union([zod.object({
+  "code": zod.enum(['ERR_PNPM_IGNORED_BUILDS', 'ERR_PNPM_OUTDATED_LOCKFILE', 'ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE', 'UNKNOWN']),
+  "cause": zod.string(),
+  "nextSteps": zod.array(zod.string())
+}),zod.null()]).optional(),
   "startedAt": zod.coerce.date().nullable(),
   "finishedAt": zod.coerce.date().nullable(),
   "events": zod.array(zod.object({

@@ -89,10 +89,18 @@ Die korrigierte Projektdatei zuerst committen und auf den konfigurierten Git-Bra
 
 Dieser Abbruch liegt vor Build und Übernahme. Das vollständige private Protokoll liegt in `.comet-operations/update.log`; es gehört nicht ins Git-Repository oder ungeprüft in öffentliche Fehlerberichte.
 
+
+## Sichere Fehlerhinweise im Systemstatus
+
+Bei einem Installationsabbruch erkennt der Hintergrundauftrag die freigegebenen pnpm-Marker `ERR_PNPM_IGNORED_BUILDS`, `ERR_PNPM_OUTDATED_LOCKFILE` und `ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE`. Im Systemstatus erscheinen eine feste deutsche Ursache, der Fehlercode, die Abbruchphase und passende nächste Schritte. Ein unbekannter Fehler bleibt ausdrücklich unbekannt; verlorener Prozesskontakt ist weiterhin kein nachgewiesener Fehlschlag.
+
+Nur ein Fehlercode wird aus einem begrenzten Arbeitsspeicherpuffer übernommen, keine Paketlisten, Rohzeilen oder Umgebungsvariablen. Die private strukturierte Zwischendatei ist an Auftrag und Phase gebunden. Statusschreiber und API rekonstruieren die Anzeige aus freigegebenen Texten; frei gespeicherte Ursachen und Ereignistexte werden nicht ausgeliefert. Bei einem neuen oder erfolgreichen Auftrag werden alte Fehlerhinweise nicht angezeigt. Die bisherigen Rückkehrregeln und die laufende Datenbank bleiben unverändert.
+
 ## Nachgewiesene Tests
 
 ```bash
-node --test tools/operations/operations.test.mjs
+node --test tools/operations/operations.test.mjs tools/operations/update-diagnostics.test.mjs
+pnpm --filter @workspace/api-server exec tsx --tsconfig ../comet-lkw/tsconfig.test.json --test ../comet-lkw/src/pages/settings/update-failure-details.test.tsx
 ```
 
 Die Tests führen Updates nur in temporären Verzeichnissen mit kontrollierten Git-/PM2-/Build-/HTTP-Ersatzprozessen aus. Sie prüfen Fehler vor und nach der Übernahme, die Rückkehr zu beiden vorherigen Builds, den Erfolgspfad und den Erhalt alter Browser-Assets. Eine zusätzliche echte PostgreSQL-/Dateisicherungsprobe arbeitet ausschließlich mit einer selbst erzeugten temporären Datenbank und Bilddatei.

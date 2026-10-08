@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { GetAdminSystemOperationsResponse } from "@workspace/api-zod";
+import { sanitizeUpdate } from "../../../../tools/operations/update-diagnostics.mjs";
 
 // Bundled runtime lives at artifacts/api-server/dist/index.mjs.
 const app = path.resolve(process.env.COMET_APP_DIR || path.join(path.dirname(fileURLToPath(import.meta.url)), "../../.."));
@@ -35,7 +36,7 @@ export async function readSystemOperations() {
   try {
     const stored = await readJson("update.json");
     if (stored) {
-      update = GetAdminSystemOperationsResponse.shape.update.parse(stored);
+      update = GetAdminSystemOperationsResponse.shape.update.parse(sanitizeUpdate(stored));
       if (["running", "queued"].includes(update.status) && stored.pid) {
         try { process.kill(Number(stored.pid), 0); }
         catch {

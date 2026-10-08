@@ -6,6 +6,8 @@
  * OpenAPI spec version: 0.1.0
  */
 import type { SystemOperationEvent } from './systemOperationEvent';
+import type { SystemUpdateDiagnostic } from './systemUpdateDiagnostic';
+import type { SystemUpdateProgressRecovery } from './systemUpdateProgressRecovery';
 import type { SystemUpdateProgressStatus } from './systemUpdateProgressStatus';
 
 export interface SystemUpdateProgress {
@@ -14,6 +16,12 @@ export interface SystemUpdateProgress {
   status: SystemUpdateProgressStatus;
   phase: string;
   message: string;
+  /**
+     * Previous builds retained/restored, or automatic recovery failed. Not a database rollback.
+     * @nullable
+     */
+  recovery?: SystemUpdateProgressRecovery;
+  diagnostic?: SystemUpdateDiagnostic | null;
   /** @nullable */
   startedAt: Date | null;
   /** @nullable */

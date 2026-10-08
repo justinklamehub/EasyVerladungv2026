@@ -1307,12 +1307,31 @@ components:
           enum: [idle, queued, running, done, failed, unknown]
         phase: { type: string }
         message: { type: string }
+        recovery:
+          type: [string, "null"]
+          enum: [preserved, failed, null]
+          description: Previous builds retained/restored, or automatic recovery failed. Not a database rollback.
+        diagnostic:
+          anyOf:
+            - $ref: "#/components/schemas/SystemUpdateDiagnostic"
+            - type: "null"
         startedAt: { type: [string, "null"], format: date-time }
         finishedAt: { type: [string, "null"], format: date-time }
         events:
           type: array
           items:
             $ref: "#/components/schemas/SystemOperationEvent"
+    SystemUpdateDiagnostic:
+      type: object
+      required: [code, cause, nextSteps]
+      properties:
+        code:
+          type: string
+          enum: [ERR_PNPM_IGNORED_BUILDS, ERR_PNPM_OUTDATED_LOCKFILE, ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE, UNKNOWN]
+        cause: { type: string }
+        nextSteps:
+          type: array
+          items: { type: string }
     SystemOperationEvent:
       type: object
       required: [phase, message, at]

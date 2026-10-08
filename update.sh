@@ -56,7 +56,9 @@ failed() {
   fi
   local message="Update in Phase $PHASE fehlgeschlagen. Vorherige Dateien beibehalten beziehungsweise zurückgenommen; Datenbank nicht zurückgesetzt."
   if [[ $rollback == 1 ]]; then message="Update und automatische Rückkehr fehlgeschlagen. Dienst und öffentliche Auslieferung manuell prüfen; Datenbank nicht zurückgesetzt."; fi
-  node "$STATE" failed "$JOB" "$PHASE" "$message"
+  local recovery=preserved
+  if [[ $rollback == 1 ]]; then recovery=failed; fi
+  node "$STATE" failed "$JOB" "$PHASE" "$message" "$recovery"
   exit "${code:-1}"
 }
 trap failed ERR
@@ -83,7 +85,7 @@ STAGE="$(mktemp -d "$RELEASES/release-XXXXXXXX")"
 chmod 755 "$STAGE"
 git archive "$REVISION" | tar -x -C "$STAGE"
 state dependencies "Abhängigkeiten nur für die vorbereitete Version installieren."
-pnpm --dir "$STAGE" install --frozen-lockfile
+node "$APP/tools/operations/update-command.mjs" "$JOB" "$PHASE" pnpm --dir "$STAGE" install --frozen-lockfile
 state backend "Backend getrennt bauen und Syntax prüfen."
 pnpm --dir "$STAGE" --filter @workspace/api-server run build
 node --check "$STAGE/artifacts/api-server/dist/index.mjs"

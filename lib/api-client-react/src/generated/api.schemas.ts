@@ -25,6 +25,34 @@ export const SystemUpdateProgressStatus = {
   unknown: 'unknown',
 } as const;
 
+/**
+ * Previous builds retained/restored, or automatic recovery failed. Not a database rollback.
+ * @nullable
+ */
+export type SystemUpdateProgressRecovery = typeof SystemUpdateProgressRecovery[keyof typeof SystemUpdateProgressRecovery] | null;
+
+
+export const SystemUpdateProgressRecovery = {
+  preserved: 'preserved',
+  failed: 'failed',
+} as const;
+
+export type SystemUpdateDiagnosticCode = typeof SystemUpdateDiagnosticCode[keyof typeof SystemUpdateDiagnosticCode];
+
+
+export const SystemUpdateDiagnosticCode = {
+  ERR_PNPM_IGNORED_BUILDS: 'ERR_PNPM_IGNORED_BUILDS',
+  ERR_PNPM_OUTDATED_LOCKFILE: 'ERR_PNPM_OUTDATED_LOCKFILE',
+  ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE: 'ERR_PNPM_FROZEN_LOCKFILE_WITH_OUTDATED_LOCKFILE',
+  UNKNOWN: 'UNKNOWN',
+} as const;
+
+export interface SystemUpdateDiagnostic {
+  code: SystemUpdateDiagnosticCode;
+  cause: string;
+  nextSteps: string[];
+}
+
 export interface SystemOperationEvent {
   phase: string;
   message: string;
@@ -37,6 +65,12 @@ export interface SystemUpdateProgress {
   status: SystemUpdateProgressStatus;
   phase: string;
   message: string;
+  /**
+     * Previous builds retained/restored, or automatic recovery failed. Not a database rollback.
+     * @nullable
+     */
+  recovery?: SystemUpdateProgressRecovery;
+  diagnostic?: SystemUpdateDiagnostic | null;
   /** @nullable */
   startedAt: string | null;
   /** @nullable */

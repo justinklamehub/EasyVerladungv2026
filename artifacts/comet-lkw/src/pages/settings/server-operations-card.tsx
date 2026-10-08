@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, DatabaseBackup, Loader2, RefreshCw, Server, XCircle } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
+import { UpdateFailureDetails } from "./update-failure-details";
 
 const LABEL = { idle: "Bereit", queued: "Angenommen", running: "Läuft …",
   done: "Abgeschlossen", failed: "Fehler", unknown: "Abschluss unbekannt" };
@@ -72,6 +73,7 @@ export function ServerOperationsCard() {
               {current.events.map((event, i) => <li key={`${event.at}-${i}`}>{event.message}</li>)}
             </ol>}
           </div>}
+          {current && !awaitingJob && <UpdateFailureDetails update={current} />}
           <p className="text-xs text-slate-500">Der Auftrag läuft unabhängig vom geöffneten Browser weiter. Nur der eigene API-Dienst wird nach den Prüfungen kurz neu gestartet; kein fremder Prozess wird über seinen Port beendet.</p>
           <div className="flex flex-wrap gap-2 items-center">
             {!confirm && canUpdate && <Button variant="destructive" size="sm" onClick={() => setConfirm(true)}
