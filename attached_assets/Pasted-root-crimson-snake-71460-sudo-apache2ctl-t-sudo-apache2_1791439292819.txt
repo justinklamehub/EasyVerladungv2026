@@ -1,0 +1,103 @@
+root@crimson-snake-71460:~# sudo apache2ctl -t
+sudo apache2ctl -S
+sudo tail -n 80 /var/log/apache2/error.log
+sudo grep -R -n -E '^[[:space:]]*(ServerName|ServerAlias|ErrorLog)[[:space:]]' /etc/apache2/sites-enabled/
+Syntax OK
+VirtualHost configuration:
+*:443                  is a NameVirtualHost
+         default server rda-tool.de (/etc/apache2/sites-enabled/000-default-le-ssl.conf:2)
+         port 443 namevhost rda-tool.de (/etc/apache2/sites-enabled/000-default-le-ssl.conf:2)
+         port 443 namevhost code5gaming.eu (/etc/apache2/sites-enabled/code5gaming.eu.conf:22)
+                 alias www.code5gaming.eu
+         port 443 namevhost easyverladung.de (/etc/apache2/sites-enabled/easyverladung-le-ssl.conf:2)
+                 alias www.easyverladung.de
+*:80                   is a NameVirtualHost
+         default server crimson-snake-71460.zap.cloud (/etc/apache2/sites-enabled/000-default.conf:1)
+         port 80 namevhost crimson-snake-71460.zap.cloud (/etc/apache2/sites-enabled/000-default.conf:1)
+         port 80 namevhost code5gaming.eu (/etc/apache2/sites-enabled/code5gaming.eu.conf:1)
+                 alias www.code5gaming.eu
+         port 80 namevhost 87.237.54.218 (/etc/apache2/sites-enabled/comet.conf:1)
+         port 80 namevhost easyverladung.de (/etc/apache2/sites-enabled/easyverladung.conf:1)
+                 alias www.easyverladung.de
+ServerRoot: "/etc/apache2"
+Main DocumentRoot: "/var/www/html"
+Main ErrorLog: "/var/log/apache2/error.log"
+Mutex ssl-stapling: using_defaults
+Mutex proxy: using_defaults
+Mutex ssl-cache: using_defaults
+Mutex default: dir="/var/run/apache2/" mechanism=default
+Mutex watchdog-callback: using_defaults
+Mutex rewrite-map: using_defaults
+Mutex ssl-stapling-refresh: using_defaults
+PidFile: "/var/run/apache2/apache2.pid"
+Define: DUMP_VHOSTS
+Define: DUMP_RUN_CFG
+User: name="www-data" id=33
+Group: name="www-data" id=33
+[Thu Oct 08 00:00:04.917007 2026] [mpm_event:notice] [pid 1001:tid 1001] AH00489: Apache/2.4.68 (Debian) OpenSSL/3.0.20 configured -- resuming normal operations
+[Thu Oct 08 00:00:04.917054 2026] [core:notice] [pid 1001:tid 1001] AH00094: Command line: '/usr/sbin/apache2'
+[Thu Oct 08 00:02:41.588395 2026] [core:error] [pid 364008:tid 364020] [client 51.159.70.90:55114] AH10244: invalid URI path (/cgi-bin/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/.%2e/bin/sh)
+[Thu Oct 08 00:02:42.610239 2026] [core:error] [pid 364007:tid 364026] [client 51.159.70.90:55120] AH10244: invalid URI path (/cgi-bin/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/%%32%65%%32%65/bin/sh)
+[Thu Oct 08 03:00:05.080124 2026] [mpm_event:notice] [pid 1001:tid 1001] AH00492: caught SIGWINCH, shutting down gracefully
+[Thu Oct 08 03:00:43.918225 2026] [mpm_event:notice] [pid 1030:tid 1030] AH00489: Apache/2.4.68 (Debian) OpenSSL/3.0.20 configured -- resuming normal operations
+[Thu Oct 08 03:00:43.920171 2026] [core:notice] [pid 1030:tid 1030] AH00094: Command line: '/usr/sbin/apache2'
+[Thu Oct 08 04:40:44.881628 2026] [ssl:error] [pid 1032:tid 1062] [client 172.234.217.192:28328] AH02032: Hostname rda-tool.de (default host as no SNI was provided) and hostname www.easyverladung.de provided via HTTP have no compatible SSL setup for policy 'secure', referer: http://87.237.54.218/
+[Thu Oct 08 05:44:59.540544 2026] [proxy_fcgi:error] [pid 1031:tid 1082] [client 200.219.11.15:38802] AH01071: Got error 'Primary script unknown'
+[Thu Oct 08 05:54:17.448590 2026] [ssl:error] [pid 1031:tid 1043] [client 172.236.228.39:22276] AH02032: Hostname rda-tool.de (default host as no SNI was provided) and hostname www.easyverladung.de provided via HTTP have no compatible SSL setup for policy 'secure', referer: http://87.237.54.218/
+[Thu Oct 08 06:58:58.452998 2026] [ssl:error] [pid 1031:tid 1044] [client 66.228.53.174:47638] AH02032: Hostname rda-tool.de (default host as no SNI was provided) and hostname www.easyverladung.de provided via HTTP have no compatible SSL setup for policy 'secure', referer: http://87.237.54.218/
+[Thu Oct 08 07:26:23.948046 2026] [mpm_event:notice] [pid 1030:tid 1030] AH00493: SIGUSR1 received.  Doing graceful restart
+[Thu Oct 08 07:26:23.971628 2026] [mpm_event:notice] [pid 1030:tid 1030] AH00489: Apache/2.4.68 (Debian) OpenSSL/3.0.20 configured -- resuming normal operations
+[Thu Oct 08 07:26:23.971654 2026] [core:notice] [pid 1030:tid 1030] AH00094: Command line: '/usr/sbin/apache2'
+[Thu Oct 08 07:26:28.872960 2026] [mpm_event:notice] [pid 1030:tid 1030] AH00493: SIGUSR1 received.  Doing graceful restart
+[Thu Oct 08 07:26:28.889552 2026] [mpm_event:notice] [pid 1030:tid 1030] AH00489: Apache/2.4.68 (Debian) OpenSSL/3.0.20 configured -- resuming normal operations
+[Thu Oct 08 07:26:28.889580 2026] [core:notice] [pid 1030:tid 1030] AH00094: Command line: '/usr/sbin/apache2'
+[Thu Oct 08 07:55:08.774537 2026] [core:error] [pid 77695:tid 77717] [client 193.226.78.40:50100] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:08.780539 2026] [core:error] [pid 77695:tid 77717] [client 193.226.78.40:50100] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:08.780844 2026] [core:error] [pid 77695:tid 77717] [client 193.226.78.40:50100] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:08.783391 2026] [core:error] [pid 77695:tid 77717] [client 193.226.78.40:50100] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:08.783745 2026] [core:error] [pid 77695:tid 77717] [client 193.226.78.40:50100] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.245359 2026] [core:error] [pid 77695:tid 77721] [client 209.151.153.107:36388] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.248352 2026] [core:error] [pid 77695:tid 77721] [client 209.151.153.107:36388] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.248678 2026] [core:error] [pid 77695:tid 77721] [client 209.151.153.107:36388] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.250999 2026] [core:error] [pid 77695:tid 77721] [client 209.151.153.107:36388] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.251287 2026] [core:error] [pid 77695:tid 77721] [client 209.151.153.107:36388] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.275153 2026] [core:error] [pid 77694:tid 77737] [client 176.58.98.218:51352] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.275923 2026] [core:error] [pid 77694:tid 77737] [client 176.58.98.218:51352] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.276253 2026] [core:error] [pid 77694:tid 77737] [client 176.58.98.218:51352] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.276587 2026] [core:error] [pid 77694:tid 77737] [client 176.58.98.218:51352] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:55:10.276897 2026] [core:error] [pid 77694:tid 77737] [client 176.58.98.218:51352] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:59:01.295190 2026] [mpm_event:notice] [pid 1005:tid 1005] AH00489: Apache/2.4.68 (Debian) OpenSSL/3.0.20 configured -- resuming normal operations
+[Thu Oct 08 07:59:01.298704 2026] [core:notice] [pid 1005:tid 1005] AH00094: Command line: '/usr/sbin/apache2'
+[Thu Oct 08 07:59:10.924595 2026] [core:error] [pid 1007:tid 1020] [client 217.5.232.36:50557] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:59:10.944943 2026] [core:error] [pid 1008:tid 1032] [client 62.96.170.218:62149] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:59:11.028239 2026] [core:error] [pid 1008:tid 1036] [client 217.5.232.36:57157] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+[Thu Oct 08 07:59:11.086882 2026] [core:error] [pid 1008:tid 1043] [client 217.5.232.36:62790] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/login
+[Thu Oct 08 07:59:14.076190 2026] [core:error] [pid 1008:tid 1048] [client 217.5.232.36:51313] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:59:14.152645 2026] [core:error] [pid 1007:tid 1016] [client 217.5.232.36:64025] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+[Thu Oct 08 07:59:17.075917 2026] [core:error] [pid 1008:tid 1049] [client 217.5.232.36:52611] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 07:59:17.160738 2026] [core:error] [pid 1008:tid 1051] [client 62.96.170.218:64648] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+[Thu Oct 08 08:00:32.135407 2026] [core:error] [pid 1007:tid 1026] [client 217.5.232.36:58505] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 08:00:32.181511 2026] [core:error] [pid 1008:tid 1014] [client 62.96.170.218:49354] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+[Thu Oct 08 08:00:33.247891 2026] [core:error] [pid 1008:tid 1022] [client 217.5.232.36:50669] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 08:00:33.285896 2026] [core:error] [pid 1008:tid 1021] [client 62.96.170.218:53792] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+[Thu Oct 08 08:00:33.427652 2026] [core:error] [pid 1008:tid 1025] [client 217.5.232.36:65396] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 08:00:33.476277 2026] [core:error] [pid 1008:tid 1029] [client 62.96.170.218:56208] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+[Thu Oct 08 08:00:33.626923 2026] [core:error] [pid 1008:tid 1035] [client 217.5.232.36:57952] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 08:00:33.661694 2026] [core:error] [pid 1007:tid 1030] [client 62.96.170.218:58181] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+[Thu Oct 08 08:00:35.567121 2026] [core:error] [pid 1008:tid 1043] [client 62.96.170.218:60951] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace.
+[Thu Oct 08 08:00:35.625160 2026] [core:error] [pid 1007:tid 1033] [client 217.5.232.36:51326] AH00125: Request exceeded the limit of 10 subrequest nesting levels due to probable configuration error. Use 'LimitInternalRecursion' to increase the limit if necessary. Use 'LogLevel debug' to get a backtrace., referer: https://easyverladung.de/einlagerung
+/etc/apache2/sites-enabled/easyverladung-le-ssl.conf:3:        ServerName easyverladung.de
+/etc/apache2/sites-enabled/easyverladung-le-ssl.conf:4:        ServerAlias www.easyverladung.de
+/etc/apache2/sites-enabled/comet.conf:2:    ServerName 87.237.54.218
+/etc/apache2/sites-enabled/comet.conf:12:    ErrorLog  ${APACHE_LOG_DIR}/comet-error.log
+/etc/apache2/sites-enabled/code5gaming.eu.conf:2:    ServerName code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:3:    ServerAlias www.code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:12:    ErrorLog ${APACHE_LOG_DIR}/code5gaming_error.log
+/etc/apache2/sites-enabled/code5gaming.eu.conf:23:    ServerName code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:24:    ServerAlias www.code5gaming.eu
+/etc/apache2/sites-enabled/code5gaming.eu.conf:33:    ErrorLog ${APACHE_LOG_DIR}/code5gaming_ssl_error.log
+/etc/apache2/sites-enabled/easyverladung.conf:2:    ServerName easyverladung.de
+/etc/apache2/sites-enabled/easyverladung.conf:3:    ServerAlias www.easyverladung.de
+/etc/apache2/sites-enabled/000-default-le-ssl.conf:21:  ErrorLog ${APACHE_LOG_DIR}/error.log
+/etc/apache2/sites-enabled/000-default-le-ssl.conf:32:ServerName rda-tool.de
+root@crimson-snake-71460:~#
