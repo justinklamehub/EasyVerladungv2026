@@ -20,3 +20,9 @@ In Scanneransichten keine „Zurück“-Knöpfe anzeigen. Nach dem Start einer S
 **Why:** Der Nutzer hat diese Vereinfachungen ausdrücklich für die Scanneransicht verlangt.
 
 **How to apply:** Den übermittelten Suchbegriff unabhängig vom geleerten Eingabefeld erhalten, sodass Ergebnisse und erneute Scans funktionieren. Die Darstellung der angemeldeten Artikelsuche nicht ungefragt ändern.
+
+Hinweise wie „Bestandsdaten veraltet … Bitte den CSV-Stand aktualisieren“ nur in der normalen App anzeigen, nicht auf Scanner-Seiten.
+
+**Why:** Der Nutzer hat diese Trennung ausdrücklich verlangt.
+
+**How to apply:** CSV-Aktualitätswarnungen im Scanner-Modus ausblenden, unabhängig davon, ob der Nutzer angemeldet ist. Die Warnungen in der normalen App beibehalten.
