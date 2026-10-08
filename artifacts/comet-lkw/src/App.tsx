@@ -61,6 +61,7 @@ import FotosPage from "@/pages/fotos/index";
 import TorbelegungPage from "@/pages/torbelegung";
 import ChatWissensbasePage from "@/pages/chat-wissensbase";
 import EinlagerungPage from "@/pages/einlagerung";
+import SystemStatusPage from "@/pages/system-status";
 import ScannerEinlagerungPage from "@/pages/scanner/einlagerung";
 import ScannerEinlagerungAuftraegePage from "@/pages/scanner/einlagerung-auftraege";
 import { EinlagerungRoute } from "@/pages/einlagerung/guard";
@@ -128,6 +129,7 @@ function Router() {
             <Route path="/speditionsfreigabe"><ProtectedRoute component={SpeditionsfreigebePage} roles={["speditions_admin"]} /></Route>
             <Route path="/relationen"><ProtectedRoute component={RelationenPage} roles={["speditions_admin"]} /></Route>
             <Route path="/settings"><ProtectedRoute component={SettingsPage} roles={["comet_admin"]} /></Route>
+            <Route path="/system-status"><ProtectedRoute component={SystemStatusPage} roles={["comet_admin"]} /></Route>
             <Route path="/berechtigungen"><ProtectedRoute component={BerechtigungenPage} roles={["comet_admin"]} /></Route>
             <Route path="/wochenansicht"><ProtectedRoute component={WochenansichtPage} /></Route>
             <Route path="/torbelegung"><ProtectedRoute component={TorbelegungPage} /></Route>

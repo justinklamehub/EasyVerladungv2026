@@ -66,6 +66,7 @@ import type {
   SpeditionPermission,
   SpeditionPermissionInput,
   SpeditionUpdate,
+  SystemStatusReport,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
@@ -82,6 +83,83 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+export const getGetAdminSystemStatusUrl = () => {
+
+
+
+
+  return `/api/admin/system/status`
+}
+
+/**
+ * @summary Rein lesende Systemprüfungen für Administratoren
+ */
+export const getAdminSystemStatus = async ( options?: RequestInit): Promise<SystemStatusReport> => {
+
+  return customFetch<SystemStatusReport>(getGetAdminSystemStatusUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminSystemStatusQueryKey = () => {
+    return [
+    `/api/admin/system/status`
+    ] as const;
+    }
+
+
+export const getGetAdminSystemStatusQueryOptions = <TData = Awaited<ReturnType<typeof getAdminSystemStatus>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSystemStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminSystemStatusQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminSystemStatus>>> = ({ signal }) => getAdminSystemStatus({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminSystemStatus>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminSystemStatusQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminSystemStatus>>>
+export type GetAdminSystemStatusQueryError = ErrorType<void>
+
+
+/**
+ * @summary Rein lesende Systemprüfungen für Administratoren
+ */
+
+export function useGetAdminSystemStatus<TData = Awaited<ReturnType<typeof getAdminSystemStatus>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSystemStatus>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminSystemStatusQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
 
 
 

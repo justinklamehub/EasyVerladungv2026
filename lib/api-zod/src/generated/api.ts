@@ -8,6 +8,27 @@
 import * as zod from 'zod';
 
 
+/**
+ * @summary Rein lesende Systemprüfungen für Administratoren
+ */
+export const GetAdminSystemStatusResponse = zod.object({
+  "checkedAt": zod.coerce.date(),
+  "overall": zod.enum(['ok', 'warning', 'error']),
+  "environment": zod.enum(['development', 'production', 'test']),
+  "hostname": zod.string(),
+  "nodeVersion": zod.string(),
+  "uptimeSeconds": zod.number(),
+  "checks": zod.array(zod.object({
+  "id": zod.enum(['frontend', 'api', 'database', 'storage']),
+  "title": zod.string(),
+  "status": zod.enum(['ok', 'warning', 'error']),
+  "message": zod.string(),
+  "durationMs": zod.number(),
+  "details": zod.array(zod.string())
+}))
+})
+
+
 export const PreviewDeliveryReportResponse = zod.object({
   "subject": zod.string(),
   "html": zod.string(),

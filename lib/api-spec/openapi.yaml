@@ -30,6 +30,22 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /admin/system/status:
+    get:
+      operationId: getAdminSystemStatus
+      tags: [health]
+      summary: Rein lesende Systemprüfungen für Administratoren
+      responses:
+        "200":
+          description: Prüfbericht mit tatsächlichen Ergebnissen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemStatusReport"
+        "401":
+          description: Anmeldung erforderlich
+        "403":
+          description: Nur COMET-Administratoren
   /report/delivery/preview:
     get:
       operationId: previewDeliveryReport
@@ -1223,6 +1239,50 @@ paths:
 
 components:
   schemas:
+    SystemCheckStatus:
+      type: string
+      enum: [ok, warning, error]
+    SystemStatusCheck:
+      type: object
+      required: [id, title, status, message, durationMs, details]
+      properties:
+        id:
+          type: string
+          enum: [frontend, api, database, storage]
+        title:
+          type: string
+        status:
+          $ref: "#/components/schemas/SystemCheckStatus"
+        message:
+          type: string
+        durationMs:
+          type: integer
+        details:
+          type: array
+          items:
+            type: string
+    SystemStatusReport:
+      type: object
+      required: [checkedAt, overall, environment, hostname, nodeVersion, uptimeSeconds, checks]
+      properties:
+        checkedAt:
+          type: string
+          format: date-time
+        overall:
+          $ref: "#/components/schemas/SystemCheckStatus"
+        environment:
+          type: string
+          enum: [development, production, test]
+        hostname:
+          type: string
+        nodeVersion:
+          type: string
+        uptimeSeconds:
+          type: integer
+        checks:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemStatusCheck"
     DeliveryReportPreview:
       type: object
       required: [subject, html, text, criticalCount, ordersCount, dueCount, warningDays]

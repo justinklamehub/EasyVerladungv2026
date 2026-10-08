@@ -5,6 +5,53 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export type SystemCheckStatus = typeof SystemCheckStatus[keyof typeof SystemCheckStatus];
+
+
+export const SystemCheckStatus = {
+  ok: 'ok',
+  warning: 'warning',
+  error: 'error',
+} as const;
+
+export type SystemStatusCheckId = typeof SystemStatusCheckId[keyof typeof SystemStatusCheckId];
+
+
+export const SystemStatusCheckId = {
+  frontend: 'frontend',
+  api: 'api',
+  database: 'database',
+  storage: 'storage',
+} as const;
+
+export interface SystemStatusCheck {
+  id: SystemStatusCheckId;
+  title: string;
+  status: SystemCheckStatus;
+  message: string;
+  durationMs: number;
+  details: string[];
+}
+
+export type SystemStatusReportEnvironment = typeof SystemStatusReportEnvironment[keyof typeof SystemStatusReportEnvironment];
+
+
+export const SystemStatusReportEnvironment = {
+  development: 'development',
+  production: 'production',
+  test: 'test',
+} as const;
+
+export interface SystemStatusReport {
+  checkedAt: string;
+  overall: SystemCheckStatus;
+  environment: SystemStatusReportEnvironment;
+  hostname: string;
+  nodeVersion: string;
+  uptimeSeconds: number;
+  checks: SystemStatusCheck[];
+}
+
 export interface DeliveryReportPreview {
   subject: string;
   html: string;

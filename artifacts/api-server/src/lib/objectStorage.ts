@@ -71,9 +71,9 @@ const STORAGE_CONFIG_CACHE_MS = 5000;
  * LOCAL_STORAGE_DIR env vars for backward compatibility. Result is cached
  * briefly to avoid a DB round-trip on every request.
  */
-async function loadStorageConfig(): Promise<StorageConfig> {
+export async function loadStorageConfig(strict = false): Promise<StorageConfig> {
   const now = Date.now();
-  if (cachedStorageConfig && cachedStorageConfig.expiresAt > now) {
+  if (!strict && cachedStorageConfig && cachedStorageConfig.expiresAt > now) {
     return cachedStorageConfig;
   }
 
@@ -93,7 +93,8 @@ async function loadStorageConfig(): Promise<StorageConfig> {
         localDir = row.value.trim();
       }
     }
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     // DB unreachable or settings table not migrated yet — silently fall
     // back to env vars so the app keeps working.
   }

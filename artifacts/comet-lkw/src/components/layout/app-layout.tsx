@@ -17,10 +17,10 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const { isDark, toggleTheme } = useTheme();
   const [location] = useLocation();
   const isMobile = useIsMobile();
-  const narrowWarehouse = isMobile && location.startsWith("/einlagerung");
+  const compactMobileLayout = isMobile && (location.startsWith("/einlagerung") || location === "/system-status");
   const [mobileExpanded, setMobileExpanded] = useState(false);
-  // Keep the desktop preference, but give the warehouse room on handhelds.
-  const effectiveCollapsed = narrowWarehouse ? !mobileExpanded : collapsed;
+  // Keep the desktop preference, but give these operational pages room on handhelds.
+  const effectiveCollapsed = compactMobileLayout ? !mobileExpanded : collapsed;
 
   useEffect(() => {
     try { localStorage.setItem(STORAGE_KEY, String(collapsed)); } catch { /* */ }
@@ -31,13 +31,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
       <div className="flex h-screen bg-slate-50 dark:bg-slate-900 w-full overflow-hidden">
         <AppSidebar
           collapsed={effectiveCollapsed}
-          onToggle={() => narrowWarehouse ? setMobileExpanded((v) => !v) : setCollapsed((c) => !c)}
+          onToggle={() => compactMobileLayout ? setMobileExpanded((v) => !v) : setCollapsed((c) => !c)}
           isDark={isDark}
           onToggleTheme={toggleTheme}
         />
         <div className="flex-1 flex flex-col min-w-0">
           <ConnectionBanner />
-          <main className={`flex-1 overflow-auto relative ${narrowWarehouse ? "p-3" : "p-6"}`}>
+          <main className={`flex-1 overflow-auto relative ${compactMobileLayout ? "p-3" : "p-6"}`}>
             {children}
           </main>
         </div>
