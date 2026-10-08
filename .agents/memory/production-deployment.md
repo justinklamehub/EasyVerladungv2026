@@ -19,7 +19,7 @@ PM2 `jlist` kann bei einer abweichenden CLI-/Daemon-Version einen Versionshinwei
 
 Bei einer Benutzer- oder PM2-Umstellung auf dem alten Debian-Server das bestehende API-Arbeitsverzeichnis `/opt/comet/app` beibehalten, bis relative Speicherpfade ausdrücklich geklärt sind.
 
-**Why:** Die tatsächliche laufende Debian-API verwendet den App-Root als CWD, nicht den API-Unterordner aus dem Installationsbeispiel. Eine Änderung könnte eine andere lokale Bilderablage auswählen.
+**Why:** Die tatsächliche laufende Debian-API verwendet den App-Root als CWD, nicht den API-Unterordner aus dem Installationsbeispiel. Eine Änderung könnte eine andere lokale Bilderablage auswählen. Der Nutzer bestätigte Anmeldung, Fotoanzeige und Upload nach der Benutzerumstellung mit beibehaltenem CWD.
 
 **How to apply:** Scriptpfad und CWD getrennt übertragen; gegebenenfalls `COMET_STORAGE_CWD` auf das ursprüngliche API-Arbeitsverzeichnis setzen. Keinen Bilderpfad neu erfinden.
 
