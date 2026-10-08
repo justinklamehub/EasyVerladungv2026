@@ -69,6 +69,12 @@ Fix: redirect all IP traffic to HTTPS domain in Apache `000-default.conf`:
 
 ## Migration auf einen gemeinsam genutzten RHEL-Server
 
+Der Nutzer verlangt: „Ich muss den alten Server auch weiterhin laufen lassen!!!“
+
+**Why:** Der laufende Debian-Server wird weiterhin benötigt; der neue RHEL-Server ersetzt ihn nicht automatisch.
+
+**How to apply:** Den alten Server und seine Anwendung nicht im Rahmen der Migration abschalten. Fehler auf Debian getrennt vom RHEL-Ziel diagnostizieren; vor Eingriffen die Auswirkungen auf den laufenden Betrieb erklären.
+
 Der Nutzer möchte die selbst gehostete Verladungsanwendung von Debian 12 auf RHEL 9.7 übertragen. Auf dem Zielserver laufen bereits zwei andere Websites; sie müssen unverändert weiterlaufen.
 
 Die vom Nutzer gelieferte Bestandsprüfung bestätigt Nginx als aktiven Webserver und eine bestehende MariaDB. PostgreSQL für die Verladungsanwendung zusätzlich und getrennt einrichten, MariaDB nicht ersetzen.
