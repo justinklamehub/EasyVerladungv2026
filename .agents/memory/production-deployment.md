@@ -75,6 +75,12 @@ Der Nutzer verlangt: „Ich muss den alten Server auch weiterhin laufen lassen!!
 
 **How to apply:** Den alten Server und seine Anwendung nicht im Rahmen der Migration abschalten. Fehler auf Debian getrennt vom RHEL-Ziel diagnostizieren; vor Eingriffen die Auswirkungen auf den laufenden Betrieb erklären.
 
+Frontend-Builds auf dem laufenden selbst gehosteten Server in einem separaten Ausgabeordner erstellen und erst nach erfolgreicher Prüfung übernehmen.
+
+**Why:** Apache benötigt die gebaute Einstiegsdatei fortlaufend. Ein fehlgeschlagener Build darf nicht zuvor die aktive Ausgabe leeren und dadurch den weiterhin benötigten alten Server unbenutzbar machen.
+
+**How to apply:** Bestehende Assets erhalten, neue Assets zuerst übertragen und die fertige Einstiegsdatei zuletzt atomar ersetzen. Weder Anwendung noch Webserver für eine reine Aktualisierung statischer Frontend-Dateien stoppen.
+
 Der Nutzer möchte die selbst gehostete Verladungsanwendung von Debian 12 auf RHEL 9.7 übertragen. Auf dem Zielserver laufen bereits zwei andere Websites; sie müssen unverändert weiterlaufen.
 
 Die vom Nutzer gelieferte Bestandsprüfung bestätigt Nginx als aktiven Webserver und eine bestehende MariaDB. PostgreSQL für die Verladungsanwendung zusätzlich und getrennt einrichten, MariaDB nicht ersetzen.
