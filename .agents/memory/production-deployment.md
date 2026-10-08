@@ -11,6 +11,12 @@ Ein erfolgreicher `sudo -u comet pm2 describe comet-api` beweist nicht, dass der
 
 **How to apply:** Erst Prozesszuordnung lesend ermitteln. Keine Sicherheitsprüfung deaktivieren, kein `pm2 kill`, kein Port-Kill und keine zweite API auf Verdacht starten.
 
+Bei einer Benutzer- oder PM2-Umstellung auf dem alten Debian-Server das bestehende API-Arbeitsverzeichnis `/opt/comet/app` beibehalten, bis relative Speicherpfade ausdrücklich geklärt sind.
+
+**Why:** Die tatsächliche laufende Debian-API verwendet den App-Root als CWD, nicht den API-Unterordner aus dem Installationsbeispiel. Eine Änderung könnte eine andere lokale Bilderablage auswählen.
+
+**How to apply:** Scriptpfad und CWD getrennt übertragen; gegebenenfalls `COMET_STORAGE_CWD` auf das ursprüngliche API-Arbeitsverzeichnis setzen. Keinen Bilderpfad neu erfinden.
+
 ## Produktionsumgebung und Einlagerungsübernahme
 
 Der Nutzer hat bestätigt: Das produktive COMET-System läuft „auf meinem eigenen Server außerhalb von Replit“.
