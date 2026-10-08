@@ -7,6 +7,7 @@ Diese Werkzeuge laufen als **comet**, niemals als root. Sie aktualisieren aussch
 - Node.js **22 oder neuer**, pnpm, Git, Python 3, `flock`, curl und PM2.
 - PostgreSQL-Client und Serverwerkzeuge: `pg_dump`, `pg_restore`, `initdb`, `postgres`. Die lokale PostgreSQL-Hauptversion muss zum verwendeten `pg_dump` passen. Bei abweichender Installation `COMET_PG_BIN` setzen, z. B. `/usr/lib/postgresql/16/bin`. `pg_config` ist nicht zwingend nötig.
 - Der bestehende PM2-Prozess heißt standardmäßig `comet-api`; ein anderer Name wird über `COMET_PM2_NAME` eingestellt. Kein neuer Dienst wird automatisch angelegt.
+- Debian: geprüfter Dienst `pm2-comet.service` mit Benutzer `comet`, Home `/opt/comet`, `PM2_HOME=/opt/comet/.pm2` und API-CWD `/opt/comet/app`. Nur für Neuinstallationen die [Debian-Anleitung](../../DEPLOYMENT_DEBIAN_APACHE.md) verwenden; funktionierenden Autostart nicht neu erzeugen.
 - Das Git-Repository hat eine erreichbare `origin`; standardmäßig wird `main` gelesen. `COMET_UPDATE_BRANCH` erlaubt eine andere Branch. Lokale Änderungen an verfolgten Dateien verhindern das Update.
 - pnpm **10.26 oder neuer**: Die Freigabe benötigter Installationsskripte steht als `allowBuilds` in `pnpm-workspace.yaml`. pnpm 11 unterstützt das frühere `onlyBuiltDependencies` nicht mehr.
 - Der konfigurierte Bilderpfad und alle Datenbanktabellen müssen lesbar sein. Die Speicher-Einstellungen der Datenbank haben Vorrang vor `STORAGE_BACKEND` / `LOCAL_STORAGE_DIR`, wie in der App.
@@ -42,8 +43,10 @@ Personen mit delegierten System-Rechten verwenden **Systemstatus** in der Seiten
 Über **Einstellungen → System → Server sicher aktualisieren** oder direkt:
 
 ```bash
-sudo -u comet bash /opt/comet/app/update.sh
+sudo -H -u comet bash /opt/comet/app/update.sh
 ```
+
+Beim direkten SSH-Aufruf die Verbindung bis zum Abschluss offen lassen. Der Browserstart wird dagegen unabhängig vom Browser und API-Prozess im Hintergrund ausgeführt. Keine parallelen Update-Aufträge starten.
 
 1. Voraussetzungen und einen exklusiven Update-Lock prüfen.
 2. Gewünschten Git-Stand in einem neuen Release-Verzeichnis auspacken.
