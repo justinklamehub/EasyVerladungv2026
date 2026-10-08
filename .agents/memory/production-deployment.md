@@ -23,6 +23,12 @@ Bei einer Benutzer- oder PM2-Umstellung auf dem alten Debian-Server das bestehen
 
 **How to apply:** Scriptpfad und CWD getrennt übertragen; gegebenenfalls `COMET_STORAGE_CWD` auf das ursprüngliche API-Arbeitsverzeichnis setzen. Keinen Bilderpfad neu erfinden.
 
+Bei der Umstellung auf `comet` den Node-Interpreter und den PATH für den Systemd-Autostart im Kontext dieses Benutzers ermitteln, nicht aus der root-Shell übernehmen.
+
+**Why:** Die bisherige Debian-API verwendete Node aus `/root/.nvm`; unter `comet` steht ein separat zugänglicher Node bereit, mit dem die API erfolgreich gestartet wurde. Der root-Interpreter muss für andere root-PM2-Anwendungen unverändert bleiben.
+
+**How to apply:** `command -v node` als App-Benutzer ausführen und diesen zugänglichen Interpreter verwenden. Für den Autostart keinen PATH mit `/root/.nvm` einbauen und das root-Verzeichnis nicht für den App-Benutzer öffnen.
+
 ## Produktionsumgebung und Einlagerungsübernahme
 
 Der Nutzer hat bestätigt: Das produktive COMET-System läuft „auf meinem eigenen Server außerhalb von Replit“.
