@@ -11,6 +11,12 @@ Ein erfolgreicher `sudo -u comet pm2 describe comet-api` beweist nicht, dass der
 
 **How to apply:** Erst Prozesszuordnung lesend ermitteln. Keine Sicherheitsprüfung deaktivieren, kein `pm2 kill`, kein Port-Kill und keine zweite API auf Verdacht starten.
 
+PM2 `jlist` kann bei einer abweichenden CLI-/Daemon-Version einen Versionshinweis vor die JSON-Ausgabe auf stdout schreiben.
+
+**Why:** Die root-PM2-Diagnose scheiterte an diesem Hinweis, obwohl der API-Listener weiterlief.
+
+**How to apply:** In lesenden Diagnose-Pipelines den JSON-Array-Teil isolieren und nur ausgewählte Prozessfelder ausgeben. Nicht `pm2 update` als Parser-Reparatur verwenden: Ein Daemon-Update kann auch andere verwaltete Anwendungen neu starten.
+
 Bei einer Benutzer- oder PM2-Umstellung auf dem alten Debian-Server das bestehende API-Arbeitsverzeichnis `/opt/comet/app` beibehalten, bis relative Speicherpfade ausdrücklich geklärt sind.
 
 **Why:** Die tatsächliche laufende Debian-API verwendet den App-Root als CWD, nicht den API-Unterordner aus dem Installationsbeispiel. Eine Änderung könnte eine andere lokale Bilderablage auswählen.
