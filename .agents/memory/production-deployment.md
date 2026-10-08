@@ -29,6 +29,12 @@ Bei der Umstellung auf `comet` den Node-Interpreter und den PATH für den System
 
 **How to apply:** `command -v node` als App-Benutzer ausführen und diesen zugänglichen Interpreter verwenden. Für den Autostart keinen PATH mit `/root/.nvm` einbauen und das root-Verzeichnis nicht für den App-Benutzer öffnen.
 
+Die vorhandene PM2-Systemd-Unit separat prüfen: `enabled` bedeutet nicht, dass sie erfolgreich läuft. `PM2_HOME` und `PIDFile` müssen zum tatsächlichen Benutzerverzeichnis passen.
+
+**Why:** Der Debian-Autostart war aktiviert, aber fehlgeschlagen: Er verwendete root-NVM und `/home/comet`, während das tatsächliche Home `/opt/comet` ist. Der weiterhin gespeicherte root-API-Eintrag konnte dadurch wieder die aktive API werden.
+
+**How to apply:** Aktiven Listener, Service-Status und Pfade gemeinsam prüfen. Die alte root-API erst nach geprüftem Start im korrigierten comet-Dienst aus dessen PM2-Liste und gespeichertem Boot-Stand entfernen; andere root-Anwendungen nicht neu starten.
+
 ## Produktionsumgebung und Einlagerungsübernahme
 
 Der Nutzer hat bestätigt: Das produktive COMET-System läuft „auf meinem eigenen Server außerhalb von Replit“.
