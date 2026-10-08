@@ -8,6 +8,7 @@ Diese Werkzeuge laufen als **comet**, niemals als root. Sie aktualisieren aussch
 - PostgreSQL-Client und Serverwerkzeuge: `pg_dump`, `pg_restore`, `initdb`, `postgres`. Die lokale PostgreSQL-Hauptversion muss zum verwendeten `pg_dump` passen. Bei abweichender Installation `COMET_PG_BIN` setzen, z. B. `/usr/lib/postgresql/16/bin`. `pg_config` ist nicht zwingend nötig.
 - Der bestehende PM2-Prozess heißt standardmäßig `comet-api`; ein anderer Name wird über `COMET_PM2_NAME` eingestellt. Kein neuer Dienst wird automatisch angelegt.
 - Das Git-Repository hat eine erreichbare `origin`; standardmäßig wird `main` gelesen. `COMET_UPDATE_BRANCH` erlaubt eine andere Branch. Lokale Änderungen an verfolgten Dateien verhindern das Update.
+- pnpm **10.26 oder neuer**: Die Freigabe benötigter Installationsskripte steht als `allowBuilds` in `pnpm-workspace.yaml`. pnpm 11 unterstützt das frühere `onlyBuiltDependencies` nicht mehr.
 - Der konfigurierte Bilderpfad und alle Datenbanktabellen müssen lesbar sein. Die Speicher-Einstellungen der Datenbank haben Vorrang vor `STORAGE_BACKEND` / `LOCAL_STORAGE_DIR`, wie in der App.
 - API und Backup-CLI verwenden dieselbe reale Speicherbasis. Bei relativen lokalen Pfaden `COMET_STORAGE_CWD` auf das ursprüngliche Arbeitsverzeichnis der API setzen.
 
@@ -79,6 +80,14 @@ Der erste Aufruf erzeugt ein neues, nicht überschreibbares Verzeichnis. Optiona
 - Eine erneute fehlgeschlagene Prüfung entfernt den positiven Nachweis dieser Sicherung. Ein beschädigtes Archiv oder Bild ist kein grünes Ergebnis.
 
 Sicherungen enthalten geschäftliche Daten und möglicherweise sensible Datenbankinhalte. Verzeichnisse sind privat, Dateien werden nicht über die App ausgeliefert und gehören nicht ins Git-Repository. Die Dateien sind **nicht automatisch verschlüsselt**. Eine separate geschützte Kopie auf einem anderen System sowie regelmäßige Sicherungen außerhalb von Updates müssen zusätzlich eingerichtet werden. Es gibt absichtlich keine automatische Löschung oder Aufbewahrungsverkürzung.
+
+## Abbruch bei der Installation: ERR_PNPM_IGNORED_BUILDS
+
+Wird beispielsweise `esbuild@0.27.3` als blockiertes Installationsskript gemeldet, die im ausgepackten Git-Stand enthaltene `allowBuilds`-Freigabe prüfen. Die benötigten Pakete werden einzeln freigegeben; keine pauschale Skriptfreigabe verwenden.
+
+Die korrigierte Projektdatei zuerst committen und auf den konfigurierten Git-Branch pushen. Danach den fehlgeschlagenen Auftrag im Systemstatus prüfen und ein neues Update starten. Der nächste Auftrag liest die korrigierte Datei aus dem neuen Git-Stand. Weder `pnpm approve-builds` noch `pnpm install` im laufenden App-Verzeichnis ausführen; `--frozen-lockfile` beibehalten.
+
+Dieser Abbruch liegt vor Build und Übernahme. Das vollständige private Protokoll liegt in `.comet-operations/update.log`; es gehört nicht ins Git-Repository oder ungeprüft in öffentliche Fehlerberichte.
 
 ## Nachgewiesene Tests
 
