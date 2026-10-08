@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getShipmentWorkViews, putShipmentWorkViews, ApiError } from "@workspace/api-client-react";
+import { useQuery, useQueryClient, useAuth, getShipmentWorkViews, putShipmentWorkViews, ApiError } from "./_fixtures";
+
 import {
   MAX_SHIPMENT_WORK_VIEWS,
   sameWorkViewFilters,
@@ -8,19 +8,18 @@ import {
   type ShipmentWorkView,
   type ShipmentWorkViews,
   type ShipmentWorkViewFilters,
-} from "@workspace/api-zod/shipment-work-views";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+} from "./_model";
+import { Button } from "./_ui/button";
+import { Input } from "./_ui/input";
+import { Label } from "./_ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./_ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "./_ui/dialog";
 import {
   AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription,
   AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useAuth } from "@/contexts/auth-context";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Bookmark, Loader2, Pencil, Save, Trash2, RefreshCw, AlertTriangle, MoreHorizontal } from "lucide-react";
+} from "./_ui/alert-dialog";
+
+import { Bookmark, Loader2, Pencil, Save, Trash2, RefreshCw, AlertTriangle } from "lucide-react";
 
 interface Props {
   filters: ShipmentWorkViewFilters;
@@ -165,7 +164,7 @@ export function WorkViewsBar({ filters, onApply }: Props) {
         <Bookmark className="w-4 h-4 text-slate-400" aria-hidden />
         <Label htmlFor="work-view-select" className="sr-only">Gespeicherte Ansicht</Label>
         <Select value={selectedId} onValueChange={select} disabled={locked || views.length === 0}>
-          <SelectTrigger id="work-view-select" className="w-[220px] max-w-full h-9" aria-label="Gespeicherte Ansicht wählen" data-testid="select-work-view">
+          <SelectTrigger id="work-view-select" className="w-[220px] max-w-full" data-testid="select-work-view">
             <SelectValue placeholder={query.isLoading ? "Lade Ansichten…" : views.length ? "Meine Ansichten" : "Keine Ansichten"} />
           </SelectTrigger>
           <SelectContent>
@@ -188,36 +187,24 @@ export function WorkViewsBar({ filters, onApply }: Props) {
         <Button variant="outline" size="sm" className="h-9" disabled={locked || views.length >= MAX_SHIPMENT_WORK_VIEWS}
           onClick={() => setDialog({ mode: "create", name: "", error: null })} data-testid="button-save-work-view">
           {saving ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Save className="w-4 h-4 mr-1.5" />}
-          Speichern als…
+          Als Ansicht speichern
         </Button>
         {selected && (
           <>
-            {dirty && (
-              <Button variant="outline" size="sm" className="h-9" disabled={locked} onClick={updateSelected} data-testid="button-update-work-view">
-                Aktualisieren
-              </Button>
-            )}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-9 w-9" aria-label="Ansicht verwalten" data-testid="button-work-view-menu">
-                  <MoreHorizontal className="w-4 h-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuItem disabled={locked || !dirty} onSelect={() => void updateSelected()} data-testid="menu-update-work-view">
-                  <RefreshCw className="w-4 h-4 mr-2" />Ansicht aktualisieren
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={locked} onSelect={() => setDialog({ mode: "rename", name: selected.name, error: null })} data-testid="button-rename-work-view">
-                  <Pencil className="w-4 h-4 mr-2" />Umbenennen
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={locked} className="text-red-600 focus:text-red-700" onSelect={() => setConfirmDelete(true)} data-testid="button-delete-work-view">
-                  <Trash2 className="w-4 h-4 mr-2" />Löschen
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button variant="outline" size="sm" className="h-9" disabled={locked || !dirty} onClick={updateSelected} data-testid="button-update-work-view">
+              Ansicht aktualisieren
+            </Button>
+            <Button variant="ghost" size="sm" className="h-9" disabled={locked}
+              onClick={() => setDialog({ mode: "rename", name: selected.name, error: null })} data-testid="button-rename-work-view">
+              <Pencil className="w-4 h-4 mr-1.5" />Umbenennen
+            </Button>
+            <Button variant="ghost" size="sm" className="h-9 text-red-600 hover:text-red-700" disabled={locked}
+              onClick={() => setConfirmDelete(true)} data-testid="button-delete-work-view">
+              <Trash2 className="w-4 h-4 mr-1.5" />Löschen
+            </Button>
           </>
         )}
-        <span className="text-xs text-slate-500 hidden lg:inline" title="Privat, nur für Ihr Konto sichtbar">Privat ({views.length}/{MAX_SHIPMENT_WORK_VIEWS})</span>
+        <span className="text-xs text-slate-500 hidden md:inline">Privat, nur für Ihr Konto sichtbar ({views.length}/{MAX_SHIPMENT_WORK_VIEWS})</span>
       </div>
 
       {(loadError || actionError) && (

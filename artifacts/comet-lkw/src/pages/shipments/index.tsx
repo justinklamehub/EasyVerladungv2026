@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Search, Loader2, Plus, Lock, LockOpen, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate, AlertTriangle } from "lucide-react";
+import { Search, Loader2, Plus, Lock, LockOpen, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate, AlertTriangle, ChevronDown, ListChecks } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ShipmentDrawer } from "./components/shipment-drawer";
 import { BulkCreateDialog, type RowData } from "./components/bulk-create-dialog";
@@ -444,6 +444,8 @@ export default function ShipmentsPage() {
     setFilterDateFrom("");
     setFilterDateTo("");
     setDateMode("all");
+    setShowAbgefertigt(false);
+    setShowStorniert(false);
     setSelectedIds(new Set());
   }
 
@@ -519,7 +521,24 @@ export default function ShipmentsPage() {
     filterLkwArt !== "__all__" ||
     filterTor !== "__all__" ||
     effectiveDates.from !== "" ||
-    effectiveDates.to !== "";
+    effectiveDates.to !== "" ||
+    showAbgefertigt ||
+    showStorniert;
+
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  const advancedActive =
+    (filterLkwArt !== "__all__" ? 1 : 0) + (filterTor !== "__all__" ? 1 : 0) +
+    (isCometUser && filterSpeditionId !== "__all__" ? 1 : 0) +
+    (showAbgefertigt ? 1 : 0) + (showStorniert ? 1 : 0) + (dateMode === "custom" ? 1 : 0);
+  const activeChips: { id: string; label: string; remove: () => void }[] = [];
+  if (search.length > 0) activeChips.push({ id: "search", label: `Suche: ${search}`, remove: () => setSearch("") });
+  if (filterStatus !== "__all__") activeChips.push({ id: "status", label: `Status: ${filterStatus}`, remove: () => setFilterStatus("__all__") });
+  if (filterLkwArt !== "__all__") activeChips.push({ id: "lkwart", label: `LKW-Art: ${filterLkwArt}`, remove: () => setFilterLkwArt("__all__") });
+  if (filterTor !== "__all__") activeChips.push({ id: "tor", label: `Tor: ${filterTor}`, remove: () => setFilterTor("__all__") });
+  if (isCometUser && filterSpeditionId !== "__all__") activeChips.push({ id: "spedition", label: `Spedition: ${speditionen?.find((s) => String(s.id) === filterSpeditionId)?.name ?? filterSpeditionId}`, remove: () => setFilterSpeditionId("__all__") });
+  if (dateMode === "custom") activeChips.push({ id: "dates", label: `ETA: ${effectiveDates.from || "…"} bis ${effectiveDates.to || "…"}`, remove: () => { setDateMode("all"); setFilterDateFrom(""); setFilterDateTo(""); } });
+  if (showAbgefertigt) activeChips.push({ id: "abgefertigt", label: "Abgefertigte sichtbar", remove: () => setShowAbgefertigt(false) });
+  if (showStorniert) activeChips.push({ id: "storniert", label: "Stornierte sichtbar", remove: () => setShowStorniert(false) });
 
   return (
     <div className="space-y-6 max-w-[1600px] mx-auto">
@@ -580,21 +599,22 @@ export default function ShipmentsPage() {
         </div>
       </div>
 
-      <div className="app-filter-bar p-4 border shadow-sm space-y-3">
+      <div className="app-filter-bar p-3 border shadow-sm space-y-2" data-testid="shipment-filters">
         <WorkViewsBar key={user?.id} filters={workViewFilters} onApply={applyWorkView} />
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative flex-1 min-w-[180px] max-w-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[160px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
               placeholder="Kennzeichen, Tor…"
-              className="pl-9"
+              aria-label="Suche nach Kennzeichen oder Tor"
+              data-testid="input-shipment-search"
+              className="pl-9 h-9"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-
           <Select value={filterStatus} onValueChange={setFilterStatus}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger className="w-[140px] h-9" aria-label="Status filtern" data-testid="select-filter-status">
               <SelectValue placeholder="Status" />
             </SelectTrigger>
             <SelectContent>
@@ -604,50 +624,51 @@ export default function ShipmentsPage() {
               ))}
             </SelectContent>
           </Select>
-
-          <Select value={filterLkwArt} onValueChange={setFilterLkwArt}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="LKW-Art" />
+          <Select value={dateMode} onValueChange={(mode: WorkViewDate["mode"]) => {
+            const dates = resolveWorkViewDates(mode === "custom"
+              ? { mode, from: effectiveDates.from, to: effectiveDates.to } : { mode });
+            setDateMode(mode);
+            if (mode === "custom") setAdvancedOpen(true);
+            setFilterDateFrom(dates.from);
+            setFilterDateTo(dates.to);
+          }}>
+            <SelectTrigger className="w-[150px] h-9" aria-label="ETA-Zeitraum" data-testid="shipment-date-preset">
+              <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="__all__">Alle Arten</SelectItem>
-              {LKW_ART_OPTIONS.map((a) => (
-                <SelectItem key={a} value={a}>{a}</SelectItem>
-              ))}
+              <SelectItem value="today">Heute</SelectItem>
+              <SelectItem value="tomorrow">Morgen</SelectItem>
+              <SelectItem value="thisWeek">Diese Woche</SelectItem>
+              <SelectItem value="all">Alle Zeiträume</SelectItem>
+              <SelectItem value="custom">Fester Zeitraum</SelectItem>
             </SelectContent>
           </Select>
+          <Button
+            variant="outline" size="sm" className="h-9 gap-1.5"
+            aria-expanded={advancedOpen} aria-controls="shipment-advanced-filters"
+            onClick={() => setAdvancedOpen((o) => !o)}
+            data-testid="button-toggle-advanced-filters"
+          >
+            <SlidersHorizontal className="w-3.5 h-3.5" />
+            Weitere Filter
+            {advancedActive > 0 && (
+              <span className="bg-primary text-primary-foreground text-[10px] leading-none px-1.5 py-0.5 rounded-full">{advancedActive}</span>
+            )}
+            <ChevronDown className={`w-3.5 h-3.5 transition-transform ${advancedOpen ? "rotate-180" : ""}`} />
+          </Button>
 
-          <Select value={filterTor} onValueChange={setFilterTor}>
-            <SelectTrigger className="w-[110px]">
-              <SelectValue placeholder="Tor" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">Alle Tore</SelectItem>
-              {TOR_OPTIONS.map((t) => (
-                <SelectItem key={t} value={t}>{t}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {isCometUser && speditionen && (
-            <Select value={filterSpeditionId} onValueChange={setFilterSpeditionId}>
-              <SelectTrigger className="w-[170px]">
-                <SelectValue placeholder="Spedition" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__all__">Alle Speditionnen</SelectItem>
-                {speditionen.map((s) => (
-                  <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="ml-auto flex items-center gap-1">
+          {hasActiveFilters && (
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-slate-500 h-9" data-testid="button-reset-filters">
+              <X className="w-3 h-3 mr-1" />
+              Zurücksetzen
+            </Button>
           )}
-
           {/* Column visibility picker */}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" size="sm" className="h-9 gap-1.5 ml-auto">
-                <SlidersHorizontal className="w-3.5 h-3.5" />
+              <Button variant="outline" size="sm" className="h-9 gap-1.5" data-testid="button-columns">
+                <ListChecks className="w-3.5 h-3.5" />
                 Spalten
                 {hiddenCount > 0 && (
                   <span className="bg-primary text-primary-foreground text-[10px] leading-none px-1.5 py-0.5 rounded-full">
@@ -699,81 +720,108 @@ export default function ShipmentsPage() {
               </div>
             </PopoverContent>
           </Popover>
+          </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <span>Zeitraum:</span>
-            <Select value={dateMode} onValueChange={(mode: WorkViewDate["mode"]) => {
-              const dates = resolveWorkViewDates(mode === "custom"
-                ? { mode, from: effectiveDates.from, to: effectiveDates.to } : { mode });
-              setDateMode(mode);
-              setFilterDateFrom(dates.from);
-              setFilterDateTo(dates.to);
-            }}>
-              <SelectTrigger className="w-[160px] h-8" aria-label="ETA-Zeitraum" data-testid="shipment-date-preset">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="today">Heute</SelectItem>
-                <SelectItem value="tomorrow">Morgen</SelectItem>
-                <SelectItem value="thisWeek">Diese Woche</SelectItem>
-                <SelectItem value="all">Alle Zeiträume</SelectItem>
-                <SelectItem value="custom">Fester Zeitraum</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <span>ETA von:</span>
-            <Input
-              type="date"
-              className="w-[145px] h-8 text-sm"
-              aria-label="ETA von"
-              value={effectiveDates.from}
-              onChange={(e) => { setDateMode("custom"); setFilterDateFrom(e.target.value); setFilterDateTo(effectiveDates.to); }}
-            />
-          </div>
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <span>bis:</span>
-            <Input
-              type="date"
-              className="w-[145px] h-8 text-sm"
-              aria-label="ETA bis"
-              value={effectiveDates.to}
-              onChange={(e) => { setDateMode("custom"); setFilterDateTo(e.target.value); setFilterDateFrom(effectiveDates.from); }}
-            />
-          </div>
-
-          <div className="flex items-center gap-4 ml-auto">
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-abgefertigt"
-                checked={showAbgefertigt}
-                onCheckedChange={(v) => setShowAbgefertigt(!!v)}
-              />
-              <label htmlFor="show-abgefertigt" className="text-sm text-slate-600 cursor-pointer select-none">
-                Abgefertigte anzeigen
+        {advancedOpen && (
+          <div id="shipment-advanced-filters" className="flex flex-wrap items-end gap-3 rounded-md border bg-slate-50/60 p-3" data-testid="panel-advanced-filters">
+            <label className="flex flex-col gap-1 text-xs text-slate-500">
+              LKW-Art
+              <Select value={filterLkwArt} onValueChange={setFilterLkwArt}>
+                <SelectTrigger className="w-[150px] h-9" aria-label="LKW-Art filtern" data-testid="select-filter-lkwart">
+                  <SelectValue placeholder="LKW-Art" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Alle Arten</SelectItem>
+                  {LKW_ART_OPTIONS.map((a) => (
+                    <SelectItem key={a} value={a}>{a}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-slate-500">
+              Tor
+              <Select value={filterTor} onValueChange={setFilterTor}>
+                <SelectTrigger className="w-[110px] h-9" aria-label="Tor filtern" data-testid="select-filter-tor">
+                  <SelectValue placeholder="Tor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">Alle Tore</SelectItem>
+                  {TOR_OPTIONS.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+            {isCometUser && speditionen && (
+              <label className="flex flex-col gap-1 text-xs text-slate-500">
+                Spedition
+                <Select value={filterSpeditionId} onValueChange={setFilterSpeditionId}>
+                  <SelectTrigger className="w-[170px] h-9" aria-label="Spedition filtern" data-testid="select-filter-spedition">
+                    <SelectValue placeholder="Spedition" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__all__">Alle Speditionnen</SelectItem>
+                    {speditionen.map((s) => (
+                      <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </label>
-            </div>
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="show-storniert"
-                checked={showStorniert}
-                onCheckedChange={(v) => setShowStorniert(!!v)}
+            )}
+            <label className="flex flex-col gap-1 text-xs text-slate-500">
+              ETA von
+              <Input
+                type="date"
+                className="w-[145px] h-9 text-sm"
+                aria-label="ETA von"
+                data-testid="input-eta-from"
+                value={effectiveDates.from}
+                onChange={(e) => { setDateMode("custom"); setFilterDateFrom(e.target.value); setFilterDateTo(effectiveDates.to); }}
               />
-              <label htmlFor="show-storniert" className="text-sm text-slate-600 cursor-pointer select-none">
-                Stornierte anzeigen
-              </label>
+            </label>
+            <label className="flex flex-col gap-1 text-xs text-slate-500">
+              ETA bis
+              <Input
+                type="date"
+                className="w-[145px] h-9 text-sm"
+                aria-label="ETA bis"
+                data-testid="input-eta-to"
+                value={effectiveDates.to}
+                onChange={(e) => { setDateMode("custom"); setFilterDateTo(e.target.value); setFilterDateFrom(effectiveDates.from); }}
+              />
+            </label>
+            <div className="flex items-center gap-4 h-9">
+              <div className="flex items-center gap-2">
+                <Checkbox id="show-abgefertigt" checked={showAbgefertigt} onCheckedChange={(v) => setShowAbgefertigt(!!v)} data-testid="checkbox-show-abgefertigt" />
+                <label htmlFor="show-abgefertigt" className="text-sm text-slate-600 cursor-pointer select-none">Abgefertigte anzeigen</label>
+              </div>
+              <div className="flex items-center gap-2">
+                <Checkbox id="show-storniert" checked={showStorniert} onCheckedChange={(v) => setShowStorniert(!!v)} data-testid="checkbox-show-storniert" />
+                <label htmlFor="show-storniert" className="text-sm text-slate-600 cursor-pointer select-none">Stornierte anzeigen</label>
+              </div>
             </div>
           </div>
+        )}
 
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={resetFilters} className="text-slate-500 h-8">
-              <X className="w-3 h-3 mr-1" />
-              Filter zurücksetzen
-            </Button>
-          )}
-        </div>
+        {activeChips.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5" role="list" aria-label="Aktive Filter" data-testid="list-active-filters">
+            {activeChips.map((c) => (
+              <span key={c.id} role="listitem" className="inline-flex items-center gap-1 rounded-full border bg-white pl-2.5 pr-1 py-0.5 text-xs text-slate-700">
+                {c.label}
+                <button
+                  type="button"
+                  className="rounded-full p-0.5 hover:bg-slate-100 text-slate-500"
+                  aria-label={`Filter entfernen: ${c.label}`}
+                  data-testid={`chip-remove-${c.id}`}
+                  onClick={c.remove}
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {selectedIds.size > 0 && canEdit && (
