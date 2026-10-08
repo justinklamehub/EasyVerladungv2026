@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Search, Loader2, Plus, Lock, LockOpen, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate, AlertTriangle, ChevronDown, ListChecks } from "lucide-react";
 import * as XLSX from "xlsx";
@@ -541,8 +542,8 @@ export default function ShipmentsPage() {
   if (showStorniert) activeChips.push({ id: "storniert", label: "Stornierte sichtbar", remove: () => setShowStorniert(false) });
 
   return (
-    <div className="space-y-6 max-w-[1600px] mx-auto">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="space-y-5 max-w-[1600px] mx-auto">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-border/70">
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Verladungen</h1>
@@ -557,41 +558,47 @@ export default function ShipmentsPage() {
               {isConnected ? "Live" : "Getrennt"}
             </span>
           </div>
-          <p className="text-sm text-slate-500">Verwalten und verfolgen Sie alle LKW-Bewegungen.</p>
+          <p className="text-sm text-slate-500 mt-0.5">Verwalten und verfolgen Sie alle LKW-Bewegungen.</p>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={sorted.length === 0}
-            onClick={exportCsv}
-            className="h-9"
-          >
-            <Download className="w-4 h-4 mr-1.5" />
-            CSV
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={sorted.length === 0}
-            onClick={exportXlsx}
-            className="h-9"
-          >
-            <FileSpreadsheet className="w-4 h-4 mr-1.5" />
-            Excel
-          </Button>
+        <div className="flex items-center gap-2 flex-wrap" data-testid="shipments-header-actions">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 gap-1.5" aria-label="Export-Optionen" data-testid="button-export-menu">
+                <Download className="w-4 h-4" />
+                Export
+                <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem disabled={sorted.length === 0} onSelect={exportCsv} data-testid="menu-export-csv">
+                <Download className="w-4 h-4 mr-2" /> CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={sorted.length === 0} onSelect={exportXlsx} data-testid="menu-export-xlsx">
+                <FileSpreadsheet className="w-4 h-4 mr-2" /> Excel
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {canCreate && (
             <>
-              <Button variant="outline" onClick={() => setIsTemplatesOpen(true)}>
-                <BookTemplate className="w-4 h-4 mr-2" />
-                Vorlagen
-              </Button>
-              <Button variant="outline" onClick={() => setIsBulkOpen(true)}>
-                <Plus className="w-4 h-4 mr-2" />
-                Massenanlage
-              </Button>
-              <Button onClick={() => { setSelectedShipmentId(null); setIsDrawerOpen(true); }}>
-                <Plus className="w-4 h-4 mr-2" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="h-9 gap-1.5" aria-label="Vorlagen und Massenanlage" data-testid="button-create-more">
+                    <BookTemplate className="w-4 h-4" />
+                    Vorlagen
+                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onSelect={() => setIsTemplatesOpen(true)} data-testid="menu-templates">
+                    <BookTemplate className="w-4 h-4 mr-2" /> Vorlagen
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setIsBulkOpen(true)} data-testid="menu-bulk-create">
+                    <Plus className="w-4 h-4 mr-2" /> Massenanlage
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button className="h-9" data-testid="button-new-shipment" onClick={() => { setSelectedShipmentId(null); setIsDrawerOpen(true); }}>
+                <Plus className="w-4 h-4 mr-1.5" />
                 Neue Verladung
               </Button>
             </>

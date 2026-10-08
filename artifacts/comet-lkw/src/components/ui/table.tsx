@@ -23,7 +23,7 @@ const TableHeader = React.forwardRef<
   <thead
     ref={ref}
     className={cn(
-      "[&_tr]:border-b bg-[var(--custom-table-header-bg)] [&_th]:text-[var(--custom-table-header-fg)]",
+      "[&_tr]:border-b [&_tr]:hover:bg-transparent bg-[var(--custom-table-header-bg)] [&_th]:text-[var(--custom-table-header-fg)]",
       className
     )}
     {...props}
@@ -65,7 +65,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b transition-colors hover:bg-[var(--custom-table-row-hover-bg)] data-[state=selected]:bg-muted",
+      "border-b border-border/60 transition-colors focus-visible:outline-none focus-visible:bg-[var(--custom-table-row-hover-bg)] hover:bg-[var(--custom-table-row-hover-bg)] data-[state=selected]:bg-muted",
       className
     )}
     {...props}
@@ -80,7 +80,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-10 px-2 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
+      "h-10 px-2 text-left align-middle text-xs font-semibold tracking-wide text-muted-foreground [&:has([role=checkbox])]:pr-0 [&>[role=checkbox]]:translate-y-[2px]",
       className
     )}
     {...props}

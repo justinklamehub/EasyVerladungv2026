@@ -102,7 +102,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard</h1>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Überblick und aktuelle Kennzahlen
           </p>
         </div>
@@ -126,7 +126,7 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Gesamt</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Gesamt</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-slate-900">{data.totalShipments}</div>
@@ -134,7 +134,7 @@ export default function DashboardPage() {
         </Card>
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Erwartet</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Erwartet</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-blue-600">{data.expectedShipments}</div>
@@ -142,7 +142,7 @@ export default function DashboardPage() {
         </Card>
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Angekommen</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Angekommen</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-green-600">{data.arrivedShipments}</div>
@@ -150,7 +150,7 @@ export default function DashboardPage() {
         </Card>
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Offen</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Offen</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-slate-700">{data.openShipments}</div>
@@ -158,7 +158,7 @@ export default function DashboardPage() {
         </Card>
         <Card className="bg-white shadow-sm border-slate-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-slate-500">Verspätet</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-500 dark:text-slate-400">Verspätet</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-red-600">{data.lateShipments}</div>
@@ -168,8 +168,8 @@ export default function DashboardPage() {
 
       {/* ── Brennpunkt: Live SLA Alerts ── */}
       <Card className={`shadow-sm border ${
-        dangerCount > 0 ? "border-red-200 bg-red-50/30" :
-        warnCount > 0  ? "border-orange-200 bg-orange-50/20" :
+        dangerCount > 0 ? "border-red-200 bg-red-50/30 dark:border-red-800/60 dark:bg-red-950/20" :
+        warnCount > 0  ? "border-orange-200 bg-orange-50/20 dark:border-orange-800/60 dark:bg-orange-950/20" :
         "border-slate-200 bg-white"
       }`}>
         <CardHeader className="pb-3">
@@ -227,7 +227,7 @@ export default function DashboardPage() {
                 </TableHeader>
                 <TableBody>
                   {alerts.map((alert) => (
-                    <TableRow key={alert.id} className={alert.level === "danger" ? "bg-red-50/40" : "bg-orange-50/30"}>
+                    <TableRow key={alert.id} className={alert.level === "danger" ? "bg-red-50/40 dark:bg-red-950/30" : "bg-orange-50/30 dark:bg-orange-950/30"}>
                       <TableCell className="py-2 pr-0">
                         <div className={`w-2 h-2 rounded-full mx-auto ${alert.level === "danger" ? "bg-red-500" : "bg-orange-400"}`} />
                       </TableCell>
@@ -252,14 +252,14 @@ export default function DashboardPage() {
                       <TableCell className="py-2 text-slate-600 text-sm">{alert.speditionName}</TableCell>
                       <TableCell className="py-2 text-right">
                         <span className={`font-semibold text-sm flex items-center justify-end gap-1 ${
-                          alert.level === "danger" ? "text-red-600" : "text-orange-600"
+                          alert.level === "danger" ? "text-red-600 dark:text-red-400" : "text-orange-600 dark:text-orange-400"
                         }`}>
                           <Clock className="w-3 h-3 shrink-0" />
                           {fmtMinutes(alert.minutesWaiting)}
                         </span>
                       </TableCell>
                       <TableCell className="py-2 text-right">
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-slate-500 dark:text-slate-400">
                           {alert.alertReason === "timeInStatus" ? "Wartezeit" : "nach ETA"}
                         </span>
                       </TableCell>

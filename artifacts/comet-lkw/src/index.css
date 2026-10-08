@@ -172,7 +172,7 @@
   --custom-card-border: hsl(var(--card-border));
   --custom-card-radius: 0.75rem;
 
-  --custom-table-header-bg: transparent;
+  --custom-table-header-bg: hsl(var(--muted) / 0.6);
   --custom-table-header-fg: hsl(var(--muted-foreground));
   --custom-table-row-hover-bg: hsl(var(--muted) / 0.5);
   --custom-table-row-stripe-bg: transparent;
@@ -342,6 +342,13 @@
   background-color: var(--custom-filter-bg);
   border-color: var(--custom-filter-border);
   border-radius: var(--custom-filter-radius);
+}
+
+/* ── Shell: Sidebar-Fokus & Navigation ─────────────────────────────────── */
+.sidebar-link:focus-visible,
+.sidebar-ctl:focus-visible {
+  outline: 2px solid hsl(210 40% 80%);
+  outline-offset: -2px;
 }
 
 /* Sonner toast progress bar */

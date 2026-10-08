@@ -24,3 +24,4 @@
 - [Update- und Sicherungssicherheit](operations-safety.md) — getrennte Builds, unabhängige Jobs, gezielter Neustart und ausschließlich isolierte Restore-Proben.
 - [pnpm-Serverkompatibilität](pnpm-server-compatibility.md) — Entwicklung und Debian nutzen unterschiedliche pnpm-Majors; Buildfreigaben mit beiden CLIs isoliert prüfen.
 - [Datenbankziel für Tests](test-database-target.md) — Laufzeitmarkierung allein beweist kein Produktionsziel; vor Testdaten den ausdrücklich gewählten Dev-Zugriff mit der App abgleichen.
+- [Navigation und Hintergrunddienste](navigation-service-lifecycle.md) — Geschlossene mobile Menüs dürfen Nachrichtenabos, Push und aktuelle Online-Seitenangaben nicht stoppen.

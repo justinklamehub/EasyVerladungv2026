@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/hooks/use-permissions";
@@ -64,12 +64,13 @@ import {
 } from "@/components/ui/tooltip";
 import { useNotifications, type AppNotification } from "@/hooks/use-notifications";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
-import { usePresence, getPageName, ROLE_LABELS, type OnlineUser } from "@/hooks/use-presence";
+import { getPageName, ROLE_LABELS, type OnlineUser } from "@/hooks/use-presence";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation as useWouterLocation } from "wouter";
 import { formatDistanceToNow } from "date-fns";
 import { de } from "date-fns/locale";
 import { SendPushDialog } from "@/components/layout/send-push-dialog";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -81,6 +82,9 @@ interface AppSidebarProps {
   onToggle: () => void;
   isDark: boolean;
   onToggleTheme: () => void;
+  notificationsController: ReturnType<typeof useNotifications>;
+  pushController: ReturnType<typeof usePushNotifications>;
+  onlineUsers: OnlineUser[];
 }
 
 function UserAvatar({ username, size = "sm" }: { username: string; size?: "sm" | "md" }) {
@@ -293,7 +297,8 @@ function NotificationPanel({
   );
 }
 
-export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSidebarProps) {
+export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme, notificationsController, pushController, onlineUsers }: AppSidebarProps) {
+  const isMobile = useIsMobile();
   const { user, refetch } = useAuth();
   const permissions = usePermissions();
   const canSendCustomPush = !!permissions["push.send_custom"];
@@ -303,16 +308,9 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
   const [showOnline, setShowOnline] = useState(false);
   const [showSendPush, setShowSendPush] = useState(false);
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
-  const { notifications, unreadCount, markRead, markAllRead, dismiss, dismissAll } = useNotifications();
-  const { state: pushState, error: pushError, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = usePushNotifications();
+  const { notifications, unreadCount, markRead, markAllRead, dismiss, dismissAll } = notificationsController;
+  const { state: pushState, subscribe: pushSubscribe, unsubscribe: pushUnsubscribe } = pushController;
   const { toast } = useToast();
-
-  useEffect(() => {
-    if (pushError) {
-      toast({ title: "Push-Fehler", description: pushError, variant: "destructive" });
-    }
-  }, [pushError, toast]);
-  const { onlineUsers } = usePresence(user?.id);
 
   const { data: pubSettings } = useQuery<Record<string, string>>({
     queryKey: ["settings-public"],
@@ -500,8 +498,9 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
               onClick={() => setShowNotifications(false)}
             />
             <div
-              className="fixed top-0 bottom-0 z-50 w-72 bg-slate-950 border-r border-slate-800 shadow-2xl flex flex-col"
-              style={{ left: collapsed ? 60 : 256 }}
+              className="fixed top-0 bottom-0 z-50 w-72 max-w-full bg-slate-950 border-r border-slate-800 shadow-2xl flex flex-col"
+              style={{ left: isMobile ? 0 : collapsed ? 60 : 256 }}
+              data-testid="panel-notifications"
             >
               <NotificationPanel
                 notifications={notifications}
@@ -512,8 +511,14 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                 onNavigate={(path) => {
                   navigate(path);
                   setShowNotifications(false);
+                  if (isMobile) onToggle();
                 }}
               />
+              {isMobile && (
+                <button onClick={() => setShowNotifications(false)} className="sidebar-ctl shrink-0 h-10 border-t border-slate-800 text-sm text-slate-300 hover:bg-slate-800" data-testid="button-close-notifications">
+                  Zur Navigation
+                </button>
+              )}
             </div>
           </>
         )}
@@ -526,17 +531,23 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
               onClick={() => setShowOnline(false)}
             />
             <div
-              className="fixed top-0 bottom-0 z-50 w-72 bg-slate-950 border-r border-slate-800 shadow-2xl flex flex-col"
-              style={{ left: collapsed ? 60 : 256 }}
+              className="fixed top-0 bottom-0 z-50 w-72 max-w-full bg-slate-950 border-r border-slate-800 shadow-2xl flex flex-col"
+              style={{ left: isMobile ? 0 : collapsed ? 60 : 256 }}
+              data-testid="panel-online"
             >
               <OnlinePanel users={onlineUsers} currentUserId={user.id} />
+              {isMobile && (
+                <button onClick={() => setShowOnline(false)} className="sidebar-ctl shrink-0 h-10 border-t border-slate-800 text-sm text-slate-300 hover:bg-slate-800" data-testid="button-close-online">
+                  Zur Navigation
+                </button>
+              )}
             </div>
           </>
         )}
 
         <div
           className={cn(
-            "bg-slate-950 text-slate-300 flex flex-col h-full border-r border-slate-900 transition-[width] duration-200 ease-in-out overflow-hidden",
+            "bg-slate-950 text-slate-300 flex flex-col h-full max-w-full border-r border-slate-900 transition-[width] duration-200 ease-in-out overflow-hidden",
             collapsed ? "w-[60px]" : "w-64"
           )}
         >
@@ -546,7 +557,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
               <button
                 onClick={onToggle}
                 className="w-full flex items-center justify-center p-1.5 rounded-md text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors"
-                title="Menü ausklappen"
+                title="Menü ausklappen" aria-label="Menü ausklappen" data-testid="button-sidebar-expand"
               >
                 <PanelLeftOpen className="w-4 h-4" />
               </button>
@@ -561,7 +572,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                 <button
                   onClick={onToggle}
                   className="p-1.5 rounded-md text-slate-500 hover:text-slate-200 hover:bg-slate-800 transition-colors shrink-0"
-                  title="Menü einklappen"
+                  title="Menü einklappen" aria-label="Menü schließen oder einklappen" data-testid="button-sidebar-collapse"
                 >
                   <PanelLeftClose className="w-4 h-4" />
                 </button>
@@ -590,13 +601,15 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
                       key={item.href}
                       href={item.href}
                       data-tour={item.href === "/hilfe" ? "help-link" : undefined}
+                      aria-current={isActive ? "page" : undefined}
+                      data-testid={`nav-${item.href.replace(/\//g, "-").replace(/^-/, "")}`}
                       className={cn(
-                        "flex items-center rounded-md text-sm font-medium transition-all duration-150",
-                        collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2.5",
+                        "sidebar-link flex items-center rounded-md text-sm font-medium transition-colors duration-150",
+                        collapsed ? "justify-center w-9 h-9 mx-auto" : "gap-3 px-3 py-2",
                         isActive
                           ? hasActiveCustomColor
                             ? "text-white shadow-sm"
-                            : "bg-primary text-white shadow-sm dark:bg-white/15 dark:text-white dark:shadow-none"
+                            : "bg-slate-800 text-white shadow-[inset_3px_0_0_hsl(210_40%_85%)]"
                           : hasInactiveCustomColor
                           ? "hover:bg-slate-800"
                           : "text-slate-400 hover:text-slate-100 hover:bg-slate-800"
@@ -720,124 +733,127 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme }: AppSi
           </div>
 
           {/* User footer */}
-          <div data-tour="sidebar-footer" className={cn("border-t border-slate-800 bg-slate-900/30 shrink-0", collapsed ? "p-2" : "p-3")}>
+          <div data-tour="sidebar-footer" className={cn("border-t border-slate-800 bg-slate-900/30 shrink-0", collapsed ? "p-2" : "px-3 py-2.5")}>
             {/* ── Expanded footer ── */}
             {!collapsed && (
               <>
                 {/* User info */}
-                <div className="flex items-center gap-3 mb-3">
-                  <div className="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-xs font-medium text-slate-300 uppercase shrink-0">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <div className="w-7 h-7 rounded-full bg-slate-800 flex items-center justify-center text-[11px] font-medium text-slate-300 uppercase shrink-0">
                     {initials}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-200 truncate">{user.username}</div>
-                    <div className="text-xs text-slate-500 truncate">{user.speditionName || "COMET"}</div>
+                    <div className="text-sm font-medium text-slate-200 truncate leading-tight">{user.username}</div>
+                    <div className="text-[11px] text-slate-500 truncate leading-tight">{user.speditionName || "COMET"}</div>
                   </div>
                 </div>
 
-                {/* 2×2 tile grid */}
-                <div className="grid grid-cols-2 gap-1.5 mb-1.5">
-                  {/* Online tile */}
-                  <button
-                    onClick={() => { setShowOnline((v) => !v); setShowNotifications(false); }}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 rounded-lg p-2.5 transition-colors min-h-[52px]",
-                      showOnline
-                        ? "bg-slate-700 text-slate-100"
-                        : "bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                    )}
-                  >
-                    <div className="relative">
-                      <Radio className="w-4 h-4" />
-                      <span className="absolute -top-1 -right-1 w-2 h-2 bg-emerald-500 rounded-full" />
-                    </div>
-                    <span className="text-[10px] leading-tight">
-                      Online{otherOnlineCount > 0 ? ` (${otherOnlineCount})` : ""}
-                    </span>
-                  </button>
+                {/* Compact action row */}
+                <div className="flex items-center gap-0.5" role="toolbar" aria-label="Konto und Benachrichtigungen">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => { setShowOnline((v) => !v); setShowNotifications(false); }}
+                        aria-label="Wer ist online?"
+                        data-testid="button-online-panel"
+                        className={cn("sidebar-ctl relative flex-1 h-8 flex items-center justify-center rounded-md transition-colors", showOnline ? "bg-slate-700 text-slate-100" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800")}
+                      >
+                        <Radio className="w-4 h-4" />
+                        <span className="absolute top-1 right-2 w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                        {otherOnlineCount > 0 && <span className="sr-only">{otherOnlineCount} andere online</span>}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Wer ist online?</TooltipContent>
+                  </Tooltip>
 
-                  {/* Benachrichtigungen tile */}
-                  <button
-                    onClick={() => { setShowNotifications((v) => !v); setShowOnline(false); }}
-                    className={cn(
-                      "flex flex-col items-center justify-center gap-1 rounded-lg p-2.5 transition-colors min-h-[52px]",
-                      showNotifications
-                        ? "bg-slate-700 text-slate-100"
-                        : "bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200"
-                    )}
-                  >
-                    <div className="relative">
-                      <Bell className="w-4 h-4" />
-                      {unreadCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[14px] h-3.5 bg-primary text-white text-[8px] font-bold rounded-full flex items-center justify-center px-0.5">
-                          {unreadCount > 9 ? "9+" : unreadCount}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[10px] leading-tight">Nachrichten</span>
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => { setShowNotifications((v) => !v); setShowOnline(false); }}
+                        aria-label="Benachrichtigungen"
+                        data-testid="button-notifications-panel"
+                        className={cn("sidebar-ctl relative flex-1 h-8 flex items-center justify-center rounded-md transition-colors", showNotifications ? "bg-slate-700 text-slate-100" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800")}
+                      >
+                        <Bell className="w-4 h-4" />
+                        {unreadCount > 0 && (
+                          <span className="absolute top-0 right-0.5 min-w-[14px] h-3.5 bg-primary text-primary-foreground text-[9px] font-bold rounded-full flex items-center justify-center px-0.5 ring-1 ring-slate-950">
+                            {unreadCount > 9 ? "9+" : unreadCount}
+                          </span>
+                        )}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Benachrichtigungen</TooltipContent>
+                  </Tooltip>
 
-                  {/* Theme tile */}
-                  <button
-                    onClick={onToggleTheme}
-                    className="flex flex-col items-center justify-center gap-1 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 p-2.5 transition-colors min-h-[52px]"
-                  >
-                    {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
-                    <span className="text-[10px] leading-tight">{isDark ? "Hell" : "Dunkel"}</span>
-                  </button>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={onToggleTheme}
+                        aria-label="Farbschema wechseln"
+                        data-testid="button-toggle-theme"
+                        className="sidebar-ctl relative flex-1 h-8 flex items-center justify-center rounded-md transition-colors text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                      >
+                        {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Farbschema wechseln</TooltipContent>
+                  </Tooltip>
 
-                  {/* Profil tile */}
-                  <Link
-                    href="/profil"
-                    className="flex flex-col items-center justify-center gap-1 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-slate-800 hover:text-slate-200 p-2.5 transition-colors min-h-[52px]"
-                  >
-                    <UserCog className="w-4 h-4" />
-                    <span className="text-[10px] leading-tight">Profil</span>
-                  </Link>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Link href="/profil" aria-label="Mein Profil" data-testid="link-profile" className="sidebar-ctl relative flex-1 h-8 flex items-center justify-center rounded-md transition-colors text-slate-400 hover:text-slate-100 hover:bg-slate-800">
+                        <UserCog className="w-4 h-4" />
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Mein Profil</TooltipContent>
+                  </Tooltip>
+                  {canSendCustomPush && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => setShowSendPush(true)}
+                        aria-label="Nachricht senden"
+                        data-testid="button-send-push"
+                        className="sidebar-ctl relative flex-1 h-8 flex items-center justify-center rounded-md transition-colors text-slate-400 hover:text-slate-100 hover:bg-slate-800"
+                      >
+                        <Send className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Nachricht senden</TooltipContent>
+                  </Tooltip>
+                  )}
+                  {pushState !== "unsupported" && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          onClick={() => pushState === "subscribed" ? pushUnsubscribe() : pushSubscribe()}
+                          disabled={pushState === "loading" || pushState === "denied"}
+                          aria-label={pushState === "subscribed" ? "Push aktiv – deaktivieren" : pushState === "denied" ? "Push gesperrt" : "Push aktivieren"}
+                          data-testid="button-toggle-push"
+                          className={cn("sidebar-ctl relative flex-1 h-8 flex items-center justify-center rounded-md transition-colors", pushState === "subscribed" ? "text-primary-foreground bg-white/10 hover:bg-white/20" : pushState === "denied" ? "text-slate-600 cursor-not-allowed" : "text-slate-400 hover:text-slate-100 hover:bg-slate-800")}
+                        >
+                          {pushState === "subscribed" ? <BellRing className="w-4 h-4" /> : pushState === "denied" ? <BellOff className="w-4 h-4" /> : <Bell className="w-4 h-4" />}
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs">
+                        {pushState === "subscribed" ? "Push aktiv (klicken zum Deaktivieren)" : pushState === "denied" ? "Push vom Browser gesperrt" : "Push aktivieren"}
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        onClick={() => logoutMutation.mutate()}
+                        aria-label="Abmelden"
+                        data-testid="button-logout"
+                        className="sidebar-ctl relative flex-1 h-8 flex items-center justify-center rounded-md transition-colors text-slate-400 hover:text-red-300 hover:bg-red-900/40"
+                      >
+                        <LogOut className="w-4 h-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">Abmelden</TooltipContent>
+                  </Tooltip>
                 </div>
-
-                {/* Nachricht senden (konfigurierbar über Berechtigungen) — full width */}
-                {canSendCustomPush && (
-                  <button
-                    onClick={() => setShowSendPush(true)}
-                    className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-200 p-2 text-xs transition-colors mb-1.5"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    Nachricht senden
-                  </button>
-                )}
-
-                {/* Push-Benachrichtigungen — full width */}
-                {pushState !== "unsupported" && (
-                  <button
-                    onClick={() => pushState === "subscribed" ? pushUnsubscribe() : pushSubscribe()}
-                    disabled={pushState === "loading" || pushState === "denied"}
-                    className={cn(
-                      "w-full flex items-center justify-center gap-2 rounded-lg p-2 text-xs transition-colors mb-1.5",
-                      pushState === "subscribed"
-                        ? "bg-primary/20 text-primary hover:bg-primary/30"
-                        : pushState === "denied"
-                        ? "bg-slate-800/50 text-slate-600 cursor-not-allowed"
-                        : "bg-slate-800/50 text-slate-400 hover:bg-slate-700 hover:text-slate-200"
-                    )}
-                  >
-                    {pushState === "subscribed"
-                      ? <><BellRing className="w-3.5 h-3.5" /> Push aktiv</>
-                      : pushState === "denied"
-                      ? <><BellOff className="w-3.5 h-3.5" /> Push gesperrt</>
-                      : <><Bell className="w-3.5 h-3.5" /> Push aktivieren</>
-                    }
-                  </button>
-                )}
-
-                {/* Logout — full width */}
-                <button
-                  onClick={() => logoutMutation.mutate()}
-                  className="w-full flex items-center justify-center gap-2 rounded-lg bg-slate-800/50 text-slate-400 hover:bg-red-900/40 hover:text-red-300 p-2 text-xs transition-colors"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  Abmelden
-                </button>
               </>
             )}
 
