@@ -3,16 +3,21 @@ import { getGetAdminSystemOperationsQueryKey, useGetAdminSystemOperations, useSt
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, DatabaseBackup, Loader2, RefreshCw, Server, XCircle } from "lucide-react";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const LABEL = { idle: "Bereit", queued: "Angenommen", running: "Läuft …",
   done: "Abgeschlossen", failed: "Fehler", unknown: "Abschluss unbekannt" };
 
 export function ServerOperationsCard() {
+  const permissions = usePermissions();
+  const canView = !!permissions["system.view"];
+  const canUpdate = canView && !!permissions["system.update"];
   const [confirm, setConfirm] = useState(false);
   const [acceptedJob, setAcceptedJob] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const query = useGetAdminSystemOperations({ query: {
     queryKey: getGetAdminSystemOperationsQueryKey(),
+    enabled: canView,
     refetchInterval: 5000, refetchIntervalInBackground: false, retry: false, staleTime: 0,
   } });
   const start = useStartAdminSystemUpdate();
@@ -24,6 +29,7 @@ export function ServerOperationsCard() {
   const status = query.isError ? "unknown" : awaitingJob ? "queued" : current?.status ?? "idle";
   const backup = data?.backup;
   async function startUpdate() {
+    if (!canUpdate) return;
     setConfirm(false);
     setSubmitError(null);
     try {
@@ -35,6 +41,7 @@ export function ServerOperationsCard() {
       void query.refetch();
     }
   }
+  if (!canView) return null;
   return (
     <div className="space-y-4 min-w-0 [overflow-wrap:anywhere]">
       <Card className="shadow-sm" data-testid="card-safe-update">
@@ -67,11 +74,11 @@ export function ServerOperationsCard() {
           </div>}
           <p className="text-xs text-slate-500">Der Auftrag läuft unabhängig vom geöffneten Browser weiter. Nur der eigene API-Dienst wird nach den Prüfungen kurz neu gestartet; kein fremder Prozess wird über seinen Port beendet.</p>
           <div className="flex flex-wrap gap-2 items-center">
-            {!confirm && <Button variant="destructive" size="sm" onClick={() => setConfirm(true)}
+            {!confirm && canUpdate && <Button variant="destructive" size="sm" onClick={() => setConfirm(true)}
               disabled={!data?.available || busy || query.isError || !!submitError} data-testid="button-prepare-update">
               <RefreshCw className="w-3.5 h-3.5 mr-1.5" />Update vorbereiten
             </Button>}
-            {confirm && <>
+            {confirm && canUpdate && <>
               <p className="text-sm basis-full">Die API wird kurz neu gestartet. Bei einem Fehler werden vorherige Builds zurückgenommen, nicht die Datenbank. Jetzt starten?</p>
               <Button variant="destructive" size="sm" onClick={() => void startUpdate()} disabled={busy} data-testid="button-confirm-update">Ja, Update starten</Button>
               <Button variant="outline" size="sm" onClick={() => setConfirm(false)}>Abbrechen</Button>
@@ -81,6 +88,7 @@ export function ServerOperationsCard() {
               if (result.isSuccess) { setSubmitError(null); setAcceptedJob(null); }
             }} disabled={query.isFetching} data-testid="button-refresh-update">Status aktualisieren</Button>
           </div>
+          {!canUpdate && <p className="text-xs text-slate-500" data-testid="text-update-permission">Nur Lesezugriff. Zum Starten eines Updates ist das separate Update-Recht erforderlich.</p>}
         </CardContent>
       </Card>
       <Card className="shadow-sm" data-testid="card-backup-proof">

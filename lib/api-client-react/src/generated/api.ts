@@ -246,7 +246,7 @@ export const getGetAdminSystemStatusUrl = () => {
 }
 
 /**
- * @summary Rein lesende Systemprüfungen für Administratoren
+ * @summary Rein lesende Systemprüfungen mit konfigurierbarem System-Anzeigerecht
  */
 export const getAdminSystemStatus = async ( options?: RequestInit): Promise<SystemStatusReport> => {
 
@@ -293,7 +293,7 @@ export type GetAdminSystemStatusQueryError = ErrorType<void>
 
 
 /**
- * @summary Rein lesende Systemprüfungen für Administratoren
+ * @summary Rein lesende Systemprüfungen mit konfigurierbarem System-Anzeigerecht
  */
 
 export function useGetAdminSystemStatus<TData = Awaited<ReturnType<typeof getAdminSystemStatus>>, TError = ErrorType<void>>(

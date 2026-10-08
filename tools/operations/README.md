@@ -34,6 +34,10 @@ Die `.env` wird als Dotenv-Daten gelesen, nicht als ausführbarer Shellcode. Ge�
 
 ## Update-Ablauf
 
+Unter **Einstellungen → Sidebar** ist „Systemstatus“ mit Beschriftung, Symbol, Reihenfolge und Rollensichtbarkeit konfigurierbar. Sichtbarkeit ist kein Zugriffsrecht: Unter **Berechtigungen → System** werden `system.view` (Status, Fortschritt und Sicherungsnachweise) und `system.update` (Updates starten) getrennt vergeben. Ein Update benötigt beide Rechte. Bestehende Nicht-Admin-Rollen erhalten die neuen Rechte standardmäßig nicht; auch eigene Rollen können sie erhalten.
+
+Personen mit delegierten System-Rechten verwenden **Systemstatus** in der Seitenleiste. Dort sind auch Fortschritt und Sicherungsnachweise verfügbar, ohne Zugriff auf die übrigen globalen Einstellungen zu erhalten.
+
 Über **Einstellungen → System → Server sicher aktualisieren** oder direkt:
 
 ```bash

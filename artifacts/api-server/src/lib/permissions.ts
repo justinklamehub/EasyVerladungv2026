@@ -38,7 +38,9 @@ export type Permission =
   | "einlagerung.master"
   | "einlagerung.import"
   | "einlagerung.replace"
-  | "einlagerung.settings";
+  | "einlagerung.settings"
+  | "system.view"
+  | "system.update";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -95,9 +97,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   "einlagerung.import",
   "einlagerung.replace",
   "einlagerung.settings",
+  "system.view",
+  "system.update",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
+  "system.view": { label: "Systemstatus, Update-Fortschritt und Sicherungsnachweise ansehen", category: "System" },
+  "system.update": { label: "Serverupdates starten (zusätzlich System-Anzeigerecht erforderlich)", category: "System" },
   "einlagerung.view": { label: "Lagerübersicht und Bestände ansehen", category: "Einlagerung" },
   "einlagerung.scan": { label: "Einlagerungsscanner nutzen", category: "Einlagerung" },
   "einlagerung.full": { label: "Regal voll melden", category: "Einlagerung" },

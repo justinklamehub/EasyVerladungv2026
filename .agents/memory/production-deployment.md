@@ -3,6 +3,14 @@ name: Production deployment gotchas
 description: Self-hosted deployment issues specific to COMET LKW on Debian/Apache2
 ---
 
+## PM2-Client ist kein Nachweis des API-Benutzers
+
+Ein erfolgreicher `sudo -u comet pm2 describe comet-api` beweist nicht, dass der tatsächliche API-Prozess als `comet` läuft. Vor einer Benutzerumstellung den Linux-Benutzer des API-PIDs, seinen Elternprozess und den zugehörigen Listener prüfen.
+
+**Why:** Auf Debian wurde der PM2-Prozess unter dem comet-Client gefunden, während die laufende API anschließend UID 0 meldete. Eine ungezielte zweite PM2-Instanz oder ein pauschaler Neustart könnte andere Dienste betreffen.
+
+**How to apply:** Erst Prozesszuordnung lesend ermitteln. Keine Sicherheitsprüfung deaktivieren, kein `pm2 kill`, kein Port-Kill und keine zweite API auf Verdacht starten.
+
 ## Produktionsumgebung und Einlagerungsübernahme
 
 Der Nutzer hat bestätigt: Das produktive COMET-System läuft „auf meinem eigenen Server außerhalb von Replit“.
@@ -16,6 +24,14 @@ Für Einlagerungsübernahmen verlangt der Nutzer die Daten als PostgreSQL-SQL f�
 **Why:** Der Nutzer hat die Bitte um direkt verwendbare SQL-Daten mehrfach wiederholt und Adminer für PostgreSQL ausdrücklich genannt.
 
 **How to apply:** Eine direkt herunterladbare SQL-Datendatei bereitstellen. SQL-Dialekt PostgreSQL verwenden; phpMyAdmin nicht als PostgreSQL-Verwaltung darstellen.
+
+## Bestehender PostgreSQL-Cluster auf Debian
+
+Der alte Debian-Server verwendet PostgreSQL 18 mit dem bestehenden Cluster `main` auf Port 5432. Für Wiederherstellungsproben die zur tatsächlichen pg_dump-Version passenden Serverwerkzeuge verwenden, nicht ungeprüft die PostgreSQL-16-Beispiele aus der Entwicklungsumgebung.
+
+**Why:** Der Nutzer bestätigte am 2026-10-08 PostgreSQL 18 als laufenden Cluster und pg_dump 18. Die Entwicklungsumgebung verwendet eine andere Hauptversion.
+
+**How to apply:** Vor späteren Arbeiten die aktuelle Version erneut prüfen. Den vorhandenen Cluster nicht neu initialisieren, ersetzen oder für eine Probe stoppen.
 
 ## Missing tables not in Drizzle schema
 

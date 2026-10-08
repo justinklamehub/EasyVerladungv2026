@@ -1,5 +1,5 @@
 import { Switch, Route, Router as WouterRouter, Redirect } from "wouter";
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, useQuery, useIsFetching } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { useEffect } from "react";
 import { toast as sonnerToast } from "sonner";
@@ -7,7 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
 import { useSocket } from "@/hooks/use-socket";
-import { usePermissions } from "@/hooks/use-permissions";
+import { usePermissions, PERMISSIONS_QUERY_KEY } from "@/hooks/use-permissions";
 import { useCustomDesign } from "@/hooks/use-custom-design";
 import NotFound from "@/pages/not-found";
 
@@ -79,11 +79,15 @@ const queryClient = new QueryClient({
 function ProtectedRoute({ component: Component, roles, permission }: { component: any, roles?: string[], permission?: string }) {
   const { user, isLoading } = useAuth();
   const permissions = usePermissions();
+  const permissionsFetching = useIsFetching({ queryKey: PERMISSIONS_QUERY_KEY });
 
   if (isLoading) return <div className="h-screen w-full flex items-center justify-center">Laden...</div>;
   if (!user) return <Redirect to="/login" />;
 
   if (roles && !roles.includes(user.role)) {
+    if (permission && permissionsFetching && Object.keys(permissions).length === 0) {
+      return <div className="h-screen w-full flex items-center justify-center">Berechtigungen werden geladen...</div>;
+    }
     const hasPermissionOverride = permission && !!permissions[permission];
     if (!hasPermissionOverride) {
       return <Redirect to="/dashboard" />;
@@ -129,7 +133,7 @@ function Router() {
             <Route path="/speditionsfreigabe"><ProtectedRoute component={SpeditionsfreigebePage} roles={["speditions_admin"]} /></Route>
             <Route path="/relationen"><ProtectedRoute component={RelationenPage} roles={["speditions_admin"]} /></Route>
             <Route path="/settings"><ProtectedRoute component={SettingsPage} roles={["comet_admin"]} /></Route>
-            <Route path="/system-status"><ProtectedRoute component={SystemStatusPage} roles={["comet_admin"]} /></Route>
+            <Route path="/system-status"><ProtectedRoute component={SystemStatusPage} roles={["comet_admin"]} permission="system.view" /></Route>
             <Route path="/berechtigungen"><ProtectedRoute component={BerechtigungenPage} roles={["comet_admin"]} /></Route>
             <Route path="/wochenansicht"><ProtectedRoute component={WochenansichtPage} /></Route>
             <Route path="/torbelegung"><ProtectedRoute component={TorbelegungPage} /></Route>

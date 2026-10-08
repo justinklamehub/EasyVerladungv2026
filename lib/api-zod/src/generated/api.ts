@@ -53,7 +53,7 @@ export const StartAdminSystemUpdateBody = zod.object({
 
 
 /**
- * @summary Rein lesende Systemprüfungen für Administratoren
+ * @summary Rein lesende Systemprüfungen mit konfigurierbarem System-Anzeigerecht
  */
 export const GetAdminSystemStatusResponse = zod.object({
   "checkedAt": zod.coerce.date(),

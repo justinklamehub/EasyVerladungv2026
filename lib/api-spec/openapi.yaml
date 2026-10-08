@@ -43,7 +43,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/SystemOperationsReport"
         "401": { description: Anmeldung erforderlich }
-        "403": { description: Nur COMET-Administratoren }
+        "403": { description: System-Anzeigerecht erforderlich }
   /admin/system/update:
     post:
       operationId: startAdminSystemUpdate
@@ -63,14 +63,14 @@ paths:
               schema:
                 $ref: "#/components/schemas/SystemUpdateAccepted"
         "400": { description: Bestätigung fehlt }
-        "403": { description: Administrator oder gültige Herkunft fehlt }
+        "403": { description: System-Anzeige-/Update-Recht oder gültige Herkunft fehlt }
         "409": { description: Update läuft bereits }
         "503": { description: Sicherer Updater ist nicht eingerichtet }
   /admin/system/status:
     get:
       operationId: getAdminSystemStatus
       tags: [health]
-      summary: Rein lesende Systemprüfungen für Administratoren
+      summary: Rein lesende Systemprüfungen mit konfigurierbarem System-Anzeigerecht
       responses:
         "200":
           description: Prüfbericht mit tatsächlichen Ergebnissen
@@ -81,7 +81,7 @@ paths:
         "401":
           description: Anmeldung erforderlich
         "403":
-          description: Nur COMET-Administratoren
+          description: System-Anzeigerecht erforderlich
   /report/delivery/preview:
     get:
       operationId: previewDeliveryReport

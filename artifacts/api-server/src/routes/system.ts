@@ -3,17 +3,24 @@ import { requireAuth } from "../lib/auth";
 import { GetAdminSystemStatusResponse, StartAdminSystemUpdateBody } from "@workspace/api-zod";
 import { readSystemStatus } from "../lib/system-status-runtime";
 import { readSystemOperations, startSystemUpdate } from "../lib/system-operations";
+import { can } from "../lib/permissions";
 
 const router = Router();
 
 router.get("/admin/system/operations", requireAuth, async (req, res, next) => {
-  if (req.session.role !== "comet_admin") { res.status(403).json({ error: "Nur Administratoren." }); return; }
-  res.setHeader("Cache-Control", "no-store");
-  try { res.json(await readSystemOperations()); } catch (error) { next(error); }
+  try {
+    if (!(await can(req.session.role!, "system.view"))) { res.status(403).json({ error: "Kein Recht zum Anzeigen des Systemstatus." }); return; }
+    res.setHeader("Cache-Control", "no-store");
+    res.json(await readSystemOperations());
+  } catch (error) { next(error); }
 });
 
 router.post("/admin/system/update", requireAuth, async (req, res, next) => {
-  if (req.session.role !== "comet_admin") { res.status(403).json({ error: "Nur Administratoren." }); return; }
+  try {
+    if (!(await can(req.session.role!, "system.view")) || !(await can(req.session.role!, "system.update"))) {
+      res.status(403).json({ error: "System-Anzeige- und Update-Recht erforderlich." }); return;
+    }
+  } catch (error) { next(error); return; }
   let origin;
   try { origin = new URL(process.env.COMET_PUBLIC_URL || "").origin; } catch { /* unconfigured updater */ }
   if (!origin || req.get("origin") !== origin) {
@@ -30,23 +37,22 @@ router.post("/admin/system/update", requireAuth, async (req, res, next) => {
 });
 
 router.get("/admin/system/status", requireAuth, async (req, res, next) => {
-  if (req.session.role !== "comet_admin") {
-    res.status(403).json({ error: "Nur Administratoren dürfen den Systemstatus prüfen." });
-    return;
-  }
-  res.setHeader("Cache-Control", "no-store");
   try {
+    if (!(await can(req.session.role!, "system.view"))) {
+      res.status(403).json({ error: "Kein Recht zum Anzeigen des Systemstatus." }); return;
+    }
+    res.setHeader("Cache-Control", "no-store");
     res.json(GetAdminSystemStatusResponse.parse(await readSystemStatus()));
   } catch (error) { next(error); }
 });
 
-router.get("/admin/system/restart/stream", requireAuth, (req, res) => {
-  if (req.session.role !== "comet_admin") {
-    res.status(403).json({ error: "Nur Admins dürfen den Server neu starten." });
-    return;
-  }
-
+router.get("/admin/system/restart/stream", requireAuth, async (req, res, next) => {
+  try {
+    if (!(await can(req.session.role!, "system.view")) || !(await can(req.session.role!, "system.update"))) {
+      res.status(403).json({ error: "System-Anzeige- und Update-Recht erforderlich." }); return;
+    }
   res.status(410).json({ error: "Updates werden nicht mehr durch GET gestartet. Seite neu laden und den bestätigten Update-Auftrag verwenden." });
+  } catch (error) { next(error); }
 });
 
 export default router;

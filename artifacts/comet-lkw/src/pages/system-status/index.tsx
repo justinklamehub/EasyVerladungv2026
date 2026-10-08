@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertTriangle, CheckCircle2, HelpCircle, Loader2, RefreshCw, XCircle, Info } from "lucide-react";
+import { ServerOperationsCard } from "@/pages/settings/server-operations-card";
 
 type Level = "ok" | "warning" | "error" | "unknown" | "pending";
 
@@ -300,11 +301,12 @@ export default function SystemStatusPage() {
       <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 flex gap-2">
         <Info className="w-4 h-4 shrink-0 mt-0.5" aria-hidden="true" />
         <ul className="space-y-1">
-          <li>Alle Prüfungen sind rein lesend. Schreibvorgänge und Backups werden nicht geprüft.</li>
+          <li>Die obigen Live-Prüfungen sind rein lesend. Sie prüfen weder Schreibvorgänge noch Backups; vorhandene Sicherungsnachweise werden unten separat angezeigt.</li>
           <li>Angezeigt wird nur diese Instanz – alter und neuer Server werden nicht automatisch verglichen.</li>
           <li><Badge variant="outline" className="mr-1">Hinweis</Badge>Ein grüner Status ersetzt keine Sicherungs- oder Wiederherstellungsprüfung.</li>
         </ul>
       </div>
+      <ServerOperationsCard />
     </div>
   );
 }
