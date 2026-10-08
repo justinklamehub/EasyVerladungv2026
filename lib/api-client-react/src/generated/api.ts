@@ -66,7 +66,10 @@ import type {
   SpeditionPermission,
   SpeditionPermissionInput,
   SpeditionUpdate,
+  SystemOperationsReport,
   SystemStatusReport,
+  SystemUpdateAccepted,
+  SystemUpdateConfirmation,
   UploadUrlRequest,
   UploadUrlResponse,
   User,
@@ -85,6 +88,154 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
+export const getGetAdminSystemOperationsUrl = () => {
+
+
+
+
+  return `/api/admin/system/operations`
+}
+
+/**
+ * @summary Update-Fortschritt und letzte gemeinsame Sicherung
+ */
+export const getAdminSystemOperations = async ( options?: RequestInit): Promise<SystemOperationsReport> => {
+
+  return customFetch<SystemOperationsReport>(getGetAdminSystemOperationsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetAdminSystemOperationsQueryKey = () => {
+    return [
+    `/api/admin/system/operations`
+    ] as const;
+    }
+
+
+export const getGetAdminSystemOperationsQueryOptions = <TData = Awaited<ReturnType<typeof getAdminSystemOperations>>, TError = ErrorType<void>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSystemOperations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetAdminSystemOperationsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getAdminSystemOperations>>> = ({ signal }) => getAdminSystemOperations({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getAdminSystemOperations>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetAdminSystemOperationsQueryResult = NonNullable<Awaited<ReturnType<typeof getAdminSystemOperations>>>
+export type GetAdminSystemOperationsQueryError = ErrorType<void>
+
+
+/**
+ * @summary Update-Fortschritt und letzte gemeinsame Sicherung
+ */
+
+export function useGetAdminSystemOperations<TData = Awaited<ReturnType<typeof getAdminSystemOperations>>, TError = ErrorType<void>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getAdminSystemOperations>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetAdminSystemOperationsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getStartAdminSystemUpdateUrl = () => {
+
+
+
+
+  return `/api/admin/system/update`
+}
+
+/**
+ * @summary Bestätigtes Update als unabhängigen Hintergrundauftrag starten
+ */
+export const startAdminSystemUpdate = async (systemUpdateConfirmation: SystemUpdateConfirmation, options?: RequestInit): Promise<SystemUpdateAccepted> => {
+
+  return customFetch<SystemUpdateAccepted>(getStartAdminSystemUpdateUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      systemUpdateConfirmation,)
+  }
+);}
+
+
+
+
+export const getStartAdminSystemUpdateMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAdminSystemUpdate>>, TError,{data: BodyType<SystemUpdateConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof startAdminSystemUpdate>>, TError,{data: BodyType<SystemUpdateConfirmation>}, TContext> => {
+
+const mutationKey = ['startAdminSystemUpdate'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof startAdminSystemUpdate>>, {data: BodyType<SystemUpdateConfirmation>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  startAdminSystemUpdate(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StartAdminSystemUpdateMutationResult = NonNullable<Awaited<ReturnType<typeof startAdminSystemUpdate>>>
+    export type StartAdminSystemUpdateMutationBody = BodyType<SystemUpdateConfirmation>
+    export type StartAdminSystemUpdateMutationError = ErrorType<void>
+
+    /**
+ * @summary Bestätigtes Update als unabhängigen Hintergrundauftrag starten
+ */
+export const useStartAdminSystemUpdate = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof startAdminSystemUpdate>>, TError,{data: BodyType<SystemUpdateConfirmation>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof startAdminSystemUpdate>>,
+        TError,
+        {data: BodyType<SystemUpdateConfirmation>},
+        TContext
+      > => {
+      return useMutation(getStartAdminSystemUpdateMutationOptions(options));
+    }
 
 export const getGetAdminSystemStatusUrl = () => {
 

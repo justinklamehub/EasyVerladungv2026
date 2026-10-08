@@ -21,3 +21,4 @@
 - [Lieferterminwarnungen](delivery-deadline-rules.md) — Tagesgrenzen dynamisch in Einstellungen; KW-Termine separat, Plus-KW nicht ungefragt als Terminverlängerung behandeln.
 - [Überfällige Vormerkungen](reservation-deadline-rules.md) — Für Vormerkungen bestätigt: Plus-KW verlängert Datum bzw. KW-Ende um die angegebene Anzahl Wochen.
 - [Systemmonitoring](system-monitoring.md) — API-Erreichbarkeit ist nicht App-Erreichbarkeit; Admin-Prüfungen bleiben lesend, pro Instanz und mit klaren Aussagegrenzen.
+- [Update- und Sicherungssicherheit](operations-safety.md) — getrennte Builds, unabhängige Jobs, gezielter Neustart und ausschließlich isolierte Restore-Proben.

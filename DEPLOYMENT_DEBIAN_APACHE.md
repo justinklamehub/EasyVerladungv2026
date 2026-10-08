@@ -438,6 +438,8 @@ RequestHeader set X-Forwarded-Proto "https"
 
 ## 16. Updates deployen (Workflow)
 
+> **Aktueller sicherer Ablauf:** [COMET-Betriebswerkzeuge](tools/operations/README.md). Der neue Updater baut getrennt, prüft Datenbank-/Bilder-Sicherung und Wiederherstellung und übernimmt erst danach. Die folgenden manuellen Live-Build-Schritte sind historisch und sollten nicht für laufende Instanzen verwendet werden.
+
 ```bash
 cd /opt/comet/app
 
@@ -537,6 +539,8 @@ apache2ctl -M | grep proxy
 ---
 
 ## 18. Update auf bestehender Installation (ohne Datenverlust)
+
+> **Aktueller sicherer Ablauf:** [COMET-Betriebswerkzeuge](tools/operations/README.md). Eine nicht leere SQL-Datei allein beweist keine erfolgreiche Sicherung oder Wiederherstellung. Für bestehende Instanzen den geprüften Updater und die gemeinsame Datenbank-/Bilder-Sicherung verwenden; keine Live-Builds aus den historischen Schritten unten durchführen.
 
 > **Voraussetzung:** Das System läuft bereits gemäß dieser Anleitung unter `/opt/comet/app/` mit PM2 und Apache2.  
 > Alle Schritte als Benutzer **root** oder mit `sudo` ausführen, sofern nicht anders angegeben.

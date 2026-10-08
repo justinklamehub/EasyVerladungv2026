@@ -383,6 +383,8 @@ sudo ufw status
 
 ## 13. Updates einspielen
 
+> **Aktueller sicherer Ablauf:** [COMET-Betriebswerkzeuge](tools/operations/README.md). Der getrennte Updater mit gemeinsamer Datenbank-/Bilder-Sicherung und isolierter Wiederherstellungsprobe ersetzt die historischen manuellen Live-Build-Schritte unten.
+
 ```bash
 cd /opt/comet-lkw
 

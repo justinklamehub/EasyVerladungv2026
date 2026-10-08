@@ -30,6 +30,42 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /admin/system/operations:
+    get:
+      operationId: getAdminSystemOperations
+      tags: [health]
+      summary: Update-Fortschritt und letzte gemeinsame Sicherung
+      responses:
+        "200":
+          description: Gespeicherter Betriebsstatus ohne Ausführung eines Skripts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemOperationsReport"
+        "401": { description: Anmeldung erforderlich }
+        "403": { description: Nur COMET-Administratoren }
+  /admin/system/update:
+    post:
+      operationId: startAdminSystemUpdate
+      tags: [health]
+      summary: Bestätigtes Update als unabhängigen Hintergrundauftrag starten
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SystemUpdateConfirmation"
+      responses:
+        "202":
+          description: Hintergrundauftrag angenommen; noch nicht abgeschlossen
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemUpdateAccepted"
+        "400": { description: Bestätigung fehlt }
+        "403": { description: Administrator oder gültige Herkunft fehlt }
+        "409": { description: Update läuft bereits }
+        "503": { description: Sicherer Updater ist nicht eingerichtet }
   /admin/system/status:
     get:
       operationId: getAdminSystemStatus
@@ -1239,6 +1275,61 @@ paths:
 
 components:
   schemas:
+    SystemUpdateConfirmation:
+      type: object
+      required: [confirm]
+      properties:
+        confirm: { type: boolean }
+    SystemUpdateAccepted:
+      type: object
+      required: [jobId]
+      properties:
+        jobId: { type: string }
+    SystemOperationsReport:
+      type: object
+      required: [available, reason, update, backup]
+      properties:
+        available: { type: boolean }
+        reason: { type: [string, "null"] }
+        update:
+          $ref: "#/components/schemas/SystemUpdateProgress"
+        backup:
+          anyOf:
+            - $ref: "#/components/schemas/SystemBackupSummary"
+            - type: "null"
+    SystemUpdateProgress:
+      type: object
+      required: [jobId, status, phase, message, startedAt, finishedAt, events]
+      properties:
+        jobId: { type: [string, "null"] }
+        status:
+          type: string
+          enum: [idle, queued, running, done, failed, unknown]
+        phase: { type: string }
+        message: { type: string }
+        startedAt: { type: [string, "null"], format: date-time }
+        finishedAt: { type: [string, "null"], format: date-time }
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/SystemOperationEvent"
+    SystemOperationEvent:
+      type: object
+      required: [phase, message, at]
+      properties:
+        phase: { type: string }
+        message: { type: string }
+        at: { type: string, format: date-time }
+    SystemBackupSummary:
+      type: object
+      required: [id, createdAt, imageCount, tableCount, backend, verifiedAt]
+      properties:
+        id: { type: string }
+        createdAt: { type: string, format: date-time }
+        imageCount: { type: integer, minimum: 0 }
+        tableCount: { type: integer, minimum: 0 }
+        backend: { type: string, enum: [local, gcs] }
+        verifiedAt: { type: [string, "null"], format: date-time }
     SystemCheckStatus:
       type: string
       enum: [ok, warning, error]

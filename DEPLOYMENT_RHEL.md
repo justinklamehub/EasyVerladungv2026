@@ -563,6 +563,8 @@ Nach der Zertifikat-Ausstellung ergänzt Certbot automatisch die Nginx-Konfigura
 
 ## 18. Updates deployen (Workflow)
 
+> **Aktueller sicherer Ablauf:** [COMET-Betriebswerkzeuge](tools/operations/README.md), einschließlich der dort beschriebenen Apache-/SELinux-Voraussetzungen. Die folgenden manuellen Live-Build-Schritte sind historisch; für laufende Instanzen den getrennten, geprüften Updater verwenden.
+
 Für jedes neue Release führen Sie diese Schritte aus:
 
 ```bash

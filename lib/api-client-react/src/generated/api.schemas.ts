@@ -5,6 +5,73 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export interface SystemUpdateConfirmation {
+  confirm: boolean;
+}
+
+export interface SystemUpdateAccepted {
+  jobId: string;
+}
+
+export type SystemUpdateProgressStatus = typeof SystemUpdateProgressStatus[keyof typeof SystemUpdateProgressStatus];
+
+
+export const SystemUpdateProgressStatus = {
+  idle: 'idle',
+  queued: 'queued',
+  running: 'running',
+  done: 'done',
+  failed: 'failed',
+  unknown: 'unknown',
+} as const;
+
+export interface SystemOperationEvent {
+  phase: string;
+  message: string;
+  at: string;
+}
+
+export interface SystemUpdateProgress {
+  /** @nullable */
+  jobId: string | null;
+  status: SystemUpdateProgressStatus;
+  phase: string;
+  message: string;
+  /** @nullable */
+  startedAt: string | null;
+  /** @nullable */
+  finishedAt: string | null;
+  events: SystemOperationEvent[];
+}
+
+export type SystemBackupSummaryBackend = typeof SystemBackupSummaryBackend[keyof typeof SystemBackupSummaryBackend];
+
+
+export const SystemBackupSummaryBackend = {
+  local: 'local',
+  gcs: 'gcs',
+} as const;
+
+export interface SystemBackupSummary {
+  id: string;
+  createdAt: string;
+  /** @minimum 0 */
+  imageCount: number;
+  /** @minimum 0 */
+  tableCount: number;
+  backend: SystemBackupSummaryBackend;
+  /** @nullable */
+  verifiedAt: string | null;
+}
+
+export interface SystemOperationsReport {
+  available: boolean;
+  /** @nullable */
+  reason: string | null;
+  update: SystemUpdateProgress;
+  backup: SystemBackupSummary | null;
+}
+
 export type SystemCheckStatus = typeof SystemCheckStatus[keyof typeof SystemCheckStatus];
 
 

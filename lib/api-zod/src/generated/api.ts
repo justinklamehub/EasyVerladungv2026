@@ -9,6 +9,50 @@ import * as zod from 'zod';
 
 
 /**
+ * @summary Update-Fortschritt und letzte gemeinsame Sicherung
+ */
+export const getAdminSystemOperationsResponseBackupOneImageCountMin = 0;
+
+export const getAdminSystemOperationsResponseBackupOneTableCountMin = 0;
+
+
+
+export const GetAdminSystemOperationsResponse = zod.object({
+  "available": zod.boolean(),
+  "reason": zod.string().nullable(),
+  "update": zod.object({
+  "jobId": zod.string().nullable(),
+  "status": zod.enum(['idle', 'queued', 'running', 'done', 'failed', 'unknown']),
+  "phase": zod.string(),
+  "message": zod.string(),
+  "startedAt": zod.coerce.date().nullable(),
+  "finishedAt": zod.coerce.date().nullable(),
+  "events": zod.array(zod.object({
+  "phase": zod.string(),
+  "message": zod.string(),
+  "at": zod.coerce.date()
+}))
+}),
+  "backup": zod.union([zod.object({
+  "id": zod.string(),
+  "createdAt": zod.coerce.date(),
+  "imageCount": zod.number().min(getAdminSystemOperationsResponseBackupOneImageCountMin),
+  "tableCount": zod.number().min(getAdminSystemOperationsResponseBackupOneTableCountMin),
+  "backend": zod.enum(['local', 'gcs']),
+  "verifiedAt": zod.coerce.date().nullable()
+}),zod.null()])
+})
+
+
+/**
+ * @summary Bestätigtes Update als unabhängigen Hintergrundauftrag starten
+ */
+export const StartAdminSystemUpdateBody = zod.object({
+  "confirm": zod.boolean()
+})
+
+
+/**
  * @summary Rein lesende Systemprüfungen für Administratoren
  */
 export const GetAdminSystemStatusResponse = zod.object({

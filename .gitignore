@@ -50,3 +50,8 @@ Thumbs.db
 
 # Einlagerungs-Exporte enthalten Geschäftsdaten, keine Quelltexte.
 /exports/einlagerung-transfer/
+
+# Private operational state, logs, database dumps and picture backups.
+.comet-operations/
+backups/
+releases/
