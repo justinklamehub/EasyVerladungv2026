@@ -27,6 +27,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
+    if (isLoading) return;
+    const socket = getSocket();
+    socket.disconnect();
+    if (user && !isError) socket.connect();
+    return () => { socket.disconnect(); };
+  }, [user?.id, isLoading, isError]);
+
+  useEffect(() => {
     const publicScanner = location.startsWith("/scanner");
     const isPublicRoute = location === "/login" || location === "/forgot-password" || location.startsWith("/reset-password") || publicScanner || location === "/impressum" || location === "/datenschutz";
     if (!isLoading && (isError || !user) && !isPublicRoute) {

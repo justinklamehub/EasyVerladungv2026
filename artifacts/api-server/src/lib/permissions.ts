@@ -40,7 +40,9 @@ export type Permission =
   | "einlagerung.replace"
   | "einlagerung.settings"
   | "system.view"
-  | "system.update";
+  | "system.update"
+  | "system.liveview"
+  | "system.liveview.manage";
 
 export type ConfigurableRole =
   | "comet_leitstand"
@@ -99,9 +101,13 @@ export const ALL_PERMISSIONS: Permission[] = [
   "einlagerung.settings",
   "system.view",
   "system.update",
+  "system.liveview",
+  "system.liveview.manage",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
+  "system.liveview": { label: "Sichtbar angekündigte App-Liveansichten ansehen", category: "System" },
+  "system.liveview.manage": { label: "App-Liveansicht systemweit ein-/ausschalten", category: "System" },
   "system.view": { label: "Systemstatus, Update-Fortschritt und Sicherungsnachweise ansehen", category: "System" },
   "system.update": { label: "Serverupdates starten (zusätzlich System-Anzeigerecht erforderlich)", category: "System" },
   "einlagerung.view": { label: "Lagerübersicht und Bestände ansehen", category: "Einlagerung" },

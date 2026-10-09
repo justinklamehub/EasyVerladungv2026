@@ -6,6 +6,9 @@ export const getSocket = () => {
   if (!socket) {
     socket = io(window.location.origin, {
       path: "/api/socket.io",
+      // AuthProvider connects only once the authenticated user is known.
+      // A rejected pre-login handshake does not automatically reconnect after login.
+      autoConnect: false,
       // WebSocket-first: verhindert Probleme mit dem Polling→WebSocket-Upgrade
       // im PWA-Standalone-Modus. WebSocket-Verbindungen werden nie gecacht
       // und funktionieren zuverlässig in installierten PWAs.

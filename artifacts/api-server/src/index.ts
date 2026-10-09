@@ -19,6 +19,7 @@ import { ensureLkwArtenTable } from "./routes/lkw-arten";
 import { ensureWareneingangTable } from "./routes/wareneingang";
 import { pool } from "@workspace/db";
 import { ensureWarehouseTables } from "./lib/einlagerung/model";
+import { setupLiveView } from "./lib/live-view";
 
 // Load .env relative to this file (Node 20.6+ built-in, no dotenv needed).
 // Works regardless of PM2's working directory at startup.
@@ -109,6 +110,7 @@ interface UserPresenceInfo {
 }
 
 const userPresence = new Map<string, UserPresenceInfo>(); // socketId → info
+setupLiveView(io, userPresence);
 
 const COMET_ROLES = new Set(["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"]);
 

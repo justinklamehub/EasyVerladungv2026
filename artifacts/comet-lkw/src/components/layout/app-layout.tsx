@@ -13,6 +13,8 @@ import { useNotifications } from "@/hooks/use-notifications";
 import { usePresence } from "@/hooks/use-presence";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
 import { useToast } from "@/hooks/use-toast";
+import { useLiveView } from "@/hooks/use-live-view";
+import { LiveViewPanel } from "@/components/live-view/live-view-panel";
 
 const STORAGE_KEY = "sidebar-collapsed";
 
@@ -27,6 +29,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
   const notificationsController = useNotifications();
   const pushController = usePushNotifications();
   const { onlineUsers } = usePresence(user?.id);
+  const liveView = useLiveView();
   const { toast } = useToast();
   useEffect(() => {
     if (pushController.error) toast({ title: "Push-Fehler", description: pushController.error, variant: "destructive" });
@@ -94,12 +97,13 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           )}
           <ConnectionBanner />
+          <LiveViewPanel controller={liveView} />
           <main className={`flex-1 overflow-auto relative ${mainPadding}`} data-testid="app-main">
             {children}
           </main>
         </div>
       </div>
-      <ChatWidget />
+      <div data-live-private><ChatWidget /></div>
     </ChatProvider>
   );
 }
