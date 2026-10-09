@@ -4,6 +4,7 @@ import { aggregateStock, getSettings, read, records } from "./einlagerung/model"
 import { buildDeliveryReport, deliverReportRecipients, reportDate, reportIsDue, reportRecipients } from "./delivery-report-content";
 import { logger } from "./logger";
 import { deliveryMailDays, deliveryMailScope } from "@workspace/api-zod/delivery-mail";
+import { mailFailureHint } from "./mail-diagnostics";
 
 async function appSettings() {
   return Object.fromEntries((await db.select().from(settingsTable)).map((s) => [s.key, s.value ?? ""]));
@@ -54,9 +55,9 @@ export async function runDeliveryReportCheck(manual = false, now = new Date()) {
       return skipped(message);
     }
     await put("report_delivery_last_attempt", now.toISOString());
-    const transport = createEmailTransport(s);
     const from = s.email_from || process.env.SMTP_FROM || "noreply@comet-seasonal.de";
     try {
+      const transport = createEmailTransport(s);
       await deliverReportRecipients(report, recipients, progress.delivered, from, (message) => transport.sendMail(message), async (to) => {
         progress.delivered.push(to);
         await put("report_delivery_sent", JSON.stringify(progress));
@@ -68,7 +69,7 @@ export async function runDeliveryReportCheck(manual = false, now = new Date()) {
       return { ok: true, sent: true, message };
     } catch (error) {
       await db.insert(emailLogTable).values({ event: "delivery_report", toAddresses: recipients.filter((to) => !progress.delivered.includes(to)).join(", "),
-        subject: report.subject, bodyHtml: report.html, bodyText: report.text, status: "failed", errorMessage: "Liefertermin-Mail konnte nicht zugestellt werden." });
+        subject: report.subject, bodyHtml: report.html, bodyText: report.text, status: "failed", errorMessage: mailFailureHint(error) });
       await check("Versand fehlgeschlagen; automatische Wiederholung nach 15 Minuten.");
       logger.warn({ err: error }, "Liefertermin-Mail fehlgeschlagen");
       throw error;

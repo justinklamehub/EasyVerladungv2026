@@ -3,6 +3,7 @@ import { requireAuth, requireRoles } from "../lib/auth";
 import { sendWeeklyReport } from "../lib/weekly-report";
 import { previewDeliveryReport, runDeliveryReportCheck } from "../lib/delivery-report";
 import { PreviewDeliveryReportResponse, SendDeliveryReportResponse } from "@workspace/api-zod";
+import { mailFailureHint } from "../lib/mail-diagnostics";
 
 const router = Router();
 
@@ -12,8 +13,8 @@ router.get("/report/delivery/preview", requireAuth, requireRoles("comet_admin"),
 router.post("/report/delivery/send", requireAuth, requireRoles("comet_admin"), async (_req, res): Promise<void> => {
   try {
     res.json(SendDeliveryReportResponse.parse(await runDeliveryReportCheck(true)));
-  } catch {
-    res.status(500).json({ error: "Liefertermin-Mail konnte nicht gesendet werden. Empfänger und Mailserver prüfen; Details siehe Postausgang." });
+  } catch (error) {
+    res.status(500).json({ error: mailFailureHint(error) });
   }
 });
 

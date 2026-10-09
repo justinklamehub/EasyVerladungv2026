@@ -2,6 +2,7 @@ import nodemailer from "nodemailer";
 import { db, pool } from "@workspace/db";
 import { settingsTable, emailLogTable } from "@workspace/db";
 import { eq, notLike, and } from "drizzle-orm";
+import { findSendmailPath } from "./mail-diagnostics";
 
 export type EmailEvent = "shipment" | "bulk" | "user" | "password_expiry" | "reconciliation_opened" | "reconciliation_reminder";
 
@@ -46,7 +47,7 @@ export function createEmailTransport(settings: Record<string, string>) {
   // DB settings take precedence over env vars; empty host → local sendmail (like PHP mail())
   const host = settings["smtp_host"] || process.env.SMTP_HOST || "";
   if (!host) {
-    return nodemailer.createTransport({ sendmail: true, newline: "unix" });
+    return nodemailer.createTransport({ sendmail: true, newline: "unix", path: findSendmailPath() });
   }
   const port = Number(settings["smtp_port"] || process.env.SMTP_PORT || 587);
   const user = settings["smtp_user"] || process.env.SMTP_USER || "";
@@ -157,10 +158,10 @@ export async function sendEventEmail(
       .replace(/\{\{tabelle\}\}/g, vars.tabelleHtml ?? vars.tabelle ?? "")
       .replace(/\{\{(\w+)\}\}/g, (_, key) => vars[key] ?? "");
 
-    const transport = createEmailTransport(settings);
     let logStatus = "sent";
     let logError: string | null = null;
     try {
+      const transport = createEmailTransport(settings);
       await transport.sendMail({
         from,
         to: configuredTo.join(", "),
