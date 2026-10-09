@@ -32,3 +32,14 @@ PostgreSQL-Serverwerkzeuge müssen zur Version des verwendeten pg_dump passen; p
 **Why:** Die Replit-Nix-Installation bietet pg_dump, initdb und postgres, aber kein pg_config im ausführbaren Paket. Ein zwingender pg_config-Aufruf verhinderte eine ansonsten mögliche Prüfung.
 
 **How to apply:** Passende ausführbare Werkzeuge direkt finden oder einen expliziten Installationspfad verwenden; keine andere Version stillschweigend wählen.
+
+Bei Wiederherstellungen die Wirkung von Betriebs-Schutzoptionen am tatsächlich
+gesicherten Code prüfen, nicht vom aktuellen Entwicklungsstand ableiten.
+
+**Why:** Ein Code-Backup unterstützte die inzwischen vorhandenen Optionen für
+Scheduler-Abschaltung und localhost-Bindung noch nicht. Nur die Variablen zu setzen
+hätte einen parallelen Testserver nicht ausreichend geschützt.
+
+**How to apply:** Vor dem ersten Start die Listener- und Job-Startstellen des
+wiederhergestellten Codes prüfen; notwendige begrenzte Kompatibilitätsanpassungen
+dokumentieren und unbekannte Strukturen vor dem Start ablehnen.

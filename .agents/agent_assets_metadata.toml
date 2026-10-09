@@ -112,3 +112,17 @@ mtime_ms = 1791280522462
 storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:7ff45556-65b3-42a8-8e14-2ac3c5498ac5/cb168a06-6dc2-47c9-b246-5b9171c4c8d7/1fe93484-ffd9-4263-9962-5c22993052ff"
 storage_version_token = "1791280678245741"
 content_type = "application/octet-stream"
+
+[[outputs]]
+id = "jzanIc7Y-ePEZ4s8r3_Gx"
+uri = "file://downloads/comet-debian-deployment.tar.gz"
+type = "unspecified"
+title = "COMET – Installationspaket für Debian 12"
+description = "Installationsskripte und Anleitung für die fünf Sicherungen unter /srv/comet-restore. Keine Zugangsdaten oder Sicherungsdaten enthalten."
+logical_id = "f5ac2d6d-55ef-4470-8377-cc794237a962"
+content_hash = "sha256:8977e23fc40a1f616e59569d085b51d262537a15c8f15c9fd22f9f15ec1041be"
+size = 16173
+mtime_ms = 1791533990250
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:7ff45556-65b3-42a8-8e14-2ac3c5498ac5/f5ac2d6d-55ef-4470-8377-cc794237a962/2c88cca9-840c-4814-a267-f6ca22a93783"
+storage_version_token = "1791534015846656"
+content_type = "application/octet-stream"
