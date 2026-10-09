@@ -26,14 +26,14 @@ logical_id = "47d5eef7-e7e7-4bf2-ad49-397147c302ad"
 id = "fY9BoCCf6DWPJFvltRuwa"
 uri = "file://DEPLOYMENT_DEBIAN_APACHE.md"
 type = "text"
-title = "Aktualisierte Debian-Installationsanleitung"
-description = "Korrigierte COMET-Benutzer-, PM2- und Autostart-Konfiguration, sicherer Update-Ablauf und lesende Serverprüfungen. Die Befehlsbeispiele wurden auf Syntax geprüft, nicht auf dem laufenden Server ausgeführt."
+title = "Aktuelle Deployment-Anleitung – Debian / Apache"
+description = "Deployment-Anleitung des COMET-Projekts für den externen Debian-Server mit Apache und PM2. Dies ist die Projektanleitung, kein Nachweis des aktuell laufenden Server-Builds."
 logical_id = "dbbc76f4-115f-4eb9-8a89-5c9047d1a73f"
-content_hash = "sha256:09453d3028b2b4be1658730910bfe773df72a6d6da1c9f3ebba91354b039eb3d"
-size = 26011
-mtime_ms = 1791457945558
-storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:7ff45556-65b3-42a8-8e14-2ac3c5498ac5/dbbc76f4-115f-4eb9-8a89-5c9047d1a73f/52534716-843d-42a9-818c-f8ad25ad21e6"
-storage_version_token = "1791458043358648"
+content_hash = "sha256:a25339325a31ba55ec228ba9c978eacd30faf123ebe0308408b345643d30d9a9"
+size = 26495
+mtime_ms = 1791468776981
+storage_uri = "gcs://replit-rams-assets-kirk/rams/assets/repl:7ff45556-65b3-42a8-8e14-2ac3c5498ac5/dbbc76f4-115f-4eb9-8a89-5c9047d1a73f/1643760c-7e2c-4276-b6f3-611cb5e932ae"
+storage_version_token = "1791532466708977"
 content_type = "text/markdown"
 
 [[outputs]]
