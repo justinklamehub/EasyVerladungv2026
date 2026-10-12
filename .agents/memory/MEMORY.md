@@ -27,3 +27,5 @@
 - [Navigation und Hintergrunddienste](navigation-service-lifecycle.md) — Geschlossene mobile Menüs dürfen Nachrichtenabos, Push und aktuelle Online-Seitenangaben nicht stoppen.
 - [Zeitbezüge im Dashboard](dashboard-metric-scope.md) — Historische Auswertungen dürfen aktuellen Handlungsbedarf nicht ausblenden; Bestände und Ereigniszählungen getrennt erklären.
 - [Installierte Chrome-App](pwa-updates.md) — Beim Start/Resume neuesten Online-Build prüfen; Eingaben schützen, unbekannten Stand anzeigen und Neulade-Schleifen vermeiden.
+- [Liveansicht und Fernsteuerung](live-view-safety.md) — Volle COMET-App-Steuerung inkl. Speichern/Löschen; sichtbare Übernahme nach 15 Sekunden, Ablehnen/Beenden und Privatschutz.
+- [Livebild-Eingabekontinuität](live-view-input-continuity.md) — Aktive Sandbox und fokussierte Felder bei Bildupdates erhalten; sonst gehen Zeichen und unterwegs befindliche Befehle verloren.

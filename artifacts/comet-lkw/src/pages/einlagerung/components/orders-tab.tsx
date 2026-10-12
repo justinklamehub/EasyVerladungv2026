@@ -16,6 +16,7 @@ import { emptyOrderFilters, matchesOrderFilters, orderFacetOptions, orderFilterR
 import { ordersExcel, ordersPrintHtml } from "./orders-output";
 import { useRecordActions } from "../use-einlagerung";
 import { datasetOf, errMsg, nf, P, toRec, type D, type Model, type Rec } from "../lib";
+import { useLiveFilters } from "@/lib/live-view-control";
 
 const STATUS = [{ value: "offen", label: "Offen" }, { value: "erledigt", label: "Erledigt" }, { value: "storniert", label: "Storniert" }];
 
@@ -32,6 +33,12 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   const [del, setDel] = useState<Rec | null>(null);
   const { save, remove } = useRecordActions();
   const { toast } = useToast();
+  useLiveFilters([
+    { id: "search", label: reservationsOnly ? "Vormerkungen suchen" : "Lageraufträge suchen",
+      kind: "text", value: searchText, change: setSearchText },
+    { id: "reservation-status", label: "Vormerkungen filtern", kind: "select", value: resFilter, change: setResFilter,
+      options: [{ value: "", label: "Alle Status" }, ...STATUS] },
+  ]);
 
   useEffect(() => {
     const timer = setTimeout(() => setAppliedSearch(searchText.trim()), 300);

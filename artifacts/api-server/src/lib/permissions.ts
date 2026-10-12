@@ -42,6 +42,7 @@ export type Permission =
   | "system.view"
   | "system.update"
   | "system.liveview"
+  | "system.liveview.control"
   | "system.liveview.manage";
 
 export type ConfigurableRole =
@@ -102,10 +103,12 @@ export const ALL_PERMISSIONS: Permission[] = [
   "system.view",
   "system.update",
   "system.liveview",
+  "system.liveview.control",
   "system.liveview.manage",
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
+  "system.liveview.control": { label: "Vollständige App-Steuerung inklusive Bearbeiten, Speichern und Löschen nach sichtbarer Ankündigung", category: "System" },
   "system.liveview": { label: "Sichtbar angekündigte App-Liveansichten ansehen", category: "System" },
   "system.liveview.manage": { label: "App-Liveansicht systemweit ein-/ausschalten", category: "System" },
   "system.view": { label: "Systemstatus, Update-Fortschritt und Sicherungsnachweise ansehen", category: "System" },

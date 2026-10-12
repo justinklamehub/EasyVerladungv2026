@@ -23,6 +23,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 import { slaWarning, SlaThresholds, SLA_DEFAULTS } from "@/lib/sla";
 import { resolveWorkViewDates, type ShipmentWorkViewFilters, type WorkViewDate } from "@workspace/api-zod/shipment-work-views";
 import { WorkViewsBar } from "./components/work-views-bar";
+import { useLiveFilters } from "@/lib/live-view-control";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
@@ -527,6 +528,33 @@ export default function ShipmentsPage() {
     showStorniert;
 
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  useLiveFilters([
+    { id: "search", label: "Verladungen suchen", kind: "text", value: search, change: setSearch },
+    { id: "status", label: "Statusfilter", kind: "select", value: filterStatus, change: setFilterStatus,
+      options: [{ value: "__all__", label: "Alle Status" }, ...STATUS_OPTIONS.map(value => ({ value, label: value }))] },
+    { id: "date-mode", label: "ETA-Zeitraum", kind: "select", value: dateMode,
+      options: [{ value: "today", label: "Heute" }, { value: "tomorrow", label: "Morgen" },
+        { value: "thisWeek", label: "Diese Woche" }, { value: "all", label: "Alle Zeiträume" }, { value: "custom", label: "Fester Zeitraum" }],
+      change: value => {
+        const mode = value as WorkViewDate["mode"];
+        const dates = resolveWorkViewDates(mode === "custom"
+          ? { mode, from: effectiveDates.from, to: effectiveDates.to } : { mode });
+        setDateMode(mode); setFilterDateFrom(dates.from); setFilterDateTo(dates.to);
+        if (mode === "custom") setAdvancedOpen(true);
+      } },
+    { id: "date-from", label: "ETA von", kind: "date", value: filterDateFrom,
+      change: value => { setDateMode("custom"); setFilterDateFrom(value); setAdvancedOpen(true); } },
+    { id: "date-to", label: "ETA bis", kind: "date", value: filterDateTo,
+      change: value => { setDateMode("custom"); setFilterDateTo(value); setAdvancedOpen(true); } },
+    { id: "lkw-art", label: "LKW-Art filtern", kind: "select", value: filterLkwArt, change: setFilterLkwArt,
+      options: [{ value: "__all__", label: "Alle Arten" }, ...LKW_ART_OPTIONS.map(value => ({ value, label: value }))] },
+    { id: "tor", label: "Tor filtern", kind: "select", value: filterTor, change: setFilterTor,
+      options: [{ value: "__all__", label: "Alle Tore" }, ...TOR_OPTIONS.map(value => ({ value, label: value }))] },
+    ...(isCometUser ? [{
+      id: "spedition", label: "Spedition filtern", kind: "select" as const, value: filterSpeditionId, change: setFilterSpeditionId,
+      options: [{ value: "__all__", label: "Alle Speditionen" }, ...(speditionen ?? []).map(s => ({ value: String(s.id), label: s.name }))],
+    }] : []),
+  ]);
   const advancedActive =
     (filterLkwArt !== "__all__" ? 1 : 0) + (filterTor !== "__all__" ? 1 : 0) +
     (isCometUser && filterSpeditionId !== "__all__" ? 1 : 0) +

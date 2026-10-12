@@ -1,15 +1,31 @@
+import { registerLiveFrame, isProtectedLiveElement } from "./live-view-direct";
+import { controlPage } from "./live-view-control";
+import { liveFrameBridge, type FrameBridgeOptions } from "./live-view-frame-bridge";
 const DROP = "script,iframe,object,embed,base,link,meta,template,noscript,input[type='hidden'],foreignObject";
-const PRIVATE = "[data-live-private],[data-testid*='chat'],[data-live-view-ui]";
+const PRIVATE = "[data-live-private],[data-testid*='chat'],[data-live-view-ui],[data-live-protected]";
 
 /** Sanitizes at BOTH sender and viewer; the viewer never trusts a socket HTML payload. */
-export function sanitizeSnapshot(root: HTMLElement) {
+export function sanitizeSnapshot(root: HTMLElement, fullControl = false) {
   root.querySelectorAll(DROP + "," + PRIVATE).forEach(node => node.remove());
-  root.querySelectorAll("form").forEach(form => form.replaceWith(...Array.from(form.childNodes)));
+  root.querySelectorAll("form").forEach(form => {
+    if (form.querySelector("input[type='password']")) form.remove();
+    else form.replaceWith(...Array.from(form.childNodes));
+  });
   for (const node of Array.from(root.querySelectorAll("*"))) {
+    if (node instanceof HTMLElement && isProtectedLiveElement(node)) { node.remove(); continue; }
+    // Default to read-only. Only our bridge re-enables registered targets
+    // during an active full-control grant.
+    if (node instanceof HTMLButtonElement || node instanceof HTMLInputElement ||
+        node instanceof HTMLTextAreaElement || node instanceof HTMLSelectElement) {
+      node.setAttribute("disabled", "");
+      node.setAttribute("aria-disabled", "true");
+      node.setAttribute("tabindex", "-1");
+    }
     for (const attr of Array.from(node.attributes)) {
       const name = attr.name.toLowerCase();
       if (name.startsWith("on") || ["href", "srcdoc", "action", "formaction", "nonce", "autofocus", "contenteditable", "srcset"].includes(name) ||
-          (name.startsWith("data-") && !["data-testid", "data-live-scroll-top", "data-live-scroll-left"].includes(name))) {
+          (name.startsWith("data-") && !["data-testid", "data-live-scroll-top", "data-live-scroll-left",
+            "data-live-target", "data-live-actionable", "data-live-editable"].includes(name))) {
         node.removeAttribute(attr.name);
       }
       if (["src", "poster", "xlink:href"].includes(name) && !/^data:image\/(?:png|jpeg|webp|gif);base64,/i.test(attr.value)) {
@@ -18,7 +34,8 @@ export function sanitizeSnapshot(root: HTMLElement) {
     }
     if (node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement) {
       node.setAttribute("readonly", "");
-      const allowed = node instanceof HTMLInputElement && node.type !== "password" &&
+      const allowed = (fullControl && node.hasAttribute("data-live-editable") &&
+        (!(node instanceof HTMLInputElement) || node.type !== "password")) || node instanceof HTMLInputElement && node.type !== "password" &&
         (["date", "datetime-local", "month", "week", "time"].includes(node.type) ||
         /suche|suchen|filter|search/i.test([node.placeholder, node.getAttribute("aria-label"), node.getAttribute("data-testid"), node.type === "search" ? "search" : ""].join(" ")));
       if (!allowed && !["checkbox", "radio"].includes((node as HTMLInputElement).type)) {
@@ -30,14 +47,16 @@ export function sanitizeSnapshot(root: HTMLElement) {
   }
 }
 
-export function captureSnapshot(): { html: string; page: string; width: number; height: number } {
-  const page = window.location.pathname;
+export function captureSnapshot(fullControl = false): { html: string; page: string; width: number; height: number; frameId: string; fullControl: boolean } {
+  const page = controlPage();
+  const frameId = crypto.randomUUID();
   if (/^\/(profil|users|settings|berechtigungen|chat)(\/|$)/.test(page)) {
-    return { html: "<p style='padding:32px;font-family:sans-serif'>Kontoverwaltung und vertrauliche Einstellungen werden nicht übertragen.</p>", page, width: innerWidth, height: innerHeight };
+    return { html: "<p style='padding:32px;font-family:sans-serif'>Kontoverwaltung und vertrauliche Einstellungen werden nicht übertragen.</p>", page, width: innerWidth, height: innerHeight, frameId, fullControl: false };
   }
   const clone = document.body.cloneNode(true) as HTMLElement;
   const originals = Array.from(document.body.querySelectorAll("*"));
   const copies = Array.from(clone.querySelectorAll("*"));
+  registerLiveFrame(frameId, originals, copies);
   originals.forEach((original, index) => {
     const copy = copies[index];
     if (!copy) return;
@@ -70,7 +89,7 @@ export function captureSnapshot(): { html: string; page: string; width: number; 
       copy.replaceWith(document.createTextNode("[Diagramm]"));
     }
   });
-  sanitizeSnapshot(clone);
+  sanitizeSnapshot(clone, fullControl);
   let css = "";
   for (const sheet of Array.from(document.styleSheets)) {
     try { css += Array.from(sheet.cssRules).map(rule => rule.cssText).join("\n"); } catch { /* foreign stylesheet omitted */ }
@@ -84,18 +103,24 @@ export function captureSnapshot(): { html: string; page: string; width: number; 
   wrapper.className = document.documentElement.className;
   wrapper.style.cssText = document.documentElement.style.cssText;
   wrapper.append(...Array.from(clone.childNodes));
-  return { html: wrapper.outerHTML, page, width: innerWidth, height: innerHeight };
+  return { html: wrapper.outerHTML, page, width: innerWidth, height: innerHeight, frameId, fullControl };
 }
 
-export function snapshotDocument(html: string): string {
+export function snapshotBody(html: string, fullControl = false): string {
   const parsed = new DOMParser().parseFromString(html, "text/html");
   const container = document.createElement("div");
   // Preserve CSS that the parser may move to head; never preserve any executable tags.
   parsed.querySelectorAll("style").forEach(style => container.appendChild(style.cloneNode(true)));
   container.append(...Array.from(parsed.body.childNodes));
-  sanitizeSnapshot(container);
+  sanitizeSnapshot(container, fullControl);
+  return container.innerHTML;
+}
+
+export function snapshotDocument(html: string, options?: FrameBridgeOptions): string {
+  const body = snapshotBody(html, options?.active === true);
   const nonce = crypto.randomUUID().replaceAll("-", "");
   const policy = `default-src 'none'; script-src 'nonce-${nonce}'; style-src 'unsafe-inline'; img-src data:; font-src data:; form-action 'none'; base-uri 'none'`;
-  // The sole allowed script is OUR constant scroll restoration, inside an opaque-origin sandbox.
-  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{margin:0;pointer-events:none}*{caret-color:transparent!important}</style></head><body>${container.innerHTML}<script nonce="${nonce}">document.querySelectorAll('[data-live-scroll-top],[data-live-scroll-left]').forEach(e=>{e.scrollTop=Math.min(10000000,Math.max(0,Number(e.dataset.liveScrollTop)||0));e.scrollLeft=Math.min(10000000,Math.max(0,Number(e.dataset.liveScrollLeft)||0));});</script></body></html>`;
+  const config = JSON.stringify(options ?? { active: false }).replaceAll("<", "\\u003c");
+  // Only OUR constant bridge executes; source DOM never supplies script or access to parent.
+  return `<!doctype html><html><head><meta http-equiv="Content-Security-Policy" content="${policy}"><style>html,body{margin:0;pointer-events:${options?.active ? "auto" : "none"}}${options?.active ? "" : "*{caret-color:transparent!important}"}</style></head><body>${body}<script nonce="${nonce}">(${liveFrameBridge.toString()})(${config});</script></body></html>`;
 }

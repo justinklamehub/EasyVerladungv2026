@@ -50,7 +50,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <ChatProvider>
-      <div className="flex h-[100dvh] bg-slate-50 dark:bg-slate-900 w-full overflow-hidden">
+      <div className="flex h-[100dvh] bg-slate-50 dark:bg-slate-900 w-full overflow-hidden"
+        style={{ paddingTop: "var(--live-view-banner-height, 0px)" }}>
         {!isMobile && (
           <AppSidebar
             collapsed={collapsed}
@@ -97,7 +98,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           )}
           <ConnectionBanner />
-          <main className={`flex-1 overflow-auto relative ${mainPadding}`} data-testid="app-main">
+          <main className={`flex-1 overflow-auto relative ${mainPadding}`} data-testid="app-main"
+            style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}>
             {children}
           </main>
         </div>

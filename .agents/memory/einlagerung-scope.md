@@ -3,6 +3,12 @@ name: Einlagerungsstrategie integration
 description: User requirements for integrating the legacy storage strategy into COMET.
 ---
 
+In der Auftragsansicht sollen bei den angezeigten Belegnummern nur „80“-Nummern erscheinen, nicht andere „8er“- oder „5er“-Nummern.
+
+**Why:** Der Nutzer hat dies anhand der gemischten Belegliste im Regaldetail ausdrücklich verlangt.
+
+**How to apply:** Die Beleganzeige nach dem Präfix „80“ filtern; diese Anzeigeregel verlangt keine Löschung von Importdaten oder Änderung von Palettenzahlen.
+
 Die Einlagerungsstrategie soll in das aktuelle COMET-Projekt integriert werden: Aufbau und Styling wie im aktuellen Projekt, alles dynamisch, mit Einstellungen und Rechtevergabe.
 
 **Why:** Der Nutzer hat diese Anforderungen ausdrücklich für die Integration seiner alten Einlagerungsanwendung genannt.

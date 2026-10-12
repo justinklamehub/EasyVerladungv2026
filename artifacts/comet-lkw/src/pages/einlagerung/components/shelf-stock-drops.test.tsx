@@ -31,3 +31,29 @@ test("Leere Bestände und fehlende Importe werden unterschiedlich angezeigt", ()
   assert.ok(html.includes("Daten noch nicht importiert."));
   assert.ok(!html.includes("…"), "Regale ohne Belegung zeigen 0, keinen dauerhaften Ladezustand");
 });
+
+test("Auftragsbelege zeigen ausschließlich 80-Nummern, ohne Quelldaten oder Paletten zu ändern", () => {
+  const belege = ["80607965", "591829", "8911", "81007966", " 80607966 ", 80607967, 591805, "", null];
+  const html = renderToStaticMarkup(createElement(ShelfStockDrops, {
+    shelfId: 789, ist: [], retouren: [],
+    auftraege: [{ spedition: "DHL Freight", belege, paletten: 22 }],
+    imported: { ist: true, retouren: true, auftraege: true },
+    totals: { ist: 0, retouren: 0, auftraege: 22 },
+  }));
+  assert.ok(html.includes("Belege: 80607965, 80607966, 80607967"));
+  for (const excluded of ["591829", "8911", "81007966", "591805"]) assert.ok(!html.includes(excluded));
+  assert.ok(html.includes("22 Pal."));
+  assert.deepEqual(belege, ["80607965", "591829", "8911", "81007966", " 80607966 ", 80607967, 591805, "", null]);
+});
+
+test("Aufträge ohne 80-Belege bleiben mit ihrer Palettenzahl sichtbar, ohne leere Belegzeile", () => {
+  const html = renderToStaticMarkup(createElement(ShelfStockDrops, {
+    shelfId: 790, ist: [], retouren: [],
+    auftraege: [{ spedition: "DHL Freight", belege: ["591829", "8911"], paletten: 22 }],
+    imported: { ist: true, retouren: true, auftraege: true },
+    totals: { ist: 0, retouren: 0, auftraege: 22 },
+  }));
+  assert.ok(html.includes("DHL Freight") && html.includes("22 Pal."));
+  assert.ok(!html.includes("Belege:"));
+  assert.ok(!html.includes("591829") && !html.includes("8911"));
+});

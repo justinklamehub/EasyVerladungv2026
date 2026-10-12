@@ -29,7 +29,11 @@ function StockDrop({ kind, rows, imported, pallets, shelfId }: {
       <div className="max-h-72 space-y-2 overflow-y-auto px-3 pb-3" data-testid={`stock-list-${kind}-${shelfId}`}>
         {!imported ? <p className="text-xs text-slate-500">Daten noch nicht importiert.</p>
         : rows.length === 0 ? <p className="text-xs text-slate-500">{EMPTY[kind]}</p>
-        : rows.map((row, index) => (
+        : rows.map((row, index) => {
+          const belege = kind === "auftraege" && Array.isArray(row.belege)
+            ? row.belege.map(beleg => String(beleg ?? "").trim()).filter(beleg => beleg.startsWith("80"))
+            : [];
+          return (
           <div key={index} className="rounded-md border border-slate-200 bg-white p-2 text-xs">
             <div className="flex items-start justify-between gap-3">
               <span className="min-w-0 break-words font-medium text-slate-900">
@@ -44,11 +48,12 @@ function StockDrop({ kind, rows, imported, pallets, shelfId }: {
               <div className="mt-1 space-y-1 text-slate-600">
                 <p className="break-words">{[row.relation && `Relation ${row.relation}`, row.termin,
                   row.calendarWeek && `KW ${row.calendarWeek}`, row.plusKw && `+${row.plusKw} KW`].filter(Boolean).join(" · ") || "Ohne Termin / Relation"}</p>
-                {Array.isArray(row.belege) && row.belege.length > 0 && <p className="break-all">Belege: {row.belege.join(", ")}</p>}
+                {belege.length > 0 && <p className="break-all">Belege: {belege.join(", ")}</p>}
               </div>
             )}
           </div>
-        ))}
+          );
+        })}
       </div>
     </details>
   );
