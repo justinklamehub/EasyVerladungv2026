@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { useChatContext } from "./chat-context";
 import { useAuth } from "@/contexts/auth-context";
 import { ChatPanel } from "./chat-panel";
@@ -110,7 +110,7 @@ function NewChatDialog({
   );
 }
 
-export function ChatWidget() {
+export function ChatWidget({ extraAction }: { extraAction?: ReactNode }) {
   const { user } = useAuth();
   const {
     activeSession,
@@ -167,6 +167,7 @@ export function ChatWidget() {
         )}
 
         <div className="flex items-center gap-2">
+          {extraAction}
           {/* Inbox button — only for staff */}
           {isStaff && (
             <Button

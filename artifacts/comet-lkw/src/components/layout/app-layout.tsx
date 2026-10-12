@@ -97,13 +97,12 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           )}
           <ConnectionBanner />
-          <LiveViewPanel controller={liveView} />
           <main className={`flex-1 overflow-auto relative ${mainPadding}`} data-testid="app-main">
             {children}
           </main>
         </div>
       </div>
-      <div data-live-private><ChatWidget /></div>
+      <div data-live-private><ChatWidget extraAction={<LiveViewPanel controller={liveView} />} /></div>
     </ChatProvider>
   );
 }

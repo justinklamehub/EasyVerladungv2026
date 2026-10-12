@@ -59,10 +59,11 @@ export function LiveViewPanel({ controller }: { controller: LiveViewController }
 
       {canUse && (
         <>
-          <Button variant="outline" size="sm" data-testid="button-live-open"
-            className="fixed bottom-4 right-4 z-50 shadow gap-2" onClick={() => setOpen(true)}>
-            <ScreenShare className="h-4 w-4" /><span className="hidden sm:inline">Liveansicht</span>
-            {target && <span className="h-2 w-2 rounded-full bg-green-500" />}
+          <Button variant="outline" size="icon" data-testid="button-live-open"
+            title="Liveansicht öffnen" aria-label="Liveansicht öffnen"
+            className="relative h-10 w-10 shrink-0 rounded-full shadow-lg" onClick={() => setOpen(true)}>
+            <ScreenShare className="h-4 w-4" />
+            {target && <span className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-green-500 ring-2 ring-background" />}
           </Button>
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogContent data-live-view-ui className="max-w-4xl w-[calc(100vw-1rem)] max-h-[92dvh] overflow-y-auto p-4 sm:p-6">
