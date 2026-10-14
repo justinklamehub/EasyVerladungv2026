@@ -56,6 +56,7 @@ const ITEM_ALLOWED_ROLES: Record<string, readonly string[] | null> = {
   "/paletten":           null,  // all roles
   "/abstimmungen":       null,  // all roles
   "/einlagerung":        null,  // dynamic: einlagerung.* permissions control access
+  "/stempeluhr":         null,  // dynamic: stempeluhr.* permissions control access
   "/kalkulation":        ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
   "/gefahrgut":          ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
   "/auswertung":         ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"],
@@ -107,6 +108,7 @@ const DEFAULT_NAV_ITEMS: { href: string; defaultLabel: string; defaultIconName: 
   { href: "/users", defaultLabel: "Benutzer", defaultIconName: "Users" },
   { href: "/paletten", defaultLabel: "Palettenkonto", defaultIconName: "PackageSearch" },
   { href: "/einlagerung", defaultLabel: "Einlagerung", defaultIconName: "Warehouse" },
+  { href: "/stempeluhr", defaultLabel: "Stempeluhr", defaultIconName: "Clock" },
   { href: "/abstimmungen", defaultLabel: "Abstimmungen", defaultIconName: "FileCheck2" },
   { href: "/kalkulation", defaultLabel: "Kalkulation", defaultIconName: "Calculator" },
   { href: "/gefahrgut", defaultLabel: "Gefahrgut", defaultIconName: "ShieldAlert" },
