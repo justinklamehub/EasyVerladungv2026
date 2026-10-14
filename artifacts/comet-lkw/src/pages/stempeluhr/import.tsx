@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { errMsg, parseCsv, useInvalidateClock } from "./lib";
+import { parseLegacySql } from "./legacy-sql";
 
 const readText = (f: File) => f.text();
 const ts = (v: string | undefined) => (v ?? "").trim();
@@ -14,6 +15,9 @@ export function ImportPanel() {
   const [empText, setEmpText] = useState<string | null>(null);
   const [attText, setAttText] = useState<string | null>(null);
   const [jsonText, setJsonText] = useState<string | null>(null);
+  const [sqlText, setSqlText] = useState<string | null>(null);
+  const [recoverArchived, setRecoverArchived] = useState(false);
+  const [fileSelection, setFileSelection] = useState(0);
   const [ack, setAck] = useState(false);
   const [prev, setPrev] = useState<{ key: string; res: ClockImportResult } | null>(null);
   const [done, setDone] = useState<ClockImportResult | null>(null);
@@ -22,6 +26,7 @@ export function ImportPanel() {
   const built = useMemo<{ payload?: ClockImportInput; errors: string[] }>(() => {
     const errors: string[] = [];
     try {
+      if (sqlText !== null) return { payload: parseLegacySql(sqlText, ack, recoverArchived), errors };
       if (jsonText) {
         const j = JSON.parse(jsonText);
         if (!Array.isArray(j.employees) || !Array.isArray(j.entries)) return { errors: ["JSON braucht die Felder employees und entries"] };
@@ -51,7 +56,7 @@ export function ImportPanel() {
       });
       return { payload: { employees, entries, legacyTimesAcknowledged: ack }, errors };
     } catch (x) { return { errors: ["Datei nicht lesbar: " + errMsg(x)] }; }
-  }, [empText, attText, jsonText, ack]);
+  }, [empText, attText, jsonText, sqlText, ack, recoverArchived]);
 
   const key = built.payload ? JSON.stringify(built.payload) : "";
   const canCommit = !!prev && prev.key === key && !prev.res.errors.length && ack && !built.errors.length;
@@ -77,16 +82,21 @@ export function ImportPanel() {
   return (
     <div className="rounded-lg border bg-white p-4 space-y-4 max-w-3xl">
       <h2 className="font-semibold">Altdaten importieren</h2>
-      <p className="text-sm text-slate-600">Zwei CSV-Dateien (mitarbeiter: id, mitarbeiterid, vorname, nachname, dienstleister, tatigkeit; anwesenheit: id, mitarbeiterid, time_begin, time_end als Unix-Sekunden) oder eine normalisierte JSON-Datei. Kartennummern werden als Text gelesen, führende Nullen bleiben erhalten. Bestehende Daten werden nie verändert; es wird kein SQL ausgeführt.</p>
-      <div className="grid sm:grid-cols-2 gap-3">
-        <div><Label>Mitarbeiter-CSV</Label><input type="file" accept=".csv,text/csv" onChange={pick(setEmpText)} disabled={!!jsonText} data-testid="input-file-employees" className="block text-sm" /></div>
-        <div><Label>Anwesenheit-CSV</Label><input type="file" accept=".csv,text/csv" onChange={pick(setAttText)} disabled={!!jsonText} data-testid="input-file-attendance" className="block text-sm" /></div>
-        <div className="sm:col-span-2"><Label>oder JSON (ClockImportInput)</Label><input type="file" accept=".json,application/json" onChange={pick(setJsonText)} data-testid="input-file-json" className="block text-sm" /></div>
+      <p className="text-sm text-slate-600">Den alten SQL-Export, zwei CSV-Dateien oder eine normalisierte JSON-Datei auswählen. Aus SQL werden ausschließlich Datenwerte der Tabellen mitarbeiter und anwesenheit gelesen – der Dump wird niemals ausgeführt. Kartennummern bleiben Text mit führenden Nullen. Bestehende Daten werden nie überschrieben.</p>
+      <div key={fileSelection} className="grid sm:grid-cols-2 gap-3">
+        <div className="sm:col-span-2"><Label>SQL-Export des Vorsystems</Label><input type="file" accept=".sql,text/plain,application/octet-stream" onChange={pick(setSqlText)} disabled={jsonText !== null || empText !== null || attText !== null} data-testid="input-file-sql" className="block text-sm" /></div>
+        <div><Label>Mitarbeiter-CSV</Label><input type="file" accept=".csv,text/csv" onChange={pick(setEmpText)} disabled={jsonText !== null || sqlText !== null} data-testid="input-file-employees" className="block text-sm" /></div>
+        <div><Label>Anwesenheit-CSV</Label><input type="file" accept=".csv,text/csv" onChange={pick(setAttText)} disabled={jsonText !== null || sqlText !== null} data-testid="input-file-attendance" className="block text-sm" /></div>
+        <div className="sm:col-span-2"><Label>oder JSON (ClockImportInput)</Label><input type="file" accept=".json,application/json" onChange={pick(setJsonText)} disabled={sqlText !== null || empText !== null || attText !== null} data-testid="input-file-json" className="block text-sm" /></div>
+        <div className="sm:col-span-2"><button type="button" className="text-sm underline" onClick={() => { setSqlText(null); setJsonText(null); setEmpText(null); setAttText(null); setFileSelection((value) => value + 1); reset(); }}>Dateiauswahl zurücksetzen</button></div>
       </div>
+      {sqlText !== null && <label className="flex items-start gap-2 text-sm"><Checkbox checked={recoverArchived} onCheckedChange={(v) => { setRecoverArchived(v === true); reset(); }} data-testid="check-recover-archived" />
+        <span>Fehlende historische Mitarbeiter aus den in Buchungen gespeicherten Namen und Kartennummern als inaktive Archivmitarbeiter rekonstruieren. Mehrdeutige Namen werden abgewiesen.</span></label>}
       <label className="flex items-start gap-2 text-sm"><Checkbox checked={ack} onCheckedChange={(v) => { setAck(v === true); reset(); }} data-testid="check-legacy-ack" />
         <span>Mir ist bewusst: Die Altzeiten sind bereits gerundet; die ursprünglich gescannte Zeit kann nicht rekonstruiert werden.</span></label>
       {built.errors.length > 0 && <ul className="list-disc ml-5 text-sm text-red-700 max-h-48 overflow-auto" data-testid="list-parse-errors">{built.errors.map((x, i) => <li key={i}>{x}</li>)}</ul>}
       {built.payload && !built.errors.length && <div className="text-sm text-slate-600">Gelesen: {built.payload.employees.length} Mitarbeiter, {built.payload.entries.length} Einträge.</div>}
+      {sqlText !== null && recoverArchived && built.payload && <p className="text-sm text-amber-800">{built.payload.employees.filter((e) => !e.active).length} inaktive Archivmitarbeiter ohne neue Stempelfreigabe. Unbekannte Dienstleister und Tätigkeiten bleiben leer.</p>}
       {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{err}</div>}
       <div className="flex gap-2">
         <Button variant="outline" onClick={doPreview} disabled={!built.payload || !!built.errors.length || !ack || preview.isPending} data-testid="button-import-preview">Vorschau prüfen</Button>

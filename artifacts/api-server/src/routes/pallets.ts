@@ -3,6 +3,7 @@ import { db } from "@workspace/db";
 import {
   palletMovementsTable,
   palletPlantCountsTable,
+  palletPurchasesTable,
   speditionenTable,
   usersTable,
   shipmentsTable,
@@ -12,6 +13,7 @@ import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { emitToRooms } from "../lib/socket-emit";
 import { can } from "../lib/permissions";
+import { ensurePalletPurchasesTable, calculateOwnedStock } from "../lib/pallet-purchases";
 import type { Server as IOServer } from "socket.io";
 
 const router = Router();
@@ -421,6 +423,7 @@ router.get("/pallet-export", requireAuth, async (req, res) => {
 
 router.get("/pallet-werkbestand", requireAuth, async (req, res) => {
   try {
+    await ensurePalletPurchasesTable();
     // Step 1: find the latest manual inventory entry
     const [latest] = await db
       .select({ recordedAt: palletPlantCountsTable.recordedAt, amount: palletPlantCountsTable.amount })
@@ -452,8 +455,10 @@ router.get("/pallet-werkbestand", requireAuth, async (req, res) => {
       r.sumEingang - r.sumAusgang + r.sumKorrektur
       + (r.neutralAnGross - r.neutralVonGross);
 
+    const [purchases] = await db.select({ amount: sql<number>`COALESCE(SUM(${palletPurchasesTable.amount}),0)`.mapWith(Number) })
+      .from(palletPurchasesTable).where(gte(palletPurchasesTable.purchaseDate, latest.recordedAt));
     return res.json({
-      werkbestand: latest.amount + delta,
+      werkbestand: calculateOwnedStock(latest.amount, delta, purchases.amount, 0).plantStock,
       inventurDate: latest.recordedAt,
       hasInventur: true,
     });

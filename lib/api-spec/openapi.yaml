@@ -30,6 +30,58 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /pallet-purchases:
+    get:
+      operationId: listPalletPurchases
+      parameters:
+        - { name: dateFrom, in: query, schema: { type: string } }
+        - { name: dateTo, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: COMET-owned purchase records, never customer account movements
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: "#/components/schemas/PalletPurchase" }
+    post:
+      operationId: createPalletPurchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PalletPurchaseInput" }
+      responses:
+        "201":
+          description: Purchased pallets recorded
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PalletPurchase" }
+  /pallet-purchases/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    put:
+      operationId: updatePalletPurchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PalletPurchaseInput" }
+      responses:
+        "200":
+          description: Purchase updated with version check
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PalletPurchase" }
+    delete:
+      operationId: deletePalletPurchase
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PalletPurchaseDeletion" }
+      responses:
+        "204": { description: Purchase deleted with version check }
   /stempeluhr/state:
     get:
       operationId: getStempeluhrState
@@ -1519,6 +1571,30 @@ paths:
 
 components:
   schemas:
+    PalletPurchaseInput:
+      type: object
+      required: [purchaseDate, amount, speditionName, reference, note]
+      properties:
+        purchaseDate: { type: string, pattern: '^\d{4}-\d{2}-\d{2}$' }
+        amount: { type: integer, minimum: 1, maximum: 2147483647 }
+        speditionName: { type: string, minLength: 1, maxLength: 200 }
+        reference: { type: string, maxLength: 200 }
+        note: { type: string, maxLength: 2000 }
+        expectedUpdatedAt: { type: string }
+    PalletPurchase:
+      allOf:
+        - { $ref: "#/components/schemas/PalletPurchaseInput" }
+        - type: object
+          required: [id, createdAt, updatedAt]
+          properties:
+            id: { type: integer }
+            createdAt: { type: string }
+            updatedAt: { type: string }
+    PalletPurchaseDeletion:
+      type: object
+      required: [expectedUpdatedAt]
+      properties:
+        expectedUpdatedAt: { type: string }
     ClockEmployeeInput:
       type: object
       required: [cardNumber, firstName, lastName, provider, activity, active]

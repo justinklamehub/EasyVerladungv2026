@@ -19,6 +19,7 @@ import { ensureLkwArtenTable } from "./routes/lkw-arten";
 import { ensureWareneingangTable } from "./routes/wareneingang";
 import { pool } from "@workspace/db";
 import { ensureClockTables } from "./lib/stempeluhr/model";
+import { ensurePalletPurchasesTable } from "./lib/pallet-purchases";
 import { ensureWarehouseTables } from "./lib/einlagerung/model";
 import { setupLiveView } from "./lib/live-view";
 
@@ -253,6 +254,7 @@ httpServer.listen({ port, ...(process.env.HOST ? { host: process.env.HOST } : {}
   logger.info({ port }, "Server listening with Socket.IO");
   try {
     await ensureClockTables();
+    await ensurePalletPurchasesTable();
     logger.info("stempeluhr tables ensured");
   } catch (e) {
     logger.error({ err: e }, "Stempeluhr tables could not be initialized");

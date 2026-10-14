@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useListPalletBalances, useListPalletMovements, useListSpeditionen } from "@workspace/api-client-react";
+import { useListPalletBalances, useListPalletMovements, useListSpeditionen, useListPalletPurchases, getListPalletPurchasesQueryKey, type PalletPurchase } from "@workspace/api-client-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,8 @@ import { format, addDays } from "date-fns";
 import { Loader2, Plus, Download, BarChart2, FileDown, ClipboardList, RefreshCw, Archive, FileSpreadsheet, Building2 } from "lucide-react";
 import * as XLSX from "xlsx";
 import { MovementDialog } from "./components/movement-dialog";
+import { PurchaseDetails } from "./components/purchase-panel";
+import { mergePalletBookings, bookingsCsv } from "./bookings";
 import { MovementDetailSheet } from "./components/movement-detail-sheet";
 import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
 import { useAuth } from "@/contexts/auth-context";
@@ -34,6 +36,7 @@ export default function PalettenPage() {
   const [filterSchein, setFilterSchein] = useState("");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedMovement, setSelectedMovement] = useState<any | null>(null);
+  const [selectedPurchase, setSelectedPurchase] = useState<PalletPurchase | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
   const [isShipmentDrawerOpen, setIsShipmentDrawerOpen] = useState(false);
@@ -48,18 +51,24 @@ export default function PalettenPage() {
   const [werkbestandInventurDate, setWerkbestandInventurDate] = useState<string | null>(null);
   const [werkbestandHasInventur, setWerkbestandHasInventur] = useState<boolean | null>(null);
   const [werkbestandLoading, setWerkbestandLoading] = useState(false);
+  const [werkbestandError, setWerkbestandError] = useState("");
 
   const loadWerkbestand = async () => {
     setWerkbestandLoading(true);
+    setWerkbestandError("");
     try {
-      const res = await fetch("/api/pallet-werkbestand", { credentials: "include" });
+      const res = await fetch(`${import.meta.env.BASE_URL.replace(/\/$/, "")}/api/pallet-werkbestand`, { credentials: "include" });
+      if (!res.ok) throw new Error("Werkbestand nicht verfügbar");
       if (res.ok) {
         const d = await res.json();
         setWerkbestandHasInventur(d.hasInventur ?? false);
         setWerkbestand(d.werkbestand ?? null);
         setWerkbestandInventurDate(d.inventurDate ?? null);
       }
-    } catch { /* ignore */ } finally { setWerkbestandLoading(false); }
+    } catch {
+      setWerkbestand(null);
+      setWerkbestandError("Werkbestand und Eigentum konnten nicht aktualisiert werden. Bitte erneut laden.");
+    } finally { setWerkbestandLoading(false); }
   };
 
   const [closeAccountData, setCloseAccountData] = useState<{ speditionId: number; speditionName: string; balance: number } | null>(null);
@@ -495,16 +504,23 @@ export default function PalettenPage() {
     dateTo: dateTo || undefined,
     palettenscheinnummer: filterSchein.trim() || undefined,
   });
+  const purchases = useListPalletPurchases(undefined, { query: {
+    queryKey: getListPalletPurchasesQueryKey(), enabled: !!isCometUser, staleTime: 10_000, refetchInterval: 15_000,
+  } });
+  useEffect(() => { if (isCometUser && purchases.dataUpdatedAt) loadWerkbestand(); }, [purchases.dataUpdatedAt, isCometUser]);
+  const bookings = mergePalletBookings(movements ?? [], purchases.data ?? [], {
+    internal: !!isCometUser, speditionId: filterSpeditionId, dateFrom, dateTo, reference: filterSchein,
+  });
 
   const handleExport = () => {
-    const params = new URLSearchParams();
-    if (filterSpeditionId && filterSpeditionId !== "__all__") params.set("speditionId", filterSpeditionId);
-    if (dateFrom) params.set("dateFrom", dateFrom);
-    if (dateTo) params.set("dateTo", dateTo);
-    window.open(`/api/pallet-export?${params.toString()}`, "_blank");
+    const url = URL.createObjectURL(new Blob([bookingsCsv(bookings)], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url; link.download = "paletten-buchungen.csv"; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handleRowClick = (movement: any) => {
+    if (movement.purchase) { setSelectedPurchase(movement.purchase); return; }
     // Attach the spedition's palletFaktor so the detail sheet can compute the correct display amount
     const faktor = (balances ?? []).find((b: any) => b.speditionId === movement.speditionId)?.palletFaktor ?? 1;
     setSelectedMovement({ ...movement, palletFaktor: faktor });
@@ -513,6 +529,7 @@ export default function PalettenPage() {
 
   const getMovementColor = (type: string) => {
     switch (type) {
+      case "kauf": return "bg-emerald-100 text-emerald-800 border-transparent";
       case "eingang": return "bg-green-100 text-green-800 hover:bg-green-100 border-transparent";
       case "ausgang": return "bg-red-100 text-red-800 hover:bg-red-100 border-transparent";
       case "korrektur": return "bg-orange-100 text-orange-800 hover:bg-orange-100 border-transparent";
@@ -525,7 +542,7 @@ export default function PalettenPage() {
   };
 
   const displayAmount = (m: any) => {
-    const sign = m.movementType === "ausgang" ? "-" : m.movementType === "eingang" ? "+" : m.movementType === "abschreibung" ? (m.amount >= 0 ? "+" : "") : "";
+    const sign = m.movementType === "ausgang" ? "-" : m.movementType === "eingang" || m.movementType === "kauf" ? "+" : m.movementType === "abschreibung" ? (m.amount >= 0 ? "+" : "") : "";
     const f = (balances ?? []).find((b: any) => b.speditionId === m.speditionId)?.palletFaktor ?? 1;
     const amt = (m.movementType === "neutral" && f > 1)
       ? Math.abs(
@@ -540,6 +557,7 @@ export default function PalettenPage() {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto">
+      {werkbestandError && <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{werkbestandError} <Button variant="outline" size="sm" onClick={loadWerkbestand}>Erneut versuchen</Button></p>}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900">Palettenkonto</h1>
@@ -552,7 +570,7 @@ export default function PalettenPage() {
               Auswertung
             </Button>
           )}
-          <Button variant="outline" onClick={handleExport}>
+          <Button variant="outline" onClick={handleExport} disabled={loadingMovements || (isCometUser && (purchases.isLoading || purchases.isError)) || !bookings.length}>
             <Download className="w-4 h-4 mr-2" />
             CSV Export
           </Button>
@@ -601,7 +619,7 @@ export default function PalettenPage() {
                 )}
                 <p className="text-xs text-indigo-400 mt-1">
                   {werkbestandInventurDate
-                    ? `Inventur ${format(new Date(werkbestandInventurDate), "dd.MM.yyyy")} + Buchungen danach`
+                    ? `Inventur ${format(new Date(werkbestandInventurDate), "dd.MM.yyyy")} + Bewegungen und Kaufpaletten`
                     : "Basierend auf letzter Inventur"}
                 </p>
               </CardContent>
@@ -734,35 +752,37 @@ export default function PalettenPage() {
       <div className="bg-white border border-slate-200 rounded-lg shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
           <h3 className="font-semibold text-slate-800">Buchungen</h3>
-          <span className="text-sm text-slate-500">{movements?.length ?? 0} Einträge</span>
+          <span className="text-sm text-slate-500">{bookings.length} Einträge</span>
         </div>
+        {isCometUser && purchases.isError && <p role="alert" className="p-3 text-sm text-red-700">Kaufpaletten konnten nicht geladen werden. Die Buchungsliste ist möglicherweise unvollständig. <Button size="sm" variant="outline" onClick={() => purchases.refetch()}>Erneut versuchen</Button></p>}
+        {isCometUser && filterSpeditionId !== "__all__" && <p className="px-4 py-2 text-xs text-slate-500">Kaufpaletten sind keinem Palettenkonto zugeordnet und werden bei „Alle Speditionen“ angezeigt.</p>}
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Datum</TableHead>
               {isCometUser && <TableHead>Spedition</TableHead>}
               <TableHead>Art</TableHead>
-              <TableHead>Palettenschein-Nr.</TableHead>
+              <TableHead>Palettenschein / Beleg</TableHead>
               <TableHead>Verladung</TableHead>
               <TableHead>Bemerkung</TableHead>
               <TableHead className="text-right">Anzahl</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loadingMovements ? (
+            {loadingMovements || (isCometUser && purchases.isLoading) ? (
               <TableRow>
                 <TableCell colSpan={colSpan} className="text-center py-8">
                   <Loader2 className="w-6 h-6 animate-spin mx-auto text-primary" />
                 </TableCell>
               </TableRow>
-            ) : !movements || movements.length === 0 ? (
+            ) : bookings.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={colSpan} className="text-center py-8 text-slate-500">
                   Keine Buchungen gefunden.
                 </TableCell>
               </TableRow>
             ) : (
-              movements.map((movement) => (
+              bookings.map((movement: any) => (
                 <TableRow
                   key={movement.id}
                   className="cursor-pointer hover:bg-slate-50 transition-colors"
@@ -776,7 +796,8 @@ export default function PalettenPage() {
                   )}
                   <TableCell>
                     <Badge variant="outline" className={getMovementColor(movement.movementType)}>
-                      {movement.movementType === "eingang" ? "Zugang" :
+                      {movement.movementType === "kauf" ? "Kaufpaletten" :
+                       movement.movementType === "eingang" ? "Zugang" :
                        movement.movementType === "ausgang" ? "Abgang" :
                        movement.movementType === "korrektur" ? "Korrektur" :
                        movement.movementType === "neutral" ? "Neutral" :
@@ -1126,6 +1147,7 @@ export default function PalettenPage() {
         </DialogContent>
       </Dialog>
 
+      {selectedPurchase && <PurchaseDetails key={selectedPurchase.id} purchase={selectedPurchase} canEdit={canEdit} canDelete={canDelete} onClose={() => setSelectedPurchase(null)} onChanged={loadWerkbestand} />}
       <MovementDialog open={isDialogOpen} onOpenChange={setIsDialogOpen} />
       <MovementDetailSheet
         movement={selectedMovement}

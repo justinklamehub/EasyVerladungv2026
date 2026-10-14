@@ -57,6 +57,7 @@ import type {
   HealthStatus,
   ListAuditLogParams,
   ListPalletMovementsParams,
+  ListPalletPurchasesParams,
   ListReconciliationsParams,
   ListShipmentsParams,
   ListUsersParams,
@@ -66,6 +67,9 @@ import type {
   PalletMovement,
   PalletMovementInput,
   PalletMovementUpdate,
+  PalletPurchase,
+  PalletPurchaseDeletion,
+  PalletPurchaseInput,
   Reconciliation,
   ReconciliationComment,
   ReconciliationCommentInput,
@@ -106,6 +110,281 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
+export const getListPalletPurchasesUrl = (params?: ListPalletPurchasesParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/pallet-purchases?${stringifiedParams}` : `/api/pallet-purchases`
+}
+
+export const listPalletPurchases = async (params?: ListPalletPurchasesParams, options?: RequestInit): Promise<PalletPurchase[]> => {
+
+  return customFetch<PalletPurchase[]>(getListPalletPurchasesUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListPalletPurchasesQueryKey = (params?: ListPalletPurchasesParams,) => {
+    return [
+    `/api/pallet-purchases`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListPalletPurchasesQueryOptions = <TData = Awaited<ReturnType<typeof listPalletPurchases>>, TError = ErrorType<unknown>>(params?: ListPalletPurchasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPalletPurchases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListPalletPurchasesQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listPalletPurchases>>> = ({ signal }) => listPalletPurchases(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listPalletPurchases>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListPalletPurchasesQueryResult = NonNullable<Awaited<ReturnType<typeof listPalletPurchases>>>
+export type ListPalletPurchasesQueryError = ErrorType<unknown>
+
+
+
+export function useListPalletPurchases<TData = Awaited<ReturnType<typeof listPalletPurchases>>, TError = ErrorType<unknown>>(
+ params?: ListPalletPurchasesParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listPalletPurchases>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListPalletPurchasesQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreatePalletPurchaseUrl = () => {
+
+
+
+
+  return `/api/pallet-purchases`
+}
+
+export const createPalletPurchase = async (palletPurchaseInput: PalletPurchaseInput, options?: RequestInit): Promise<PalletPurchase> => {
+
+  return customFetch<PalletPurchase>(getCreatePalletPurchaseUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      palletPurchaseInput,)
+  }
+);}
+
+
+
+
+export const getCreatePalletPurchaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPalletPurchase>>, TError,{data: BodyType<PalletPurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createPalletPurchase>>, TError,{data: BodyType<PalletPurchaseInput>}, TContext> => {
+
+const mutationKey = ['createPalletPurchase'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createPalletPurchase>>, {data: BodyType<PalletPurchaseInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createPalletPurchase(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreatePalletPurchaseMutationResult = NonNullable<Awaited<ReturnType<typeof createPalletPurchase>>>
+    export type CreatePalletPurchaseMutationBody = BodyType<PalletPurchaseInput>
+    export type CreatePalletPurchaseMutationError = ErrorType<unknown>
+
+    export const useCreatePalletPurchase = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createPalletPurchase>>, TError,{data: BodyType<PalletPurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createPalletPurchase>>,
+        TError,
+        {data: BodyType<PalletPurchaseInput>},
+        TContext
+      > => {
+      return useMutation(getCreatePalletPurchaseMutationOptions(options));
+    }
+
+export const getUpdatePalletPurchaseUrl = (id: number,) => {
+
+
+
+
+  return `/api/pallet-purchases/${id}`
+}
+
+export const updatePalletPurchase = async (id: number,
+    palletPurchaseInput: PalletPurchaseInput, options?: RequestInit): Promise<PalletPurchase> => {
+
+  return customFetch<PalletPurchase>(getUpdatePalletPurchaseUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      palletPurchaseInput,)
+  }
+);}
+
+
+
+
+export const getUpdatePalletPurchaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePalletPurchase>>, TError,{id: number;data: BodyType<PalletPurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updatePalletPurchase>>, TError,{id: number;data: BodyType<PalletPurchaseInput>}, TContext> => {
+
+const mutationKey = ['updatePalletPurchase'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updatePalletPurchase>>, {id: number;data: BodyType<PalletPurchaseInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updatePalletPurchase(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdatePalletPurchaseMutationResult = NonNullable<Awaited<ReturnType<typeof updatePalletPurchase>>>
+    export type UpdatePalletPurchaseMutationBody = BodyType<PalletPurchaseInput>
+    export type UpdatePalletPurchaseMutationError = ErrorType<unknown>
+
+    export const useUpdatePalletPurchase = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updatePalletPurchase>>, TError,{id: number;data: BodyType<PalletPurchaseInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updatePalletPurchase>>,
+        TError,
+        {id: number;data: BodyType<PalletPurchaseInput>},
+        TContext
+      > => {
+      return useMutation(getUpdatePalletPurchaseMutationOptions(options));
+    }
+
+export const getDeletePalletPurchaseUrl = (id: number,) => {
+
+
+
+
+  return `/api/pallet-purchases/${id}`
+}
+
+export const deletePalletPurchase = async (id: number,
+    palletPurchaseDeletion: PalletPurchaseDeletion, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeletePalletPurchaseUrl(id),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      palletPurchaseDeletion,)
+  }
+);}
+
+
+
+
+export const getDeletePalletPurchaseMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePalletPurchase>>, TError,{id: number;data: BodyType<PalletPurchaseDeletion>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deletePalletPurchase>>, TError,{id: number;data: BodyType<PalletPurchaseDeletion>}, TContext> => {
+
+const mutationKey = ['deletePalletPurchase'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deletePalletPurchase>>, {id: number;data: BodyType<PalletPurchaseDeletion>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  deletePalletPurchase(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeletePalletPurchaseMutationResult = NonNullable<Awaited<ReturnType<typeof deletePalletPurchase>>>
+    export type DeletePalletPurchaseMutationBody = BodyType<PalletPurchaseDeletion>
+    export type DeletePalletPurchaseMutationError = ErrorType<unknown>
+
+    export const useDeletePalletPurchase = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deletePalletPurchase>>, TError,{id: number;data: BodyType<PalletPurchaseDeletion>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deletePalletPurchase>>,
+        TError,
+        {id: number;data: BodyType<PalletPurchaseDeletion>},
+        TContext
+      > => {
+      return useMutation(getDeletePalletPurchaseMutationOptions(options));
+    }
 
 export const getGetStempeluhrStateUrl = (params: GetStempeluhrStateParams,) => {
   const normalizedParams = new URLSearchParams();

@@ -2,6 +2,7 @@ export * from "./users";
 export * from "./speditionen";
 export * from "./shipments";
 export * from "./pallets";
+export * from "./pallet-purchases";
 export * from "./audit";
 export * from "./austraege";
 export * from "./settings";

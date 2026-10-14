@@ -5,6 +5,36 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export interface PalletPurchaseInput {
+  /** @pattern ^\d{4}-\d{2}-\d{2}$ */
+  purchaseDate: string;
+  /**
+     * @minimum 1
+     * @maximum 2147483647
+     */
+  amount: number;
+  /**
+     * @minLength 1
+     * @maxLength 200
+     */
+  speditionName: string;
+  /** @maxLength 200 */
+  reference: string;
+  /** @maxLength 2000 */
+  note: string;
+  expectedUpdatedAt?: string;
+}
+
+export type PalletPurchase = PalletPurchaseInput & {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export interface PalletPurchaseDeletion {
+  expectedUpdatedAt: string;
+}
+
 export interface ClockEmployeeInput {
   /**
      * @minLength 1
@@ -1400,6 +1430,11 @@ export interface AuditLogPage {
   page: number;
   limit: number;
 }
+
+export type ListPalletPurchasesParams = {
+dateFrom?: string;
+dateTo?: string;
+};
 
 export type GetStempeluhrStateParams = {
 from: string;

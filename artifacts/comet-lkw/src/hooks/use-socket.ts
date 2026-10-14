@@ -96,6 +96,8 @@ export function useSocket() {
     socket.on("pallet_movement.created", invalidatePalletMovements);
     socket.on("pallet_movement.created", invalidatePalletBalances);
     socket.on("pallet_balance.updated", invalidatePalletBalances);
+    const invalidatePurchases = () => queryClient.invalidateQueries({ queryKey: ["/api/pallet-purchases"] });
+    socket.on("pallet_purchase.updated", invalidatePurchases);
 
     // Reconciliation events
     const invalidateReconciliations = () => {
@@ -148,6 +150,7 @@ export function useSocket() {
       socket.off("pallet_movement.created", invalidatePalletMovements);
       socket.off("pallet_movement.created", invalidatePalletBalances);
       socket.off("pallet_balance.updated", invalidatePalletBalances);
+    socket.off("pallet_purchase.updated", invalidatePurchases);
       socket.off("reconciliation.created", invalidateReconciliations);
       socket.off("reconciliation.updated", invalidateReconciliations);
       socket.off("reconciliation.comment_added", invalidateReconciliations);

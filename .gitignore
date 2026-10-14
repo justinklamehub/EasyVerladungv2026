@@ -55,3 +55,6 @@ Thumbs.db
 .comet-operations/
 backups/
 releases/
+
+# Legacy attendance dumps contain personal data, not application source.
+/attached_assets/*.sql

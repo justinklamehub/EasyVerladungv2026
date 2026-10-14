@@ -1,7 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useCreatePalletMovement, useListSpeditionen } from "@workspace/api-client-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PurchaseDialog } from "./purchase-panel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +23,9 @@ const emptyForm = () => ({
 });
 
 export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenChange: (open: boolean) => void }) {
+  const [tab, setTab] = useState("buchung");
+  const [purchaseBusy, setPurchaseBusy] = useState(false);
+  useEffect(() => { if (!open) { setTab("buchung"); setPurchaseBusy(false); } }, [open]);
   const { toast } = useToast();
   const { user } = useAuth();
   const { data: speditionen } = useListSpeditionen();
@@ -218,11 +223,18 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
   const amountColor = isAbgang ? "text-red-600" : isZugang ? "text-green-600" : isNeutral ? "text-blue-600" : "text-slate-400";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(value) => { if (!purchaseBusy && !createMutation.isPending) onOpenChange(value); }}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Neue Buchung erfassen</DialogTitle>
+          <DialogDescription>Kontobuchung oder Kaufpaletten erfassen.</DialogDescription>
         </DialogHeader>
+        <Tabs value={tab} onValueChange={(value) => { if (!purchaseBusy && !createMutation.isPending) setTab(value); }}>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="buchung">Kontobuchung</TabsTrigger>
+            <TabsTrigger value="kauf" data-testid="tab-pallet-purchase">Kaufpaletten</TabsTrigger>
+          </TabsList>
+          <TabsContent value="buchung">
         <ScrollArea className="max-h-[70vh] pr-4">
           <div className="space-y-4 py-2">
 
@@ -522,6 +534,13 @@ export function MovementDialog({ open, onOpenChange }: { open: boolean, onOpenCh
             Speichern
           </Button>
         </DialogFooter>
+          </TabsContent>
+          <TabsContent value="kauf">
+            <ScrollArea className="max-h-[65vh] pr-4">
+              <PurchaseDialog embedded purchase={null} onBusyChange={setPurchaseBusy} onClose={() => onOpenChange(false)} onSaved={() => {}} />
+            </ScrollArea>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );

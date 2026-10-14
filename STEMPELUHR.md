@@ -54,8 +54,19 @@ Stornierte Zeiteinträge bleiben für Nachweise gespeichert.
 
 ## Altdaten übernehmen
 
-Die alte ZIP enthält Anwendungscode, aber keinen Datenexport. Aus der bisherigen
-Datenbank werden **zwei UTF-8-CSV-Dateien mit Spaltenüberschriften** benötigt:
+Die alte ZIP enthält Anwendungscode, aber keinen Datenexport. Ein **SQL-Export
+des Vorsystems** kann unter Import direkt ausgewählt werden. Er wird ausschließlich
+als Text gelesen: nur INSERT-Datenwerte für `mitarbeiter` und `anwesenheit` werden
+übernommen, niemals SQL-Befehle ausgeführt.
+
+Wenn historische Buchungen auf nicht mehr vorhandene Mitarbeiter verweisen,
+können deren eindeutige, in Buchungen gespeicherte Namen und Kartennummern mit der
+entsprechenden Option als **inaktive Archivmitarbeiter** rekonstruiert werden.
+Fehlende Dienstleister und Tätigkeiten bleiben leer; widersprüchliche Namen
+werden abgewiesen. Historische Karten werden dadurch nicht zum Stempeln aktiviert.
+Offene Einträge bleiben ohne erfundene Endzeit erhalten.
+
+Alternativ werden **zwei UTF-8-CSV-Dateien mit Spaltenüberschriften** akzeptiert:
 
 **mitarbeiter**
 
@@ -88,7 +99,7 @@ Altzeiten bestätigen, Vorschau prüfen und anschließend Import bestätigen.
 - Die ursprüngliche echte Scanzeit kann aus gekürzten Altzeiten nicht
   rekonstruiert werden. Importierte Zeiten werden nicht nochmals gekürzt;
   für ihre Pausen gilt der oben dokumentierte alte Regelstand.
-- SQL-Dumps werden nicht im Webmodul ausgeführt.
+- SQL-Dumps werden im Webmodul nur ausgewertet, niemals ausgeführt.
 - Bei großen Dateien gegebenenfalls Teilmengen verwenden. Wird das Zeitbudget
   überschritten oder die Verbindung vor Abschluss unterbrochen, wird die
   Transaktion zurückgenommen. Eine erneute Übernahme identischer Datensätze

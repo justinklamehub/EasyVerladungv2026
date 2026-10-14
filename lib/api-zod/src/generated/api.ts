@@ -8,6 +8,116 @@
 import * as zod from 'zod';
 
 
+export const ListPalletPurchasesQueryParams = zod.object({
+  "dateFrom": zod.coerce.string().optional(),
+  "dateTo": zod.coerce.string().optional()
+})
+
+export const listPalletPurchasesResponseOnePurchaseDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const listPalletPurchasesResponseOneAmountMax = 2147483647;
+
+export const listPalletPurchasesResponseOneSpeditionNameMax = 200;
+
+export const listPalletPurchasesResponseOneReferenceMax = 200;
+
+export const listPalletPurchasesResponseOneNoteMax = 2000;
+
+
+
+export const ListPalletPurchasesResponseItem = zod.object({
+  "purchaseDate": zod.string().regex(listPalletPurchasesResponseOnePurchaseDateRegExp),
+  "amount": zod.number().min(1).max(listPalletPurchasesResponseOneAmountMax),
+  "speditionName": zod.string().min(1).max(listPalletPurchasesResponseOneSpeditionNameMax),
+  "reference": zod.string().max(listPalletPurchasesResponseOneReferenceMax),
+  "note": zod.string().max(listPalletPurchasesResponseOneNoteMax),
+  "expectedUpdatedAt": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+export const ListPalletPurchasesResponse = zod.array(ListPalletPurchasesResponseItem)
+
+
+export const createPalletPurchaseBodyPurchaseDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const createPalletPurchaseBodyAmountMax = 2147483647;
+
+export const createPalletPurchaseBodySpeditionNameMax = 200;
+
+export const createPalletPurchaseBodyReferenceMax = 200;
+
+export const createPalletPurchaseBodyNoteMax = 2000;
+
+
+
+export const CreatePalletPurchaseBody = zod.object({
+  "purchaseDate": zod.string().regex(createPalletPurchaseBodyPurchaseDateRegExp),
+  "amount": zod.number().min(1).max(createPalletPurchaseBodyAmountMax),
+  "speditionName": zod.string().min(1).max(createPalletPurchaseBodySpeditionNameMax),
+  "reference": zod.string().max(createPalletPurchaseBodyReferenceMax),
+  "note": zod.string().max(createPalletPurchaseBodyNoteMax),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+
+export const UpdatePalletPurchaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updatePalletPurchaseBodyPurchaseDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updatePalletPurchaseBodyAmountMax = 2147483647;
+
+export const updatePalletPurchaseBodySpeditionNameMax = 200;
+
+export const updatePalletPurchaseBodyReferenceMax = 200;
+
+export const updatePalletPurchaseBodyNoteMax = 2000;
+
+
+
+export const UpdatePalletPurchaseBody = zod.object({
+  "purchaseDate": zod.string().regex(updatePalletPurchaseBodyPurchaseDateRegExp),
+  "amount": zod.number().min(1).max(updatePalletPurchaseBodyAmountMax),
+  "speditionName": zod.string().min(1).max(updatePalletPurchaseBodySpeditionNameMax),
+  "reference": zod.string().max(updatePalletPurchaseBodyReferenceMax),
+  "note": zod.string().max(updatePalletPurchaseBodyNoteMax),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+export const updatePalletPurchaseResponseOnePurchaseDateRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+export const updatePalletPurchaseResponseOneAmountMax = 2147483647;
+
+export const updatePalletPurchaseResponseOneSpeditionNameMax = 200;
+
+export const updatePalletPurchaseResponseOneReferenceMax = 200;
+
+export const updatePalletPurchaseResponseOneNoteMax = 2000;
+
+
+
+export const UpdatePalletPurchaseResponse = zod.object({
+  "purchaseDate": zod.string().regex(updatePalletPurchaseResponseOnePurchaseDateRegExp),
+  "amount": zod.number().min(1).max(updatePalletPurchaseResponseOneAmountMax),
+  "speditionName": zod.string().min(1).max(updatePalletPurchaseResponseOneSpeditionNameMax),
+  "reference": zod.string().max(updatePalletPurchaseResponseOneReferenceMax),
+  "note": zod.string().max(updatePalletPurchaseResponseOneNoteMax),
+  "expectedUpdatedAt": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "createdAt": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+export const DeletePalletPurchaseParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeletePalletPurchaseBody = zod.object({
+  "expectedUpdatedAt": zod.string()
+})
+
+
 export const GetStempeluhrStateQueryParams = zod.object({
   "from": zod.date(),
   "to": zod.date(),
