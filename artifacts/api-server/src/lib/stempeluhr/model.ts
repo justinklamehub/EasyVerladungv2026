@@ -36,7 +36,8 @@ export function ensureClockTables(): Promise<void> {
           before_data JSONB, after_data JSONB, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW());
         CREATE TABLE IF NOT EXISTS clock_terminals (
           id SERIAL PRIMARY KEY, token_hash TEXT NOT NULL UNIQUE, label TEXT NOT NULL, user_id INTEGER NOT NULL,
-          expires_at TIMESTAMPTZ NOT NULL, revoked_at TIMESTAMPTZ);
+          expires_at TIMESTAMPTZ, revoked_at TIMESTAMPTZ);
+        ALTER TABLE clock_terminals ALTER COLUMN expires_at DROP NOT NULL;
         CREATE TABLE IF NOT EXISTS clock_receipts (
           terminal_id INTEGER NOT NULL REFERENCES clock_terminals(id), request_id TEXT NOT NULL, card_number TEXT NOT NULL,
           result JSONB NOT NULL);

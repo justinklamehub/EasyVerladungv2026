@@ -88,10 +88,12 @@ export interface ClockSettings {
      */
   breakRules: ClockBreakRule[];
   /**
+     * Laufzeit für neue Terminalfreigaben in Stunden; null bedeutet unbegrenzt.
      * @minimum 1
      * @maximum 168
+     * @nullable
      */
-  terminalHours: number;
+  terminalHours: number | null;
   /**
      * @minimum 5
      * @maximum 120

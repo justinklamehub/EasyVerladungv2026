@@ -115,7 +115,7 @@ export default function StempeluhrTerminal() {
           </div>
 
           <div className="flex items-center justify-between text-xs text-slate-400 border-t border-slate-700 pt-3">
-            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{status.data?.label} · gültig bis {fmtDateTime(status.data?.expiresAt)}</span>
+            <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{status.data?.label} · {status.data?.expiresAt ? `gültig bis ${fmtDateTime(status.data.expiresAt)}` : "Unbegrenzt"}</span>
             <Button size="sm" variant="outline" className="text-slate-900" onClick={doLock} disabled={lock.isPending} data-testid="button-lock"><Lock className="w-3 h-3 mr-1" />Sperren</Button>
           </div>
         </div>

@@ -361,7 +361,7 @@ export const GetClockSettingsResponse = zod.object({
   "fromMinutes": zod.number().min(getClockSettingsResponseBreakRulesItemFromMinutesMin).max(getClockSettingsResponseBreakRulesItemFromMinutesMax),
   "deductionMinutes": zod.number().min(getClockSettingsResponseBreakRulesItemDeductionMinutesMin).max(getClockSettingsResponseBreakRulesItemDeductionMinutesMax)
 })).min(1).max(getClockSettingsResponseBreakRulesMax),
-  "terminalHours": zod.number().min(1).max(getClockSettingsResponseTerminalHoursMax),
+  "terminalHours": zod.number().min(1).max(getClockSettingsResponseTerminalHoursMax).nullable().describe('Laufzeit für neue Terminalfreigaben in Stunden; null bedeutet unbegrenzt.'),
   "debounceSeconds": zod.number().min(getClockSettingsResponseDebounceSecondsMin).max(getClockSettingsResponseDebounceSecondsMax),
   "updatedAt": zod.string()
 })
@@ -389,7 +389,7 @@ export const UpdateClockSettingsBody = zod.object({
   "fromMinutes": zod.number().min(updateClockSettingsBodyBreakRulesItemFromMinutesMin).max(updateClockSettingsBodyBreakRulesItemFromMinutesMax),
   "deductionMinutes": zod.number().min(updateClockSettingsBodyBreakRulesItemDeductionMinutesMin).max(updateClockSettingsBodyBreakRulesItemDeductionMinutesMax)
 })).min(1).max(updateClockSettingsBodyBreakRulesMax),
-  "terminalHours": zod.number().min(1).max(updateClockSettingsBodyTerminalHoursMax),
+  "terminalHours": zod.number().min(1).max(updateClockSettingsBodyTerminalHoursMax).nullable().describe('Laufzeit für neue Terminalfreigaben in Stunden; null bedeutet unbegrenzt.'),
   "debounceSeconds": zod.number().min(updateClockSettingsBodyDebounceSecondsMin).max(updateClockSettingsBodyDebounceSecondsMax),
   "updatedAt": zod.string()
 })
@@ -416,7 +416,7 @@ export const UpdateClockSettingsResponse = zod.object({
   "fromMinutes": zod.number().min(updateClockSettingsResponseBreakRulesItemFromMinutesMin).max(updateClockSettingsResponseBreakRulesItemFromMinutesMax),
   "deductionMinutes": zod.number().min(updateClockSettingsResponseBreakRulesItemDeductionMinutesMin).max(updateClockSettingsResponseBreakRulesItemDeductionMinutesMax)
 })).min(1).max(updateClockSettingsResponseBreakRulesMax),
-  "terminalHours": zod.number().min(1).max(updateClockSettingsResponseTerminalHoursMax),
+  "terminalHours": zod.number().min(1).max(updateClockSettingsResponseTerminalHoursMax).nullable().describe('Laufzeit für neue Terminalfreigaben in Stunden; null bedeutet unbegrenzt.'),
   "debounceSeconds": zod.number().min(updateClockSettingsResponseDebounceSecondsMin).max(updateClockSettingsResponseDebounceSecondsMax),
   "updatedAt": zod.string()
 })

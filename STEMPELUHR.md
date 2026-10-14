@@ -19,7 +19,12 @@ Das Terminal besitzt eine eigene, nicht auslesbare Browserfreigabe und braucht
 keine Mitarbeiteranmeldung. Sie berechtigt ausschließlich zum Stempeln, nicht
 zum Abrufen von Mitarbeiterlisten oder zur Verwaltung. Die Freigabe ist an diesen
 Browser gebunden, gilt standardmäßig zwölf Stunden und lässt sich am Gerät oder
-im Modul widerrufen. Auch die Deaktivierung oder der Entzug des Terminalrechts
+im Modul widerrufen. Unter Einstellungen ist alternativ **Unbegrenzt** wählbar:
+neue Freigaben haben dann keine serverseitige Ablaufzeit. Bestehende Freigaben
+werden nicht rückwirkend geändert; das Gerät gegebenenfalls sperren und erneut
+freischalten. Das geschützte Browser-Cookie wird bei Nutzung erneuert. Löschen der
+Browserdaten oder browserseitige Speicher-/Inaktivitätslimits können dennoch eine
+erneute Freischaltung erfordern. Auch die Deaktivierung oder der Entzug des Terminalrechts
 beim freischaltenden Benutzer beendet den Zugriff.
 
 Standardmäßig werden wiederholte Scans derselben Karte innerhalb von zehn

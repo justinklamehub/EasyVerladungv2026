@@ -1631,7 +1631,11 @@ components:
           minItems: 1
           maxItems: 20
           items: { $ref: "#/components/schemas/ClockBreakRule" }
-        terminalHours: { type: integer, minimum: 1, maximum: 168 }
+        terminalHours:
+          type: ["integer", "null"]
+          minimum: 1
+          maximum: 168
+          description: Laufzeit für neue Terminalfreigaben in Stunden; null bedeutet unbegrenzt.
         debounceSeconds: { type: integer, minimum: 5, maximum: 120 }
         updatedAt: { type: string }
     ClockEntryInput:

@@ -20,3 +20,9 @@ Fehlende historische Mitarbeiter dürfen aus eindeutig zugeordneten Namen und Ka
 **Why:** Der bereitgestellte SQL-Export enthält Buchungen, deren ursprüngliche Stammdatensätze fehlen. Die Historie soll vollständig erhalten bleiben, ohne alte Karten unbeabsichtigt wieder zum Stempeln freizugeben oder Endzeiten zu erfinden.
 
 **How to apply:** SQL nur als Datenformat auswerten, niemals als Befehle ausführen. Vor Import eine vollständige transaktionale Vorschau prüfen; bestehende Daten nicht überschreiben und identische Wiederholungen überspringen.
+
+Terminalfreigaben sollen auch zeitlich unbegrenzt möglich sein, aber weiterhin gesperrt und widerrufen werden können. Benutzer-Deaktivierung und Berechtigungsentzug müssen auch unbegrenzte Freigaben beenden.
+
+**Why:** Der Nutzer möchte die Terminallaufzeit auf „Unbegrenzt“ schalten können; das hebt die Zugangsabsicherung nicht auf.
+
+**How to apply:** Eine Laufzeitänderung nicht stillschweigend auf bestehende Freigaben anwenden oder abgelaufene Freigaben wiederbeleben. Für die neue Laufzeit das Gerät ausdrücklich erneut freischalten. Browserseitiger Verlust der Gerätefreigabe kann weiterhin eine erneute Freischaltung erfordern.

@@ -1,5 +1,6 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod/v4";
+import { ZodError as GeneratedZodError } from "zod";
 import {
   GetStempeluhrStateQueryParams, GetStempeluhrStateResponse, CreateClockEmployeeBody,
   UpdateClockEmployeeBody, UpdateClockEmployeeResponse, CreateClockEntryBody,
@@ -12,7 +13,7 @@ import { requireAuth } from "../lib/auth";
 import { can, type Permission } from "../lib/permissions";
 import { read, transaction, audit, settings, entry, employee, checkVersion, checkOverlap, validateRange, ClockError, ENTRY_SELECT, iso } from "../lib/stempeluhr/model";
 import { berlinInstant, nextDay } from "../lib/stempeluhr/calculation";
-import { activeTerminal, terminalResult, unlock, lock, stamp } from "../lib/stempeluhr/terminal";
+import { activeTerminal, terminalResult, renewUnlimitedCookie, unlock, lock, stamp } from "../lib/stempeluhr/terminal";
 import { importLegacy } from "../lib/stempeluhr/import";
 
 const router = Router();
@@ -36,7 +37,7 @@ function handler(fn: (req: Request, res: Response) => Promise<void>) {
     catch (err: any) {
       if (res.headersSent || res.destroyed) { req.log.warn("Stempeluhr response was already closed"); return; }
       if (err instanceof ClockError) { res.status(err.status).json({ error: err.message }); return; }
-      if (err instanceof z.ZodError) { res.status(400).json({ error: "Ungültige Eingabe.", details: err.issues }); return; }
+      if (err instanceof z.ZodError || err instanceof GeneratedZodError) { res.status(400).json({ error: "Ungültige Eingabe.", details: err.issues }); return; }
       if (err.code === "23505") { res.status(409).json({ error: "Kartennummer, Alt-ID oder offener Eintrag ist bereits vorhanden." }); return; }
       if (err.code === "23503") { res.status(409).json({ error: "Der Mitarbeiter hat bereits Zeiteinträge und kann nicht gelöscht werden." }); return; }
       req.log.error({ err }, "Stempeluhr request failed");
@@ -186,7 +187,7 @@ router.put("/stempeluhr/settings", requireAuth, handler(async (req, res) => {
   const b = UpdateClockSettingsBody.parse(req.body);
   for (const value of [b.earliestStart, b.latestEnd]) if (value !== null && !/^([01]\d|2[0-3]):[0-5]\d$/.test(value)) throw new ClockError("Uhrzeiten bitte als HH:MM angeben.");
   if (b.earliestStart && b.latestEnd && b.earliestStart >= b.latestEnd) throw new ClockError("Startgrenze muss vor der Endgrenze liegen.");
-  for (const n of [b.terminalHours, b.debounceSeconds, ...b.breakRules.flatMap((r) => [r.fromMinutes, r.deductionMinutes])]) z.number().int().parse(n);
+  for (const n of [...(b.terminalHours == null ? [] : [b.terminalHours]), b.debounceSeconds, ...b.breakRules.flatMap((r) => [r.fromMinutes, r.deductionMinutes])]) z.number().int().parse(n);
   const rules = [...b.breakRules].sort((a, b) => a.fromMinutes - b.fromMinutes);
   if (rules[0].fromMinutes !== 0 || new Set(rules.map((r) => r.fromMinutes)).size !== rules.length) throw new ClockError("Pausenstufen müssen bei 0 beginnen und eindeutige Grenzen haben.");
   // Prevent a configuration that can fail calculations on DST days.
@@ -211,7 +212,11 @@ for (const commit of [false, true]) router.post(`/stempeluhr/import/${commit ? "
   res.json((commit ? CommitClockImportResponse : PreviewClockImportResponse).parse(result));
 }));
 router.get("/stempeluhr/terminal/status", handler(async (req, res) => {
-  res.json(GetClockTerminalResponse.parse(await read(async (c) => terminalResult(await activeTerminal(c, req)))));
+  res.json(GetClockTerminalResponse.parse(await read(async (c) => {
+    const terminal = await activeTerminal(c, req);
+    renewUnlimitedCookie(req, res, terminal);
+    return terminalResult(terminal);
+  })));
 }));
 router.post("/stempeluhr/terminal/unlock", requireAuth, handler(async (req, res) => {
   await permissions(req, ["stempeluhr.terminal"]);
@@ -223,11 +228,11 @@ router.post("/stempeluhr/terminal/lock", handler(async (req, res) => {
 }));
 router.post("/stempeluhr/terminal/stamp", handler(async (req, res) => {
   const b = StampClockTerminalBody.parse(req.body);
-  res.json(StampClockTerminalResponse.parse(await stamp(req, nonempty(b.cardNumber, "Karte"), b.requestId)));
+  res.json(StampClockTerminalResponse.parse(await stamp(req, nonempty(b.cardNumber, "Karte"), b.requestId, res)));
 }));
 router.get("/stempeluhr/terminals", requireAuth, handler(async (req, res) => {
   await permissions(req, ["stempeluhr.terminal"]);
-  const result = await read(async (c) => (await c.query("SELECT id,label,expires_at FROM clock_terminals WHERE revoked_at IS NULL AND expires_at>NOW() ORDER BY id DESC")).rows.map(terminalResult));
+  const result = await read(async (c) => (await c.query("SELECT id,label,expires_at FROM clock_terminals WHERE revoked_at IS NULL AND (expires_at IS NULL OR expires_at>NOW()) ORDER BY id DESC")).rows.map(terminalResult));
   res.json(GetClockTerminalsResponse.parse(result));
 }));
 router.delete("/stempeluhr/terminals/:id", requireAuth, handler(async (req, res) => {

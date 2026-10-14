@@ -15,13 +15,28 @@ function cookieToken(req: Request) {
   return raw && /^[a-f0-9]{64}$/.test(raw) ? raw : null;
 }
 export const terminalResult = (t?: Row) => ({
-  unlocked: !!t, id: t?.id ?? null, label: t?.label ?? null, expiresAt: t ? iso(t.expires_at) : null,
+  unlocked: !!t, id: t?.id ?? null, label: t?.label ?? null, expiresAt: t?.expires_at != null ? iso(t.expires_at) : null,
 });
+// Browsers limit persistent cookies. Unlimited server authorization has no expiry;
+// renew its browser cookie during use, without extending time-limited authorizations.
+export function terminalCookieLifetime(expiresAt: unknown) {
+  return expiresAt == null ? { maxAge: 400 * 24 * 60 * 60 * 1000 } : { expires: new Date(expiresAt as string) };
+}
+export function renewUnlimitedCookie(req: Request, res: Response, terminal?: Row) {
+  const token = cookieToken(req);
+  if (terminal && terminal.expires_at == null && token)
+    res.cookie(TERMINAL_COOKIE, token, { ...cookieOptions(req), ...terminalCookieLifetime(null) });
+}
+export async function createTerminalRecord(c: PoolClient, tokenHash: string, label: string, userId: number, hours: number | null) {
+  const { rows } = await c.query(`INSERT INTO clock_terminals(token_hash,label,user_id,expires_at)
+    VALUES($1,$2,$3,NOW()+$4::integer*INTERVAL '1 hour') RETURNING *`, [tokenHash, label, userId, hours]);
+  return rows[0];
+}
 export async function activeTerminal(c: PoolClient, req: Request) {
   const token = cookieToken(req);
   if (!token) return undefined;
   const { rows } = await c.query(`SELECT t.*,u.role,u.is_active FROM clock_terminals t JOIN users u ON u.id=t.user_id
-    WHERE t.token_hash=$1 AND t.revoked_at IS NULL AND t.expires_at>NOW()`, [hash(token)]);
+    WHERE t.token_hash=$1 AND t.revoked_at IS NULL AND (t.expires_at IS NULL OR t.expires_at>NOW())`, [hash(token)]);
   const t = rows[0];
   if (!t || !t.is_active || !(await can(t.role, "stempeluhr.terminal"))) return undefined;
   return t;
@@ -32,12 +47,11 @@ export async function unlock(req: Request, res: Response, label: string, userId:
     const s = await settings(c);
     const oldToken = cookieToken(req);
     if (oldToken) await c.query("UPDATE clock_terminals SET revoked_at=NOW() WHERE token_hash=$1", [hash(oldToken)]);
-    const { rows } = await c.query(`INSERT INTO clock_terminals(token_hash,label,user_id,expires_at)
-      VALUES($1,$2,$3,NOW()+$4*INTERVAL '1 hour') RETURNING *`, [hash(token), label, userId, s.terminalHours]);
-    await audit(c, actor, "Terminal freigeschaltet", label, null, { id: rows[0].id, label, expiresAt: iso(rows[0].expires_at) });
-    return rows[0];
+    const terminal = await createTerminalRecord(c, hash(token), label, userId, s.terminalHours);
+    await audit(c, actor, "Terminal freigeschaltet", label, null, { id: terminal.id, label, expiresAt: terminalResult(terminal).expiresAt });
+    return terminal;
   });
-  res.cookie(TERMINAL_COOKIE, token, { ...cookieOptions(req), expires: new Date(result.expires_at) });
+  res.cookie(TERMINAL_COOKIE, token, { ...cookieOptions(req), ...terminalCookieLifetime(result.expires_at) });
   return terminalResult(result);
 }
 export async function lock(req: Request, res: Response) {
@@ -56,10 +70,11 @@ function limit(key: string) {
   if (!current || current.until < now) limits.set(key, { count: 1, until: now + 60000 });
   else if (++current.count > 60) throw new ClockError("Zu viele Stempelversuche. Bitte eine Minute warten.", 429);
 }
-export async function stamp(req: Request, card: string, requestId: string) {
+export async function stamp(req: Request, card: string, requestId: string, res?: Response) {
   limit(req.ip ?? "unknown");
   return transaction(async (c) => {
     const terminal = await activeTerminal(c, req);
+    if (res) renewUnlimitedCookie(req, res, terminal);
     if (!terminal) throw new ClockError("Terminal ist gesperrt oder die Freigabe abgelaufen.", 403);
     const replay = await c.query("SELECT result,card_number FROM clock_receipts WHERE terminal_id=$1 AND request_id=$2", [terminal.id, requestId]);
     if (replay.rowCount) {

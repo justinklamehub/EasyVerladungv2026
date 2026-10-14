@@ -4,7 +4,7 @@ export interface TimeRules {
   breakRules: { fromMinutes: number; deductionMinutes: number }[];
 }
 export interface Settings extends TimeRules {
-  terminalHours: number;
+  terminalHours: number | null;
   debounceSeconds: number;
   updatedAt: string;
 }

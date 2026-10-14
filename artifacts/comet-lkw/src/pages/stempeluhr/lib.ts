@@ -28,6 +28,7 @@ export function useInvalidateClock() {
   const qc = useQueryClient();
   return () => qc.invalidateQueries({ predicate: (q) => JSON.stringify(q.queryKey).includes("/api/stempeluhr/") });
 }
+export const terminalValidity = (expiresAt: string | null | undefined) => expiresAt ? `gültig bis ${fmtDateTime(expiresAt)}` : "Unbegrenzt";
 
 const TZ = "Europe/Berlin";
 function parts(d: Date) {

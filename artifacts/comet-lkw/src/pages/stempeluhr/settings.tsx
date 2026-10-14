@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Trash2 } from "lucide-react";
-import { errMsg, fmtDateTime, useInvalidateClock } from "./lib";
+import { errMsg, terminalValidity, useInvalidateClock } from "./lib";
 
 export function SettingsPanel() {
   const q = useGetClockSettings({ query: { queryKey: ["/api/stempeluhr/settings"] } as any });
@@ -14,18 +15,19 @@ export function SettingsPanel() {
   const [f, setF] = useState<{ updatedAt: string; earliest: string; latest: string; hours: string; deb: string; rules: { from: string; ded: string }[] } | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   const d = q.data;
-  useEffect(() => { if (d && !f) setF({ updatedAt: d.updatedAt, earliest: d.earliestStart ?? "", latest: d.latestEnd ?? "", hours: String(d.terminalHours), deb: String(d.debounceSeconds), rules: d.breakRules.map((r) => ({ from: String(r.fromMinutes), ded: String(r.deductionMinutes) })) }); }, [d, f]);
+  useEffect(() => { if (d && !f) setF({ updatedAt: d.updatedAt, earliest: d.earliestStart ?? "", latest: d.latestEnd ?? "", hours: d.terminalHours === null ? "unlimited" : String(d.terminalHours), deb: String(d.debounceSeconds), rules: d.breakRules.map((r) => ({ from: String(r.fromMinutes), ded: String(r.deductionMinutes) })) }); }, [d, f]);
   if (q.isLoading) return <Skeleton className="h-48" />;
   if (q.isError || !d) return <div className="text-sm text-red-700">Einstellungen nicht ladbar: {errMsg(q.error)} <Button size="sm" variant="outline" onClick={() => q.refetch()}>Erneut versuchen</Button></div>;
   if (!f) return null;
   const submit = async () => {
     setMsg(null);
+    if (f.hours !== "unlimited" && (!Number.isInteger(Number(f.hours)) || Number(f.hours) < 1 || Number(f.hours) > 168)) { setMsg({ ok: false, t: "Terminal-Laufzeit: 1–168 ganze Stunden oder Unbegrenzt wählen." }); return; }
     const rules: ClockBreakRule[] = f.rules.map((r) => ({ fromMinutes: Number(r.from), deductionMinutes: Number(r.ded) }));
     if (rules.some((r) => !Number.isFinite(r.fromMinutes) || !Number.isFinite(r.deductionMinutes))) { setMsg({ ok: false, t: "Pausenregeln: nur Zahlen" }); return; }
     try {
-      const saved = await save.mutateAsync({ data: { earliestStart: f.earliest || null, latestEnd: f.latest || null, breakRules: rules, terminalHours: Number(f.hours), debounceSeconds: Number(f.deb), updatedAt: f.updatedAt } });
+      const saved = await save.mutateAsync({ data: { earliestStart: f.earliest || null, latestEnd: f.latest || null, breakRules: rules, terminalHours: f.hours === "unlimited" ? null : Number(f.hours), debounceSeconds: Number(f.deb), updatedAt: f.updatedAt } });
       setF({ ...f, updatedAt: saved.updatedAt });
-      invalidate(); setMsg({ ok: true, t: "Gespeichert. Gilt nur für neue Einträge; bestehende Einträge behalten ihre Regeln." });
+      invalidate(); setMsg({ ok: true, t: "Gespeichert. Zeitregeln gelten für neue Einträge, die Terminal-Laufzeit für neue Freischaltungen. Bestehende Freigaben bleiben unverändert; ein Gerät gegebenenfalls sperren und erneut freischalten." });
     } catch (e) { setMsg({ ok: false, t: errMsg(e) }); }
   };
   return (
@@ -35,9 +37,13 @@ export function SettingsPanel() {
       <div className="grid grid-cols-2 gap-3">
         <div><Label>Früheste Buchung</Label><Input type="time" value={f.earliest} onChange={(e) => setF({ ...f, earliest: e.target.value })} data-testid="input-earliest" /></div>
         <div><Label>Späteste Buchung</Label><Input type="time" value={f.latest} onChange={(e) => setF({ ...f, latest: e.target.value })} data-testid="input-latest" /></div>
-        <div><Label>Terminal-Laufzeit (Stunden, 1-168)</Label><Input inputMode="numeric" value={f.hours} onChange={(e) => setF({ ...f, hours: e.target.value })} data-testid="input-terminal-hours" /></div>
+        <div className="space-y-2"><Label>Terminal-Laufzeit</Label>
+          <label className="flex items-center gap-2 text-sm"><Checkbox checked={f.hours === "unlimited"} onCheckedChange={(value) => setF({ ...f, hours: value === true ? "unlimited" : String(d.terminalHours ?? 12) })} data-testid="check-terminal-unlimited" />Unbegrenzt</label>
+          {f.hours !== "unlimited" && <Input aria-label="Terminal-Laufzeit in Stunden (1–168)" type="number" min={1} max={168} step={1} value={f.hours} onChange={(e) => setF({ ...f, hours: e.target.value })} data-testid="input-terminal-hours" />}
+        </div>
         <div><Label>Doppelscan-Sperre (Sekunden, 5-120)</Label><Input inputMode="numeric" value={f.deb} onChange={(e) => setF({ ...f, deb: e.target.value })} data-testid="input-debounce" /></div>
       </div>
+      <p className="text-xs text-slate-500">Unbegrenzt gilt bis zum Sperren oder Widerrufen. Berechtigungsentzug und Benutzer-Deaktivierung sperren weiterhin den Zugang. Browserdaten oder Gerätefreigaben können durch den Browser gelöscht werden. Neue Laufzeiten gelten erst beim erneuten Freischalten.</p>
       <div className="space-y-2"><Label>Automatische Pause (ab Netto-Arbeitsminuten, Abzug in Minuten)</Label>
         {f.rules.map((r, i) => (
           <div key={i} className="flex gap-2 items-center">
@@ -66,7 +72,7 @@ export function TerminalPanel() {
         <h2 className="font-semibold">Dieses Gerät als Terminal freischalten</h2>
         <p className="text-sm text-slate-600">Nach der Freischaltung bleibt ein eigenes, geschütztes Terminal-Cookie auf diesem Gerät bestehen. Bitte melden Sie sich danach aus Ihrem Easy-Konto ab; Mitarbeiter stempeln ohne eigenes Login, das Terminal bleibt freigeschaltet. Öffnen Sie dann /stempeluhr-terminal.</p>
         {here.data?.unlocked
-          ? <div className="text-sm flex flex-wrap gap-2 items-center">Dieses Gerät ist freigeschaltet: <b>{here.data.label}</b>, gültig bis {fmtDateTime(here.data.expiresAt)}
+          ? <div className="text-sm flex flex-wrap gap-2 items-center">Dieses Gerät ist freigeschaltet: <b>{here.data.label}</b>, {terminalValidity(here.data.expiresAt)}
               <a href="/stempeluhr-terminal" className="underline" data-testid="link-open-terminal">Terminal öffnen</a>
               <Button size="sm" variant="outline" onClick={() => run(() => lock.mutateAsync(undefined))} data-testid="button-lock-here">Dieses Gerät sperren</Button></div>
           : <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (label.trim()) run(async () => { await unlock.mutateAsync({ data: { label: label.trim() } }); setLabel(""); }); }}>
@@ -81,7 +87,7 @@ export function TerminalPanel() {
         {list.data && !list.data.length && <div className="text-sm text-slate-500">Keine aktiven Terminals.</div>}
         {list.data?.map((t) => (
           <div key={t.id} className="flex items-center justify-between border-t py-2 text-sm" data-testid={`terminal-${t.id}`}>
-            <div><b>{t.label}</b><div className="text-xs text-slate-500">gültig bis {fmtDateTime(t.expiresAt)}</div></div>
+            <div><b>{t.label}</b><div className="text-xs text-slate-500">{terminalValidity(t.expiresAt)}</div></div>
             <Button size="sm" variant="outline" disabled={t.id == null} onClick={() => run(() => revoke.mutateAsync({ id: t.id! }))} data-testid={`button-revoke-${t.id}`}>Widerrufen</Button>
           </div>))}
       </div>
