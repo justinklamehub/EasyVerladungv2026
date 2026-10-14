@@ -14,3 +14,4 @@ export * from "./fotos";
 export * from "./lkw-arten";
 export * from "./wareneingang";
 export * from "./einlagerung";
+export * from "./stempeluhr";

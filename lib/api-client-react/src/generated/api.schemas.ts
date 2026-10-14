@@ -5,6 +5,229 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export interface ClockEmployeeInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  cardNumber: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  firstName: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  lastName: string;
+  /** @maxLength 150 */
+  provider: string;
+  /** @maxLength 150 */
+  activity: string;
+  active: boolean;
+  expectedUpdatedAt?: string;
+}
+
+export type ClockEmployee = ClockEmployeeInput & {
+  id: number;
+  updatedAt: string;
+};
+
+export interface ClockBreakRule {
+  /**
+     * @minimum 0
+     * @maximum 10080
+     */
+  fromMinutes: number;
+  /**
+     * @minimum 0
+     * @maximum 1440
+     */
+  deductionMinutes: number;
+}
+
+export interface ClockSettings {
+  /** @nullable */
+  earliestStart: string | null;
+  /** @nullable */
+  latestEnd: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 20
+     */
+  breakRules: ClockBreakRule[];
+  /**
+     * @minimum 1
+     * @maximum 168
+     */
+  terminalHours: number;
+  /**
+     * @minimum 5
+     * @maximum 120
+     */
+  debounceSeconds: number;
+  updatedAt: string;
+}
+
+export interface ClockEntryInput {
+  employeeId: number;
+  startedAt: string;
+  /** @nullable */
+  endedAt: string | null;
+  /**
+     * @minimum 0
+     * @maximum 1440
+     * @nullable
+     */
+  pauseOverride: number | null;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+  expectedUpdatedAt?: string;
+}
+
+export interface ClockEntry {
+  id: number;
+  employeeId: number;
+  cardNumber: string;
+  firstName: string;
+  lastName: string;
+  provider: string;
+  activity: string;
+  startedAt: string;
+  /** @nullable */
+  endedAt: string | null;
+  originalStartedAt: string;
+  /** @nullable */
+  originalEndedAt: string | null;
+  bookedStart: string;
+  /** @nullable */
+  bookedEnd: string | null;
+  /** @nullable */
+  grossMinutes: number | null;
+  /** @nullable */
+  pauseMinutes: number | null;
+  /** @nullable */
+  netMinutes: number | null;
+  /** @nullable */
+  pauseOverride: number | null;
+  source: string;
+  updatedAt: string;
+}
+
+export interface ClockDeletion {
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+  expectedUpdatedAt: string;
+}
+
+/**
+ * @nullable
+ */
+export type ClockAuditBefore = { [key: string]: unknown } | null;
+
+/**
+ * @nullable
+ */
+export type ClockAuditAfter = { [key: string]: unknown } | null;
+
+export interface ClockAudit {
+  id: number;
+  action: string;
+  actor: string;
+  reason: string;
+  createdAt: string;
+  /** @nullable */
+  before: ClockAuditBefore;
+  /** @nullable */
+  after: ClockAuditAfter;
+}
+
+export interface ClockState {
+  employees: ClockEmployee[];
+  entries: ClockEntry[];
+  audit: ClockAudit[];
+}
+
+export interface ClockTerminalInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  label: string;
+}
+
+export interface ClockTerminal {
+  unlocked: boolean;
+  /** @nullable */
+  id: number | null;
+  /** @nullable */
+  label: string | null;
+  /** @nullable */
+  expiresAt: string | null;
+}
+
+export interface ClockStampInput {
+  /**
+     * @minLength 1
+     * @maxLength 80
+     */
+  cardNumber: string;
+  /**
+     * @minLength 16
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export type ClockStampResultAction = typeof ClockStampResultAction[keyof typeof ClockStampResultAction];
+
+
+export const ClockStampResultAction = {
+  in: 'in',
+  out: 'out',
+} as const;
+
+export interface ClockStampResult {
+  action: ClockStampResultAction;
+  name: string;
+  time: string;
+  bookedTime: string;
+}
+
+export interface ClockLegacyEntry {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  legacyId: string;
+  cardNumber: string;
+  startedAt: string;
+  /** @nullable */
+  endedAt: string | null;
+}
+
+export interface ClockImportInput {
+  /** @maxItems 10000 */
+  employees: ClockEmployeeInput[];
+  /** @maxItems 50000 */
+  entries: ClockLegacyEntry[];
+  legacyTimesAcknowledged: boolean;
+}
+
+export interface ClockImportResult {
+  employeesAdded: number;
+  entriesAdded: number;
+  skipped: number;
+  errors: string[];
+}
+
 export type ShipmentWorkViewDateRange = {
   mode: 'today' | 'tomorrow' | 'thisWeek' | 'all';
 } | {
@@ -1177,6 +1400,12 @@ export interface AuditLogPage {
   page: number;
   limit: number;
 }
+
+export type GetStempeluhrStateParams = {
+from: string;
+to: string;
+employeeId?: number;
+};
 
 export type SearchScannerEinlagerungParams = {
 mode: SearchScannerEinlagerungMode;

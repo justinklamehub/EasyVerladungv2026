@@ -38,7 +38,7 @@ export default function LoginPage() {
     mutation: {
       onSuccess: (data: any) => {
         refetch();
-        setLocation(data?.passwordChangeRequired ? "/passwort-aendern" : "/dashboard");
+        setLocation(data?.passwordChangeRequired ? "/passwort-aendern" : new URLSearchParams(window.location.search).get("redirect") === "/stempeluhr" ? "/stempeluhr" : "/dashboard");
       },
       onError: () => {
         toast({

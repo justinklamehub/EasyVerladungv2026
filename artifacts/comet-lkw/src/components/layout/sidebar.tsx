@@ -14,6 +14,7 @@ import {
   FileCheck2,
   History,
   FileClock,
+  Clock,
   LogOut,
   Share2,
   Settings,
@@ -53,6 +54,7 @@ import {
   type LucideProps,
 } from "lucide-react";
 import { hasEinlagerungAccess } from "@/pages/einlagerung/lib";
+import { P as CLOCK_PERMISSIONS } from "@/pages/stempeluhr/lib";
 import { NAV_ICONS } from "@/lib/nav-icons";
 import { useLogout } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
@@ -368,6 +370,7 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme, notific
     { name: "Benutzer", href: "/users", icon: Users, show: canManageUsers },
     { name: "Palettenkonto", href: "/paletten", icon: PackageSearch, show: true },
     { name: "Einlagerung", href: "/einlagerung", icon: Warehouse, show: hasEinlagerungAccess(user.role === "comet_admin", permissions) },
+    { name: "Stempeluhr", href: "/stempeluhr", icon: Clock, show: user.role === "comet_admin" || Object.values(CLOCK_PERMISSIONS).some((key) => !!permissions[key]) },
     { name: "Abstimmungen", href: "/abstimmungen", icon: FileCheck2, show: true },
     { name: "Kalkulation", href: "/kalkulation", icon: Calculator, show: isCometUser },
     { name: "Gefahrgut", href: "/gefahrgut", icon: ShieldAlert, show: isCometUser, badgeCount: gefahrgutBlankoCount || 0 },

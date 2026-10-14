@@ -8,6 +8,458 @@
 import * as zod from 'zod';
 
 
+export const GetStempeluhrStateQueryParams = zod.object({
+  "from": zod.date(),
+  "to": zod.date(),
+  "employeeId": zod.coerce.number().optional()
+})
+
+export const getStempeluhrStateResponseEmployeesItemOneCardNumberMax = 80;
+
+export const getStempeluhrStateResponseEmployeesItemOneFirstNameMax = 100;
+
+export const getStempeluhrStateResponseEmployeesItemOneLastNameMax = 100;
+
+export const getStempeluhrStateResponseEmployeesItemOneProviderMax = 150;
+
+export const getStempeluhrStateResponseEmployeesItemOneActivityMax = 150;
+
+
+
+export const GetStempeluhrStateResponse = zod.object({
+  "employees": zod.array(zod.object({
+  "cardNumber": zod.string().min(1).max(getStempeluhrStateResponseEmployeesItemOneCardNumberMax),
+  "firstName": zod.string().min(1).max(getStempeluhrStateResponseEmployeesItemOneFirstNameMax),
+  "lastName": zod.string().min(1).max(getStempeluhrStateResponseEmployeesItemOneLastNameMax),
+  "provider": zod.string().max(getStempeluhrStateResponseEmployeesItemOneProviderMax),
+  "activity": zod.string().max(getStempeluhrStateResponseEmployeesItemOneActivityMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string()
+}))),
+  "entries": zod.array(zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "cardNumber": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "provider": zod.string(),
+  "activity": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "originalStartedAt": zod.string(),
+  "originalEndedAt": zod.string().nullable(),
+  "bookedStart": zod.string(),
+  "bookedEnd": zod.string().nullable(),
+  "grossMinutes": zod.number().nullable(),
+  "pauseMinutes": zod.number().nullable(),
+  "netMinutes": zod.number().nullable(),
+  "pauseOverride": zod.number().nullable(),
+  "source": zod.string(),
+  "updatedAt": zod.string()
+})),
+  "audit": zod.array(zod.object({
+  "id": zod.number(),
+  "action": zod.string(),
+  "actor": zod.string(),
+  "reason": zod.string(),
+  "createdAt": zod.string(),
+  "before": zod.record(zod.string(), zod.unknown()).nullable(),
+  "after": zod.record(zod.string(), zod.unknown()).nullable()
+}))
+})
+
+
+export const createClockEmployeeBodyCardNumberMax = 80;
+
+export const createClockEmployeeBodyFirstNameMax = 100;
+
+export const createClockEmployeeBodyLastNameMax = 100;
+
+export const createClockEmployeeBodyProviderMax = 150;
+
+export const createClockEmployeeBodyActivityMax = 150;
+
+
+
+export const CreateClockEmployeeBody = zod.object({
+  "cardNumber": zod.string().min(1).max(createClockEmployeeBodyCardNumberMax),
+  "firstName": zod.string().min(1).max(createClockEmployeeBodyFirstNameMax),
+  "lastName": zod.string().min(1).max(createClockEmployeeBodyLastNameMax),
+  "provider": zod.string().max(createClockEmployeeBodyProviderMax),
+  "activity": zod.string().max(createClockEmployeeBodyActivityMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+
+export const UpdateClockEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateClockEmployeeBodyCardNumberMax = 80;
+
+export const updateClockEmployeeBodyFirstNameMax = 100;
+
+export const updateClockEmployeeBodyLastNameMax = 100;
+
+export const updateClockEmployeeBodyProviderMax = 150;
+
+export const updateClockEmployeeBodyActivityMax = 150;
+
+
+
+export const UpdateClockEmployeeBody = zod.object({
+  "cardNumber": zod.string().min(1).max(updateClockEmployeeBodyCardNumberMax),
+  "firstName": zod.string().min(1).max(updateClockEmployeeBodyFirstNameMax),
+  "lastName": zod.string().min(1).max(updateClockEmployeeBodyLastNameMax),
+  "provider": zod.string().max(updateClockEmployeeBodyProviderMax),
+  "activity": zod.string().max(updateClockEmployeeBodyActivityMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+export const updateClockEmployeeResponseOneCardNumberMax = 80;
+
+export const updateClockEmployeeResponseOneFirstNameMax = 100;
+
+export const updateClockEmployeeResponseOneLastNameMax = 100;
+
+export const updateClockEmployeeResponseOneProviderMax = 150;
+
+export const updateClockEmployeeResponseOneActivityMax = 150;
+
+
+
+export const UpdateClockEmployeeResponse = zod.object({
+  "cardNumber": zod.string().min(1).max(updateClockEmployeeResponseOneCardNumberMax),
+  "firstName": zod.string().min(1).max(updateClockEmployeeResponseOneFirstNameMax),
+  "lastName": zod.string().min(1).max(updateClockEmployeeResponseOneLastNameMax),
+  "provider": zod.string().max(updateClockEmployeeResponseOneProviderMax),
+  "activity": zod.string().max(updateClockEmployeeResponseOneActivityMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string()
+}))
+
+
+export const DeleteClockEmployeeParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const createClockEntryBodyPauseOverrideMin = 0;
+export const createClockEntryBodyPauseOverrideMax = 1440;
+
+export const createClockEntryBodyReasonMin = 3;
+export const createClockEntryBodyReasonMax = 1000;
+
+
+
+export const CreateClockEntryBody = zod.object({
+  "employeeId": zod.number(),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullable(),
+  "pauseOverride": zod.number().min(createClockEntryBodyPauseOverrideMin).max(createClockEntryBodyPauseOverrideMax).nullable(),
+  "reason": zod.string().min(createClockEntryBodyReasonMin).max(createClockEntryBodyReasonMax),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+
+export const UpdateClockEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateClockEntryBodyPauseOverrideMin = 0;
+export const updateClockEntryBodyPauseOverrideMax = 1440;
+
+export const updateClockEntryBodyReasonMin = 3;
+export const updateClockEntryBodyReasonMax = 1000;
+
+
+
+export const UpdateClockEntryBody = zod.object({
+  "employeeId": zod.number(),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullable(),
+  "pauseOverride": zod.number().min(updateClockEntryBodyPauseOverrideMin).max(updateClockEntryBodyPauseOverrideMax).nullable(),
+  "reason": zod.string().min(updateClockEntryBodyReasonMin).max(updateClockEntryBodyReasonMax),
+  "expectedUpdatedAt": zod.string().optional()
+})
+
+export const UpdateClockEntryResponse = zod.object({
+  "id": zod.number(),
+  "employeeId": zod.number(),
+  "cardNumber": zod.string(),
+  "firstName": zod.string(),
+  "lastName": zod.string(),
+  "provider": zod.string(),
+  "activity": zod.string(),
+  "startedAt": zod.string(),
+  "endedAt": zod.string().nullable(),
+  "originalStartedAt": zod.string(),
+  "originalEndedAt": zod.string().nullable(),
+  "bookedStart": zod.string(),
+  "bookedEnd": zod.string().nullable(),
+  "grossMinutes": zod.number().nullable(),
+  "pauseMinutes": zod.number().nullable(),
+  "netMinutes": zod.number().nullable(),
+  "pauseOverride": zod.number().nullable(),
+  "source": zod.string(),
+  "updatedAt": zod.string()
+})
+
+
+export const DeleteClockEntryParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const deleteClockEntryBodyReasonMin = 3;
+export const deleteClockEntryBodyReasonMax = 1000;
+
+
+
+export const DeleteClockEntryBody = zod.object({
+  "reason": zod.string().min(deleteClockEntryBodyReasonMin).max(deleteClockEntryBodyReasonMax),
+  "expectedUpdatedAt": zod.string()
+})
+
+
+export const getClockSettingsResponseBreakRulesItemFromMinutesMin = 0;
+export const getClockSettingsResponseBreakRulesItemFromMinutesMax = 10080;
+
+export const getClockSettingsResponseBreakRulesItemDeductionMinutesMin = 0;
+export const getClockSettingsResponseBreakRulesItemDeductionMinutesMax = 1440;
+
+export const getClockSettingsResponseBreakRulesMax = 20;
+
+export const getClockSettingsResponseTerminalHoursMax = 168;
+
+export const getClockSettingsResponseDebounceSecondsMin = 5;
+export const getClockSettingsResponseDebounceSecondsMax = 120;
+
+
+
+export const GetClockSettingsResponse = zod.object({
+  "earliestStart": zod.string().nullable(),
+  "latestEnd": zod.string().nullable(),
+  "breakRules": zod.array(zod.object({
+  "fromMinutes": zod.number().min(getClockSettingsResponseBreakRulesItemFromMinutesMin).max(getClockSettingsResponseBreakRulesItemFromMinutesMax),
+  "deductionMinutes": zod.number().min(getClockSettingsResponseBreakRulesItemDeductionMinutesMin).max(getClockSettingsResponseBreakRulesItemDeductionMinutesMax)
+})).min(1).max(getClockSettingsResponseBreakRulesMax),
+  "terminalHours": zod.number().min(1).max(getClockSettingsResponseTerminalHoursMax),
+  "debounceSeconds": zod.number().min(getClockSettingsResponseDebounceSecondsMin).max(getClockSettingsResponseDebounceSecondsMax),
+  "updatedAt": zod.string()
+})
+
+
+export const updateClockSettingsBodyBreakRulesItemFromMinutesMin = 0;
+export const updateClockSettingsBodyBreakRulesItemFromMinutesMax = 10080;
+
+export const updateClockSettingsBodyBreakRulesItemDeductionMinutesMin = 0;
+export const updateClockSettingsBodyBreakRulesItemDeductionMinutesMax = 1440;
+
+export const updateClockSettingsBodyBreakRulesMax = 20;
+
+export const updateClockSettingsBodyTerminalHoursMax = 168;
+
+export const updateClockSettingsBodyDebounceSecondsMin = 5;
+export const updateClockSettingsBodyDebounceSecondsMax = 120;
+
+
+
+export const UpdateClockSettingsBody = zod.object({
+  "earliestStart": zod.string().nullable(),
+  "latestEnd": zod.string().nullable(),
+  "breakRules": zod.array(zod.object({
+  "fromMinutes": zod.number().min(updateClockSettingsBodyBreakRulesItemFromMinutesMin).max(updateClockSettingsBodyBreakRulesItemFromMinutesMax),
+  "deductionMinutes": zod.number().min(updateClockSettingsBodyBreakRulesItemDeductionMinutesMin).max(updateClockSettingsBodyBreakRulesItemDeductionMinutesMax)
+})).min(1).max(updateClockSettingsBodyBreakRulesMax),
+  "terminalHours": zod.number().min(1).max(updateClockSettingsBodyTerminalHoursMax),
+  "debounceSeconds": zod.number().min(updateClockSettingsBodyDebounceSecondsMin).max(updateClockSettingsBodyDebounceSecondsMax),
+  "updatedAt": zod.string()
+})
+
+export const updateClockSettingsResponseBreakRulesItemFromMinutesMin = 0;
+export const updateClockSettingsResponseBreakRulesItemFromMinutesMax = 10080;
+
+export const updateClockSettingsResponseBreakRulesItemDeductionMinutesMin = 0;
+export const updateClockSettingsResponseBreakRulesItemDeductionMinutesMax = 1440;
+
+export const updateClockSettingsResponseBreakRulesMax = 20;
+
+export const updateClockSettingsResponseTerminalHoursMax = 168;
+
+export const updateClockSettingsResponseDebounceSecondsMin = 5;
+export const updateClockSettingsResponseDebounceSecondsMax = 120;
+
+
+
+export const UpdateClockSettingsResponse = zod.object({
+  "earliestStart": zod.string().nullable(),
+  "latestEnd": zod.string().nullable(),
+  "breakRules": zod.array(zod.object({
+  "fromMinutes": zod.number().min(updateClockSettingsResponseBreakRulesItemFromMinutesMin).max(updateClockSettingsResponseBreakRulesItemFromMinutesMax),
+  "deductionMinutes": zod.number().min(updateClockSettingsResponseBreakRulesItemDeductionMinutesMin).max(updateClockSettingsResponseBreakRulesItemDeductionMinutesMax)
+})).min(1).max(updateClockSettingsResponseBreakRulesMax),
+  "terminalHours": zod.number().min(1).max(updateClockSettingsResponseTerminalHoursMax),
+  "debounceSeconds": zod.number().min(updateClockSettingsResponseDebounceSecondsMin).max(updateClockSettingsResponseDebounceSecondsMax),
+  "updatedAt": zod.string()
+})
+
+
+export const previewClockImportBodyEmployeesItemCardNumberMax = 80;
+
+export const previewClockImportBodyEmployeesItemFirstNameMax = 100;
+
+export const previewClockImportBodyEmployeesItemLastNameMax = 100;
+
+export const previewClockImportBodyEmployeesItemProviderMax = 150;
+
+export const previewClockImportBodyEmployeesItemActivityMax = 150;
+
+export const previewClockImportBodyEmployeesMax = 10000;
+
+export const previewClockImportBodyEntriesItemLegacyIdMax = 100;
+
+export const previewClockImportBodyEntriesMax = 50000;
+
+
+
+export const PreviewClockImportBody = zod.object({
+  "employees": zod.array(zod.object({
+  "cardNumber": zod.string().min(1).max(previewClockImportBodyEmployeesItemCardNumberMax),
+  "firstName": zod.string().min(1).max(previewClockImportBodyEmployeesItemFirstNameMax),
+  "lastName": zod.string().min(1).max(previewClockImportBodyEmployeesItemLastNameMax),
+  "provider": zod.string().max(previewClockImportBodyEmployeesItemProviderMax),
+  "activity": zod.string().max(previewClockImportBodyEmployeesItemActivityMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string().optional()
+})).max(previewClockImportBodyEmployeesMax),
+  "entries": zod.array(zod.object({
+  "legacyId": zod.string().min(1).max(previewClockImportBodyEntriesItemLegacyIdMax),
+  "cardNumber": zod.string(),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullable()
+})).max(previewClockImportBodyEntriesMax),
+  "legacyTimesAcknowledged": zod.boolean()
+})
+
+export const PreviewClockImportResponse = zod.object({
+  "employeesAdded": zod.number(),
+  "entriesAdded": zod.number(),
+  "skipped": zod.number(),
+  "errors": zod.array(zod.string())
+})
+
+
+export const commitClockImportBodyEmployeesItemCardNumberMax = 80;
+
+export const commitClockImportBodyEmployeesItemFirstNameMax = 100;
+
+export const commitClockImportBodyEmployeesItemLastNameMax = 100;
+
+export const commitClockImportBodyEmployeesItemProviderMax = 150;
+
+export const commitClockImportBodyEmployeesItemActivityMax = 150;
+
+export const commitClockImportBodyEmployeesMax = 10000;
+
+export const commitClockImportBodyEntriesItemLegacyIdMax = 100;
+
+export const commitClockImportBodyEntriesMax = 50000;
+
+
+
+export const CommitClockImportBody = zod.object({
+  "employees": zod.array(zod.object({
+  "cardNumber": zod.string().min(1).max(commitClockImportBodyEmployeesItemCardNumberMax),
+  "firstName": zod.string().min(1).max(commitClockImportBodyEmployeesItemFirstNameMax),
+  "lastName": zod.string().min(1).max(commitClockImportBodyEmployeesItemLastNameMax),
+  "provider": zod.string().max(commitClockImportBodyEmployeesItemProviderMax),
+  "activity": zod.string().max(commitClockImportBodyEmployeesItemActivityMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string().optional()
+})).max(commitClockImportBodyEmployeesMax),
+  "entries": zod.array(zod.object({
+  "legacyId": zod.string().min(1).max(commitClockImportBodyEntriesItemLegacyIdMax),
+  "cardNumber": zod.string(),
+  "startedAt": zod.coerce.date(),
+  "endedAt": zod.coerce.date().nullable()
+})).max(commitClockImportBodyEntriesMax),
+  "legacyTimesAcknowledged": zod.boolean()
+})
+
+export const CommitClockImportResponse = zod.object({
+  "employeesAdded": zod.number(),
+  "entriesAdded": zod.number(),
+  "skipped": zod.number(),
+  "errors": zod.array(zod.string())
+})
+
+
+export const GetClockTerminalResponse = zod.object({
+  "unlocked": zod.boolean(),
+  "id": zod.number().nullable(),
+  "label": zod.string().nullable(),
+  "expiresAt": zod.string().nullable()
+})
+
+
+export const unlockClockTerminalBodyLabelMax = 100;
+
+
+
+export const UnlockClockTerminalBody = zod.object({
+  "label": zod.string().min(1).max(unlockClockTerminalBodyLabelMax)
+})
+
+export const UnlockClockTerminalResponse = zod.object({
+  "unlocked": zod.boolean(),
+  "id": zod.number().nullable(),
+  "label": zod.string().nullable(),
+  "expiresAt": zod.string().nullable()
+})
+
+
+export const stampClockTerminalBodyCardNumberMax = 80;
+
+export const stampClockTerminalBodyRequestIdMin = 16;
+export const stampClockTerminalBodyRequestIdMax = 100;
+
+
+
+export const StampClockTerminalBody = zod.object({
+  "cardNumber": zod.string().min(1).max(stampClockTerminalBodyCardNumberMax),
+  "requestId": zod.string().min(stampClockTerminalBodyRequestIdMin).max(stampClockTerminalBodyRequestIdMax)
+})
+
+export const StampClockTerminalResponse = zod.object({
+  "action": zod.enum(['in', 'out']),
+  "name": zod.string(),
+  "time": zod.string(),
+  "bookedTime": zod.string()
+})
+
+
+export const GetClockTerminalsResponseItem = zod.object({
+  "unlocked": zod.boolean(),
+  "id": zod.number().nullable(),
+  "label": zod.string().nullable(),
+  "expiresAt": zod.string().nullable()
+})
+export const GetClockTerminalsResponse = zod.array(GetClockTerminalsResponseItem)
+
+
+export const RevokeClockTerminalParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
 /**
  * @summary Persönliche Arbeitsansichten des angemeldeten Benutzers
  */

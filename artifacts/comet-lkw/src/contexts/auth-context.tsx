@@ -36,12 +36,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const publicScanner = location.startsWith("/scanner");
-    const isPublicRoute = location === "/login" || location === "/forgot-password" || location.startsWith("/reset-password") || publicScanner || location === "/impressum" || location === "/datenschutz";
+    const publicTerminal = location === "/stempeluhr-terminal";
+    const isPublicRoute = location === "/login" || location === "/forgot-password" || location.startsWith("/reset-password") || publicScanner || publicTerminal || location === "/impressum" || location === "/datenschutz";
     if (!isLoading && (isError || !user) && !isPublicRoute) {
       setLocation("/login");
       return;
     }
-    if (!isLoading && user && (user as any).passwordChangeRequired && location !== "/passwort-aendern" && !publicScanner) {
+    if (!isLoading && user && (user as any).passwordChangeRequired && location !== "/passwort-aendern" && !publicScanner && !publicTerminal) {
       setLocation("/passwort-aendern");
     }
   }, [isLoading, isError, user, location, setLocation]);

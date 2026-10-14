@@ -2,6 +2,14 @@ import { db } from "@workspace/db";
 import { sql } from "drizzle-orm";
 
 export type Permission =
+  | "stempeluhr.view"
+  | "stempeluhr.terminal"
+  | "stempeluhr.employees"
+  | "stempeluhr.correct"
+  | "stempeluhr.delete"
+  | "stempeluhr.export"
+  | "stempeluhr.settings"
+  | "stempeluhr.import"
   | "pallet.create"
   | "pallet.edit"
   | "pallet.delete"
@@ -63,6 +71,8 @@ export const ALL_CONFIGURABLE_ROLES: ConfigurableRole[] = [
 ];
 
 export const ALL_PERMISSIONS: Permission[] = [
+  "stempeluhr.view", "stempeluhr.terminal", "stempeluhr.employees", "stempeluhr.correct",
+  "stempeluhr.delete", "stempeluhr.export", "stempeluhr.settings", "stempeluhr.import",
   "pallet.create",
   "pallet.edit",
   "pallet.delete",
@@ -108,6 +118,14 @@ export const ALL_PERMISSIONS: Permission[] = [
 ];
 
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
+  "stempeluhr.view": { label: "Anwesenheiten und Änderungsprotokoll ansehen", category: "Stempeluhr" },
+  "stempeluhr.terminal": { label: "Stempelterminals freischalten und sperren", category: "Stempeluhr" },
+  "stempeluhr.employees": { label: "Mitarbeiter und Barcodekarten verwalten", category: "Stempeluhr" },
+  "stempeluhr.correct": { label: "Zeiten anlegen und mit Begründung korrigieren", category: "Stempeluhr" },
+  "stempeluhr.delete": { label: "Zeiten mit Begründung stornieren", category: "Stempeluhr" },
+  "stempeluhr.export": { label: "Anwesenheiten exportieren und Berichte drucken", category: "Stempeluhr" },
+  "stempeluhr.settings": { label: "Zeit-, Pausen- und Terminalregeln einstellen", category: "Stempeluhr" },
+  "stempeluhr.import": { label: "Mitarbeiter und Stempelzeiten importieren", category: "Stempeluhr" },
   "system.liveview.control": { label: "Vollständige App-Steuerung inklusive Bearbeiten, Speichern und Löschen nach sichtbarer Ankündigung", category: "System" },
   "system.liveview": { label: "Sichtbar angekündigte App-Liveansichten ansehen", category: "System" },
   "system.liveview.manage": { label: "App-Liveansicht systemweit ein-/ausschalten", category: "System" },

@@ -24,6 +24,19 @@ import type {
   AuditLogPage,
   AuthUser,
   BulkShipmentInput,
+  ClockDeletion,
+  ClockEmployee,
+  ClockEmployeeInput,
+  ClockEntry,
+  ClockEntryInput,
+  ClockImportInput,
+  ClockImportResult,
+  ClockSettings,
+  ClockStampInput,
+  ClockStampResult,
+  ClockState,
+  ClockTerminal,
+  ClockTerminalInput,
   DashboardData,
   DeleteEinlagerungRecord200,
   DeliveryReportPreview,
@@ -40,6 +53,7 @@ import type {
   ErrorEnvelope,
   ExportPalletMovementsParams,
   GetDashboardParams,
+  GetStempeluhrStateParams,
   HealthStatus,
   ListAuditLogParams,
   ListPalletMovementsParams,
@@ -92,6 +106,1142 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
 
 
+
+export const getGetStempeluhrStateUrl = (params: GetStempeluhrStateParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/stempeluhr/state?${stringifiedParams}` : `/api/stempeluhr/state`
+}
+
+export const getStempeluhrState = async (params: GetStempeluhrStateParams, options?: RequestInit): Promise<ClockState> => {
+
+  return customFetch<ClockState>(getGetStempeluhrStateUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetStempeluhrStateQueryKey = (params?: GetStempeluhrStateParams,) => {
+    return [
+    `/api/stempeluhr/state`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetStempeluhrStateQueryOptions = <TData = Awaited<ReturnType<typeof getStempeluhrState>>, TError = ErrorType<unknown>>(params: GetStempeluhrStateParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStempeluhrState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetStempeluhrStateQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getStempeluhrState>>> = ({ signal }) => getStempeluhrState(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getStempeluhrState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetStempeluhrStateQueryResult = NonNullable<Awaited<ReturnType<typeof getStempeluhrState>>>
+export type GetStempeluhrStateQueryError = ErrorType<unknown>
+
+
+
+export function useGetStempeluhrState<TData = Awaited<ReturnType<typeof getStempeluhrState>>, TError = ErrorType<unknown>>(
+ params: GetStempeluhrStateParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getStempeluhrState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetStempeluhrStateQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateClockEmployeeUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/employees`
+}
+
+export const createClockEmployee = async (clockEmployeeInput: ClockEmployeeInput, options?: RequestInit): Promise<ClockEmployee> => {
+
+  return customFetch<ClockEmployee>(getCreateClockEmployeeUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockEmployeeInput,)
+  }
+);}
+
+
+
+
+export const getCreateClockEmployeeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeInput>}, TContext> => {
+
+const mutationKey = ['createClockEmployee'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClockEmployee>>, {data: BodyType<ClockEmployeeInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createClockEmployee(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClockEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof createClockEmployee>>>
+    export type CreateClockEmployeeMutationBody = BodyType<ClockEmployeeInput>
+    export type CreateClockEmployeeMutationError = ErrorType<unknown>
+
+    export const useCreateClockEmployee = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClockEmployee>>,
+        TError,
+        {data: BodyType<ClockEmployeeInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClockEmployeeMutationOptions(options));
+    }
+
+export const getUpdateClockEmployeeUrl = (id: number,) => {
+
+
+
+
+  return `/api/stempeluhr/employees/${id}`
+}
+
+export const updateClockEmployee = async (id: number,
+    clockEmployeeInput: ClockEmployeeInput, options?: RequestInit): Promise<ClockEmployee> => {
+
+  return customFetch<ClockEmployee>(getUpdateClockEmployeeUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockEmployeeInput,)
+  }
+);}
+
+
+
+
+export const getUpdateClockEmployeeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEmployee>>, TError,{id: number;data: BodyType<ClockEmployeeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClockEmployee>>, TError,{id: number;data: BodyType<ClockEmployeeInput>}, TContext> => {
+
+const mutationKey = ['updateClockEmployee'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClockEmployee>>, {id: number;data: BodyType<ClockEmployeeInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateClockEmployee(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClockEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof updateClockEmployee>>>
+    export type UpdateClockEmployeeMutationBody = BodyType<ClockEmployeeInput>
+    export type UpdateClockEmployeeMutationError = ErrorType<unknown>
+
+    export const useUpdateClockEmployee = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEmployee>>, TError,{id: number;data: BodyType<ClockEmployeeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateClockEmployee>>,
+        TError,
+        {id: number;data: BodyType<ClockEmployeeInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateClockEmployeeMutationOptions(options));
+    }
+
+export const getDeleteClockEmployeeUrl = (id: number,) => {
+
+
+
+
+  return `/api/stempeluhr/employees/${id}`
+}
+
+export const deleteClockEmployee = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteClockEmployeeUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteClockEmployeeMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteClockEmployee>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteClockEmployee>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['deleteClockEmployee'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteClockEmployee>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  deleteClockEmployee(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteClockEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof deleteClockEmployee>>>
+
+    export type DeleteClockEmployeeMutationError = ErrorType<unknown>
+
+    export const useDeleteClockEmployee = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteClockEmployee>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteClockEmployee>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getDeleteClockEmployeeMutationOptions(options));
+    }
+
+export const getCreateClockEntryUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/entries`
+}
+
+export const createClockEntry = async (clockEntryInput: ClockEntryInput, options?: RequestInit): Promise<ClockEntry> => {
+
+  return customFetch<ClockEntry>(getCreateClockEntryUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockEntryInput,)
+  }
+);}
+
+
+
+
+export const getCreateClockEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEntry>>, TError,{data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClockEntry>>, TError,{data: BodyType<ClockEntryInput>}, TContext> => {
+
+const mutationKey = ['createClockEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClockEntry>>, {data: BodyType<ClockEntryInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createClockEntry(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClockEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createClockEntry>>>
+    export type CreateClockEntryMutationBody = BodyType<ClockEntryInput>
+    export type CreateClockEntryMutationError = ErrorType<unknown>
+
+    export const useCreateClockEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEntry>>, TError,{data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClockEntry>>,
+        TError,
+        {data: BodyType<ClockEntryInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClockEntryMutationOptions(options));
+    }
+
+export const getUpdateClockEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/stempeluhr/entries/${id}`
+}
+
+export const updateClockEntry = async (id: number,
+    clockEntryInput: ClockEntryInput, options?: RequestInit): Promise<ClockEntry> => {
+
+  return customFetch<ClockEntry>(getUpdateClockEntryUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockEntryInput,)
+  }
+);}
+
+
+
+
+export const getUpdateClockEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryInput>}, TContext> => {
+
+const mutationKey = ['updateClockEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClockEntry>>, {id: number;data: BodyType<ClockEntryInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateClockEntry(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClockEntryMutationResult = NonNullable<Awaited<ReturnType<typeof updateClockEntry>>>
+    export type UpdateClockEntryMutationBody = BodyType<ClockEntryInput>
+    export type UpdateClockEntryMutationError = ErrorType<unknown>
+
+    export const useUpdateClockEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateClockEntry>>,
+        TError,
+        {id: number;data: BodyType<ClockEntryInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateClockEntryMutationOptions(options));
+    }
+
+export const getDeleteClockEntryUrl = (id: number,) => {
+
+
+
+
+  return `/api/stempeluhr/entries/${id}`
+}
+
+export const deleteClockEntry = async (id: number,
+    clockDeletion: ClockDeletion, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteClockEntryUrl(id),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockDeletion,)
+  }
+);}
+
+
+
+
+export const getDeleteClockEntryMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteClockEntry>>, TError,{id: number;data: BodyType<ClockDeletion>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteClockEntry>>, TError,{id: number;data: BodyType<ClockDeletion>}, TContext> => {
+
+const mutationKey = ['deleteClockEntry'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteClockEntry>>, {id: number;data: BodyType<ClockDeletion>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  deleteClockEntry(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteClockEntryMutationResult = NonNullable<Awaited<ReturnType<typeof deleteClockEntry>>>
+    export type DeleteClockEntryMutationBody = BodyType<ClockDeletion>
+    export type DeleteClockEntryMutationError = ErrorType<unknown>
+
+    export const useDeleteClockEntry = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteClockEntry>>, TError,{id: number;data: BodyType<ClockDeletion>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteClockEntry>>,
+        TError,
+        {id: number;data: BodyType<ClockDeletion>},
+        TContext
+      > => {
+      return useMutation(getDeleteClockEntryMutationOptions(options));
+    }
+
+export const getGetClockSettingsUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/settings`
+}
+
+export const getClockSettings = async ( options?: RequestInit): Promise<ClockSettings> => {
+
+  return customFetch<ClockSettings>(getGetClockSettingsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClockSettingsQueryKey = () => {
+    return [
+    `/api/stempeluhr/settings`
+    ] as const;
+    }
+
+
+export const getGetClockSettingsQueryOptions = <TData = Awaited<ReturnType<typeof getClockSettings>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClockSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClockSettingsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClockSettings>>> = ({ signal }) => getClockSettings({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClockSettings>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClockSettingsQueryResult = NonNullable<Awaited<ReturnType<typeof getClockSettings>>>
+export type GetClockSettingsQueryError = ErrorType<unknown>
+
+
+
+export function useGetClockSettings<TData = Awaited<ReturnType<typeof getClockSettings>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClockSettings>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClockSettingsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUpdateClockSettingsUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/settings`
+}
+
+export const updateClockSettings = async (clockSettings: ClockSettings, options?: RequestInit): Promise<ClockSettings> => {
+
+  return customFetch<ClockSettings>(getUpdateClockSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockSettings,)
+  }
+);}
+
+
+
+
+export const getUpdateClockSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockSettings>>, TError,{data: BodyType<ClockSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClockSettings>>, TError,{data: BodyType<ClockSettings>}, TContext> => {
+
+const mutationKey = ['updateClockSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClockSettings>>, {data: BodyType<ClockSettings>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateClockSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateClockSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateClockSettings>>>
+    export type UpdateClockSettingsMutationBody = BodyType<ClockSettings>
+    export type UpdateClockSettingsMutationError = ErrorType<unknown>
+
+    export const useUpdateClockSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockSettings>>, TError,{data: BodyType<ClockSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateClockSettings>>,
+        TError,
+        {data: BodyType<ClockSettings>},
+        TContext
+      > => {
+      return useMutation(getUpdateClockSettingsMutationOptions(options));
+    }
+
+export const getPreviewClockImportUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/import/preview`
+}
+
+export const previewClockImport = async (clockImportInput: ClockImportInput, options?: RequestInit): Promise<ClockImportResult> => {
+
+  return customFetch<ClockImportResult>(getPreviewClockImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockImportInput,)
+  }
+);}
+
+
+
+
+export const getPreviewClockImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewClockImport>>, TError,{data: BodyType<ClockImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewClockImport>>, TError,{data: BodyType<ClockImportInput>}, TContext> => {
+
+const mutationKey = ['previewClockImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewClockImport>>, {data: BodyType<ClockImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewClockImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewClockImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewClockImport>>>
+    export type PreviewClockImportMutationBody = BodyType<ClockImportInput>
+    export type PreviewClockImportMutationError = ErrorType<unknown>
+
+    export const usePreviewClockImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewClockImport>>, TError,{data: BodyType<ClockImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewClockImport>>,
+        TError,
+        {data: BodyType<ClockImportInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewClockImportMutationOptions(options));
+    }
+
+export const getCommitClockImportUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/import/commit`
+}
+
+export const commitClockImport = async (clockImportInput: ClockImportInput, options?: RequestInit): Promise<ClockImportResult> => {
+
+  return customFetch<ClockImportResult>(getCommitClockImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockImportInput,)
+  }
+);}
+
+
+
+
+export const getCommitClockImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitClockImport>>, TError,{data: BodyType<ClockImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof commitClockImport>>, TError,{data: BodyType<ClockImportInput>}, TContext> => {
+
+const mutationKey = ['commitClockImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commitClockImport>>, {data: BodyType<ClockImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commitClockImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommitClockImportMutationResult = NonNullable<Awaited<ReturnType<typeof commitClockImport>>>
+    export type CommitClockImportMutationBody = BodyType<ClockImportInput>
+    export type CommitClockImportMutationError = ErrorType<unknown>
+
+    export const useCommitClockImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitClockImport>>, TError,{data: BodyType<ClockImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof commitClockImport>>,
+        TError,
+        {data: BodyType<ClockImportInput>},
+        TContext
+      > => {
+      return useMutation(getCommitClockImportMutationOptions(options));
+    }
+
+export const getGetClockTerminalUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/terminal/status`
+}
+
+export const getClockTerminal = async ( options?: RequestInit): Promise<ClockTerminal> => {
+
+  return customFetch<ClockTerminal>(getGetClockTerminalUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClockTerminalQueryKey = () => {
+    return [
+    `/api/stempeluhr/terminal/status`
+    ] as const;
+    }
+
+
+export const getGetClockTerminalQueryOptions = <TData = Awaited<ReturnType<typeof getClockTerminal>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClockTerminal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClockTerminalQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClockTerminal>>> = ({ signal }) => getClockTerminal({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClockTerminal>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClockTerminalQueryResult = NonNullable<Awaited<ReturnType<typeof getClockTerminal>>>
+export type GetClockTerminalQueryError = ErrorType<unknown>
+
+
+
+export function useGetClockTerminal<TData = Awaited<ReturnType<typeof getClockTerminal>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClockTerminal>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClockTerminalQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUnlockClockTerminalUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/terminal/unlock`
+}
+
+export const unlockClockTerminal = async (clockTerminalInput: ClockTerminalInput, options?: RequestInit): Promise<ClockTerminal> => {
+
+  return customFetch<ClockTerminal>(getUnlockClockTerminalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockTerminalInput,)
+  }
+);}
+
+
+
+
+export const getUnlockClockTerminalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockClockTerminal>>, TError,{data: BodyType<ClockTerminalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unlockClockTerminal>>, TError,{data: BodyType<ClockTerminalInput>}, TContext> => {
+
+const mutationKey = ['unlockClockTerminal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unlockClockTerminal>>, {data: BodyType<ClockTerminalInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  unlockClockTerminal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnlockClockTerminalMutationResult = NonNullable<Awaited<ReturnType<typeof unlockClockTerminal>>>
+    export type UnlockClockTerminalMutationBody = BodyType<ClockTerminalInput>
+    export type UnlockClockTerminalMutationError = ErrorType<unknown>
+
+    export const useUnlockClockTerminal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockClockTerminal>>, TError,{data: BodyType<ClockTerminalInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unlockClockTerminal>>,
+        TError,
+        {data: BodyType<ClockTerminalInput>},
+        TContext
+      > => {
+      return useMutation(getUnlockClockTerminalMutationOptions(options));
+    }
+
+export const getLockClockTerminalUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/terminal/lock`
+}
+
+export const lockClockTerminal = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getLockClockTerminalUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getLockClockTerminalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof lockClockTerminal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof lockClockTerminal>>, TError,void, TContext> => {
+
+const mutationKey = ['lockClockTerminal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof lockClockTerminal>>, void> = () => {
+
+
+          return  lockClockTerminal(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LockClockTerminalMutationResult = NonNullable<Awaited<ReturnType<typeof lockClockTerminal>>>
+
+    export type LockClockTerminalMutationError = ErrorType<unknown>
+
+    export const useLockClockTerminal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof lockClockTerminal>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof lockClockTerminal>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLockClockTerminalMutationOptions(options));
+    }
+
+export const getStampClockTerminalUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/terminal/stamp`
+}
+
+export const stampClockTerminal = async (clockStampInput: ClockStampInput, options?: RequestInit): Promise<ClockStampResult> => {
+
+  return customFetch<ClockStampResult>(getStampClockTerminalUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockStampInput,)
+  }
+);}
+
+
+
+
+export const getStampClockTerminalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stampClockTerminal>>, TError,{data: BodyType<ClockStampInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof stampClockTerminal>>, TError,{data: BodyType<ClockStampInput>}, TContext> => {
+
+const mutationKey = ['stampClockTerminal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof stampClockTerminal>>, {data: BodyType<ClockStampInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  stampClockTerminal(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type StampClockTerminalMutationResult = NonNullable<Awaited<ReturnType<typeof stampClockTerminal>>>
+    export type StampClockTerminalMutationBody = BodyType<ClockStampInput>
+    export type StampClockTerminalMutationError = ErrorType<unknown>
+
+    export const useStampClockTerminal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof stampClockTerminal>>, TError,{data: BodyType<ClockStampInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof stampClockTerminal>>,
+        TError,
+        {data: BodyType<ClockStampInput>},
+        TContext
+      > => {
+      return useMutation(getStampClockTerminalMutationOptions(options));
+    }
+
+export const getGetClockTerminalsUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/terminals`
+}
+
+export const getClockTerminals = async ( options?: RequestInit): Promise<ClockTerminal[]> => {
+
+  return customFetch<ClockTerminal[]>(getGetClockTerminalsUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetClockTerminalsQueryKey = () => {
+    return [
+    `/api/stempeluhr/terminals`
+    ] as const;
+    }
+
+
+export const getGetClockTerminalsQueryOptions = <TData = Awaited<ReturnType<typeof getClockTerminals>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClockTerminals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetClockTerminalsQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getClockTerminals>>> = ({ signal }) => getClockTerminals({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getClockTerminals>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetClockTerminalsQueryResult = NonNullable<Awaited<ReturnType<typeof getClockTerminals>>>
+export type GetClockTerminalsQueryError = ErrorType<unknown>
+
+
+
+export function useGetClockTerminals<TData = Awaited<ReturnType<typeof getClockTerminals>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getClockTerminals>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetClockTerminalsQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getRevokeClockTerminalUrl = (id: number,) => {
+
+
+
+
+  return `/api/stempeluhr/terminals/${id}`
+}
+
+export const revokeClockTerminal = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRevokeClockTerminalUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeClockTerminalMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeClockTerminal>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeClockTerminal>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeClockTerminal'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeClockTerminal>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeClockTerminal(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeClockTerminalMutationResult = NonNullable<Awaited<ReturnType<typeof revokeClockTerminal>>>
+
+    export type RevokeClockTerminalMutationError = ErrorType<unknown>
+
+    export const useRevokeClockTerminal = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeClockTerminal>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeClockTerminal>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeClockTerminalMutationOptions(options));
+    }
 
 export const getGetShipmentWorkViewsUrl = () => {
 

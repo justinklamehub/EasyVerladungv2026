@@ -14,3 +14,9 @@ Der Browser-Tester hat nicht immer Zugriff auf den offiziellen SQL-Aufruf mit Um
 **Why:** Der Tester stoppte vor Testdaten, weil er den verlangten Entwicklungsabgleich mit seinen eigenen Helfern nicht durchführen konnte. Eine zusätzliche Connector-Suche löst dieses Problem nicht.
 
 **How to apply:** Den Abgleich im Hauptagenten über den offiziellen Entwicklungszugriff und die App-Verbindung durchführen und dem Tester die aktuellen übereinstimmenden Instanzmetadaten als Nachweis mitgeben. Der Tester darf anschließend seine vorhandene App-Verbindung für eindeutig eigene, anschließend bereinigte Testdaten nutzen; ohne diesen Nachweis bleibt die Schreibsperre bestehen.
+
+Bei konfigurierbaren Regeln vor dem Test den tatsächlich gespeicherten Wert lesen, nicht den Code-Standard als Testvorgabe behandeln. Parallele Änderungen des Nutzers nicht rückgängig machen.
+
+**Why:** Ein Browser-Test meldete eine vermeintlich fehlerhafte Doppelscan-Sperre, weil er gegen den Standardwert prüfte, während die aktive Einstellung bereits eine kürzere Sperre erlaubte.
+
+**How to apply:** Zeitabhängige Prüfungen am aktuellen Wert ausrichten und Messzeiten verwenden. Testdaten und Teständerungen eindeutig zuordnen; nur eigene Änderungen bereinigen.
