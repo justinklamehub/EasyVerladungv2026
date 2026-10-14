@@ -52,7 +52,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   const filterDetails = deadlineFilterDetails(filters);
   const rangeInvalid = deadlineRangeInvalid(filters);
   const activeFilterCount = filters.statuses.length + Object.values(filters.facets).reduce((n, values) => n + values.length, 0) +
-    Number(!!filters.search.trim()) + Number(filters.overdueOnly) + Number(!!filters.dateFrom) + Number(!!filters.dateTo);
+    Number(!!filters.search.trim()) + Number(!!(filters.debitorPrefix ?? "").trim()) + Number(filters.overdueOnly) + Number(!!filters.dateFrom) + Number(!!filters.dateTo);
   const outputDisabled = q.isLoading || q.isError || q.isFetching || rangeInvalid || shown.length === 0;
   const printShown = () => {
     if (outputDisabled) return;
@@ -148,6 +148,11 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
          )}
          </div>
          <div className="flex flex-wrap items-end gap-3">
+           <label className="space-y-1 text-xs text-slate-600">Debitorennummer beginnt mit
+             <Input type="text" inputMode="numeric" aria-label="Debitorennummer beginnt mit"
+               placeholder="z. B. 51045" value={filters.debitorPrefix ?? ""} data-testid="filter-deadline-debitor-prefix"
+               onChange={(e) => setFilters((previous) => ({ ...previous, debitorPrefix: e.target.value }))} />
+           </label>
            <label className="space-y-1 text-xs text-slate-600">Liefertermin ab
              <Input type="date" aria-label="Liefertermin ab" value={filters.dateFrom} data-testid="filter-deadline-from"
                onChange={(e) => setFilters((previous) => ({ ...previous, dateFrom: e.target.value }))} />

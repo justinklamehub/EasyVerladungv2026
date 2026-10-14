@@ -3,6 +3,12 @@ name: Lieferterminwarnungen
 description: Nutzervorgaben und vorsichtige Interpretation von Lieferterminen der eingelagerten Aufträge.
 ---
 
+Die Debitorennummernsuche in den Lieferterminen soll als Anfangssuche möglich sein: alle Kundennummern anzeigen, die mit der eingegebenen Ziffernfolge beginnen.
+
+**Why:** Der Nutzer hat ausdrücklich die Suche nach einem Kundennummern-Präfix verlangt, nicht nur nach einer vollständigen Nummer.
+
+**How to apply:** Den speziellen Debitorenfilter auf den Anfang der Kundennummer beschränken; Treffer innerhalb anderer Nummern oder des Kundennamens zählen dafür nicht.
+
 „Ich möchte dynamisch die Grenzen in den Einstellungen tätigen können.“ Die Warnstufen für eingelagerten Aufträge sollen auf dauerhaft gespeicherten, veränderbaren Tagesgrenzen beruhen.
 
 **Why:** Der Nutzer hat feste Tagesgrenzen abgelehnt und ausdrücklich Änderungen über die Einstellungen verlangt.

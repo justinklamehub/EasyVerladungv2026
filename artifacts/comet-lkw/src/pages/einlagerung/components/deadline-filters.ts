@@ -4,6 +4,7 @@ import { emptyOrderFilters, matchesOrderFilters, orderFacetOptions, orderFilterR
 
 export interface DeadlineFilters {
   search: string;
+  debitorPrefix?: string;
   statuses: DeadlineStatus[];
   facets: OrderFilters;
   overdueOnly: boolean;
@@ -11,7 +12,7 @@ export interface DeadlineFilters {
   dateTo: string;
 }
 export const emptyDeadlineFilters = (): DeadlineFilters => ({
-  search: "", statuses: [], facets: emptyOrderFilters(), overdueOnly: false, dateFrom: "", dateTo: "",
+  search: "", debitorPrefix: "", statuses: [], facets: emptyOrderFilters(), overdueOnly: false, dateFrom: "", dateTo: "",
 });
 function day(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
@@ -26,7 +27,10 @@ export function deadlineRangeInvalid(filters: DeadlineFilters) {
 export function filterDeliveryRows(rows: DeadlineOrder[], filters: DeadlineFilters, omit?: OrderFilterKey, ignoreStatuses = false) {
   if (deadlineRangeInvalid(filters)) return [];
   const terms = filters.search.trim().toLocaleLowerCase("de").split(/\s+/).filter(Boolean);
+  const debitorPrefix = (filters.debitorPrefix ?? "").trim();
   return rows.filter((row) => {
+    if (debitorPrefix && !String(row.order.debitor ?? "").split(",")
+      .some((debitor) => debitor.trim().startsWith(debitorPrefix))) return false;
     if (!ignoreStatuses && filters.statuses.length && !filters.statuses.some((s) =>
       s === "week" ? row.dateLabel.startsWith("KW ") : row.status === s)) return false;
     if (filters.overdueOnly && !(row.days != null && row.days < 0)) return false;
@@ -52,6 +56,7 @@ export function deadlineFilterDetails(filters: DeadlineFilters) {
   return [
     ["Status", filters.statuses.length ? filters.statuses.map((s) => DEADLINE_LABELS[s]).join(" oder ") : "Alle"],
     ["Suche", filters.search.trim() || "Keine"],
+    ["Debitorennummer beginnt mit", (filters.debitorPrefix ?? "").trim() || "Alle"],
     ["Speditionen", list(filters.facets.spedition)], ["Relationen", list(filters.facets.relation)],
     ["Termine / KW", list(filters.facets.termin)], ["Regale", list(filters.facets.shelf)],
     ["Nur überfällig", filters.overdueOnly ? "Ja" : "Nein"],
