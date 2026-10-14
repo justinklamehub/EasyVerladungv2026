@@ -178,13 +178,23 @@ export function aggregateStock(rows: Data[], type: string, all: WarehouseRecord[
     if (!group) {
       group = { shelf, material: row.material || "", kunde: row.parcours || row.name || "", spedition,
         speditionId, relation: row.relation || "", termin: row.lfdat || "", calendarWeek: calendarWeek(row.lfdat),
-        plusKw: row.plus_kw || "", units: new Set<string>(), belege: new Set<string>() };
+        plusKw: row.plus_kw || "", units: new Set<string>(), belege: new Set<string>(),
+        debitors: new Set<string>(), debitorNames: new Set<string>() };
       if (type === "auftraege" && groupByDelivery) group.deliveryNumber = deliveryNumber;
       groups.set(key, group);
     }
     group.units.add(unit);
     if (row.beleg) group.belege.add(row.beleg);
     if (row.verkaufsbeleg) group.belege.add(row.verkaufsbeleg);
+    if (type === "auftraege") {
+      const debitor = String(row.debitor ?? "").trim();
+      const debitorName = String(row.kunde_name1 ?? "").trim();
+      if (debitor) group.debitors.add(debitor);
+      if (debitorName) group.debitorNames.add(debitorName);
+    }
   }
-  return [...groups.values()].map(({ units, belege, ...g }) => ({ ...g, paletten: units.size, hus: [...units], belege: [...belege] }));
+  return [...groups.values()].map(({ units, belege, debitors, debitorNames, ...g }) => ({
+    ...g, paletten: units.size, hus: [...units], belege: [...belege],
+    ...(type === "auftraege" ? { debitor: [...debitors].join(", "), debitorName: [...debitorNames].join(", ") } : {}),
+  }));
 }

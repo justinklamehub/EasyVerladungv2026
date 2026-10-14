@@ -137,7 +137,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-3 items-start">
          <div className="relative">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" />
-           <Input aria-label="Lieferung, HU, Beleg, Regal, Spedition, Relation oder Termin suchen" placeholder="Lieferung, HU, Beleg, Termin …" value={filters.search}
+           <Input aria-label="Lieferung, Debitorennummer, Debitorname, HU, Beleg, Regal, Spedition, Relation oder Termin suchen" placeholder="Lieferung, Debitor, HU, Termin …" value={filters.search}
              onChange={(e) => setFilters((previous) => ({ ...previous, search: e.target.value }))} className="pl-8" data-testid="input-deadline-search" />
         </div>
          {([["spedition", "Speditionen"], ["relation", "Relationen"], ["termin", "Termine / KW"], ["shelf", "Regale"]] as const).map(([key, label]) =>
@@ -190,6 +190,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
               <caption className="sr-only">Aufträge nach Lieferungsnummer getrennt, nach Liefertermin aufsteigend sortiert</caption>
                <TableHeader className="sticky top-0 z-10"><TableRow>
                 <TableHead scope="col">Status</TableHead><TableHead scope="col">Termin</TableHead><TableHead scope="col">Rest</TableHead><TableHead scope="col">Regal</TableHead><TableHead scope="col">Lieferungsnummer</TableHead>
+                <TableHead scope="col">Debitorennummer</TableHead><TableHead scope="col">Debitorname</TableHead>
                 <TableHead scope="col">Spedition</TableHead><TableHead scope="col">Relation</TableHead><TableHead scope="col">Plus-KW</TableHead><TableHead scope="col" className="text-right">Paletten</TableHead>
               </TableRow></TableHeader>
               <TableBody>{shown.map((r, i) => (
@@ -200,6 +201,8 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
                     {r.dateLabel.startsWith("KW ") && <span className="block text-[10px]">KW-Beginn (Montag)</span>}</TableCell>
                   <TableCell>{String(r.order.shelf ?? "")}</TableCell>
                   <TableCell className="whitespace-nowrap font-medium">{String(r.order.deliveryNumber || "–")}</TableCell>
+                  <TableCell className="whitespace-nowrap">{String(r.order.debitor || "–")}</TableCell>
+                  <TableCell>{String(r.order.debitorName || "–")}</TableCell>
                   <TableCell>{String(r.order.spedition ?? "")}</TableCell>
                   <TableCell>{String(r.order.relation ?? "")}</TableCell>
                   <TableCell className="whitespace-nowrap">{r.order.plusKw ? String(r.order.plusKw) : "–"}</TableCell>

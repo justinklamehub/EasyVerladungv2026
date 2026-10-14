@@ -7,7 +7,7 @@ import { deadlineFacetOptions, deadlineFilterDetails, deadlineRangeInvalid, empt
 
 const now = new Date("2026-10-07T12:00:00Z");
 const rows = classifyDeliveryOrders([
-  { deliveryNumber: "80001", shelf: "A1", spedition: "DHL Freight", relation: "1", termin: "06.10.2026", hus: ["HU001"], belege: ["VB001"], paletten: 1 },
+  { deliveryNumber: "80001", shelf: "A1", spedition: "DHL Freight", relation: "1", termin: "06.10.2026", hus: ["HU001"], belege: ["VB001"], paletten: 1, debitor: "001234", debitorName: "Muster GmbH" },
   { deliveryNumber: "80002", shelf: "A2", spedition: "DHL Freight", relation: "10", termin: "12.10.2026", hus: ["HU002"], paletten: 2 },
   { deliveryNumber: "80003", shelf: "B1", spedition: "Andere", relation: "Nord", termin: "42.2026", hus: ["HU003"], paletten: 1 },
   { deliveryNumber: "80004", shelf: "B2", spedition: "Andere", relation: "Süd", termin: "01.11.2026", hus: ["HU004"], paletten: 1 },
@@ -25,6 +25,8 @@ test("Status-Mehrfachauswahl OR und weitere Kriterien AND", () => {
   assert.deepEqual(ids(filterDeliveryRows(rows, combined)), ["80001"]);
 });
 test("Suchbegriffe suchen HU, Beleg, Termin und verschiedene Felder gemeinsam", () => {
+  assert.deepEqual(ids(filterDeliveryRows(rows, { ...emptyDeadlineFilters(), search: "001234" })), ["80001"]);
+  assert.deepEqual(ids(filterDeliveryRows(rows, { ...emptyDeadlineFilters(), search: "muster gmbh dhl" })), ["80001"]);
   assert.deepEqual(ids(filterDeliveryRows(rows, { ...emptyDeadlineFilters(), search: "dhl freight HU001 VB001" })), ["80001"]);
   assert.deepEqual(ids(filterDeliveryRows(rows, { ...emptyDeadlineFilters(), search: "DHL A2 12.10.2026" })), ["80002"]);
   assert.deepEqual(filterDeliveryRows(rows, { ...emptyDeadlineFilters(), search: "DHL Nord" }), []);

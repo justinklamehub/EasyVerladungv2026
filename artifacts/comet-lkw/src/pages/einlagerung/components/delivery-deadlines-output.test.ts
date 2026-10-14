@@ -52,11 +52,11 @@ test("Importtexte bleiben Excel-Text, keine Formeln; HTML wird maskiert", async 
     spedition: 'Name; "Zitat"\nZeile', relation: " =HYPERLINK(\"bad\")", paletten: 1.5,
   } }];
   const sheet = await readExcel(special);
-  assert.equal(sheet.getCell("F2").value, special[0].order.spedition);
-  assert.equal(sheet.getCell("G2").value, special[0].order.relation);
-  assert.equal(sheet.getCell("G2").type, ExcelJS.ValueType.String);
-  assert.equal(sheet.getCell("I2").value, 1.5);
-  assert.equal(sheet.getCell("I2").type, ExcelJS.ValueType.Number);
+   assert.equal(sheet.getCell("H2").value, special[0].order.spedition);
+   assert.equal(sheet.getCell("I2").value, special[0].order.relation);
+   assert.equal(sheet.getCell("I2").type, ExcelJS.ValueType.String);
+   assert.equal(sheet.getCell("K2").value, 1.5);
+   assert.equal(sheet.getCell("K2").type, ExcelJS.ValueType.Number);
   const html = deadlinePrintHtml(special, "all", "<img src=x onerror=alert(1)>", now);
   assert.ok(!html.includes("<script>"));
   assert.ok(!html.includes("<img"));
@@ -74,12 +74,35 @@ test("Lieferungsnummer wird gesucht und in Druck/Excel als Text separat ausgegeb
   assert.equal(sheet.getCell("E1").value, "Lieferungsnummer");
   assert.equal(sheet.getCell("E2").value, "80000002");
   assert.equal(sheet.getCell("E2").numFmt, "@");
-  assert.equal(sheet.getCell("I2").value, 2);
+   assert.equal(sheet.getCell("K2").value, 2);
   const html = deadlinePrintHtml(shown, "critical", "80000002", now);
   assert.match(html, /Lieferungsnummer/);
   assert.match(html, /80000002/);
   assert.ok(!html.includes("80000001"));
   assert.match(html, /1 Aufträge · 2 Paletten/);
+});
+
+test("Debitoren sind suchbar und bleiben in Druck und Excel Text mit führenden Nullen", async () => {
+  const selected = [{ ...rows[0], order: {
+    ...rows[0].order, debitor: "001234", debitorName: '<Muster & Partner>', paletten: 3,
+  } }];
+  assert.equal(filterDeadlineRows(selected, "all", "001234").length, 1);
+  assert.equal(filterDeadlineRows(selected, "all", "muster").length, 1);
+  const sheet = await readExcel(selected);
+  assert.equal(sheet.getCell("F1").value, "Debitorennummer");
+  assert.equal(sheet.getCell("G1").value, "Debitorname");
+  assert.equal(sheet.getCell("F2").value, "001234");
+  assert.equal(sheet.getCell("F2").type, ExcelJS.ValueType.String);
+  assert.equal(sheet.getCell("F2").numFmt, "@");
+  assert.equal(sheet.getCell("G2").value, "<Muster & Partner>");
+  assert.equal(sheet.getCell("K2").value, 3);
+  const html = deadlinePrintHtml(selected, "all", "", now);
+  assert.ok(html.includes("Debitorennummer") && html.includes("001234"));
+  assert.ok(html.includes("&lt;Muster &amp; Partner&gt;"));
+  assert.ok(!html.includes("<Muster & Partner>"));
+  const missing = await readExcel(rows.slice(0, 1));
+  assert.equal(missing.getCell("F2").value, "–");
+  assert.equal(missing.getCell("G2").value, "–");
 });
 
 test("Datumsähnliche Regalnamen und führende Nullen bleiben nach XLSX-Roundtrip Text", async () => {

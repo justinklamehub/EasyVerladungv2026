@@ -34,6 +34,7 @@ export function filterDeliveryRows(rows: DeadlineOrder[], filters: DeadlineFilte
     if (filters.dateTo && (!Number.isFinite(row.sortDay) || row.sortDay > day(filters.dateTo))) return false;
     const searchable = [
       row.order.deliveryNumber, row.order.shelf, row.order.spedition, row.order.relation,
+      row.order.debitor, row.order.debitorName,
       row.order.termin, row.order.calendarWeek, row.order.plusKw, row.dateLabel, DEADLINE_LABELS[row.status],
       ...(Array.isArray(row.order.belege) ? row.order.belege : []),
       ...(Array.isArray(row.order.hus) ? row.order.hus : []),
