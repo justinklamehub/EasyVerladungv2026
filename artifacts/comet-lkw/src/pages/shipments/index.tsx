@@ -610,7 +610,7 @@ export default function ShipmentsPage() {
             <>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 gap-1.5" aria-label="Vorlagen und Massenanlage" data-testid="button-create-more">
+                  <Button variant="outline" size="sm" className="h-9 gap-1.5" aria-label="Vorlagen" data-testid="button-create-more">
                     <BookTemplate className="w-4 h-4" />
                     Vorlagen
                     <ChevronDown className="w-3.5 h-3.5 opacity-60" />
@@ -620,14 +620,15 @@ export default function ShipmentsPage() {
                   <DropdownMenuItem onSelect={() => setIsTemplatesOpen(true)} data-testid="menu-templates">
                     <BookTemplate className="w-4 h-4 mr-2" /> Vorlagen
                   </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setIsBulkOpen(true)} data-testid="menu-bulk-create">
-                    <Plus className="w-4 h-4 mr-2" /> Massenanlage
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <Button className="h-9" data-testid="button-new-shipment" onClick={() => { setSelectedShipmentId(null); setIsDrawerOpen(true); }}>
                 <Plus className="w-4 h-4 mr-1.5" />
                 Neue Verladung
+              </Button>
+              <Button variant="outline" className="h-9" data-testid="button-bulk-create" onClick={() => setIsBulkOpen(true)}>
+                <Plus className="w-4 h-4 mr-1.5" />
+                Massenanlage
               </Button>
             </>
           )}

@@ -116,7 +116,7 @@ const TOPICS: Topic[] = [
     steps: [
       {
         title: "Massenanlage oeffnen",
-        text: 'Navigieren Sie zu "Verladungen" und klicken Sie auf den Pfeil neben "+ Neue Verladung" und dann auf "Massenanlage".',
+        text: 'Navigieren Sie zu "Verladungen" und klicken Sie auf "Massenanlage" direkt neben "+ Neue Verladung".',
       },
       {
         title: "Daten eingeben",
