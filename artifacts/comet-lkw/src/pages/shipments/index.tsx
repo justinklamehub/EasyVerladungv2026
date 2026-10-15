@@ -608,20 +608,10 @@ export default function ShipmentsPage() {
           </DropdownMenu>
           {canCreate && (
             <>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-9 gap-1.5" aria-label="Vorlagen" data-testid="button-create-more">
-                    <BookTemplate className="w-4 h-4" />
-                    Vorlagen
-                    <ChevronDown className="w-3.5 h-3.5 opacity-60" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onSelect={() => setIsTemplatesOpen(true)} data-testid="menu-templates">
-                    <BookTemplate className="w-4 h-4 mr-2" /> Vorlagen
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button variant="outline" size="sm" className="h-9 gap-1.5" data-testid="button-templates" onClick={() => setIsTemplatesOpen(true)}>
+                <BookTemplate className="w-4 h-4" />
+                Vorlagen
+              </Button>
               <Button className="h-9" data-testid="button-new-shipment" onClick={() => { setSelectedShipmentId(null); setIsDrawerOpen(true); }}>
                 <Plus className="w-4 h-4 mr-1.5" />
                 Neue Verladung
