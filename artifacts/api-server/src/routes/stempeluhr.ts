@@ -8,6 +8,7 @@ import {
   UpdateClockSettingsBody, UpdateClockSettingsResponse, PreviewClockImportBody, PreviewClockImportResponse,
   CommitClockImportBody, CommitClockImportResponse, GetClockTerminalResponse, UnlockClockTerminalBody,
   UnlockClockTerminalResponse, StampClockTerminalBody, StampClockTerminalResponse, GetClockTerminalsResponse,
+  GetNextClockCardNumberResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
 import { can, type Permission } from "../lib/permissions";
@@ -15,6 +16,7 @@ import { read, transaction, audit, settings, entry, employee, checkVersion, chec
 import { berlinInstant, nextDay } from "../lib/stempeluhr/calculation";
 import { activeTerminal, terminalResult, renewUnlimitedCookie, unlock, lock, stamp } from "../lib/stempeluhr/terminal";
 import { importLegacy } from "../lib/stempeluhr/import";
+import { allocateClockCardNumber, previewClockCardNumber, assertClockCardUnchanged, assertAutomaticClockCardNumber } from "../lib/stempeluhr/employee-numbers";
 
 const router = Router();
 const keys: Permission[] = ["stempeluhr.view", "stempeluhr.terminal", "stempeluhr.employees", "stempeluhr.correct",
@@ -83,12 +85,20 @@ router.get("/stempeluhr/state", requireAuth, handler(async (req, res) => {
   });
   res.json(GetStempeluhrStateResponse.parse(result));
 }));
+router.get("/stempeluhr/employees/next-card-number", requireAuth, handler(async (req, res) => {
+  await permissions(req, ["stempeluhr.employees"]);
+  res.setHeader("Cache-Control", "no-store");
+  res.json(GetNextClockCardNumberResponse.parse({ cardNumber: await read(previewClockCardNumber) }));
+}));
 router.post("/stempeluhr/employees", requireAuth, handler(async (req, res) => {
   await permissions(req, ["stempeluhr.employees"]);
   const b = CreateClockEmployeeBody.parse(req.body);
+  assertAutomaticClockCardNumber(req.body);
   const result = await transaction(async (c) => {
+    const firstName = nonempty(b.firstName, "Vorname"), lastName = nonempty(b.lastName, "Nachname");
+    const cardNumber = await allocateClockCardNumber(c);
     const { rows } = await c.query(`INSERT INTO clock_employees(card_number,first_name,last_name,provider,activity,active)
-      VALUES($1,$2,$3,$4,$5,$6) RETURNING *`, [nonempty(b.cardNumber, "Karte"), nonempty(b.firstName, "Vorname"), nonempty(b.lastName, "Nachname"), b.provider.trim(), b.activity.trim(), b.active]);
+      VALUES($1,$2,$3,$4,$5,$6) RETURNING *`, [cardNumber, firstName, lastName, b.provider.trim(), b.activity.trim(), b.active]);
     const result = employee(rows[0]);
     await audit(c, actor(req), "Mitarbeiter angelegt", result.cardNumber, null, result);
     return result;
@@ -102,11 +112,12 @@ router.put("/stempeluhr/employees/:id", requireAuth, handler(async (req, res) =>
     const current = (await c.query("SELECT * FROM clock_employees WHERE id=$1", [id])).rows[0];
     if (!current) throw new ClockError("Mitarbeiter nicht gefunden.", 404);
     checkVersion(current.updated_at, b.expectedUpdatedAt);
+    assertClockCardUnchanged(current.card_number, b.cardNumber);
     if (!b.active && (await c.query("SELECT id FROM clock_entries WHERE employee_id=$1 AND ended_at IS NULL AND deleted_at IS NULL", [id])).rowCount)
       throw new ClockError("Vor der Deaktivierung bitte den offenen Zeiteintrag schließen.");
-    const { rows } = await c.query(`UPDATE clock_employees SET card_number=$2,first_name=$3,last_name=$4,provider=$5,activity=$6,active=$7,
+    const { rows } = await c.query(`UPDATE clock_employees SET first_name=$2,last_name=$3,provider=$4,activity=$5,active=$6,
       updated_at=date_trunc('milliseconds',clock_timestamp()) WHERE id=$1 RETURNING *`,
-      [id, nonempty(b.cardNumber, "Karte"), nonempty(b.firstName, "Vorname"), nonempty(b.lastName, "Nachname"), b.provider.trim(), b.activity.trim(), b.active]);
+      [id, nonempty(b.firstName, "Vorname"), nonempty(b.lastName, "Nachname"), b.provider.trim(), b.activity.trim(), b.active]);
     const result = employee(rows[0]);
     await audit(c, actor(req), "Mitarbeiter geändert", result.cardNumber, employee(current), result);
     return result;

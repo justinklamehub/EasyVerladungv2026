@@ -35,6 +35,24 @@ export interface PalletPurchaseDeletion {
   expectedUpdatedAt: string;
 }
 
+export interface ClockEmployeeCreateInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  firstName: string;
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  lastName: string;
+  /** @maxLength 150 */
+  provider: string;
+  /** @maxLength 150 */
+  activity: string;
+  active: boolean;
+}
+
 export interface ClockEmployeeInput {
   /**
      * @minLength 1
@@ -1442,6 +1460,10 @@ export type GetStempeluhrStateParams = {
 from: string;
 to: string;
 employeeId?: number;
+};
+
+export type GetNextClockCardNumber200 = {
+  cardNumber: string;
 };
 
 export type SearchScannerEinlagerungParams = {

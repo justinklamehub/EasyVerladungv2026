@@ -26,6 +26,7 @@ import type {
   BulkShipmentInput,
   ClockDeletion,
   ClockEmployee,
+  ClockEmployeeCreateInput,
   ClockEmployeeInput,
   ClockEntry,
   ClockEntryInput,
@@ -53,6 +54,7 @@ import type {
   ErrorEnvelope,
   ExportPalletMovementsParams,
   GetDashboardParams,
+  GetNextClockCardNumber200,
   GetStempeluhrStateParams,
   HealthStatus,
   ListAuditLogParams,
@@ -472,7 +474,7 @@ export const getCreateClockEmployeeUrl = () => {
   return `/api/stempeluhr/employees`
 }
 
-export const createClockEmployee = async (clockEmployeeInput: ClockEmployeeInput, options?: RequestInit): Promise<ClockEmployee> => {
+export const createClockEmployee = async (clockEmployeeCreateInput: ClockEmployeeCreateInput, options?: RequestInit): Promise<ClockEmployee> => {
 
   return customFetch<ClockEmployee>(getCreateClockEmployeeUrl(),
   {
@@ -480,7 +482,7 @@ export const createClockEmployee = async (clockEmployeeInput: ClockEmployeeInput
     method: 'POST',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      clockEmployeeInput,)
+      clockEmployeeCreateInput,)
   }
 );}
 
@@ -488,8 +490,8 @@ export const createClockEmployee = async (clockEmployeeInput: ClockEmployeeInput
 
 
 export const getCreateClockEmployeeMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeCreateInput>}, TContext> => {
 
 const mutationKey = ['createClockEmployee'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -501,7 +503,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClockEmployee>>, {data: BodyType<ClockEmployeeInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClockEmployee>>, {data: BodyType<ClockEmployeeCreateInput>}> = (props) => {
           const {data} = props ?? {};
 
           return  createClockEmployee(data,requestOptions)
@@ -515,19 +517,90 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type CreateClockEmployeeMutationResult = NonNullable<Awaited<ReturnType<typeof createClockEmployee>>>
-    export type CreateClockEmployeeMutationBody = BodyType<ClockEmployeeInput>
+    export type CreateClockEmployeeMutationBody = BodyType<ClockEmployeeCreateInput>
     export type CreateClockEmployeeMutationError = ErrorType<unknown>
 
     export const useCreateClockEmployee = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEmployee>>, TError,{data: BodyType<ClockEmployeeCreateInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createClockEmployee>>,
         TError,
-        {data: BodyType<ClockEmployeeInput>},
+        {data: BodyType<ClockEmployeeCreateInput>},
         TContext
       > => {
       return useMutation(getCreateClockEmployeeMutationOptions(options));
     }
+
+export const getGetNextClockCardNumberUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/employees/next-card-number`
+}
+
+export const getNextClockCardNumber = async ( options?: RequestInit): Promise<GetNextClockCardNumber200> => {
+
+  return customFetch<GetNextClockCardNumber200>(getGetNextClockCardNumberUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetNextClockCardNumberQueryKey = () => {
+    return [
+    `/api/stempeluhr/employees/next-card-number`
+    ] as const;
+    }
+
+
+export const getGetNextClockCardNumberQueryOptions = <TData = Awaited<ReturnType<typeof getNextClockCardNumber>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextClockCardNumber>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetNextClockCardNumberQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getNextClockCardNumber>>> = ({ signal }) => getNextClockCardNumber({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getNextClockCardNumber>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetNextClockCardNumberQueryResult = NonNullable<Awaited<ReturnType<typeof getNextClockCardNumber>>>
+export type GetNextClockCardNumberQueryError = ErrorType<unknown>
+
+
+
+export function useGetNextClockCardNumber<TData = Awaited<ReturnType<typeof getNextClockCardNumber>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getNextClockCardNumber>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetNextClockCardNumberQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getUpdateClockEmployeeUrl = (id: number,) => {
 

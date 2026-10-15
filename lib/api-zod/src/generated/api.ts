@@ -182,8 +182,6 @@ export const GetStempeluhrStateResponse = zod.object({
 })
 
 
-export const createClockEmployeeBodyCardNumberMax = 80;
-
 export const createClockEmployeeBodyFirstNameMax = 100;
 
 export const createClockEmployeeBodyLastNameMax = 100;
@@ -195,13 +193,16 @@ export const createClockEmployeeBodyActivityMax = 150;
 
 
 export const CreateClockEmployeeBody = zod.object({
-  "cardNumber": zod.string().min(1).max(createClockEmployeeBodyCardNumberMax),
   "firstName": zod.string().min(1).max(createClockEmployeeBodyFirstNameMax),
   "lastName": zod.string().min(1).max(createClockEmployeeBodyLastNameMax),
   "provider": zod.string().max(createClockEmployeeBodyProviderMax),
   "activity": zod.string().max(createClockEmployeeBodyActivityMax),
-  "active": zod.boolean(),
-  "expectedUpdatedAt": zod.string().optional()
+  "active": zod.boolean()
+})
+
+
+export const GetNextClockCardNumberResponse = zod.object({
+  "cardNumber": zod.string()
 })
 
 

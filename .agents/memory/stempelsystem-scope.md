@@ -26,3 +26,9 @@ Terminalfreigaben sollen auch zeitlich unbegrenzt möglich sein, aber weiterhin 
 **Why:** Der Nutzer möchte die Terminallaufzeit auf „Unbegrenzt“ schalten können; das hebt die Zugangsabsicherung nicht auf.
 
 **How to apply:** Eine Laufzeitänderung nicht stillschweigend auf bestehende Freigaben anwenden oder abgelaufene Freigaben wiederbeleben. Für die neue Laufzeit das Gerät ausdrücklich erneut freischalten. Browserseitiger Verlust der Gerätefreigabe kann weiterhin eine erneute Freischaltung erfordern.
+
+Mitarbeiter-Kartennummern automatisch fortlaufend im bisherigen Format vergeben und nicht bearbeitbar machen. Vorhandene Karten und historische Zuordnungen unverändert lassen.
+
+**Why:** Der Nutzer verlangt bei der Mitarbeiteranlage eine automatische, nicht bearbeitbare Kartennummer „praktisch auto increment“, aber im bisherigen Format.
+
+**How to apply:** Die Formularanzeige ist nur eine Vorschau; endgültig serverseitig beim Speichern vergeben. Nummern nach Löschung nicht wiederverwenden und bei Importen den höheren vorhandenen Nummernstand berücksichtigen. Historische Imports müssen ursprüngliche Kartennummern weiterhin erhalten.

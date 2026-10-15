@@ -102,13 +102,26 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ClockEmployeeInput" }
+            schema: { $ref: "#/components/schemas/ClockEmployeeCreateInput" }
       responses:
         "201":
           description: Created
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ClockEmployee" }
+  /stempeluhr/employees/next-card-number:
+    get:
+      operationId: getNextClockCardNumber
+      responses:
+        "200":
+          description: Preview only; the final card number is allocated atomically on creation.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [cardNumber]
+                properties:
+                  cardNumber: { type: string }
   /stempeluhr/employees/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer } }
@@ -1595,6 +1608,15 @@ components:
       required: [expectedUpdatedAt]
       properties:
         expectedUpdatedAt: { type: string }
+    ClockEmployeeCreateInput:
+      type: object
+      required: [firstName, lastName, provider, activity, active]
+      properties:
+        firstName: { type: string, minLength: 1, maxLength: 100 }
+        lastName: { type: string, minLength: 1, maxLength: 100 }
+        provider: { type: string, maxLength: 150 }
+        activity: { type: string, maxLength: 150 }
+        active: { type: boolean }
     ClockEmployeeInput:
       type: object
       required: [cardNumber, firstName, lastName, provider, activity, active]

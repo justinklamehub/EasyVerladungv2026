@@ -29,6 +29,14 @@ export function ensureClockTables(): Promise<void> {
         CREATE UNIQUE INDEX IF NOT EXISTS clock_one_open_entry ON clock_entries(employee_id)
           WHERE ended_at IS NULL AND deleted_at IS NULL;
         CREATE INDEX IF NOT EXISTS clock_entries_employee_time ON clock_entries(employee_id,started_at) WHERE deleted_at IS NULL;
+        CREATE TABLE IF NOT EXISTS clock_card_counter (
+          id INTEGER PRIMARY KEY CHECK (id=1),
+          last_number INTEGER NOT NULL CHECK (last_number BETWEEN 0 AND 99999999));
+        INSERT INTO clock_card_counter(id,last_number)
+          VALUES(1,COALESCE((SELECT MAX(SUBSTRING(card_number FROM 2)::integer)
+            FROM clock_employees WHERE card_number ~ '^M[0-9]{8}$'),
+            (to_char(NOW() AT TIME ZONE 'Europe/Berlin','YY') || '000000')::integer))
+          ON CONFLICT(id) DO NOTHING;
         CREATE TABLE IF NOT EXISTS clock_settings (
           id INTEGER PRIMARY KEY, data JSONB NOT NULL, updated_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds',clock_timestamp()));
         CREATE TABLE IF NOT EXISTS clock_audit (

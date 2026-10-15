@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useCreateClockEmployee, useUpdateClockEmployee, useDeleteClockEmployee } from "@workspace/api-client-react";
+import { useCreateClockEmployee, useUpdateClockEmployee, useDeleteClockEmployee, useGetNextClockCardNumber } from "@workspace/api-client-react";
 import type { ClockEmployee, ClockEntry } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,28 +81,34 @@ export function Employees({ employees, entries, canEdit }: { employees: ClockEmp
 
 function EmployeeDialog({ emp, onClose, invalidate }: { emp: ClockEmployee | null; onClose: () => void; invalidate: () => void }) {
   const create = useCreateClockEmployee(); const update = useUpdateClockEmployee();
-  const [f, setF] = useState({ cardNumber: emp?.cardNumber ?? "", firstName: emp?.firstName ?? "", lastName: emp?.lastName ?? "", provider: emp?.provider ?? "", activity: emp?.activity ?? "", active: emp?.active ?? true });
+  const nextCard = useGetNextClockCardNumber({ query: { queryKey: ["/api/stempeluhr/employees/next-card-number"], enabled: !emp, staleTime: 0 } });
+  const [f, setF] = useState({ firstName: emp?.firstName ?? "", lastName: emp?.lastName ?? "", provider: emp?.provider ?? "", activity: emp?.activity ?? "", active: emp?.active ?? true });
   const [err, setErr] = useState("");
   const set = (k: string, v: string | boolean) => setF((p) => ({ ...p, [k]: v }));
   const save = async () => {
     setErr("");
-    if (!f.cardNumber.trim() || !f.firstName.trim() || !f.lastName.trim()) { setErr("Kartennummer, Vor- und Nachname sind Pflicht"); return; }
-    const data = { ...f, cardNumber: f.cardNumber.trim(), firstName: f.firstName.trim(), lastName: f.lastName.trim(), provider: f.provider.trim(), activity: f.activity.trim() };
+    if (!f.firstName.trim() || !f.lastName.trim()) { setErr("Vor- und Nachname sind Pflicht"); return; }
+    const data = { ...f, firstName: f.firstName.trim(), lastName: f.lastName.trim(), provider: f.provider.trim(), activity: f.activity.trim() };
     try {
-      if (emp) await update.mutateAsync({ id: emp.id, data: { ...data, expectedUpdatedAt: emp.updatedAt } }); else await create.mutateAsync({ data });
+      if (emp) await update.mutateAsync({ id: emp.id, data: { ...data, cardNumber: emp.cardNumber, expectedUpdatedAt: emp.updatedAt } }); else await create.mutateAsync({ data });
       invalidate(); onClose();
     } catch (e) { setErr(errMsg(e)); }
   };
-  const fields: [string, string][] = [["cardNumber", "Kartennummer (führende Nullen bleiben erhalten)"], ["firstName", "Vorname"], ["lastName", "Nachname"], ["provider", "Dienstleister"], ["activity", "Tätigkeit"]];
+  const fields: [keyof typeof f, string][] = [["firstName", "Vorname"], ["lastName", "Nachname"], ["provider", "Dienstleister"], ["activity", "Tätigkeit"]];
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent><DialogHeader><DialogTitle>{emp ? "Mitarbeiter bearbeiten" : "Mitarbeiter anlegen"}</DialogTitle></DialogHeader>
         <div className="space-y-3">
-          {fields.map(([k, l]) => <div key={k}><Label>{l}</Label><Input value={(f as any)[k]} onChange={(e) => set(k, e.target.value)} className={k === "cardNumber" ? "font-mono" : ""} data-testid={`input-employee-${k}`} /></div>)}
+          <div><Label htmlFor="employee-card-number">Kartennummer (ID)</Label>
+            <Input id="employee-card-number" value={emp?.cardNumber ?? nextCard.data?.cardNumber ?? ""} readOnly aria-readonly="true" className="font-mono bg-slate-50" placeholder="Wird automatisch ermittelt…" data-testid="input-employee-cardNumber" />
+            <p className="mt-1 text-xs text-slate-500">{emp ? "Die Kartennummer ist fest vergeben und nicht bearbeitbar." : "Automatische Vergabe beim Speichern. Bei gleichzeitigen Anlagen kann sich die angezeigte Nummer noch ändern."}</p>
+            {!emp && nextCard.isError && <div className="text-sm text-red-700">{errMsg(nextCard.error)} <Button size="sm" variant="outline" onClick={() => nextCard.refetch()}>Erneut versuchen</Button></div>}
+          </div>
+          {fields.map(([k, l]) => <div key={k}><Label>{l}</Label><Input value={String(f[k])} onChange={(e) => set(k, e.target.value)} data-testid={`input-employee-${k}`} /></div>)}
           <label className="flex items-center gap-2 text-sm"><Checkbox checked={f.active} onCheckedChange={(v) => set("active", v === true)} />Aktiv</label>
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2">{err}</div>}
         </div>
-        <DialogFooter><Button variant="outline" onClick={onClose}>Abbrechen</Button><Button onClick={save} disabled={create.isPending || update.isPending} data-testid="button-save-employee">Speichern</Button></DialogFooter>
+        <DialogFooter><Button variant="outline" onClick={onClose}>Abbrechen</Button><Button onClick={save} disabled={create.isPending || update.isPending || (!emp && (!nextCard.data || nextCard.isFetching || nextCard.isError))} data-testid="button-save-employee">Speichern</Button></DialogFooter>
       </DialogContent></Dialog>
   );
 }
