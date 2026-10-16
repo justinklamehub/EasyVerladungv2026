@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck, Tag, X, Timer, Truck } from "lucide-react";
+import { Loader2, Save, Settings, Type, Mail, Inbox, CheckCircle2, XCircle, Eye, EyeOff, Image, Upload, Trash2 as TrashIcon, PanelLeft, Send, Server, ChevronUp, ChevronDown, Table2, Calculator, BarChart2, BellRing, RefreshCw, Terminal, Scale, FileClock, Plus, Pencil, Globe, GlobeLock, HardDrive, Palette, ShieldCheck, Tag, X, Timer, Truck, Wrench } from "lucide-react";
 import { SidebarNavConfig } from "./sidebar-nav-config";
 import { LkwArtenConfig } from "./lkw-arten-config";
 import { useAuth } from "@/contexts/auth-context";
@@ -21,6 +21,8 @@ import { Warehouse } from "lucide-react";
 import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { DeliveryReportCard } from "./delivery-report-card";
 import { ServerOperationsCard } from "./server-operations-card";
+import { MaintenanceModeCard } from "./maintenance-mode-card";
+import { getGetMaintenanceStatusQueryKey } from "@workspace/api-client-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -2161,8 +2163,9 @@ export default function SettingsPage() {
         throw Object.assign(new Error(), { response: { data: body } });
       }
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
+      if (variables.key === "maintenance_mode") queryClient.invalidateQueries({ queryKey: getGetMaintenanceStatusQueryKey() });
       toast({ title: "Einstellung gespeichert" });
     },
     onError: (e: any) => {
@@ -2220,6 +2223,9 @@ export default function SettingsPage() {
           </TabsTrigger>
           <TabsTrigger value="sicherheit" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <ShieldCheck className="w-3.5 h-3.5 shrink-0" /> Sicherheit
+          </TabsTrigger>
+          <TabsTrigger value="wartung" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
+            <Wrench className="w-3.5 h-3.5 shrink-0" /> Wartung
           </TabsTrigger>
           <TabsTrigger value="postausgang" className="flex items-center gap-1.5 text-xs px-3 py-1.5">
             <Inbox className="w-3.5 h-3.5 shrink-0" /> Postausgang
@@ -2428,6 +2434,11 @@ export default function SettingsPage() {
         {/* ── Tab: Sicherheit ── */}
         <TabsContent value="sicherheit" className="space-y-5 mt-0">
           <PasswordExpiryCard settings={s} onSave={handleSave} isSaving={isSavingKey} />
+        </TabsContent>
+
+        {/* ── Tab: Wartung ── */}
+        <TabsContent value="wartung" className="space-y-5 mt-0">
+          <MaintenanceModeCard value={s.maintenance_mode} onSave={handleSave} isSaving={isSavingKey("maintenance_mode")} />
         </TabsContent>
 
         {/* ── Tab: Postausgang ── */}

@@ -6,6 +6,7 @@ import { toast as sonnerToast } from "sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { AppLayout } from "@/components/layout/app-layout";
+import { MaintenanceGuard } from "@/components/maintenance-guard";
 import { useSocket } from "@/hooks/use-socket";
 import { usePermissions, PERMISSIONS_QUERY_KEY } from "@/hooks/use-permissions";
 import { useCustomDesign } from "@/hooks/use-custom-design";
@@ -177,7 +178,7 @@ function App() {
         <TitleSetter />
         <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
           <AuthProvider>
-            <Router />
+            <MaintenanceGuard><Router /></MaintenanceGuard>
           </AuthProvider>
         </WouterRouter>
         <Toaster richColors position="top-right" duration={10000} closeButton />

@@ -767,6 +767,12 @@ export interface HealthStatus {
   status: string;
 }
 
+export interface MaintenanceStatus {
+  enabled: boolean;
+  /** @maxLength 1000 */
+  message: string;
+}
+
 export interface LoginInput {
   /** Email or username */
   identifier: string;

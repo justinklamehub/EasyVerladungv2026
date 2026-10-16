@@ -1242,6 +1242,19 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
+ * @summary Get the maintenance notice and access mode
+ */
+export const getMaintenanceStatusResponseMessageMax = 1000;
+
+
+
+export const GetMaintenanceStatusResponse = zod.object({
+  "enabled": zod.boolean(),
+  "message": zod.string().max(getMaintenanceStatusResponseMessageMax)
+})
+
+
+/**
  * @summary Login
  */
 export const LoginBody = zod.object({

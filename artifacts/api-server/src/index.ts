@@ -22,6 +22,7 @@ import { ensureClockTables } from "./lib/stempeluhr/model";
 import { ensurePalletPurchasesTable } from "./lib/pallet-purchases";
 import { ensureWarehouseTables } from "./lib/einlagerung/model";
 import { setupLiveView } from "./lib/live-view";
+import { getMaintenanceStatus } from "./lib/maintenance-mode";
 
 // Load .env relative to this file (Node 20.6+ built-in, no dotenv needed).
 // Works regardless of PM2's working directory at startup.
@@ -73,7 +74,11 @@ io.use((socket, next) => {
   if (!sess?.userId) {
     return next(new Error("unauthorized"));
   }
-  return next();
+  if (sess.role === "comet_admin") return next();
+  getMaintenanceStatus().then((status) => {
+    if (status.enabled) return next(new Error("maintenance"));
+    next();
+  }).catch(() => next(new Error("maintenance")));
 });
 
 interface EditorInfo {

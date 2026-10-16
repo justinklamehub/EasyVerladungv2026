@@ -5,10 +5,22 @@ import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { reportRecipients, validReportTime } from "../lib/delivery-report-content";
 import { deliveryMailDays, deliveryMailScope } from "@workspace/api-zod/delivery-mail";
+import { GetMaintenanceStatusResponse } from "@workspace/api-zod";
+import { getMaintenanceStatus, invalidateMaintenanceStatus, validateMaintenanceSettings, disconnectNonAdminSockets } from "../lib/maintenance-mode";
 
 const router = Router();
 
 const PUBLIC_KEYS = ["app_name", "company_name", "login_subtitle", "company_logo", "page_title", "sidebar_nav_config", "sidebar_categories", "sidebar_order", "sidebar_role_visibility", "impressum_text", "datenschutz_text", "custom_design", "ticket_categories"] as const;
+
+router.get("/maintenance/status", async (req, res) => {
+  try {
+    res.setHeader("Cache-Control", "no-store");
+    res.json(GetMaintenanceStatusResponse.parse(await getMaintenanceStatus()));
+  } catch (e) {
+    req.log.error({ err: e }, "Could not read maintenance status");
+    res.status(503).json({ error: "Der Wartungsstatus ist derzeit nicht verfügbar." });
+  }
+});
 
 router.get("/settings/public", async (_req, res) => {
   try {
@@ -119,6 +131,7 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
       "sla_inverladung_danger_min",
       "sla_eta_warn_min",
       "sla_eta_danger_min",
+      "maintenance_mode",
     ];
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: "Unbekannter Einstellungsschlüssel" });
@@ -126,6 +139,14 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
 
     if (key === "storage_backend" && value !== "gcs" && value !== "local") {
       return res.status(400).json({ error: "Ungültiger Speicher-Backend-Wert" });
+    }
+    let storedValue = value;
+    let maintenanceConfig: ReturnType<typeof validateMaintenanceSettings>["config"];
+    if (key === "maintenance_mode") {
+      const validation = validateMaintenanceSettings(value);
+      if (validation.error || !validation.config) return res.status(400).json({ error: validation.error });
+      maintenanceConfig = validation.config;
+      storedValue = JSON.stringify(maintenanceConfig);
     }
     if (key === "report_delivery_days") {
       try { if (typeof value !== "string") throw new Error(); deliveryMailDays(value); }
@@ -166,12 +187,18 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
 
     await db
       .insert(settingsTable)
-      .values({ key, value, updatedBy: req.session.userId!, updatedAt: new Date() })
+      .values({ key, value: storedValue, updatedBy: req.session.userId!, updatedAt: new Date() })
       .onConflictDoUpdate({
         target: settingsTable.key,
-        set: { value, updatedBy: req.session.userId!, updatedAt: new Date() },
+        set: { value: storedValue, updatedBy: req.session.userId!, updatedAt: new Date() },
       });
 
+    if (key === "maintenance_mode" && maintenanceConfig) {
+      invalidateMaintenanceStatus();
+      const io = req.app.get("io");
+      io?.emit("maintenance:update", maintenanceConfig);
+      if (maintenanceConfig.enabled) disconnectNonAdminSockets(io);
+    }
     return res.json({ ok: true });
   } catch (e) {
     return res.status(500).json({ error: "Interner Fehler" });

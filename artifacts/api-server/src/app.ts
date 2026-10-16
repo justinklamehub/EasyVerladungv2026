@@ -5,6 +5,7 @@ import session from "express-session";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import { pool } from "@workspace/db";
+import { maintenanceGate } from "./lib/maintenance-mode";
 
 // @ts-ignore - connect-pg-simple doesn't have perfect types
 import connectPgSimple from "connect-pg-simple";
@@ -80,6 +81,7 @@ export const sessionMiddleware = session({
 });
 
 app.use(sessionMiddleware);
+app.use("/api", maintenanceGate);
 app.use("/api", router);
 
 export default app;

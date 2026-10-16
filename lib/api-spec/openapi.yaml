@@ -660,6 +660,18 @@ paths:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
 
+  /maintenance/status:
+    get:
+      operationId: getMaintenanceStatus
+      tags: [settings]
+      summary: Get the maintenance notice and access mode
+      responses:
+        "200":
+          description: Current maintenance status
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MaintenanceStatus" }
+
   /auth/login:
     post:
       operationId: login
@@ -2161,6 +2173,13 @@ components:
           type: string
       required:
         - status
+
+    MaintenanceStatus:
+      type: object
+      required: [enabled, message]
+      properties:
+        enabled: { type: boolean }
+        message: { type: string, maxLength: 1000 }
 
     LoginInput:
       type: object

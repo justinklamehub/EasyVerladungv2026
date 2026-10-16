@@ -80,6 +80,7 @@ export * from './listReconciliationsParams';
 export * from './listShipmentsParams';
 export * from './listUsersParams';
 export * from './loginInput';
+export * from './maintenanceStatus';
 export * from './messageRecipient';
 export * from './palletBalance';
 export * from './palletMovement';
