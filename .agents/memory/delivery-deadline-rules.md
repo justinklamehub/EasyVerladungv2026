@@ -3,6 +3,12 @@ name: Lieferterminwarnungen
 description: Nutzervorgaben und vorsichtige Interpretation von Lieferterminen der eingelagerten Aufträge.
 ---
 
+Die Tabellenansicht der Liefertermine soll individuell anpassbar sein: Spalten verschieben sowie ein- und ausblenden. Das Layout gilt persönlich pro Benutzerkonto.
+
+**Why:** Der Nutzer verlangt eine benutzerdefinierte Ansicht; persönliche Layouts sollen die Arbeit anderer Benutzer nicht verändern.
+
+**How to apply:** Die Ansicht getrennt von Filtern, Zeitregeln und Druck-/Exportformaten behandeln. Änderungen der Spaltenansicht dürfen die fachliche Datenauswahl nicht verändern.
+
 Die Debitorennummernsuche in den Lieferterminen soll als Anfangssuche möglich sein: alle Kundennummern anzeigen, die mit der eingegebenen Ziffernfolge beginnen.
 
 **Why:** Der Nutzer hat ausdrücklich die Suche nach einem Kundennummern-Präfix verlangt, nicht nur nach einer vollständigen Nummer.

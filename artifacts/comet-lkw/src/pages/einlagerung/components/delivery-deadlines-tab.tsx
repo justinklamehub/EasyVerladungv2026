@@ -9,6 +9,8 @@ import { AlertTriangle, Download, Loader2, Printer, Search } from "lucide-react"
 import { useToast } from "@/hooks/use-toast";
 import { DEADLINE_LABELS, deadlineExcel, deadlinePrintHtml } from "./delivery-deadlines-output";
 import { OrderMultiFilter } from "./order-multi-filter";
+import { DEADLINE_COLUMNS, defaultDeadlineColumns } from "./deadline-columns";
+import { DeadlineColumnSettings, useDeadlineColumns } from "./deadline-column-settings";
 import { summarizeOrders } from "./orders-filters";
 import { deadlineFacetOptions, deadlineFilterDetails, deadlineRangeInvalid, emptyDeadlineFilters, filterDeliveryRows } from "./deadline-filters";
 import { errMsg, datasetOf, nf, type D } from "../lib";
@@ -34,6 +36,9 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   const [now, setNow] = useState(() => new Date());
   const [filters, setFilters] = useState(emptyDeadlineFilters);
   const [exporting, setExporting] = useState(false);
+  const columnPreferences = useDeadlineColumns();
+  const columnConfig = columnPreferences.query.data ?? defaultDeadlineColumns();
+  const visibleColumns = columnConfig.columns.filter((column) => column.visible);
   useEffect(() => { const t = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(t); }, []);
 
   const saved = state.settings.deadlineThresholds;
@@ -105,6 +110,8 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold text-slate-900">Kritische Liefertermine</h2>
           <div className="flex flex-wrap gap-2">
+            <DeadlineColumnSettings config={columnConfig} onSave={columnPreferences.save.mutateAsync}
+              saving={columnPreferences.save.isPending} disabled={!columnPreferences.query.data || columnPreferences.query.isError} />
             <Button type="button" size="sm" variant="outline" disabled={outputDisabled} onClick={printShown}
               title="Aktuell gefilterte Liefertermine drucken" data-testid="button-deadlines-print"><Printer className="w-4 h-4 mr-2" />Drucken</Button>
             <Button type="button" size="sm" variant="outline" disabled={outputDisabled || exporting} onClick={exportShown}
@@ -181,6 +188,11 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
             : <p data-testid="text-deadline-no-import" className="text-amber-700 font-medium">Noch kein Auftragsimport vorhanden.</p>}
         </div>
       </div>
+      {columnPreferences.query.isLoading && <p className="px-4 py-2 text-xs text-slate-500">Tabellenansicht wird geladen …</p>}
+      {columnPreferences.query.isError && <div role="alert" className="px-4 py-2 text-sm text-red-700">
+        {errMsg(columnPreferences.query.error)} Die zuletzt geladene Ansicht bzw. die Standardansicht bleibt sichtbar.{" "}
+        <Button size="sm" variant="outline" onClick={() => columnPreferences.query.refetch()}>Erneut versuchen</Button>
+      </div>}
       {q.isLoading ? <div className="p-4 space-y-2"><Skeleton className="h-8" /><Skeleton className="h-32" /></div>
         : q.isError ? (
           <div className="p-4 flex items-center justify-between gap-3 text-sm text-red-700" data-testid="error-deadlines">
@@ -194,24 +206,27 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
             <Table className="app-table">
               <caption className="sr-only">Aufträge nach Lieferungsnummer getrennt, nach Liefertermin aufsteigend sortiert</caption>
                <TableHeader className="sticky top-0 z-10"><TableRow>
-                <TableHead scope="col">Status</TableHead><TableHead scope="col">Termin</TableHead><TableHead scope="col">Rest</TableHead><TableHead scope="col">Regal</TableHead><TableHead scope="col">Lieferungsnummer</TableHead>
-                <TableHead scope="col">Debitorennummer</TableHead><TableHead scope="col">Debitorname</TableHead>
-                <TableHead scope="col">Spedition</TableHead><TableHead scope="col">Relation</TableHead><TableHead scope="col">Plus-KW</TableHead><TableHead scope="col" className="text-right">Paletten</TableHead>
+                {visibleColumns.map(({ id }) => <TableHead key={id} scope="col" data-column={id} className={id === "paletten" ? "text-right" : undefined}>
+                  {DEADLINE_COLUMNS.find(([columnId]) => columnId === id)![1]}
+                </TableHead>)}
               </TableRow></TableHeader>
               <TableBody>{shown.map((r, i) => (
                 <TableRow key={`${r.order.shelf}-${r.order.speditionId}-${i}`} data-testid={`row-deadline-${i}`}>
-                  <TableCell><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${META[r.status].cls}`}>{META[r.status].label}</span></TableCell>
-                  <TableCell className="whitespace-nowrap font-medium">{r.dateLabel}</TableCell>
-                  <TableCell className="whitespace-nowrap text-slate-600">{r.days == null ? "–" : r.days < 0 ? `${-r.days} Tg. überfällig` : r.days === 0 ? "Heute" : `${r.days} Tg.`}
-                    {r.dateLabel.startsWith("KW ") && <span className="block text-[10px]">KW-Beginn (Montag)</span>}</TableCell>
-                  <TableCell>{String(r.order.shelf ?? "")}</TableCell>
-                  <TableCell className="whitespace-nowrap font-medium">{String(r.order.deliveryNumber || "–")}</TableCell>
-                  <TableCell className="whitespace-nowrap">{String(r.order.debitor || "–")}</TableCell>
-                  <TableCell>{String(r.order.debitorName || "–")}</TableCell>
-                  <TableCell>{String(r.order.spedition ?? "")}</TableCell>
-                  <TableCell>{String(r.order.relation ?? "")}</TableCell>
-                  <TableCell className="whitespace-nowrap">{r.order.plusKw ? String(r.order.plusKw) : "–"}</TableCell>
-                  <TableCell className="text-right whitespace-nowrap">{nf(Number(r.order.paletten) || 0)} Pal.</TableCell>
+                  {visibleColumns.map(({ id }) => {
+                    switch (id) {
+                      case "status": return <TableCell key={id} data-column={id}><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${META[r.status].cls}`}>{META[r.status].label}</span></TableCell>;
+                      case "date": return <TableCell key={id} data-column={id} className="whitespace-nowrap font-medium">{r.dateLabel}</TableCell>;
+                      case "remaining": return <TableCell key={id} data-column={id} className="whitespace-nowrap text-slate-600">
+                        {r.days == null ? "–" : r.days < 0 ? `${-r.days} Tg. überfällig` : r.days === 0 ? "Heute" : `${r.days} Tg.`}
+                        {r.dateLabel.startsWith("KW ") && <span className="block text-[10px]">KW-Beginn (Montag)</span>}</TableCell>;
+                      case "paletten": return <TableCell key={id} data-column={id} className="text-right whitespace-nowrap">{nf(Number(r.order.paletten) || 0)} Pal.</TableCell>;
+                      case "plusKw": return <TableCell key={id} data-column={id} className="whitespace-nowrap">{r.order.plusKw ? String(r.order.plusKw) : "–"}</TableCell>;
+                      default: return <TableCell key={id} data-column={id}
+                        className={id === "deliveryNumber" ? "whitespace-nowrap font-medium" : id === "debitor" ? "whitespace-nowrap" : undefined}>
+                        {String(r.order[id] || (["deliveryNumber", "debitor", "debitorName"].includes(id) ? "–" : ""))}
+                      </TableCell>;
+                    }
+                  })}
                 </TableRow>
               ))}</TableBody>
             </Table>
