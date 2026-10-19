@@ -38,3 +38,9 @@ CSV-Spaltenlayouts sind persönliche Einstellungen pro Benutzerkonto, keine glob
 **Why:** Die Exportauswahl und eigene Überschriften dürfen die Exporte anderer Mitarbeiter nicht unbeabsichtigt verändern. Diese Trennung ist eine technische Scope-Entscheidung zur individuellen Spaltenkonfiguration.
 
 **How to apply:** Auswahl, Beschriftung, Reihenfolge und Anzeigeformat getrennt von der Zeitberechnung speichern. CSV-Anpassungen dürfen die zugrunde liegenden Buchungen und Arbeitszeitberechnungen nicht verändern.
+
+Beim Bearbeiten von Zeiten muss die Begründung optional sein.
+
+**Why:** Der Nutzer hat ausdrücklich verlangt, das bisherige Pflichtfeld beim Bearbeiten optional zu machen.
+
+**How to apply:** Korrekturen auch ohne Begründung zulassen, weiterhin protokollieren. Daraus keine Änderung der Begründungspflicht beim Löschen oder manuellen Anlegen ableiten.

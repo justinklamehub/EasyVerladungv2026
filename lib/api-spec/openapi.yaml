@@ -165,7 +165,7 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ClockEntryInput" }
+            schema: { $ref: "#/components/schemas/ClockEntryUpdate" }
       responses:
         "200":
           description: Corrected with audit and optimistic locking
@@ -1681,6 +1681,16 @@ components:
         endedAt: { type: ["string", "null"], format: date-time }
         pauseOverride: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
         reason: { type: string, minLength: 3, maxLength: 1000 }
+        expectedUpdatedAt: { type: string }
+    ClockEntryUpdate:
+      type: object
+      required: [employeeId, startedAt, endedAt, pauseOverride]
+      properties:
+        employeeId: { type: integer }
+        startedAt: { type: string, format: date-time }
+        endedAt: { type: ["string", "null"], format: date-time }
+        pauseOverride: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
+        reason: { type: string, maxLength: 1000 }
         expectedUpdatedAt: { type: string }
     ClockEntry:
       type: object

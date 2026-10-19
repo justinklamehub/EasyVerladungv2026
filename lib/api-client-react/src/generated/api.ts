@@ -30,6 +30,7 @@ import type {
   ClockEmployeeInput,
   ClockEntry,
   ClockEntryInput,
+  ClockEntryUpdate,
   ClockImportInput,
   ClockImportResult,
   ClockSettings,
@@ -807,7 +808,7 @@ export const getUpdateClockEntryUrl = (id: number,) => {
 }
 
 export const updateClockEntry = async (id: number,
-    clockEntryInput: ClockEntryInput, options?: RequestInit): Promise<ClockEntry> => {
+    clockEntryUpdate: ClockEntryUpdate, options?: RequestInit): Promise<ClockEntry> => {
 
   return customFetch<ClockEntry>(getUpdateClockEntryUrl(id),
   {
@@ -815,7 +816,7 @@ export const updateClockEntry = async (id: number,
     method: 'PUT',
     headers: { 'Content-Type': 'application/json', ...options?.headers },
     body: JSON.stringify(
-      clockEntryInput,)
+      clockEntryUpdate,)
   }
 );}
 
@@ -823,8 +824,8 @@ export const updateClockEntry = async (id: number,
 
 
 export const getUpdateClockEntryMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryInput>}, TContext> => {
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryUpdate>}, TContext> => {
 
 const mutationKey = ['updateClockEntry'];
 const {mutation: mutationOptions, request: requestOptions} = options ?
@@ -836,7 +837,7 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
 
 
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClockEntry>>, {id: number;data: BodyType<ClockEntryInput>}> = (props) => {
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateClockEntry>>, {id: number;data: BodyType<ClockEntryUpdate>}> = (props) => {
           const {id,data} = props ?? {};
 
           return  updateClockEntry(id,data,requestOptions)
@@ -850,15 +851,15 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
   return  { mutationFn, ...mutationOptions }}
 
     export type UpdateClockEntryMutationResult = NonNullable<Awaited<ReturnType<typeof updateClockEntry>>>
-    export type UpdateClockEntryMutationBody = BodyType<ClockEntryInput>
+    export type UpdateClockEntryMutationBody = BodyType<ClockEntryUpdate>
     export type UpdateClockEntryMutationError = ErrorType<unknown>
 
     export const useUpdateClockEntry = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateClockEntry>>,
         TError,
-        {id: number;data: BodyType<ClockEntryInput>},
+        {id: number;data: BodyType<ClockEntryUpdate>},
         TContext
       > => {
       return useMutation(getUpdateClockEntryMutationOptions(options));

@@ -139,6 +139,22 @@ export interface ClockEntryInput {
   expectedUpdatedAt?: string;
 }
 
+export interface ClockEntryUpdate {
+  employeeId: number;
+  startedAt: string;
+  /** @nullable */
+  endedAt: string | null;
+  /**
+     * @minimum 0
+     * @maximum 1440
+     * @nullable
+     */
+  pauseOverride: number | null;
+  /** @maxLength 1000 */
+  reason?: string;
+  expectedUpdatedAt?: string;
+}
+
 export interface ClockEntry {
   id: number;
   employeeId: number;
