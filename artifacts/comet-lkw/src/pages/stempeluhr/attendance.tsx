@@ -10,6 +10,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useToast } from "@/hooks/use-toast";
 import { Download, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import { P, berlinDate, berlinInput, berlinToIso, downloadCsv, errMsg, esc, fmtDate, fmtDateTime, fmtMin, fmtTime, openPrint, sel, useInvalidateClock } from "./lib";
+import { clockCsvRows } from "./csv-export";
+import { CsvExportSettings, useClockCsvPreferences } from "./csv-export-settings";
 
 type Has = (k: string) => boolean;
 interface Props { entries: ClockEntry[]; employees: ClockEmployee[]; has: Has; from: string; to: string }
@@ -21,6 +23,7 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
   const [status, setStatus] = useState("all");
   const [edit, setEdit] = useState<ClockEntry | "new" | null>(null);
   const [del, setDel] = useState<ClockEntry | null>(null);
+  const csv = useClockCsvPreferences(has(P.export));
 
   const rows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -35,9 +38,10 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
     return { g, p, n, open };
   }, [rows]);
 
-  const exportCsv = () => downloadCsv(`stempeluhr_${from}_${to}.csv`, [
-    ["Datum", "Kartennummer", "Nachname", "Vorname", "Dienstleister", "Tätigkeit", "Kommen (erfasst/korrigiert)", "Gehen (erfasst/korrigiert)", "Kommen (gebucht)", "Gehen (gebucht)", "Brutto min", "Pause min", "Netto min", "Pause manuell", "Status", "Quelle", "Kommen (unverändertes Original)", "Gehen (unverändertes Original)"],
-    ...rows.map((e) => [fmtDate(e.bookedStart), e.cardNumber, e.lastName, e.firstName, e.provider, e.activity, fmtDateTime(e.startedAt), fmtDateTime(e.endedAt), fmtDateTime(e.bookedStart), fmtDateTime(e.bookedEnd), e.grossMinutes ?? "", e.pauseMinutes ?? "", e.netMinutes ?? "", e.pauseOverride ?? "", e.endedAt ? "abgeschlossen" : "offen", e.source, fmtDateTime(e.originalStartedAt), fmtDateTime(e.originalEndedAt)])]);
+  const exportCsv = () => {
+    if (!csv.query.data || csv.query.isError) return;
+    downloadCsv(`stempeluhr_${from}_${to}.csv`, clockCsvRows(rows, csv.query.data));
+  };
 
   const report = () => {
     const by = new Map<number, ClockEntry[]>();
@@ -63,10 +67,14 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
         <div className="flex-1 min-w-[10rem]"><Label>Suche</Label><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, Karte, Dienstleister" data-testid="input-search" /></div>
         <div><Label>Status</Label>
           <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)} data-testid="select-status"><option value="all">Alle</option><option value="open">Offen</option><option value="closed">Abgeschlossen</option></select></div>
-        {has(P.export) && <Button variant="outline" onClick={exportCsv} data-testid="button-export-csv"><Download className="w-4 h-4 mr-1" />CSV</Button>}
+        {has(P.export) && <Button variant="outline" onClick={exportCsv} disabled={!csv.query.data || csv.query.isError} data-testid="button-export-csv"><Download className="w-4 h-4 mr-1" />CSV</Button>}
+        {has(P.export) && csv.query.data && <CsvExportSettings config={csv.query.data} onSave={csv.save.mutateAsync} saving={csv.save.isPending} />}
         {has(P.export) && <Button variant="outline" onClick={report} data-testid="button-report"><Printer className="w-4 h-4 mr-1" />Bericht drucken</Button>}
         {has(P.correct) && <Button onClick={() => setEdit("new")} data-testid="button-new-entry"><Plus className="w-4 h-4 mr-1" />Zeit erfassen</Button>}
       </div>
+
+      {has(P.export) && csv.query.isLoading && <p className="text-xs text-slate-500">CSV-Einstellungen werden geladen …</p>}
+      {has(P.export) && csv.query.isError && <div role="alert" className="text-sm text-red-700">{errMsg(csv.query.error)} <Button size="sm" variant="outline" onClick={() => csv.query.refetch()}>Erneut versuchen</Button></div>}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
         {[["Brutto", fmtMin(tot.g)], ["Pause", fmtMin(tot.p)], ["Netto", fmtMin(tot.n)], ["Offen", String(tot.open)]].map(([l, v]) => (

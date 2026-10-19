@@ -32,3 +32,9 @@ Mitarbeiter-Kartennummern automatisch fortlaufend im bisherigen Format vergeben 
 **Why:** Der Nutzer verlangt bei der Mitarbeiteranlage eine automatische, nicht bearbeitbare Kartennummer „praktisch auto increment“, aber im bisherigen Format.
 
 **How to apply:** Die Formularanzeige ist nur eine Vorschau; endgültig serverseitig beim Speichern vergeben. Nummern nach Löschung nicht wiederverwenden und bei Importen den höheren vorhandenen Nummernstand berücksichtigen. Historische Imports müssen ursprüngliche Kartennummern weiterhin erhalten.
+
+CSV-Spaltenlayouts sind persönliche Einstellungen pro Benutzerkonto, keine globalen Zeit- oder Pausenregeln.
+
+**Why:** Die Exportauswahl und eigene Überschriften dürfen die Exporte anderer Mitarbeiter nicht unbeabsichtigt verändern. Diese Trennung ist eine technische Scope-Entscheidung zur individuellen Spaltenkonfiguration.
+
+**How to apply:** Auswahl, Beschriftung, Reihenfolge und Anzeigeformat getrennt von der Zeitberechnung speichern. CSV-Anpassungen dürfen die zugrunde liegenden Buchungen und Arbeitszeitberechnungen nicht verändern.
