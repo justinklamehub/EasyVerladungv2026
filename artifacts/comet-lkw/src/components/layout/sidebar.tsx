@@ -371,6 +371,8 @@ export function AppSidebar({ collapsed, onToggle, isDark, onToggleTheme, notific
     { name: "Palettenkonto", href: "/paletten", icon: PackageSearch, show: true },
     { name: "Einlagerung", href: "/einlagerung", icon: Warehouse, show: hasEinlagerungAccess(user.role === "comet_admin", permissions) },
     { name: "Stempeluhr", href: "/stempeluhr", icon: Clock, show: user.role === "comet_admin" || Object.values(CLOCK_PERMISSIONS).some((key) => !!permissions[key]) },
+    { name: "Werksverkauf / Vernichtung", href: "/werksverkauf-vernichtung", icon: Warehouse,
+      show: user.role === "comet_admin" || Object.entries(permissions).some(([key, allowed]) => key.startsWith("wvvn.") && allowed) },
     { name: "Abstimmungen", href: "/abstimmungen", icon: FileCheck2, show: true },
     { name: "Kalkulation", href: "/kalkulation", icon: Calculator, show: isCometUser },
     { name: "Gefahrgut", href: "/gefahrgut", icon: ShieldAlert, show: isCometUser, badgeCount: gefahrgutBlankoCount || 0 },

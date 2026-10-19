@@ -30,6 +30,7 @@ import lkwArtenRouter from "./lkw-arten";
 import wareneingangRouter from "./wareneingang";
 import einlagerungRouter from "./einlagerung";
 import stempeluhrRouter from "./stempeluhr";
+import wvvnRouter from "./wvvn";
 import palletPurchasesRouter from "./pallet-purchases";
 
 const router: IRouter = Router();
@@ -65,6 +66,7 @@ router.use(lkwArtenRouter);
 router.use(wareneingangRouter);
 router.use(einlagerungRouter);
 router.use(stempeluhrRouter);
+router.use(wvvnRouter);
 router.use(palletPurchasesRouter);
 
 export default router;

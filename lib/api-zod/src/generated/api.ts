@@ -8,6 +8,516 @@
 import * as zod from 'zod';
 
 
+export const GetWvvnStateQueryParams = zod.object({
+  "from": zod.coerce.string().optional(),
+  "to": zod.coerce.string().optional()
+})
+
+export const getWvvnStateResponseSettingsOneDeviceHoursMax = 8760;
+
+export const getWvvnStateResponseSettingsOneMailTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const getWvvnStateResponseSettingsOneSalesRecipientsMax = 2000;
+
+export const getWvvnStateResponseSettingsOneDestructionRecipientsMax = 2000;
+
+
+
+export const GetWvvnStateResponse = zod.object({
+  "sessions": zod.array(zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})),
+  "articles": zod.array(zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "name": zod.string(),
+  "ean": zod.string(),
+  "veEan": zod.string(),
+  "veFactor": zod.number(),
+  "active": zod.boolean(),
+  "updatedAt": zod.string(),
+  "legacyEan": zod.string().optional(),
+  "legacyVeEan": zod.string().optional(),
+  "importNote": zod.string().optional()
+})),
+  "reports": zod.array(zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "reportDate": zod.string(),
+  "runningNo": zod.number(),
+  "status": zod.string(),
+  "sentAt": zod.string().nullable(),
+  "error": zod.string(),
+  "legacy": zod.boolean()
+})),
+  "devices": zod.array(zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "expiresAt": zod.string().nullable(),
+  "revokedAt": zod.string().nullable(),
+  "createdAt": zod.string()
+})),
+  "events": zod.array(zod.object({
+  "id": zod.number(),
+  "actor": zod.string(),
+  "action": zod.string(),
+  "detail": zod.string(),
+  "createdAt": zod.string()
+})),
+  "settings": zod.union([zod.object({
+  "autoAddEan": zod.boolean(),
+  "defaultKware": zod.boolean(),
+  "deviceHours": zod.number().min(1).max(getWvvnStateResponseSettingsOneDeviceHoursMax).nullable(),
+  "mailEnabled": zod.boolean(),
+  "mailTime": zod.string().regex(getWvvnStateResponseSettingsOneMailTimeRegExp),
+  "salesRecipients": zod.string().max(getWvvnStateResponseSettingsOneSalesRecipientsMax),
+  "destructionRecipients": zod.string().max(getWvvnStateResponseSettingsOneDestructionRecipientsMax)
+}),zod.null()]),
+  "truncated": zod.boolean()
+})
+
+
+export const GetWvvnScannerStateResponse = zod.object({
+  "unlocked": zod.boolean(),
+  "device": zod.union([zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "expiresAt": zod.string().nullable(),
+  "revokedAt": zod.string().nullable(),
+  "createdAt": zod.string()
+}),zod.null()]),
+  "sessions": zod.array(zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})),
+  "autoAddEan": zod.boolean(),
+  "defaultKware": zod.boolean()
+})
+
+
+export const unlockWvvnScannerBodyLabelMax = 100;
+
+
+
+export const UnlockWvvnScannerBody = zod.object({
+  "label": zod.string().min(1).max(unlockWvvnScannerBodyLabelMax)
+})
+
+export const UnlockWvvnScannerResponse = zod.object({
+  "unlocked": zod.boolean(),
+  "device": zod.union([zod.object({
+  "id": zod.number(),
+  "label": zod.string(),
+  "expiresAt": zod.string().nullable(),
+  "revokedAt": zod.string().nullable(),
+  "createdAt": zod.string()
+}),zod.null()]),
+  "sessions": zod.array(zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})),
+  "autoAddEan": zod.boolean(),
+  "defaultKware": zod.boolean()
+})
+
+
+export const RevokeWvvnDeviceParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const LookupWvvnArticleQueryParams = zod.object({
+  "code": zod.coerce.string()
+})
+
+export const LookupWvvnArticleResponse = zod.object({
+  "article": zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "name": zod.string(),
+  "ean": zod.string(),
+  "veEan": zod.string(),
+  "veFactor": zod.number(),
+  "active": zod.boolean(),
+  "updatedAt": zod.string(),
+  "legacyEan": zod.string().optional(),
+  "legacyVeEan": zod.string().optional(),
+  "importNote": zod.string().optional()
+}),
+  "unit": zod.enum(['STK', 'VE']),
+  "autoAdd": zod.boolean()
+})
+
+
+export const CreateWvvnSessionBody = zod.object({
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean()
+})
+
+export const CreateWvvnSessionResponse = zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const GetWvvnSessionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetWvvnSessionResponse = zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const AddWvvnItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const addWvvnItemBodyCodeMax = 150;
+
+export const addWvvnItemBodyQuantityExclusiveMin = 0;
+export const addWvvnItemBodyQuantityMax = 1000000;
+
+export const addWvvnItemBodyRequestIdMin = 16;
+export const addWvvnItemBodyRequestIdMax = 100;
+
+
+
+export const AddWvvnItemBody = zod.object({
+  "code": zod.string().min(1).max(addWvvnItemBodyCodeMax),
+  "quantity": zod.number().gt(addWvvnItemBodyQuantityExclusiveMin).max(addWvvnItemBodyQuantityMax),
+  "requestId": zod.string().min(addWvvnItemBodyRequestIdMin).max(addWvvnItemBodyRequestIdMax)
+})
+
+export const AddWvvnItemResponse = zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const DeleteWvvnItemParams = zod.object({
+  "id": zod.coerce.number(),
+  "itemId": zod.coerce.number()
+})
+
+export const DeleteWvvnItemResponse = zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const FinalizeWvvnSessionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const FinalizeWvvnSessionResponse = zod.object({
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const updateWvvnSettingsBodyDeviceHoursMax = 8760;
+
+export const updateWvvnSettingsBodyMailTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateWvvnSettingsBodySalesRecipientsMax = 2000;
+
+export const updateWvvnSettingsBodyDestructionRecipientsMax = 2000;
+
+
+
+export const UpdateWvvnSettingsBody = zod.object({
+  "autoAddEan": zod.boolean(),
+  "defaultKware": zod.boolean(),
+  "deviceHours": zod.number().min(1).max(updateWvvnSettingsBodyDeviceHoursMax).nullable(),
+  "mailEnabled": zod.boolean(),
+  "mailTime": zod.string().regex(updateWvvnSettingsBodyMailTimeRegExp),
+  "salesRecipients": zod.string().max(updateWvvnSettingsBodySalesRecipientsMax),
+  "destructionRecipients": zod.string().max(updateWvvnSettingsBodyDestructionRecipientsMax)
+})
+
+export const updateWvvnSettingsResponseDeviceHoursMax = 8760;
+
+export const updateWvvnSettingsResponseMailTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateWvvnSettingsResponseSalesRecipientsMax = 2000;
+
+export const updateWvvnSettingsResponseDestructionRecipientsMax = 2000;
+
+
+
+export const UpdateWvvnSettingsResponse = zod.object({
+  "autoAddEan": zod.boolean(),
+  "defaultKware": zod.boolean(),
+  "deviceHours": zod.number().min(1).max(updateWvvnSettingsResponseDeviceHoursMax).nullable(),
+  "mailEnabled": zod.boolean(),
+  "mailTime": zod.string().regex(updateWvvnSettingsResponseMailTimeRegExp),
+  "salesRecipients": zod.string().max(updateWvvnSettingsResponseSalesRecipientsMax),
+  "destructionRecipients": zod.string().max(updateWvvnSettingsResponseDestructionRecipientsMax)
+})
+
+
+export const UpdateWvvnArticleParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateWvvnArticleBodyNumberMax = 150;
+
+export const updateWvvnArticleBodyNameMax = 255;
+
+export const updateWvvnArticleBodyEanMax = 100;
+
+export const updateWvvnArticleBodyVeEanMax = 100;
+
+export const updateWvvnArticleBodyVeFactorExclusiveMin = 0;
+export const updateWvvnArticleBodyVeFactorMax = 1000000;
+
+
+
+export const UpdateWvvnArticleBody = zod.object({
+  "number": zod.string().min(1).max(updateWvvnArticleBodyNumberMax),
+  "name": zod.string().max(updateWvvnArticleBodyNameMax),
+  "ean": zod.string().max(updateWvvnArticleBodyEanMax),
+  "veEan": zod.string().max(updateWvvnArticleBodyVeEanMax),
+  "veFactor": zod.number().gt(updateWvvnArticleBodyVeFactorExclusiveMin).max(updateWvvnArticleBodyVeFactorMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string()
+})
+
+export const UpdateWvvnArticleResponse = zod.object({
+  "id": zod.number(),
+  "number": zod.string(),
+  "name": zod.string(),
+  "ean": zod.string(),
+  "veEan": zod.string(),
+  "veFactor": zod.number(),
+  "active": zod.boolean(),
+  "updatedAt": zod.string(),
+  "legacyEan": zod.string().optional(),
+  "legacyVeEan": zod.string().optional(),
+  "importNote": zod.string().optional()
+})
+
+
+export const previewWvvnImportBodySqlMax = 20000000;
+
+
+
+export const PreviewWvvnImportBody = zod.object({
+  "sql": zod.string().min(1).max(previewWvvnImportBodySqlMax),
+  "previewHash": zod.string().optional()
+})
+
+export const PreviewWvvnImportResponse = zod.object({
+  "articles": zod.number(),
+  "sessions": zod.number(),
+  "items": zod.number(),
+  "reports": zod.number(),
+  "openSessions": zod.number(),
+  "conflicts": zod.array(zod.string()),
+  "warnings": zod.array(zod.string()),
+  "alreadyImported": zod.boolean(),
+  "previewHash": zod.string()
+})
+
+
+export const commitWvvnImportBodySqlMax = 20000000;
+
+
+
+export const CommitWvvnImportBody = zod.object({
+  "sql": zod.string().min(1).max(commitWvvnImportBodySqlMax),
+  "previewHash": zod.string().optional()
+})
+
+export const CommitWvvnImportResponse = zod.object({
+  "articles": zod.number(),
+  "sessions": zod.number(),
+  "items": zod.number(),
+  "reports": zod.number(),
+  "openSessions": zod.number(),
+  "conflicts": zod.array(zod.string()),
+  "warnings": zod.array(zod.string()),
+  "alreadyImported": zod.boolean(),
+  "previewHash": zod.string()
+})
+
+
+export const SendWvvnReportsResponse = zod.object({
+  "message": zod.string()
+})
+
+
+export const DownloadWvvnSessionCsvParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const DownloadWvvnReportCsvParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
 export const ListPalletPurchasesQueryParams = zod.object({
   "dateFrom": zod.coerce.string().optional(),
   "dateTo": zod.coerce.string().optional()

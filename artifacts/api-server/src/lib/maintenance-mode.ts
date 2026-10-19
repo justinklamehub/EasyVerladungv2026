@@ -76,6 +76,8 @@ const PUBLIC_SCANNER_ENDPOINTS = new Set([
   "POST /storage/uploads/request-url",
   "GET /stempeluhr/terminal/status", "POST /stempeluhr/terminal/stamp",
   "POST /stempeluhr/terminal/lock",
+  "GET /wvvn/scanner/state", "GET /wvvn/scanner/lookup",
+  "POST /wvvn/scanner/lock", "POST /wvvn/scanner/sessions",
 ]);
 
 export function isMaintenanceExempt(req: Pick<Request, "method" | "path">) {
@@ -86,6 +88,7 @@ export function isMaintenanceExempt(req: Pick<Request, "method" | "path">) {
     (req.method === "GET" && (req.path === "/settings/public" || req.path === "/maintenance/status")) ||
     SAFE_AUTH_ENDPOINTS.has(route) ||
     PUBLIC_SCANNER_ENDPOINTS.has(route) ||
+    (/^(POST|DELETE)$/.test(req.method) && /^\/wvvn\/scanner\/sessions\/\d+\/(?:items(?:\/\d+)?|finalize)$/.test(req.path)) ||
     (req.method === "PATCH" && /^\/scanner\/shipment\/\d+$/.test(req.path)) ||
     (req.method === "PUT" && /^\/storage\/local-uploads\/[^/]+$/.test(req.path)) ||
     (req.method === "GET" && /^\/einlagerung\/scanner\/(state|search)$/.test(req.path)) ||

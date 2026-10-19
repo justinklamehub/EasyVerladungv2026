@@ -64,6 +64,8 @@ import ChatWissensbasePage from "@/pages/chat-wissensbase";
 import EinlagerungPage from "@/pages/einlagerung";
 import SystemStatusPage from "@/pages/system-status";
 import StempeluhrPage from "@/pages/stempeluhr";
+import WvvnPage from "@/pages/wvvn";
+import WvvnScannerPage from "@/pages/wvvn/scanner";
 import StempeluhrTerminalPage from "@/pages/stempeluhr/terminal";
 import ScannerEinlagerungPage from "@/pages/scanner/einlagerung";
 import ScannerEinlagerungAuftraegePage from "@/pages/scanner/einlagerung-auftraege";
@@ -114,6 +116,7 @@ function Router() {
       <Route path="/scanner/gefahrgut" component={ScannerGefahrgutPage} />
       <Route path="/scanner/wareneingang" component={ScannerWareneingangPage} />
       <Route path="/scanner/einlagerung" component={ScannerEinlagerungPage} />
+      <Route path="/scanner/werksverkauf-vernichtung" component={WvvnScannerPage} />
       <Route path="/scanner/einlagerung-auftraege" component={ScannerEinlagerungAuftraegePage} />
       <Route path="/impressum" component={ImpressumPage} />
       <Route path="/datenschutz" component={DatenschutzPage} />
@@ -139,6 +142,7 @@ function Router() {
             <Route path="/settings"><ProtectedRoute component={SettingsPage} roles={["comet_admin"]} /></Route>
             <Route path="/system-status"><ProtectedRoute component={SystemStatusPage} roles={["comet_admin"]} permission="system.view" /></Route>
             <Route path="/stempeluhr"><ProtectedRoute component={StempeluhrPage} /></Route>
+            <Route path="/werksverkauf-vernichtung"><ProtectedRoute component={WvvnPage} /></Route>
             <Route path="/berechtigungen"><ProtectedRoute component={BerechtigungenPage} roles={["comet_admin"]} /></Route>
             <Route path="/wochenansicht"><ProtectedRoute component={WochenansichtPage} /></Route>
             <Route path="/torbelegung"><ProtectedRoute component={TorbelegungPage} /></Route>

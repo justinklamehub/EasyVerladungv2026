@@ -19,6 +19,7 @@ import { ensureLkwArtenTable } from "./routes/lkw-arten";
 import { ensureWareneingangTable } from "./routes/wareneingang";
 import { pool } from "@workspace/db";
 import { ensureClockTables } from "./lib/stempeluhr/model";
+import { ensureWvvnTables } from "./lib/wvvn/model";
 import { ensurePalletPurchasesTable } from "./lib/pallet-purchases";
 import { ensureWarehouseTables } from "./lib/einlagerung/model";
 import { setupLiveView } from "./lib/live-view";
@@ -266,6 +267,7 @@ httpServer.listen({ port, ...(process.env.HOST ? { host: process.env.HOST } : {}
   }
   try {
     await ensureWarehouseTables();
+    await ensureWvvnTables();
     logger.info("einlagerung tables ensured");
   } catch (e) {
     logger.error({ err: e }, "Einlagerung tables could not be initialized");

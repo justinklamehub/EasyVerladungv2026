@@ -57,6 +57,7 @@ import type {
   GetDashboardParams,
   GetNextClockCardNumber200,
   GetStempeluhrStateParams,
+  GetWvvnStateParams,
   HealthStatus,
   ListAuditLogParams,
   ListPalletMovementsParams,
@@ -65,6 +66,7 @@ import type {
   ListShipmentsParams,
   ListUsersParams,
   LoginInput,
+  LookupWvvnArticleParams,
   MaintenanceStatus,
   MessageRecipient,
   PalletBalance,
@@ -81,6 +83,7 @@ import type {
   ReconciliationUpdate,
   SearchEinlagerungParams,
   SearchScannerEinlagerungParams,
+  SendWvvnReports200,
   Shipment,
   ShipmentInput,
   ShipmentUpdate,
@@ -100,7 +103,19 @@ import type {
   UploadUrlResponse,
   User,
   UserInput,
-  UserUpdate
+  UserUpdate,
+  WvvnArticle,
+  WvvnArticleInput,
+  WvvnDeviceInput,
+  WvvnImportInput,
+  WvvnImportPreview,
+  WvvnItemInput,
+  WvvnLookup,
+  WvvnScannerState,
+  WvvnSession,
+  WvvnSessionInput,
+  WvvnSettings,
+  WvvnState
 } from './api.schemas';
 
 import { customFetch } from '../custom-fetch';
@@ -112,6 +127,1225 @@ type AwaitedInput<T> = PromiseLike<T> | T;
 
 
 type SecondParameter<T extends (...args: never) => unknown> = Parameters<T>[1];
+
+
+
+export const getGetWvvnStateUrl = (params?: GetWvvnStateParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/wvvn/state?${stringifiedParams}` : `/api/wvvn/state`
+}
+
+export const getWvvnState = async (params?: GetWvvnStateParams, options?: RequestInit): Promise<WvvnState> => {
+
+  return customFetch<WvvnState>(getGetWvvnStateUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWvvnStateQueryKey = (params?: GetWvvnStateParams,) => {
+    return [
+    `/api/wvvn/state`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getGetWvvnStateQueryOptions = <TData = Awaited<ReturnType<typeof getWvvnState>>, TError = ErrorType<unknown>>(params?: GetWvvnStateParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWvvnState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWvvnStateQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWvvnState>>> = ({ signal }) => getWvvnState(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWvvnState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWvvnStateQueryResult = NonNullable<Awaited<ReturnType<typeof getWvvnState>>>
+export type GetWvvnStateQueryError = ErrorType<unknown>
+
+
+
+export function useGetWvvnState<TData = Awaited<ReturnType<typeof getWvvnState>>, TError = ErrorType<unknown>>(
+ params?: GetWvvnStateParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWvvnState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWvvnStateQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetWvvnScannerStateUrl = () => {
+
+
+
+
+  return `/api/wvvn/scanner/state`
+}
+
+export const getWvvnScannerState = async ( options?: RequestInit): Promise<WvvnScannerState> => {
+
+  return customFetch<WvvnScannerState>(getGetWvvnScannerStateUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWvvnScannerStateQueryKey = () => {
+    return [
+    `/api/wvvn/scanner/state`
+    ] as const;
+    }
+
+
+export const getGetWvvnScannerStateQueryOptions = <TData = Awaited<ReturnType<typeof getWvvnScannerState>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWvvnScannerState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWvvnScannerStateQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWvvnScannerState>>> = ({ signal }) => getWvvnScannerState({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWvvnScannerState>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWvvnScannerStateQueryResult = NonNullable<Awaited<ReturnType<typeof getWvvnScannerState>>>
+export type GetWvvnScannerStateQueryError = ErrorType<unknown>
+
+
+
+export function useGetWvvnScannerState<TData = Awaited<ReturnType<typeof getWvvnScannerState>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWvvnScannerState>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWvvnScannerStateQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getUnlockWvvnScannerUrl = () => {
+
+
+
+
+  return `/api/wvvn/scanner/unlock`
+}
+
+export const unlockWvvnScanner = async (wvvnDeviceInput: WvvnDeviceInput, options?: RequestInit): Promise<WvvnScannerState> => {
+
+  return customFetch<WvvnScannerState>(getUnlockWvvnScannerUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnDeviceInput,)
+  }
+);}
+
+
+
+
+export const getUnlockWvvnScannerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockWvvnScanner>>, TError,{data: BodyType<WvvnDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof unlockWvvnScanner>>, TError,{data: BodyType<WvvnDeviceInput>}, TContext> => {
+
+const mutationKey = ['unlockWvvnScanner'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof unlockWvvnScanner>>, {data: BodyType<WvvnDeviceInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  unlockWvvnScanner(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UnlockWvvnScannerMutationResult = NonNullable<Awaited<ReturnType<typeof unlockWvvnScanner>>>
+    export type UnlockWvvnScannerMutationBody = BodyType<WvvnDeviceInput>
+    export type UnlockWvvnScannerMutationError = ErrorType<unknown>
+
+    export const useUnlockWvvnScanner = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof unlockWvvnScanner>>, TError,{data: BodyType<WvvnDeviceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof unlockWvvnScanner>>,
+        TError,
+        {data: BodyType<WvvnDeviceInput>},
+        TContext
+      > => {
+      return useMutation(getUnlockWvvnScannerMutationOptions(options));
+    }
+
+export const getLockWvvnScannerUrl = () => {
+
+
+
+
+  return `/api/wvvn/scanner/lock`
+}
+
+export const lockWvvnScanner = async ( options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getLockWvvnScannerUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getLockWvvnScannerMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof lockWvvnScanner>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof lockWvvnScanner>>, TError,void, TContext> => {
+
+const mutationKey = ['lockWvvnScanner'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof lockWvvnScanner>>, void> = () => {
+
+
+          return  lockWvvnScanner(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LockWvvnScannerMutationResult = NonNullable<Awaited<ReturnType<typeof lockWvvnScanner>>>
+
+    export type LockWvvnScannerMutationError = ErrorType<unknown>
+
+    export const useLockWvvnScanner = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof lockWvvnScanner>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof lockWvvnScanner>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getLockWvvnScannerMutationOptions(options));
+    }
+
+export const getRevokeWvvnDeviceUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/devices/${id}`
+}
+
+export const revokeWvvnDevice = async (id: number, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getRevokeWvvnDeviceUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getRevokeWvvnDeviceMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeWvvnDevice>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeWvvnDevice>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['revokeWvvnDevice'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeWvvnDevice>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  revokeWvvnDevice(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeWvvnDeviceMutationResult = NonNullable<Awaited<ReturnType<typeof revokeWvvnDevice>>>
+
+    export type RevokeWvvnDeviceMutationError = ErrorType<unknown>
+
+    export const useRevokeWvvnDevice = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeWvvnDevice>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof revokeWvvnDevice>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getRevokeWvvnDeviceMutationOptions(options));
+    }
+
+export const getLookupWvvnArticleUrl = (params: LookupWvvnArticleParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : value.toString())
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/wvvn/scanner/lookup?${stringifiedParams}` : `/api/wvvn/scanner/lookup`
+}
+
+export const lookupWvvnArticle = async (params: LookupWvvnArticleParams, options?: RequestInit): Promise<WvvnLookup> => {
+
+  return customFetch<WvvnLookup>(getLookupWvvnArticleUrl(params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getLookupWvvnArticleQueryKey = (params?: LookupWvvnArticleParams,) => {
+    return [
+    `/api/wvvn/scanner/lookup`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getLookupWvvnArticleQueryOptions = <TData = Awaited<ReturnType<typeof lookupWvvnArticle>>, TError = ErrorType<unknown>>(params: LookupWvvnArticleParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupWvvnArticle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getLookupWvvnArticleQueryKey(params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof lookupWvvnArticle>>> = ({ signal }) => lookupWvvnArticle(params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof lookupWvvnArticle>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type LookupWvvnArticleQueryResult = NonNullable<Awaited<ReturnType<typeof lookupWvvnArticle>>>
+export type LookupWvvnArticleQueryError = ErrorType<unknown>
+
+
+
+export function useLookupWvvnArticle<TData = Awaited<ReturnType<typeof lookupWvvnArticle>>, TError = ErrorType<unknown>>(
+ params: LookupWvvnArticleParams, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof lookupWvvnArticle>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getLookupWvvnArticleQueryOptions(params,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getCreateWvvnSessionUrl = () => {
+
+
+
+
+  return `/api/wvvn/scanner/sessions`
+}
+
+export const createWvvnSession = async (wvvnSessionInput: WvvnSessionInput, options?: RequestInit): Promise<WvvnSession> => {
+
+  return customFetch<WvvnSession>(getCreateWvvnSessionUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnSessionInput,)
+  }
+);}
+
+
+
+
+export const getCreateWvvnSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWvvnSession>>, TError,{data: BodyType<WvvnSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createWvvnSession>>, TError,{data: BodyType<WvvnSessionInput>}, TContext> => {
+
+const mutationKey = ['createWvvnSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createWvvnSession>>, {data: BodyType<WvvnSessionInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createWvvnSession(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateWvvnSessionMutationResult = NonNullable<Awaited<ReturnType<typeof createWvvnSession>>>
+    export type CreateWvvnSessionMutationBody = BodyType<WvvnSessionInput>
+    export type CreateWvvnSessionMutationError = ErrorType<unknown>
+
+    export const useCreateWvvnSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createWvvnSession>>, TError,{data: BodyType<WvvnSessionInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createWvvnSession>>,
+        TError,
+        {data: BodyType<WvvnSessionInput>},
+        TContext
+      > => {
+      return useMutation(getCreateWvvnSessionMutationOptions(options));
+    }
+
+export const getGetWvvnSessionUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/sessions/${id}`
+}
+
+export const getWvvnSession = async (id: number, options?: RequestInit): Promise<WvvnSession> => {
+
+  return customFetch<WvvnSession>(getGetWvvnSessionUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWvvnSessionQueryKey = (id: number,) => {
+    return [
+    `/api/wvvn/sessions/${id}`
+    ] as const;
+    }
+
+
+export const getGetWvvnSessionQueryOptions = <TData = Awaited<ReturnType<typeof getWvvnSession>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWvvnSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWvvnSessionQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWvvnSession>>> = ({ signal }) => getWvvnSession(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWvvnSession>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWvvnSessionQueryResult = NonNullable<Awaited<ReturnType<typeof getWvvnSession>>>
+export type GetWvvnSessionQueryError = ErrorType<unknown>
+
+
+
+export function useGetWvvnSession<TData = Awaited<ReturnType<typeof getWvvnSession>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWvvnSession>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWvvnSessionQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getAddWvvnItemUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/scanner/sessions/${id}/items`
+}
+
+export const addWvvnItem = async (id: number,
+    wvvnItemInput: WvvnItemInput, options?: RequestInit): Promise<WvvnSession> => {
+
+  return customFetch<WvvnSession>(getAddWvvnItemUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnItemInput,)
+  }
+);}
+
+
+
+
+export const getAddWvvnItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addWvvnItem>>, TError,{id: number;data: BodyType<WvvnItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof addWvvnItem>>, TError,{id: number;data: BodyType<WvvnItemInput>}, TContext> => {
+
+const mutationKey = ['addWvvnItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof addWvvnItem>>, {id: number;data: BodyType<WvvnItemInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  addWvvnItem(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AddWvvnItemMutationResult = NonNullable<Awaited<ReturnType<typeof addWvvnItem>>>
+    export type AddWvvnItemMutationBody = BodyType<WvvnItemInput>
+    export type AddWvvnItemMutationError = ErrorType<unknown>
+
+    export const useAddWvvnItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof addWvvnItem>>, TError,{id: number;data: BodyType<WvvnItemInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof addWvvnItem>>,
+        TError,
+        {id: number;data: BodyType<WvvnItemInput>},
+        TContext
+      > => {
+      return useMutation(getAddWvvnItemMutationOptions(options));
+    }
+
+export const getDeleteWvvnItemUrl = (id: number,
+    itemId: number,) => {
+
+
+
+
+  return `/api/wvvn/scanner/sessions/${id}/items/${itemId}`
+}
+
+export const deleteWvvnItem = async (id: number,
+    itemId: number, options?: RequestInit): Promise<WvvnSession> => {
+
+  return customFetch<WvvnSession>(getDeleteWvvnItemUrl(id,itemId),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getDeleteWvvnItemMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWvvnItem>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWvvnItem>>, TError,{id: number;itemId: number}, TContext> => {
+
+const mutationKey = ['deleteWvvnItem'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWvvnItem>>, {id: number;itemId: number}> = (props) => {
+          const {id,itemId} = props ?? {};
+
+          return  deleteWvvnItem(id,itemId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWvvnItemMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWvvnItem>>>
+
+    export type DeleteWvvnItemMutationError = ErrorType<unknown>
+
+    export const useDeleteWvvnItem = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWvvnItem>>, TError,{id: number;itemId: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWvvnItem>>,
+        TError,
+        {id: number;itemId: number},
+        TContext
+      > => {
+      return useMutation(getDeleteWvvnItemMutationOptions(options));
+    }
+
+export const getFinalizeWvvnSessionUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/scanner/sessions/${id}/finalize`
+}
+
+export const finalizeWvvnSession = async (id: number, options?: RequestInit): Promise<WvvnSession> => {
+
+  return customFetch<WvvnSession>(getFinalizeWvvnSessionUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getFinalizeWvvnSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finalizeWvvnSession>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof finalizeWvvnSession>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['finalizeWvvnSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof finalizeWvvnSession>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  finalizeWvvnSession(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type FinalizeWvvnSessionMutationResult = NonNullable<Awaited<ReturnType<typeof finalizeWvvnSession>>>
+
+    export type FinalizeWvvnSessionMutationError = ErrorType<unknown>
+
+    export const useFinalizeWvvnSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof finalizeWvvnSession>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof finalizeWvvnSession>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getFinalizeWvvnSessionMutationOptions(options));
+    }
+
+export const getUpdateWvvnSettingsUrl = () => {
+
+
+
+
+  return `/api/wvvn/settings`
+}
+
+export const updateWvvnSettings = async (wvvnSettings: WvvnSettings, options?: RequestInit): Promise<WvvnSettings> => {
+
+  return customFetch<WvvnSettings>(getUpdateWvvnSettingsUrl(),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnSettings,)
+  }
+);}
+
+
+
+
+export const getUpdateWvvnSettingsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWvvnSettings>>, TError,{data: BodyType<WvvnSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWvvnSettings>>, TError,{data: BodyType<WvvnSettings>}, TContext> => {
+
+const mutationKey = ['updateWvvnSettings'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWvvnSettings>>, {data: BodyType<WvvnSettings>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  updateWvvnSettings(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWvvnSettingsMutationResult = NonNullable<Awaited<ReturnType<typeof updateWvvnSettings>>>
+    export type UpdateWvvnSettingsMutationBody = BodyType<WvvnSettings>
+    export type UpdateWvvnSettingsMutationError = ErrorType<unknown>
+
+    export const useUpdateWvvnSettings = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWvvnSettings>>, TError,{data: BodyType<WvvnSettings>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWvvnSettings>>,
+        TError,
+        {data: BodyType<WvvnSettings>},
+        TContext
+      > => {
+      return useMutation(getUpdateWvvnSettingsMutationOptions(options));
+    }
+
+export const getUpdateWvvnArticleUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/articles/${id}`
+}
+
+export const updateWvvnArticle = async (id: number,
+    wvvnArticleInput: WvvnArticleInput, options?: RequestInit): Promise<WvvnArticle> => {
+
+  return customFetch<WvvnArticle>(getUpdateWvvnArticleUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnArticleInput,)
+  }
+);}
+
+
+
+
+export const getUpdateWvvnArticleMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWvvnArticle>>, TError,{id: number;data: BodyType<WvvnArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWvvnArticle>>, TError,{id: number;data: BodyType<WvvnArticleInput>}, TContext> => {
+
+const mutationKey = ['updateWvvnArticle'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWvvnArticle>>, {id: number;data: BodyType<WvvnArticleInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWvvnArticle(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWvvnArticleMutationResult = NonNullable<Awaited<ReturnType<typeof updateWvvnArticle>>>
+    export type UpdateWvvnArticleMutationBody = BodyType<WvvnArticleInput>
+    export type UpdateWvvnArticleMutationError = ErrorType<unknown>
+
+    export const useUpdateWvvnArticle = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWvvnArticle>>, TError,{id: number;data: BodyType<WvvnArticleInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWvvnArticle>>,
+        TError,
+        {id: number;data: BodyType<WvvnArticleInput>},
+        TContext
+      > => {
+      return useMutation(getUpdateWvvnArticleMutationOptions(options));
+    }
+
+export const getPreviewWvvnImportUrl = () => {
+
+
+
+
+  return `/api/wvvn/import/preview`
+}
+
+export const previewWvvnImport = async (wvvnImportInput: WvvnImportInput, options?: RequestInit): Promise<WvvnImportPreview> => {
+
+  return customFetch<WvvnImportPreview>(getPreviewWvvnImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnImportInput,)
+  }
+);}
+
+
+
+
+export const getPreviewWvvnImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewWvvnImport>>, TError,{data: BodyType<WvvnImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof previewWvvnImport>>, TError,{data: BodyType<WvvnImportInput>}, TContext> => {
+
+const mutationKey = ['previewWvvnImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof previewWvvnImport>>, {data: BodyType<WvvnImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  previewWvvnImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type PreviewWvvnImportMutationResult = NonNullable<Awaited<ReturnType<typeof previewWvvnImport>>>
+    export type PreviewWvvnImportMutationBody = BodyType<WvvnImportInput>
+    export type PreviewWvvnImportMutationError = ErrorType<unknown>
+
+    export const usePreviewWvvnImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof previewWvvnImport>>, TError,{data: BodyType<WvvnImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof previewWvvnImport>>,
+        TError,
+        {data: BodyType<WvvnImportInput>},
+        TContext
+      > => {
+      return useMutation(getPreviewWvvnImportMutationOptions(options));
+    }
+
+export const getCommitWvvnImportUrl = () => {
+
+
+
+
+  return `/api/wvvn/import/commit`
+}
+
+export const commitWvvnImport = async (wvvnImportInput: WvvnImportInput, options?: RequestInit): Promise<WvvnImportPreview> => {
+
+  return customFetch<WvvnImportPreview>(getCommitWvvnImportUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnImportInput,)
+  }
+);}
+
+
+
+
+export const getCommitWvvnImportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitWvvnImport>>, TError,{data: BodyType<WvvnImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof commitWvvnImport>>, TError,{data: BodyType<WvvnImportInput>}, TContext> => {
+
+const mutationKey = ['commitWvvnImport'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof commitWvvnImport>>, {data: BodyType<WvvnImportInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  commitWvvnImport(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CommitWvvnImportMutationResult = NonNullable<Awaited<ReturnType<typeof commitWvvnImport>>>
+    export type CommitWvvnImportMutationBody = BodyType<WvvnImportInput>
+    export type CommitWvvnImportMutationError = ErrorType<unknown>
+
+    export const useCommitWvvnImport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof commitWvvnImport>>, TError,{data: BodyType<WvvnImportInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof commitWvvnImport>>,
+        TError,
+        {data: BodyType<WvvnImportInput>},
+        TContext
+      > => {
+      return useMutation(getCommitWvvnImportMutationOptions(options));
+    }
+
+export const getSendWvvnReportsUrl = () => {
+
+
+
+
+  return `/api/wvvn/reports/send`
+}
+
+export const sendWvvnReports = async ( options?: RequestInit): Promise<SendWvvnReports200> => {
+
+  return customFetch<SendWvvnReports200>(getSendWvvnReportsUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getSendWvvnReportsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendWvvnReports>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof sendWvvnReports>>, TError,void, TContext> => {
+
+const mutationKey = ['sendWvvnReports'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof sendWvvnReports>>, void> = () => {
+
+
+          return  sendWvvnReports(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SendWvvnReportsMutationResult = NonNullable<Awaited<ReturnType<typeof sendWvvnReports>>>
+
+    export type SendWvvnReportsMutationError = ErrorType<unknown>
+
+    export const useSendWvvnReports = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof sendWvvnReports>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof sendWvvnReports>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getSendWvvnReportsMutationOptions(options));
+    }
+
+export const getDownloadWvvnSessionCsvUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/sessions/${id}/csv`
+}
+
+export const downloadWvvnSessionCsv = async (id: number, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getDownloadWvvnSessionCsvUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadWvvnSessionCsvQueryKey = (id: number,) => {
+    return [
+    `/api/wvvn/sessions/${id}/csv`
+    ] as const;
+    }
+
+
+export const getDownloadWvvnSessionCsvQueryOptions = <TData = Awaited<ReturnType<typeof downloadWvvnSessionCsv>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadWvvnSessionCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadWvvnSessionCsvQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadWvvnSessionCsv>>> = ({ signal }) => downloadWvvnSessionCsv(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadWvvnSessionCsv>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadWvvnSessionCsvQueryResult = NonNullable<Awaited<ReturnType<typeof downloadWvvnSessionCsv>>>
+export type DownloadWvvnSessionCsvQueryError = ErrorType<unknown>
+
+
+
+export function useDownloadWvvnSessionCsv<TData = Awaited<ReturnType<typeof downloadWvvnSessionCsv>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadWvvnSessionCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadWvvnSessionCsvQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getDownloadWvvnReportCsvUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/reports/${id}/csv`
+}
+
+export const downloadWvvnReportCsv = async (id: number, options?: RequestInit): Promise<string> => {
+
+  return customFetch<string>(getDownloadWvvnReportCsvUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getDownloadWvvnReportCsvQueryKey = (id: number,) => {
+    return [
+    `/api/wvvn/reports/${id}/csv`
+    ] as const;
+    }
+
+
+export const getDownloadWvvnReportCsvQueryOptions = <TData = Awaited<ReturnType<typeof downloadWvvnReportCsv>>, TError = ErrorType<unknown>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadWvvnReportCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getDownloadWvvnReportCsvQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof downloadWvvnReportCsv>>> = ({ signal }) => downloadWvvnReportCsv(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof downloadWvvnReportCsv>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type DownloadWvvnReportCsvQueryResult = NonNullable<Awaited<ReturnType<typeof downloadWvvnReportCsv>>>
+export type DownloadWvvnReportCsvQueryError = ErrorType<unknown>
+
+
+
+export function useDownloadWvvnReportCsv<TData = Awaited<ReturnType<typeof downloadWvvnReportCsv>>, TError = ErrorType<unknown>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof downloadWvvnReportCsv>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getDownloadWvvnReportCsvQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
 
 
 

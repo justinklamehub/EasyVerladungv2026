@@ -7,6 +7,7 @@ import { logger } from "./logger";
 import { sendEventEmail } from "./email";
 import { getPasswordMaxAgeDays } from "./password-policy";
 import { runDeliveryReportCheck } from "./delivery-report";
+import { sendReports as sendWvvnReports } from "./wvvn/reports";
 
 const CHECK_INTERVAL_MS = 60 * 60 * 1000;
 const ABGESCHLOSSEN = ["Abgefertigt", "Storniert"];
@@ -433,6 +434,9 @@ export function startScheduler(io: SocketIOServer) {
     return;
   }
   const deliveryCheck = () => runDeliveryReportCheck().catch((err) => logger.warn({ err }, "Lieferterminprüfung fehlgeschlagen"));
+  const wvvnCheck = () => sendWvvnReports().catch((err) => logger.warn({ err }, "WVVN-Berichtsprüfung fehlgeschlagen"));
+  setTimeout(wvvnCheck, 20_000);
+  setInterval(wvvnCheck, 60_000);
   void deliveryCheck();
   setInterval(deliveryCheck, 60_000);
   runAllChecks(io);

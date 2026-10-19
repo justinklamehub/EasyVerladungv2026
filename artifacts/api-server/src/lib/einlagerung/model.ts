@@ -19,7 +19,8 @@ export const schemas: Record<string, z.ZodType<any>> = {
   hall: z.object({ name, sort: order, active }),
   aisle: z.object({ name, hallId: id, sort: order, active }),
   shelf: z.object({ name, aisleId: id, position: order, sort: order, active }),
-  article: z.object({ number: name, ean: z.string().trim().max(100).default(""), name: z.string().max(255).default(""), active }),
+  article: z.object({ number: name, ean: z.string().trim().max(100).default(""), name: z.string().max(255).default(""),
+    veEan: z.string().trim().max(100).default(""), veFactor: z.number().positive().max(1000000).default(1), active }),
   group: z.object({ name, color, active }),
   rule: z.object({ articleId: id, shelfId: id, groupId: id.nullable().optional().default(null), priority: z.coerce.number().int().min(1).max(9999), note: text, active }),
   reservation: z.object({ shelfId: id, carrierId: id.nullable().default(null), speditionId: id.nullable().default(null),
@@ -134,9 +135,11 @@ export function checkData(kind: string, input: unknown, all: WarehouseRecord[], 
     if (data.active && same.some((r) => r.data.active !== false && r.data.articleId === data.articleId && r.data.shelfId === data.shelfId))
       throw new WarehouseError("Artikel und Regal sind bereits zugeordnet.");
   } else if (kind === "article") {
-    if (same.some((r) => r.data.number === data.number || (data.ean && r.data.ean === data.ean) ||
-      (data.ean && r.data.number === data.ean) || (r.data.ean && r.data.ean === data.number)))
-      throw new WarehouseError("Artikelnummer oder EAN ist bereits vergeben.");
+    const codes = [data.number, data.ean, data.veEan].filter(Boolean);
+    if (data.veEan && [data.number, data.ean].includes(data.veEan))
+      throw new WarehouseError("VE-EAN muss sich von Artikelnummer und Stück-EAN unterscheiden.");
+    if (same.some((r) => [r.data.number, r.data.ean, r.data.veEan].filter(Boolean).some((code) => codes.includes(code))))
+      throw new WarehouseError("Artikelnummer, EAN oder VE-EAN ist bereits vergeben.");
   } else if (["hall", "aisle", "shelf", "group", "carrier"].includes(kind)) {
     if (same.some((r) => r.data.name.toLowerCase() === data.name.toLowerCase()))
       throw new WarehouseError("Dieser Name ist bereits vergeben.");

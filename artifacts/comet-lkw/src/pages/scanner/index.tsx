@@ -321,6 +321,13 @@ export default function ScannerLandingPage() {
         </div>
       )}
 
+      <div style={{ width: "100%", maxWidth: 480, marginBottom: 16 }}>
+        <button
+          style={{ width: "100%", padding: "14px 16px", fontSize: 14, fontWeight: 700, background: "#ffffff", color: "#0f172a", border: "1px solid #0f172a", borderRadius: 10, cursor: "pointer" }}
+          onClick={() => setLocation("/scanner/werksverkauf-vernichtung")}
+          data-testid="button-scanner-wvvn"
+        >WERKSVERKAUF / VERNICHTUNG</button>
+      </div>
       {/* Blanko-Checkliste direkter Einstieg */}
       <div style={{ width: "100%", maxWidth: 480, marginBottom: 16 }}>
         <button

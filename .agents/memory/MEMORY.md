@@ -33,3 +33,4 @@
 - [Stempelsystem](stempelsystem-scope.md) — Altes Stempelsystem als funktionale Vorlage für ein eigenes integriertes Modul mit Berechtigungen und Pauseneinstellungen.
 - [Kaufpaletten](pallet-purchase-rules.md) — Eigenbestand und Eigentum wachsen, Konten bleiben unverändert; Spediteur frei eingeben.
 - [Zod-Fehlerklassen](zod-error-versions.md) — Generierte und manuelle Schemas können unterschiedliche Fehlerklassen werfen; ungültige Eingaben über HTTP prüfen.
+- [Werksverkauf / Vernichtung](wvvn-scope.md) — Gemeinsame Artikel mit Einlagerung, freigeschaltete Scannergeräte und historische offene Listen als Archiv.

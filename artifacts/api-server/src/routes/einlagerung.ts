@@ -96,7 +96,8 @@ router.put(["/einlagerung/records/:kind/:id", "/einlagerung/scanner/records/:kin
     if (!existing) throw new WarehouseError("Datensatz wurde nicht gefunden.", 404);
     if (body.expectedUpdatedAt && body.expectedUpdatedAt !== existing.updatedAt)
       throw new WarehouseError("Der Datensatz wurde inzwischen geändert. Bitte neu laden.", 409);
-    const data = checkData(kind, body.data, all, id);
+    const data = checkData(kind, kind === "article" ? { ...existing.data, ...body.data } : body.data, all, id);
+    if (kind === "article" && existing.data.wvvnLegacy) data.wvvnLegacy = existing.data.wvvnLegacy;
     if (["reservation", "carrier"].includes(kind) && data.speditionId != null &&
       !(await client.query("SELECT id FROM speditionen WHERE id=$1", [data.speditionId])).rowCount)
       throw new WarehouseError("Spedition wurde nicht gefunden.");

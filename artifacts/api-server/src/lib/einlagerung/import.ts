@@ -185,7 +185,7 @@ export async function prepareImport(client: Client, input: ImportInput) {
 
 async function upsert(client: Client, kind: string, data: Data, existing: WarehouseRecord | undefined) {
   if (existing) {
-    await client.query("UPDATE einlagerung_records SET data=$1, updated_at=clock_timestamp() WHERE id=$2", [JSON.stringify(data), existing.id]);
+    await client.query("UPDATE einlagerung_records SET data=$1, updated_at=clock_timestamp() WHERE id=$2", [JSON.stringify(kind === "article" ? { ...existing.data, ...data } : data), existing.id]);
   } else {
     await client.query("INSERT INTO einlagerung_records (kind,data) VALUES ($1,$2)", [kind, JSON.stringify(data)]);
   }

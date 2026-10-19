@@ -5,6 +5,226 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+export type WvvnMode = typeof WvvnMode[keyof typeof WvvnMode];
+
+
+export const WvvnMode = {
+  WERKSVERKAUF: 'WERKSVERKAUF',
+  VERNICHTUNG: 'VERNICHTUNG',
+} as const;
+
+export interface WvvnSessionInput {
+  mode: WvvnMode;
+  netto: boolean;
+  kware: boolean;
+}
+
+export interface WvvnItemInput {
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  code: string;
+  /**
+     * @maximum 1000000
+     * @exclusiveMinimum 0
+     */
+  quantity: number;
+  /**
+     * @minLength 16
+     * @maxLength 100
+     */
+  requestId: string;
+}
+
+export type WvvnItemUnit = typeof WvvnItemUnit[keyof typeof WvvnItemUnit];
+
+
+export const WvvnItemUnit = {
+  STK: 'STK',
+  VE: 'VE',
+} as const;
+
+export interface WvvnItem {
+  id: number;
+  articleNumber: string;
+  articleName: string;
+  scannedCode: string;
+  unit: WvvnItemUnit;
+  quantity: number;
+  veFactor: number;
+  pieces: number;
+  createdAt: string;
+}
+
+export type WvvnSessionStatus = typeof WvvnSessionStatus[keyof typeof WvvnSessionStatus];
+
+
+export const WvvnSessionStatus = {
+  open: 'open',
+  done: 'done',
+} as const;
+
+export interface WvvnSession {
+  id: number;
+  mode: WvvnMode;
+  netto: boolean;
+  kware: boolean;
+  status: WvvnSessionStatus;
+  actor: string;
+  createdAt: string;
+  /** @nullable */
+  finishedAt: string | null;
+  itemCount: number;
+  pieces: number;
+  legacy: boolean;
+  items: WvvnItem[];
+}
+
+export interface WvvnArticleInput {
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  number: string;
+  /** @maxLength 255 */
+  name: string;
+  /** @maxLength 100 */
+  ean: string;
+  /** @maxLength 100 */
+  veEan: string;
+  /**
+     * @maximum 1000000
+     * @exclusiveMinimum 0
+     */
+  veFactor: number;
+  active: boolean;
+  expectedUpdatedAt: string;
+}
+
+export interface WvvnArticle {
+  id: number;
+  number: string;
+  name: string;
+  ean: string;
+  veEan: string;
+  veFactor: number;
+  active: boolean;
+  updatedAt: string;
+  legacyEan?: string;
+  legacyVeEan?: string;
+  importNote?: string;
+}
+
+export type WvvnLookupUnit = typeof WvvnLookupUnit[keyof typeof WvvnLookupUnit];
+
+
+export const WvvnLookupUnit = {
+  STK: 'STK',
+  VE: 'VE',
+} as const;
+
+export interface WvvnLookup {
+  article: WvvnArticle;
+  unit: WvvnLookupUnit;
+  autoAdd: boolean;
+}
+
+export interface WvvnSettings {
+  autoAddEan: boolean;
+  defaultKware: boolean;
+  /**
+     * @minimum 1
+     * @maximum 8760
+     * @nullable
+     */
+  deviceHours: number | null;
+  mailEnabled: boolean;
+  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  mailTime: string;
+  /** @maxLength 2000 */
+  salesRecipients: string;
+  /** @maxLength 2000 */
+  destructionRecipients: string;
+}
+
+export interface WvvnDeviceInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  label: string;
+}
+
+export interface WvvnDevice {
+  id: number;
+  label: string;
+  /** @nullable */
+  expiresAt: string | null;
+  /** @nullable */
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+export interface WvvnScannerState {
+  unlocked: boolean;
+  device: WvvnDevice | null;
+  sessions: WvvnSession[];
+  autoAddEan: boolean;
+  defaultKware: boolean;
+}
+
+export interface WvvnReport {
+  id: number;
+  mode: WvvnMode;
+  reportDate: string;
+  runningNo: number;
+  status: string;
+  /** @nullable */
+  sentAt: string | null;
+  error: string;
+  legacy: boolean;
+}
+
+export interface WvvnEvent {
+  id: number;
+  actor: string;
+  action: string;
+  detail: string;
+  createdAt: string;
+}
+
+export interface WvvnState {
+  sessions: WvvnSession[];
+  articles: WvvnArticle[];
+  reports: WvvnReport[];
+  devices: WvvnDevice[];
+  events: WvvnEvent[];
+  settings: WvvnSettings | null;
+  truncated: boolean;
+}
+
+export interface WvvnImportInput {
+  /**
+     * @minLength 1
+     * @maxLength 20000000
+     */
+  sql: string;
+  previewHash?: string;
+}
+
+export interface WvvnImportPreview {
+  articles: number;
+  sessions: number;
+  items: number;
+  reports: number;
+  openSessions: number;
+  conflicts: string[];
+  warnings: string[];
+  alreadyImported: boolean;
+  previewHash: string;
+}
+
 export interface PalletPurchaseInput {
   /** @pattern ^\d{4}-\d{2}-\d{2}$ */
   purchaseDate: string;
@@ -1472,6 +1692,19 @@ export interface AuditLogPage {
   page: number;
   limit: number;
 }
+
+export type GetWvvnStateParams = {
+from?: string;
+to?: string;
+};
+
+export type LookupWvvnArticleParams = {
+code: string;
+};
+
+export type SendWvvnReports200 = {
+  message: string;
+};
 
 export type ListPalletPurchasesParams = {
 dateFrom?: string;

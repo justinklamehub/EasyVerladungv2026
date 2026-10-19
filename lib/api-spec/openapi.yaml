@@ -30,6 +30,221 @@ tags:
     description: Object storage upload and serving endpoints.
 
 paths:
+  /wvvn/state:
+    get:
+      operationId: getWvvnState
+      parameters:
+        - { name: from, in: query, schema: { type: string } }
+        - { name: to, in: query, schema: { type: string } }
+      responses:
+        "200":
+          description: Module data limited by permissions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnState" }
+  /wvvn/scanner/state:
+    get:
+      operationId: getWvvnScannerState
+      responses:
+        "200":
+          description: Current device and own open lists
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnScannerState" }
+  /wvvn/scanner/unlock:
+    post:
+      operationId: unlockWvvnScanner
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnDeviceInput" }
+      responses:
+        "200":
+          description: Scanner authorized
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnScannerState" }
+  /wvvn/scanner/lock:
+    post:
+      operationId: lockWvvnScanner
+      responses:
+        "204": { description: Scanner locked }
+  /wvvn/devices/{id}:
+    delete:
+      operationId: revokeWvvnDevice
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "204": { description: Device revoked }
+  /wvvn/scanner/lookup:
+    get:
+      operationId: lookupWvvnArticle
+      parameters:
+        - { name: code, in: query, required: true, schema: { type: string } }
+      responses:
+        "200":
+          description: Unambiguous article match
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnLookup" }
+  /wvvn/scanner/sessions:
+    post:
+      operationId: createWvvnSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnSessionInput" }
+      responses:
+        "200":
+          description: Existing or new own open list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnSession" }
+  /wvvn/sessions/{id}:
+    get:
+      operationId: getWvvnSession
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: List with positions
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnSession" }
+  /wvvn/scanner/sessions/{id}/items:
+    post:
+      operationId: addWvvnItem
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnItemInput" }
+      responses:
+        "200":
+          description: List after idempotent addition
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnSession" }
+  /wvvn/scanner/sessions/{id}/items/{itemId}:
+    delete:
+      operationId: deleteWvvnItem
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+        - { name: itemId, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Updated own open list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnSession" }
+  /wvvn/scanner/sessions/{id}/finalize:
+    post:
+      operationId: finalizeWvvnSession
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Closed immutable list
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnSession" }
+  /wvvn/settings:
+    put:
+      operationId: updateWvvnSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnSettings" }
+      responses:
+        "200":
+          description: Saved module settings
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnSettings" }
+  /wvvn/articles/{id}:
+    put:
+      operationId: updateWvvnArticle
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnArticleInput" }
+      responses:
+        "200":
+          description: Shared warehouse article updated
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnArticle" }
+  /wvvn/import/preview:
+    post:
+      operationId: previewWvvnImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnImportInput" }
+      responses:
+        "200":
+          description: Non-mutating SQL data preview
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnImportPreview" }
+  /wvvn/import/commit:
+    post:
+      operationId: commitWvvnImport
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnImportInput" }
+      responses:
+        "200":
+          description: Transactional import
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnImportPreview" }
+  /wvvn/reports/send:
+    post:
+      operationId: sendWvvnReports
+      responses:
+        "200":
+          description: Pending report processing outcome
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: { type: string }
+  /wvvn/sessions/{id}/csv:
+    get:
+      operationId: downloadWvvnSessionCsv
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Aggregated CSV
+          content:
+            text/csv:
+              schema: { type: string }
+  /wvvn/reports/{id}/csv:
+    get:
+      operationId: downloadWvvnReportCsv
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      responses:
+        "200":
+          description: Immutable report CSV
+          content:
+            text/csv:
+              schema: { type: string }
   /pallet-purchases:
     get:
       operationId: listPalletPurchases
@@ -1596,6 +1811,170 @@ paths:
 
 components:
   schemas:
+    WvvnMode:
+      type: string
+      enum: [WERKSVERKAUF, VERNICHTUNG]
+    WvvnSessionInput:
+      type: object
+      required: [mode, netto, kware]
+      properties:
+        mode: { $ref: "#/components/schemas/WvvnMode" }
+        netto: { type: boolean }
+        kware: { type: boolean }
+    WvvnItemInput:
+      type: object
+      required: [code, quantity, requestId]
+      properties:
+        code: { type: string, minLength: 1, maxLength: 150 }
+        quantity: { type: number, exclusiveMinimum: 0, maximum: 1000000 }
+        requestId: { type: string, minLength: 16, maxLength: 100 }
+    WvvnItem:
+      type: object
+      required: [id, articleNumber, articleName, scannedCode, unit, quantity, veFactor, pieces, createdAt]
+      properties:
+        id: { type: integer }
+        articleNumber: { type: string }
+        articleName: { type: string }
+        scannedCode: { type: string }
+        unit: { type: string, enum: [STK, VE] }
+        quantity: { type: number }
+        veFactor: { type: number }
+        pieces: { type: number }
+        createdAt: { type: string }
+    WvvnSession:
+      type: object
+      required: [id, mode, netto, kware, status, actor, createdAt, finishedAt, itemCount, pieces, legacy, items]
+      properties:
+        id: { type: integer }
+        mode: { $ref: "#/components/schemas/WvvnMode" }
+        netto: { type: boolean }
+        kware: { type: boolean }
+        status: { type: string, enum: [open, done] }
+        actor: { type: string }
+        createdAt: { type: string }
+        finishedAt: { type: ["string", "null"] }
+        itemCount: { type: integer }
+        pieces: { type: number }
+        legacy: { type: boolean }
+        items: { type: array, items: { $ref: "#/components/schemas/WvvnItem" } }
+    WvvnArticleInput:
+      type: object
+      required: [number, name, ean, veEan, veFactor, active, expectedUpdatedAt]
+      properties:
+        number: { type: string, minLength: 1, maxLength: 150 }
+        name: { type: string, maxLength: 255 }
+        ean: { type: string, maxLength: 100 }
+        veEan: { type: string, maxLength: 100 }
+        veFactor: { type: number, exclusiveMinimum: 0, maximum: 1000000 }
+        active: { type: boolean }
+        expectedUpdatedAt: { type: string }
+    WvvnArticle:
+      type: object
+      required: [id, number, name, ean, veEan, veFactor, active, updatedAt]
+      properties:
+        id: { type: integer }
+        number: { type: string }
+        name: { type: string }
+        ean: { type: string }
+        veEan: { type: string }
+        veFactor: { type: number }
+        active: { type: boolean }
+        updatedAt: { type: string }
+        legacyEan: { type: string }
+        legacyVeEan: { type: string }
+        importNote: { type: string }
+    WvvnLookup:
+      type: object
+      required: [article, unit, autoAdd]
+      properties:
+        article: { $ref: "#/components/schemas/WvvnArticle" }
+        unit: { type: string, enum: [STK, VE] }
+        autoAdd: { type: boolean }
+    WvvnSettings:
+      type: object
+      required: [autoAddEan, defaultKware, deviceHours, mailEnabled, mailTime, salesRecipients, destructionRecipients]
+      properties:
+        autoAddEan: { type: boolean }
+        defaultKware: { type: boolean }
+        deviceHours: { type: ["integer", "null"], minimum: 1, maximum: 8760 }
+        mailEnabled: { type: boolean }
+        mailTime: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+        salesRecipients: { type: string, maxLength: 2000 }
+        destructionRecipients: { type: string, maxLength: 2000 }
+    WvvnDeviceInput:
+      type: object
+      required: [label]
+      properties:
+        label: { type: string, minLength: 1, maxLength: 100 }
+    WvvnDevice:
+      type: object
+      required: [id, label, expiresAt, revokedAt, createdAt]
+      properties:
+        id: { type: integer }
+        label: { type: string }
+        expiresAt: { type: ["string", "null"] }
+        revokedAt: { type: ["string", "null"] }
+        createdAt: { type: string }
+    WvvnScannerState:
+      type: object
+      required: [unlocked, device, sessions, autoAddEan, defaultKware]
+      properties:
+        unlocked: { type: boolean }
+        device: { oneOf: [{ $ref: "#/components/schemas/WvvnDevice" }, { type: "null" }] }
+        sessions: { type: array, items: { $ref: "#/components/schemas/WvvnSession" } }
+        autoAddEan: { type: boolean }
+        defaultKware: { type: boolean }
+    WvvnReport:
+      type: object
+      required: [id, mode, reportDate, runningNo, status, sentAt, error, legacy]
+      properties:
+        id: { type: integer }
+        mode: { $ref: "#/components/schemas/WvvnMode" }
+        reportDate: { type: string }
+        runningNo: { type: integer }
+        status: { type: string }
+        sentAt: { type: ["string", "null"] }
+        error: { type: string }
+        legacy: { type: boolean }
+    WvvnEvent:
+      type: object
+      required: [id, actor, action, detail, createdAt]
+      properties:
+        id: { type: integer }
+        actor: { type: string }
+        action: { type: string }
+        detail: { type: string }
+        createdAt: { type: string }
+    WvvnState:
+      type: object
+      required: [sessions, articles, reports, devices, events, settings, truncated]
+      properties:
+        sessions: { type: array, items: { $ref: "#/components/schemas/WvvnSession" } }
+        articles: { type: array, items: { $ref: "#/components/schemas/WvvnArticle" } }
+        reports: { type: array, items: { $ref: "#/components/schemas/WvvnReport" } }
+        devices: { type: array, items: { $ref: "#/components/schemas/WvvnDevice" } }
+        events: { type: array, items: { $ref: "#/components/schemas/WvvnEvent" } }
+        settings: { oneOf: [{ $ref: "#/components/schemas/WvvnSettings" }, { type: "null" }] }
+        truncated: { type: boolean }
+    WvvnImportInput:
+      type: object
+      required: [sql]
+      properties:
+        sql: { type: string, minLength: 1, maxLength: 20000000 }
+        previewHash: { type: string }
+    WvvnImportPreview:
+      type: object
+      required: [articles, sessions, items, reports, openSessions, conflicts, warnings, alreadyImported, previewHash]
+      properties:
+        articles: { type: integer }
+        sessions: { type: integer }
+        items: { type: integer }
+        reports: { type: integer }
+        openSessions: { type: integer }
+        conflicts: { type: array, items: { type: string } }
+        warnings: { type: array, items: { type: string } }
+        alreadyImported: { type: boolean }
+        previewHash: { type: string }
     PalletPurchaseInput:
       type: object
       required: [purchaseDate, amount, speditionName, reference, note]
