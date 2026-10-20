@@ -16,7 +16,7 @@ export interface WvvnSettings {
      */
   deviceHours: number | null;
   mailEnabled: boolean;
-  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  /** @pattern ^00:00$ */
   mailTime: string;
   /** @maxLength 2000 */
   salesRecipients: string;

@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import {
   GetWvvnStateResponse, GetWvvnScannerStateResponse, CreateWvvnSessionBody, AddWvvnItemBody,
   UpdateWvvnSettingsBody, UpdateWvvnArticleBody, UnlockWvvnScannerBody,
-  PreviewWvvnImportBody, CommitWvvnImportBody, GetWvvnSessionResponse, LookupWvvnArticleResponse,
+  PreviewWvvnImportBody, CommitWvvnImportBody, GetWvvnSessionResponse, LookupWvvnArticleResponse, UpdateWvvnSessionBody,
 } from "@workspace/api-zod";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
@@ -12,6 +12,7 @@ import { articles, article, audit, buildCsv, defaults, device, iso, quantityPiec
 import { commitImport, prepareImport } from "../lib/wvvn/import";
 import { recipients, sendReports } from "../lib/wvvn/reports";
 import { checkData, records } from "../lib/einlagerung/model";
+import { editCompletedSession } from "../lib/wvvn/edit";
 
 const router = Router();
 const actor = (req: Request) => req.session.username || "COMET";
@@ -72,15 +73,15 @@ router.get("/wvvn/state", requireAuth, handler(async (req, res) => {
   const from = date(req.query.from), to = date(req.query.to);
   if (from && to && from > to) throw new WvvnError("Von-Datum muss vor dem Bis-Datum liegen.");
   const result = await transaction(async (c) => {
-    const view = permissions["wvvn.view"] || permissions["wvvn.export"];
+    const view = permissions["wvvn.view"] || permissions["wvvn.export"] || permissions["wvvn.edit"];
     const list = view ? await c.query(`SELECT s.*,count(i.id)::integer AS item_count,COALESCE(sum(i.pieces),0) AS pieces
       FROM wvvn_sessions s LEFT JOIN wvvn_items i ON i.session_id=s.id AND i.deleted_at IS NULL
-      WHERE ($1::text IS NULL OR s.created_at>=($1::date::timestamp AT TIME ZONE 'Europe/Berlin'))
-        AND ($2::text IS NULL OR s.created_at<(($2::date+1)::timestamp AT TIME ZONE 'Europe/Berlin'))
-      GROUP BY s.id ORDER BY s.created_at DESC,s.id DESC LIMIT 301`, [from, to]) : { rows: [] };
+      WHERE ($1::text IS NULL OR COALESCE(s.finished_at,s.created_at)>=($1::date::timestamp AT TIME ZONE 'Europe/Berlin'))
+        AND ($2::text IS NULL OR COALESCE(s.finished_at,s.created_at)<(($2::date+1)::timestamp AT TIME ZONE 'Europe/Berlin'))
+      GROUP BY s.id ORDER BY COALESCE(s.finished_at,s.created_at) DESC,s.id DESC LIMIT 301`, [from, to]) : { rows: [] };
     return {
       sessions: list.rows.slice(0, 300).map((r) => session(r)), truncated: list.rows.length > 300,
-      articles: permissions["wvvn.articles"] || permissions["wvvn.scan"] || permissions["wvvn.view"] ? await articles(c) : [],
+      articles: permissions["wvvn.articles"] || permissions["wvvn.scan"] || permissions["wvvn.view"] || permissions["wvvn.edit"] ? await articles(c) : [],
       reports: view || permissions["wvvn.settings"] ? (await c.query("SELECT * FROM wvvn_reports ORDER BY report_date DESC,id DESC LIMIT 200")).rows.map(report) : [],
       devices: permissions["wvvn.devices"] ? (await c.query("SELECT * FROM wvvn_devices ORDER BY id DESC LIMIT 200")).rows.map(device) : [],
       events: permissions["wvvn.view"] ? (await c.query("SELECT * FROM wvvn_events ORDER BY id DESC LIMIT 300")).rows.map((r) => ({ id: r.id, actor: r.actor, action: r.action, detail: r.detail, createdAt: iso(r.created_at) })) : [],
@@ -109,8 +110,11 @@ router.delete("/wvvn/devices/:id", requireAuth, handler(async (req, res) => {
 }));
 router.get("/wvvn/scanner/lookup", handler(async (req, res) => {
   const result = await transaction(async (c) => {
-    await scannerIdentity(c, req, res);
-    return resolveArticle(await articles(c), cleanCode(req.query.code), (await settings(c)).autoAddEan);
+    const who = await scannerIdentity(c, req, res);
+    const s = await ownOpen(c, id(req.query.sessionId), who);
+    if (s.status !== "open") throw new WvvnError("Bitte zuerst einen offenen Vorgang auswählen.", 409);
+    if (!["scan", "manual"].includes(String(req.query.inputMethod))) throw new WvvnError("Eingabeart fehlt.");
+    return resolveArticle(await articles(c), cleanCode(req.query.code), req.query.inputMethod === "scan");
   }); res.json(LookupWvvnArticleResponse.parse(result));
 }));
 router.post("/wvvn/scanner/sessions", handler(async (req, res) => {
@@ -132,14 +136,16 @@ router.post("/wvvn/scanner/sessions/:id/items", handler(async (req, res) => {
     const who = await scannerIdentity(c, req, res), s = await ownOpen(c, sessionId, who);
     const old = await c.query("SELECT * FROM wvvn_items WHERE session_id=$1 AND request_id=$2", [sessionId, b.requestId]);
     if (old.rowCount) {
-      if (old.rows[0].scanned_code !== code || Number(old.rows[0].quantity) !== b.quantity) throw new WvvnError("Wiederholte Anfrage hat abweichende Daten.", 409);
+      if (old.rows[0].scanned_code !== code || Number(old.rows[0].quantity) !== b.quantity || old.rows[0].input_method !== b.inputMethod) throw new WvvnError("Wiederholte Anfrage hat abweichende Daten.", 409);
       return sessionDetail(c, sessionId);
     }
     if (s.status !== "open") throw new WvvnError("Liste ist bereits abgeschlossen.", 409);
     const found = resolveArticle(await articles(c), code, false);
+    if (b.inputMethod === "scan" && code !== found.article.number && b.quantity !== 1)
+      throw new WvvnError("Ein EAN-Scan erfasst genau ein Stück, ein VE-EAN-Scan genau eine VE. Für abweichende Mengen manuelle Eingabe verwenden.");
     const pieces = quantityPieces(b.quantity, found.article.veFactor, found.unit);
-    await c.query(`INSERT INTO wvvn_items(session_id,article_number,article_name,scanned_code,unit,quantity,ve_factor,pieces,request_id)
-      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, [sessionId, found.article.number, found.article.name, code, found.unit, b.quantity, found.article.veFactor, pieces, b.requestId]);
+    await c.query(`INSERT INTO wvvn_items(session_id,article_number,article_name,scanned_code,unit,quantity,ve_factor,pieces,request_id,input_method)
+      VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [sessionId, found.article.number, found.article.name, code, found.unit, b.quantity, found.article.veFactor, pieces, b.requestId,b.inputMethod]);
     await audit(c, who.actor, "Position erfasst", `Liste #${sessionId}, Artikel ${found.article.number}, ${b.quantity} ${found.unit} = ${pieces} Stück.`);
     return sessionDetail(c, sessionId);
   }); res.json(GetWvvnSessionResponse.parse(result));
@@ -167,8 +173,13 @@ router.post("/wvvn/scanner/sessions/:id/finalize", handler(async (req, res) => {
   }); res.json(GetWvvnSessionResponse.parse(result));
 }));
 router.get("/wvvn/sessions/:id", requireAuth, handler(async (req, res) => {
-  if (!await can(req.session.role!, "wvvn.view")) await requirePermission(req, "wvvn.export");
+  if (!await can(req.session.role!, "wvvn.view") && !await can(req.session.role!, "wvvn.export")) await requirePermission(req, "wvvn.edit");
   res.json(GetWvvnSessionResponse.parse(await transaction((c) => sessionDetail(c, id(req.params.id)))));
+}));
+router.put("/wvvn/sessions/:id", requireAuth, handler(async (req, res) => {
+  await requirePermission(req, "wvvn.edit");
+  const body = UpdateWvvnSessionBody.parse(req.body);
+  res.json(GetWvvnSessionResponse.parse(await transaction((c) => editCompletedSession(c, id(req.params.id), body, actor(req)))));
 }));
 router.put("/wvvn/articles/:id", requireAuth, handler(async (req, res) => {
   await requirePermission(req, "wvvn.articles");

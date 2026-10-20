@@ -100,7 +100,7 @@ export function Reports({ reports, canSend, canExport }: { reports: WvvnReport[]
   };
   return (
     <div className="space-y-3">
-      <p className="text-xs text-slate-500">Berichte erfassen alle noch nicht gemeldeten, abgeschlossenen Listen (ohne Archiv) tagesübergreifend bis zum Sendezeitpunkt, je Modus ein Bericht. Später abgeschlossene Listen folgen im nächsten Bericht. Automatisch höchstens einmal je Berliner Tag und Modus.</p>
+      <p className="text-xs text-slate-500">Berichte erfassen alle noch nicht gemeldeten, abgeschlossenen Listen (ohne Archiv) tagesübergreifend (automatisch: bis Ende des Vortags, nie der laufende Tag; manuell: bis jetzt), je Modus ein Bericht. Später abgeschlossene Listen folgen im nächsten Bericht. Automatisch höchstens einmal je Berliner Tag und Modus.</p>
       {canSend && <Button onClick={send} disabled={m.isPending} data-testid="button-send-reports">{m.isPending ? "Wird gesendet…" : "Offene Berichte jetzt senden / erneut versuchen"}</Button>}
       {msg && <Msg ok={msg.ok}>{msg.t}</Msg>}
       {reports.length === 0 ? <div className="rounded-lg border bg-white p-10 text-center text-sm text-slate-500">Noch keine Berichte.</div> : (
@@ -126,26 +126,26 @@ export function SettingsPanel({ settings }: { settings: WvvnSettings | null }) {
   const inv = useInvalidateWvvn();
   const [msg, setMsg] = useState<{ ok: boolean; t: string } | null>(null);
   if (!d) return <Msg>Einstellungen nicht verfügbar.</Msg>;
+  const hasRcpt = [d.sales, d.destr].every((v) => v.split(/[;,\n]/).some((x) => x.trim()));
   const save = () => {
     const h = d.hours.trim() === "" ? null : Number(d.hours);
     if (h != null && !(Number.isInteger(h) && h >= 1 && h <= 8760)) { setMsg({ ok: false, t: "Gerätelaufzeit: 1–8760 Stunden oder leer (unbegrenzt)." }); return; }
-    if (!/^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(d.mailTime)) { setMsg({ ok: false, t: "Sendezeit im Format HH:mm." }); return; }
     const bad = [d.sales, d.destr].flatMap((x) => x.split(";").map((e) => e.trim()).filter(Boolean)).find((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
     if (bad) { setMsg({ ok: false, t: `Ungültige E-Mail-Adresse: ${bad}` }); return; }
+    if (d.mailEnabled && !hasRcpt) { setMsg({ ok: false, t: "Bitte Empfänger für beide Vorgangsarten eintragen oder den Versand ausdrücklich deaktivieren." }); return; }
     setMsg(null);
-    m.mutate({ data: { autoAddEan: d.autoAddEan, defaultKware: d.defaultKware, deviceHours: h, mailEnabled: d.mailEnabled, mailTime: d.mailTime, salesRecipients: d.sales, destructionRecipients: d.destr } },
+    m.mutate({ data: { autoAddEan: true, defaultKware: true, deviceHours: h, mailEnabled: d.mailEnabled, mailTime: "00:00", salesRecipients: d.sales, destructionRecipients: d.destr } },
       { onSuccess: (r) => { apply(r); setMsg({ ok: true, t: "Gespeichert." }); inv(); }, onError: (e) => setMsg({ ok: false, t: errMsg(e) }) });
   };
   return (
     <Box>
-      <label className="flex items-center gap-2 text-sm"><Switch checked={d.autoAddEan} onCheckedChange={(v) => setD({ ...d, autoAddEan: v })} data-testid="switch-autoadd" />EAN / VE-EAN sofort mit Menge 1 erfassen</label>
-      <label className="flex items-center gap-2 text-sm"><Switch checked={d.defaultKware} onCheckedChange={(v) => setD({ ...d, defaultKware: v })} />K-Ware standardmäßig aktiv</label>
-      <div className="max-w-xs"><Label>Gerätelaufzeit (Stunden, leer = unbegrenzt)</Label><Input inputMode="numeric" value={d.hours} onChange={(e) => setD({ ...d, hours: e.target.value })} data-testid="input-device-hours" /></div>
-      <label className="flex items-center gap-2 text-sm"><Switch checked={d.mailEnabled} onCheckedChange={(v) => setD({ ...d, mailEnabled: v })} data-testid="switch-mail" />Automatischer E-Mail-Bericht</label>
-      <div className="max-w-xs"><Label>Sendezeit (Berlin, HH:mm)</Label><Input value={d.mailTime} onChange={(e) => setD({ ...d, mailTime: e.target.value })} placeholder="17:00" data-testid="input-mail-time" /></div>
+            <div className="max-w-xs"><Label>Gerätelaufzeit (Stunden, leer = unbegrenzt)</Label><Input inputMode="numeric" value={d.hours} onChange={(e) => setD({ ...d, hours: e.target.value })} data-testid="input-device-hours" /></div>
+      <label className="flex items-center gap-2 text-sm"><Switch disabled={!hasRcpt && !d.mailEnabled} checked={d.mailEnabled} onCheckedChange={(v) => setD({ ...d, mailEnabled: v })} data-testid="switch-mail" />Automatischer E-Mail-Bericht (Empfänger für beide Vorgangsarten erforderlich)</label>
+      <div className="max-w-xs"><Label>Sendezeit (fest)</Label><Input value="00:00 Uhr Europe/Berlin" readOnly disabled data-testid="input-mail-time" /></div>
+      <p className="text-xs text-slate-500">Der automatische Bericht (CSV je Modus) enthält die Listen des abgeschlossenen Vortags sowie ältere ungemeldete Listen, nie den laufenden Tag. Je Modus eigene Empfänger; dieselbe Adresse darf in beiden stehen.</p>
       <div><Label>Empfänger Werksverkauf (mit Semikolon trennen)</Label><Input value={d.sales} maxLength={2000} onChange={(e) => setD({ ...d, sales: e.target.value })} data-testid="input-sales-recipients" /></div>
       <div><Label>Empfänger Vernichtung (mit Semikolon trennen)</Label><Input value={d.destr} maxLength={2000} onChange={(e) => setD({ ...d, destr: e.target.value })} data-testid="input-destruction-recipients" /></div>
-      <p className="text-xs text-slate-500">Der Tagesbericht enthält je Vorgangsart alle noch nicht gemeldeten abgeschlossenen Listen bis zum Versandzeitpunkt, auch aus früheren Tagen. Spätere Abschlüsse erscheinen im nächsten Bericht. Altdaten werden nicht erneut automatisch versendet. Änderungen der Gerätelaufzeit gelten erst bei erneuter Freigabe.</p>
+      <p className="text-xs text-slate-500">Um 00:00 Uhr werden die bis zum Tageswechsel abgeschlossenen Listen gemeldet. Abschlüsse des neuen Tages erscheinen erst in dessen Tagesabschluss. Der manuelle Versand berücksichtigt alle bislang ungemeldeten Abschlüsse bis jetzt. Altdaten werden nicht erneut automatisch versendet. Änderungen der Gerätelaufzeit gelten erst bei erneuter Freigabe.</p>
       {msg && <Msg ok={msg.ok}>{msg.t}</Msg>}
       <Button onClick={save} disabled={m.isPending} data-testid="button-save-settings">Einstellungen speichern</Button>
     </Box>

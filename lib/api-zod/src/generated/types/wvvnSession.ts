@@ -10,6 +10,8 @@ import type { WvvnMode } from './wvvnMode';
 import type { WvvnSessionStatus } from './wvvnSessionStatus';
 
 export interface WvvnSession {
+  revision: number;
+  reported: boolean;
   id: number;
   mode: WvvnMode;
   netto: boolean;

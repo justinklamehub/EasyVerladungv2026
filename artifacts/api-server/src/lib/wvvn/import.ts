@@ -100,8 +100,8 @@ export async function prepareImport(c: PoolClient, sql: string) {
       (SELECT count(*) FROM wvvn_sessions WHERE legacy_id IS NOT NULL) +
       (SELECT count(*) FROM wvvn_items WHERE legacy_id IS NOT NULL) AS count`);
     if (Number(overlap.rows[0].count)) conflicts.push("Es wurden bereits andere WVVN-Altdaten importiert. Abweichenden Export nicht ungeprüft darüber importieren.");
-    const duplicateNo = data.reports.length ? await c.query("SELECT mode,running_no FROM wvvn_reports WHERE legacy_id IS NULL") : { rows: [] };
-    if (duplicateNo.rows.some((r) => data.reports.some((p) => p.mode === r.mode && p.running_no === r.running_no))) conflicts.push("Laufnummer eines Altberichts wird bereits von einem neuen Bericht verwendet.");
+    const duplicateRows: Row[] = data.reports.length ? (await c.query("SELECT mode,running_no FROM wvvn_reports WHERE legacy_id IS NULL")).rows : [];
+    if (duplicateRows.some((r) => data.reports.some((p) => p.mode === r.mode && p.running_no === r.running_no))) conflicts.push("Laufnummer eines Altberichts wird bereits von einem neuen Bericht verwendet.");
   }
   const previewHash = digest(fileHash + JSON.stringify(existing.map((r) => [r.id, r.updated_at, r.data])));
   return { data, merged, fileHash, preview: { articles: data.articles.length, sessions: data.sessions.length,

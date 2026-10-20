@@ -113,6 +113,7 @@ import type {
   WvvnLookup,
   WvvnScannerState,
   WvvnSession,
+  WvvnSessionEdit,
   WvvnSessionInput,
   WvvnSettings,
   WvvnState
@@ -613,6 +614,72 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateWvvnSessionMutationOptions(options));
+    }
+
+export const getUpdateWvvnSessionUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/sessions/${id}`
+}
+
+export const updateWvvnSession = async (id: number,
+    wvvnSessionEdit: WvvnSessionEdit, options?: RequestInit): Promise<WvvnSession> => {
+
+  return customFetch<WvvnSession>(getUpdateWvvnSessionUrl(id),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnSessionEdit,)
+  }
+);}
+
+
+
+
+export const getUpdateWvvnSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWvvnSession>>, TError,{id: number;data: BodyType<WvvnSessionEdit>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof updateWvvnSession>>, TError,{id: number;data: BodyType<WvvnSessionEdit>}, TContext> => {
+
+const mutationKey = ['updateWvvnSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof updateWvvnSession>>, {id: number;data: BodyType<WvvnSessionEdit>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  updateWvvnSession(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UpdateWvvnSessionMutationResult = NonNullable<Awaited<ReturnType<typeof updateWvvnSession>>>
+    export type UpdateWvvnSessionMutationBody = BodyType<WvvnSessionEdit>
+    export type UpdateWvvnSessionMutationError = ErrorType<unknown>
+
+    export const useUpdateWvvnSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateWvvnSession>>, TError,{id: number;data: BodyType<WvvnSessionEdit>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof updateWvvnSession>>,
+        TError,
+        {id: number;data: BodyType<WvvnSessionEdit>},
+        TContext
+      > => {
+      return useMutation(getUpdateWvvnSessionMutationOptions(options));
     }
 
 export const getGetWvvnSessionUrl = (id: number,) => {

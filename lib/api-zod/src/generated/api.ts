@@ -15,7 +15,7 @@ export const GetWvvnStateQueryParams = zod.object({
 
 export const getWvvnStateResponseSettingsOneDeviceHoursMax = 8760;
 
-export const getWvvnStateResponseSettingsOneMailTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const getWvvnStateResponseSettingsOneMailTimeRegExp = new RegExp('^00:00$');
 export const getWvvnStateResponseSettingsOneSalesRecipientsMax = 2000;
 
 export const getWvvnStateResponseSettingsOneDestructionRecipientsMax = 2000;
@@ -24,6 +24,8 @@ export const getWvvnStateResponseSettingsOneDestructionRecipientsMax = 2000;
 
 export const GetWvvnStateResponse = zod.object({
   "sessions": zod.array(zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -107,6 +109,8 @@ export const GetWvvnScannerStateResponse = zod.object({
   "createdAt": zod.string()
 }),zod.null()]),
   "sessions": zod.array(zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -153,6 +157,8 @@ export const UnlockWvvnScannerResponse = zod.object({
   "createdAt": zod.string()
 }),zod.null()]),
   "sessions": zod.array(zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -187,7 +193,9 @@ export const RevokeWvvnDeviceParams = zod.object({
 
 
 export const LookupWvvnArticleQueryParams = zod.object({
-  "code": zod.coerce.string()
+  "code": zod.coerce.string(),
+  "sessionId": zod.coerce.number(),
+  "inputMethod": zod.enum(['scan', 'manual'])
 })
 
 export const LookupWvvnArticleResponse = zod.object({
@@ -216,6 +224,68 @@ export const CreateWvvnSessionBody = zod.object({
 })
 
 export const CreateWvvnSessionResponse = zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
+  "id": zod.number(),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "status": zod.enum(['open', 'done']),
+  "actor": zod.string(),
+  "createdAt": zod.string(),
+  "finishedAt": zod.string().nullable(),
+  "itemCount": zod.number(),
+  "pieces": zod.number(),
+  "legacy": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number(),
+  "articleNumber": zod.string(),
+  "articleName": zod.string(),
+  "scannedCode": zod.string(),
+  "unit": zod.enum(['STK', 'VE']),
+  "quantity": zod.number(),
+  "veFactor": zod.number(),
+  "pieces": zod.number(),
+  "createdAt": zod.string()
+}))
+})
+
+
+export const UpdateWvvnSessionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateWvvnSessionBodyRevisionMin = 0;
+
+export const updateWvvnSessionBodyReasonMin = 3;
+export const updateWvvnSessionBodyReasonMax = 1000;
+
+export const updateWvvnSessionBodyItemsItemCodeMax = 150;
+
+export const updateWvvnSessionBodyItemsItemQuantityExclusiveMin = 0;
+export const updateWvvnSessionBodyItemsItemQuantityMax = 1000000;
+
+export const updateWvvnSessionBodyItemsMax = 2000;
+
+
+
+export const UpdateWvvnSessionBody = zod.object({
+  "revision": zod.number().min(updateWvvnSessionBodyRevisionMin),
+  "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
+  "netto": zod.boolean(),
+  "kware": zod.boolean(),
+  "reason": zod.string().min(updateWvvnSessionBodyReasonMin).max(updateWvvnSessionBodyReasonMax),
+  "acknowledgeReported": zod.boolean(),
+  "items": zod.array(zod.object({
+  "id": zod.number().optional(),
+  "code": zod.string().min(1).max(updateWvvnSessionBodyItemsItemCodeMax).optional(),
+  "quantity": zod.number().gt(updateWvvnSessionBodyItemsItemQuantityExclusiveMin).max(updateWvvnSessionBodyItemsItemQuantityMax)
+})).min(1).max(updateWvvnSessionBodyItemsMax)
+})
+
+export const UpdateWvvnSessionResponse = zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -246,6 +316,8 @@ export const GetWvvnSessionParams = zod.object({
 })
 
 export const GetWvvnSessionResponse = zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -286,12 +358,15 @@ export const addWvvnItemBodyRequestIdMax = 100;
 
 
 export const AddWvvnItemBody = zod.object({
+  "inputMethod": zod.enum(['scan', 'manual']),
   "code": zod.string().min(1).max(addWvvnItemBodyCodeMax),
   "quantity": zod.number().gt(addWvvnItemBodyQuantityExclusiveMin).max(addWvvnItemBodyQuantityMax),
   "requestId": zod.string().min(addWvvnItemBodyRequestIdMin).max(addWvvnItemBodyRequestIdMax)
 })
 
 export const AddWvvnItemResponse = zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -323,6 +398,8 @@ export const DeleteWvvnItemParams = zod.object({
 })
 
 export const DeleteWvvnItemResponse = zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -353,6 +430,8 @@ export const FinalizeWvvnSessionParams = zod.object({
 })
 
 export const FinalizeWvvnSessionResponse = zod.object({
+  "revision": zod.number(),
+  "reported": zod.boolean(),
   "id": zod.number(),
   "mode": zod.enum(['WERKSVERKAUF', 'VERNICHTUNG']),
   "netto": zod.boolean(),
@@ -380,7 +459,7 @@ export const FinalizeWvvnSessionResponse = zod.object({
 
 export const updateWvvnSettingsBodyDeviceHoursMax = 8760;
 
-export const updateWvvnSettingsBodyMailTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateWvvnSettingsBodyMailTimeRegExp = new RegExp('^00:00$');
 export const updateWvvnSettingsBodySalesRecipientsMax = 2000;
 
 export const updateWvvnSettingsBodyDestructionRecipientsMax = 2000;
@@ -399,7 +478,7 @@ export const UpdateWvvnSettingsBody = zod.object({
 
 export const updateWvvnSettingsResponseDeviceHoursMax = 8760;
 
-export const updateWvvnSettingsResponseMailTimeRegExp = new RegExp('^([01][0-9]|2[0-3]):[0-5][0-9]$');
+export const updateWvvnSettingsResponseMailTimeRegExp = new RegExp('^00:00$');
 export const updateWvvnSettingsResponseSalesRecipientsMax = 2000;
 
 export const updateWvvnSettingsResponseDestructionRecipientsMax = 2000;

@@ -5,7 +5,10 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+import type { LookupWvvnArticleInputMethod } from './lookupWvvnArticleInputMethod';
 
 export type LookupWvvnArticleParams = {
 code: string;
+sessionId: number;
+inputMethod: LookupWvvnArticleInputMethod;
 };

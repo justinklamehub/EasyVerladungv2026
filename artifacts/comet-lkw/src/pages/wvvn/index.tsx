@@ -30,7 +30,7 @@ export default function WvvnPage() {
   const s = q.data;
   const tabs = [
     { id: "scan", label: "Erfassen", ok: has(P.scan) },
-    { id: "protokoll", label: "Protokoll", ok: has(P.view) || has(P.export) },
+    { id: "protokoll", label: "Protokoll", ok: has(P.view) || has(P.export) || has(P.edit) },
     { id: "artikel", label: "Artikel", ok: has(P.articles) || has(P.view) },
     { id: "berichte", label: "Berichte", ok: has(P.view) || has(P.settings) || has(P.export) },
     { id: "geraete", label: "Geräte", ok: has(P.devices) },
@@ -61,7 +61,7 @@ export default function WvvnPage() {
       {stateTab && q.isError && <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex items-center justify-between gap-3"><span>Daten konnten nicht geladen werden: {errMsg(q.error)}</span><Button size="sm" variant="outline" onClick={() => q.refetch()}>Erneut versuchen</Button></div>}
       {stateTab && q.isLoading && <div className="space-y-3"><Skeleton className="h-12" /><Skeleton className="h-48" /></div>}
       {active === "scan" && <Scan canDelete={has(P.delete)} canFinish={has(P.finish)} />}
-      {active === "protokoll" && <History sessions={s?.sessions ?? []} truncated={!!s?.truncated} from={from} to={to} setFrom={setFrom} setTo={setTo} canExport={has(P.export)} loading={q.isLoading} />}
+      {active === "protokoll" && <History sessions={s?.sessions ?? []} truncated={!!s?.truncated} from={from} to={to} setFrom={setFrom} setTo={setTo} canExport={has(P.export)} canEdit={has(P.edit)} loading={q.isLoading} />}
       {s && active === "artikel" && <Articles articles={s.articles} canEdit={has(P.articles)} />}
       {s && active === "berichte" && <Reports reports={s.reports} canSend={has(P.settings)} canExport={has(P.export)} />}
       {s && active === "geraete" && <Devices devices={s.devices} canRevoke={has(P.devices)} />}

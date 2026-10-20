@@ -4,7 +4,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 export const P = {
   view: "wvvn.view", scan: "wvvn.scan", delete: "wvvn.delete", finish: "wvvn.finish", devices: "wvvn.devices",
-  articles: "wvvn.articles", export: "wvvn.export", settings: "wvvn.settings", import: "wvvn.import",
+  articles: "wvvn.articles", export: "wvvn.export", settings: "wvvn.settings", import: "wvvn.import", edit: "wvvn.edit",
 } as const;
 
 export function useWvvnAccess() {
@@ -58,3 +58,5 @@ export async function downloadCsv(path: string, filename: string) {
   a.href = url; a.download = filename; document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 2000);
 }
+
+export const catLabel = (kware: boolean) => (kware ? "K-Ware" : "Retoure");

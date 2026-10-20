@@ -20,3 +20,15 @@ Historische offene Listen bleiben als offene Archivlisten erhalten, statt sie au
 **Why:** Der bereitgestellte Altbestand enthält offene Listen und einen widersprüchlichen Abschlusszeitpunkt bei offenem Status. Es gibt keine Grundlage, den tatsächlichen Arbeitsabschluss zu erfinden oder alte Gerätezuordnungen als neue Freigaben zu übernehmen.
 
 **How to apply:** Widersprüchliche Originalwerte erhalten und die fachliche Unklarheit kennzeichnen. Mehrdeutige EAN-Zuordnungen nicht auf Verdacht übernehmen; bestehende gemeinsame Stammdaten nicht ungeprüft überschreiben.
+
+Vor der ersten Artikelabfrage müssen Scannerbenutzer ausdrücklich „Werksverkauf“ oder „Vernichtung“ und „K-Ware“ oder „Retoure“ auswählen. Netto-Kunde ist optional. Ein einzelner EAN-Scan erfasst ein Stück; manuelle Eingabe verlangt eine Mengenabfrage. VE-EAN bezeichnet eine Verpackungseinheit.
+
+**Why:** Der Nutzer hat diese Reihenfolge und die Unterscheidung zwischen Scannen und manueller Eingabe ausdrücklich klargestellt; bloße vorbelegte Umschalter genügen nicht.
+
+**How to apply:** Ohne bestätigten Vorgang keine Suche oder Erfassung anbieten. K-Ware und Retoure sind Alternativen, keine voneinander unabhängigen Merkmale. Nach Abschluss stehen Artikel und Mengen in einer Liste bereit, die nur Benutzer mit einer eigenen Bearbeitungsberechtigung korrigieren können.
+
+Tageslisten sollen automatisch um 00:00 Uhr an einen einstellbaren Verteiler gehen, getrennt nach Werksverkauf und Vernichtung; eine gemeinsame E-Mail wäre ebenfalls zulässig.
+
+**Why:** Der Nutzer hat Mitternacht ausdrücklich als Tagesabschluss vorgegeben.
+
+**How to apply:** Den gerade abgeschlossenen lokalen Kalendertag melden, nicht versehentlich den neuen Tag. Historische Importlisten weiterhin nicht erneut automatisch melden. Ein fehlender Verteiler darf nicht durch eine geratene Empfängeradresse ersetzt werden.

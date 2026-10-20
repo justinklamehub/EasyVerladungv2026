@@ -5,8 +5,10 @@
  * COMET LKW-Verladungsverwaltung API
  * OpenAPI spec version: 0.1.0
  */
+import type { WvvnItemInputInputMethod } from './wvvnItemInputInputMethod';
 
 export interface WvvnItemInput {
+  inputMethod: WvvnItemInputInputMethod;
   /**
      * @minLength 1
      * @maxLength 150

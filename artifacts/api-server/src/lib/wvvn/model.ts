@@ -9,12 +9,12 @@ export type Row = Record<string, any>;
 export const settingsSchema = z.object({
   autoAddEan: z.boolean(), defaultKware: z.boolean(),
   deviceHours: z.number().int().min(1).max(8760).nullable(),
-  mailEnabled: z.boolean(), mailTime: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+  mailEnabled: z.boolean(), mailTime: z.literal("00:00"),
   salesRecipients: z.string().max(2000), destructionRecipients: z.string().max(2000),
 });
 export const defaults = {
   autoAddEan: true, defaultKware: true, deviceHours: null,
-  mailEnabled: false, mailTime: "16:00", salesRecipients: "", destructionRecipients: "",
+   mailEnabled: false, mailTime: "00:00", salesRecipients: "", destructionRecipients: "",
 };
 export const iso = (value: any): string => new Date(value).toISOString();
 export async function ensureWvvnTables() {
@@ -59,6 +59,16 @@ export async function ensureWvvnTables() {
       digest TEXT PRIMARY KEY, imported_at TIMESTAMPTZ NOT NULL DEFAULT now(), actor TEXT NOT NULL
     );
     ALTER TABLE wvvn_sessions ADD COLUMN IF NOT EXISTS legacy_data JSONB NOT NULL DEFAULT '{}';
+    ALTER TABLE wvvn_sessions ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE wvvn_items ADD COLUMN IF NOT EXISTS input_method TEXT NOT NULL DEFAULT 'manual';
+    ALTER TABLE wvvn_reports ADD COLUMN IF NOT EXISTS automatic_day TEXT;
+    CREATE UNIQUE INDEX IF NOT EXISTS wvvn_automatic_day ON wvvn_reports(mode,automatic_day) WHERE automatic_day IS NOT NULL;
+    CREATE TABLE IF NOT EXISTS wvvn_revisions (
+      id SERIAL PRIMARY KEY, session_id INTEGER NOT NULL REFERENCES wvvn_sessions(id),
+      revision INTEGER NOT NULL, actor TEXT NOT NULL, reason TEXT NOT NULL,
+      before_data JSONB NOT NULL, after_data JSONB NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+      UNIQUE(session_id,revision)
+    );
   `);
 }
 export async function transaction<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
@@ -74,7 +84,7 @@ export async function transaction<T>(fn: (c: PoolClient) => Promise<T>): Promise
 }
 export async function settings(c: PoolClient) {
   const r = await c.query("SELECT value FROM settings WHERE key='wvvn_settings'");
-  return r.rowCount ? settingsSchema.parse(JSON.parse(r.rows[0].value)) : { ...defaults };
+  return r.rowCount ? settingsSchema.parse({ ...JSON.parse(r.rows[0].value), mailTime: "00:00" }) : { ...defaults };
 }
 export async function audit(c: PoolClient, actor: string, action: string, detail: string) {
   await c.query("INSERT INTO wvvn_events(actor,action,detail) VALUES($1,$2,$3)", [actor, action, detail]);
@@ -125,7 +135,7 @@ export const session = (r: Row, items: WvvnItem[] = []): WvvnSession => ({
   id: r.id, mode: r.mode, netto: r.netto, kware: r.kware, status: r.status, actor: r.actor,
   createdAt: iso(r.created_at), finishedAt: r.finished_at ? iso(r.finished_at) : null,
   itemCount: Number(r.item_count ?? items.length), pieces: Number(r.pieces ?? items.reduce((n, i) => n + i.pieces, 0)),
-  legacy: r.legacy_id != null, items,
+  legacy: r.legacy_id != null, revision: Number(r.revision ?? 0), reported: r.report_id != null, items,
 });
 export async function sessionDetail(c: PoolClient, id: number) {
   const r = await c.query("SELECT * FROM wvvn_sessions WHERE id=$1", [id]);

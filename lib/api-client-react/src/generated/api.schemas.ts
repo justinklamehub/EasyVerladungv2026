@@ -19,7 +19,16 @@ export interface WvvnSessionInput {
   kware: boolean;
 }
 
+export type WvvnItemInputInputMethod = typeof WvvnItemInputInputMethod[keyof typeof WvvnItemInputInputMethod];
+
+
+export const WvvnItemInputInputMethod = {
+  scan: 'scan',
+  manual: 'manual',
+} as const;
+
 export interface WvvnItemInput {
+  inputMethod: WvvnItemInputInputMethod;
   /**
      * @minLength 1
      * @maxLength 150
@@ -66,6 +75,8 @@ export const WvvnSessionStatus = {
 } as const;
 
 export interface WvvnSession {
+  revision: number;
+  reported: boolean;
   id: number;
   mode: WvvnMode;
   netto: boolean;
@@ -79,6 +90,39 @@ export interface WvvnSession {
   pieces: number;
   legacy: boolean;
   items: WvvnItem[];
+}
+
+export type WvvnSessionEditItemsItem = {
+  id?: number;
+  /**
+     * @minLength 1
+     * @maxLength 150
+     */
+  code?: string;
+  /**
+     * @maximum 1000000
+     * @exclusiveMinimum 0
+     */
+  quantity: number;
+};
+
+export interface WvvnSessionEdit {
+  /** @minimum 0 */
+  revision: number;
+  mode: WvvnMode;
+  netto: boolean;
+  kware: boolean;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+  acknowledgeReported: boolean;
+  /**
+     * @minItems 1
+     * @maxItems 2000
+     */
+  items: WvvnSessionEditItemsItem[];
 }
 
 export interface WvvnArticleInput {
@@ -140,7 +184,7 @@ export interface WvvnSettings {
      */
   deviceHours: number | null;
   mailEnabled: boolean;
-  /** @pattern ^([01][0-9]|2[0-3]):[0-5][0-9]$ */
+  /** @pattern ^00:00$ */
   mailTime: string;
   /** @maxLength 2000 */
   salesRecipients: string;
@@ -1700,7 +1744,17 @@ to?: string;
 
 export type LookupWvvnArticleParams = {
 code: string;
+sessionId: number;
+inputMethod: LookupWvvnArticleInputMethod;
 };
+
+export type LookupWvvnArticleInputMethod = typeof LookupWvvnArticleInputMethod[keyof typeof LookupWvvnArticleInputMethod];
+
+
+export const LookupWvvnArticleInputMethod = {
+  scan: 'scan',
+  manual: 'manual',
+} as const;
 
 export type SendWvvnReports200 = {
   message: string;

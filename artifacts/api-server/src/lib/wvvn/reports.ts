@@ -1,4 +1,4 @@
-import { pool } from "@workspace/db";
+import { pool, type PoolClient } from "@workspace/db";
 import { createEmailTransport } from "../email";
 import { logger } from "../logger";
 import { audit, buildCsv, settings, transaction, WvvnError } from "./model";
@@ -13,6 +13,31 @@ export function berlinNow(now = new Date()) {
   const time = now.toLocaleTimeString("de-DE", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hour12: false });
   return { date, time };
 }
+export function reportWindow(now = new Date(), manual = false) {
+  const today = berlinNow(now).date;
+  const previous = new Date(`${today}T12:00:00Z`);
+  previous.setUTCDate(previous.getUTCDate() - 1);
+  return { date: manual ? today : previous.toISOString().slice(0, 10), cutoffDate: manual ? null : today };
+}
+/** Caller owns the transaction. This only creates the immutable snapshot; never sends mail. */
+export async function prepareReport(c: PoolClient, mode: string, now: Date, manual = false, actor = "Automatik") {
+  const { date, cutoffDate } = reportWindow(now, manual);
+  const pending = await c.query("SELECT * FROM wvvn_reports WHERE mode=$1 AND status IN ('pending','failed') ORDER BY id LIMIT 1", [mode]);
+  if (pending.rowCount) return pending.rows[0];
+  if (!manual && (await c.query("SELECT 1 FROM wvvn_reports WHERE mode=$1 AND automatic_day=$2", [mode, date])).rowCount) return null;
+  const closed = await c.query(`SELECT id FROM wvvn_sessions WHERE status='done' AND legacy_id IS NULL AND report_id IS NULL AND mode=$1
+    AND ($2::text IS NULL OR finished_at < ($2::date::timestamp AT TIME ZONE 'Europe/Berlin')) ORDER BY id`, [mode, cutoffDate]);
+  if (!closed.rowCount) return null;
+  const ids = closed.rows.map((row) => row.id);
+  const rows = await c.query(`SELECT i.*,s.netto,s.kware FROM wvvn_items i JOIN wvvn_sessions s ON s.id=i.session_id
+    WHERE s.id=ANY($1::integer[]) AND i.deleted_at IS NULL ORDER BY i.id`, [ids]);
+  const runningNo = Number((await c.query("SELECT COALESCE(MAX(running_no),0)+1 AS n FROM wvvn_reports WHERE mode=$1", [mode])).rows[0].n);
+  const r = await c.query(`INSERT INTO wvvn_reports(mode,report_date,running_no,status,csv,automatic_day)
+    VALUES($1,$2,$3,'pending',$4,$5) RETURNING *`, [mode, date, runningNo, buildCsv(rows.rows), manual ? null : date]);
+  await c.query("UPDATE wvvn_sessions SET report_id=$1 WHERE id=ANY($2::integer[])", [r.rows[0].id, ids]);
+  await audit(c, actor, "Tagesbericht erstellt", `${mode} Nr. ${runningNo}, ${ids.length} abgeschlossene Listen. ${manual ? "Manueller Versand bis jetzt." : `Tagesabschluss ${date} (Berlin), einschließlich älterer noch nicht gemeldeter Abschlüsse.`}`);
+  return r.rows[0];
+}
 // A separate session advisory lock spans enqueue+SMTP. Report snapshots and assignments
 // are committed before SMTP, so uncertain delivery is never automatically duplicated.
 export async function sendReports(manual = false, actor = "Automatik") {
@@ -23,8 +48,8 @@ export async function sendReports(manual = false, actor = "Automatik") {
     if (!acquired) return { message: "Ein Berichtsversand läuft bereits." };
     const s = await settings(lock);
     if (!manual && !s.mailEnabled) return { message: "Automatischer Versand ist deaktiviert." };
-    const { date, time } = berlinNow();
-    if (!manual && time < s.mailTime) return { message: "Versandzeit noch nicht erreicht." };
+    // At/after local midnight, report the day that has just finished.
+    // Later ticks also catch a missed midnight run, but never include today's work.
     let sent = 0;
     for (const mode of ["WERKSVERKAUF", "VERNICHTUNG"]) {
       const to = recipients(mode === "WERKSVERKAUF" ? s.salesRecipients : s.destructionRecipients);
@@ -32,23 +57,7 @@ export async function sendReports(manual = false, actor = "Automatik") {
         if (manual) throw new WvvnError(`Kein Empfänger für ${mode === "WERKSVERKAUF" ? "Werksverkauf" : "Vernichtung"} eingestellt.`);
         continue;
       }
-      const r = await transaction(async (c) => {
-        // Failed SMTP rejections are retryable. Uncertain sends require human review.
-        const pending = await c.query("SELECT * FROM wvvn_reports WHERE mode=$1 AND status IN ('pending','failed') ORDER BY id LIMIT 1", [mode]);
-        if (pending.rowCount) return pending.rows[0];
-        if (!manual && (await c.query("SELECT 1 FROM wvvn_reports WHERE mode=$1 AND report_date=$2 AND legacy_id IS NULL", [mode, date])).rowCount) return null;
-        const closed = await c.query("SELECT id FROM wvvn_sessions WHERE status='done' AND legacy_id IS NULL AND report_id IS NULL AND mode=$1 ORDER BY id", [mode]);
-        if (!closed.rowCount) return null;
-        const ids = closed.rows.map((row) => row.id);
-        const rows = await c.query(`SELECT i.*,s.netto,s.kware FROM wvvn_items i JOIN wvvn_sessions s ON s.id=i.session_id
-          WHERE s.id=ANY($1::integer[]) AND i.deleted_at IS NULL ORDER BY i.id`, [ids]);
-        const runningNo = Number((await c.query("SELECT COALESCE(MAX(running_no),0)+1 AS n FROM wvvn_reports WHERE mode=$1", [mode])).rows[0].n);
-        const r = await c.query(`INSERT INTO wvvn_reports(mode,report_date,running_no,status,csv)
-          VALUES($1,$2,$3,'pending',$4) RETURNING *`, [mode, date, runningNo, buildCsv(rows.rows)]);
-        await c.query("UPDATE wvvn_sessions SET report_id=$1 WHERE id=ANY($2::integer[])", [r.rows[0].id, ids]);
-        await audit(c, actor, "Tagesbericht erstellt", `${mode} Nr. ${runningNo}, ${ids.length} abgeschlossene Listen. Noch nicht gemeldete Abschlüsse werden unabhängig vom Kalendertag erfasst.`);
-        return r.rows[0];
-      });
+      const r = await transaction((c) => prepareReport(c, mode, new Date(), manual, actor));
       if (!r) continue;
       const appSettings = Object.fromEntries((await lock.query("SELECT key,value FROM settings WHERE key LIKE 'smtp_%' OR key='email_from'")).rows.map((row) => [row.key, row.value ?? ""]));
       const from = appSettings.email_from || process.env.SMTP_FROM;
@@ -62,7 +71,7 @@ export async function sendReports(manual = false, actor = "Automatik") {
       try {
         const info = await transport.sendMail({
           from, to, subject: `${mode} (${r.report_date}) Nr. ${r.running_no}`,
-          text: `Anbei der Bericht ${mode} Nr. ${r.running_no}.\nEr enthält alle bisher noch nicht gemeldeten abgeschlossenen Listen bis zum Versandzeitpunkt. Spätere Abschlüsse erscheinen im nächsten Bericht.\n`,
+          text: `Anbei der Bericht ${mode} für ${r.report_date}, Nr. ${r.running_no}.\nEr enthält die noch nicht gemeldeten abgeschlossenen Listen des Berichtstages sowie gegebenenfalls ältere offene Meldungen. Der automatische Tagesabschluss erfolgt um 00:00 Uhr (Europe/Berlin). Bereits versandte Berichte bleiben bei späteren Listenkorrekturen unverändert.\n`,
           attachments: [{ filename: `${mode}_${r.report_date}_Nr${r.running_no}.csv`, content: Buffer.from(r.csv, "utf8"), contentType: "text/csv; charset=utf-8" }],
         });
         if (info.rejected?.length) throw Object.assign(new Error("Mindestens ein Empfänger wurde abgelehnt; Zustellung an weitere Empfänger ist möglicherweise erfolgt."), { uncertain: true });

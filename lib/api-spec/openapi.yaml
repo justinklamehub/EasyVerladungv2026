@@ -82,6 +82,8 @@ paths:
       operationId: lookupWvvnArticle
       parameters:
         - { name: code, in: query, required: true, schema: { type: string } }
+        - { name: sessionId, in: query, required: true, schema: { type: integer } }
+        - { name: inputMethod, in: query, required: true, schema: { type: string, enum: [scan, manual] } }
       responses:
         "200":
           description: Unambiguous article match
@@ -103,6 +105,21 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/WvvnSession" }
   /wvvn/sessions/{id}:
+    put:
+      operationId: updateWvvnSession
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnSessionEdit" }
+      responses:
+        "200":
+          description: Authorized correction of a completed list with optimistic locking and audit
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WvvnSession" }
     get:
       operationId: getWvvnSession
       parameters:
@@ -1823,8 +1840,9 @@ components:
         kware: { type: boolean }
     WvvnItemInput:
       type: object
-      required: [code, quantity, requestId]
+      required: [code, quantity, requestId, inputMethod]
       properties:
+        inputMethod: { type: string, enum: [scan, manual] }
         code: { type: string, minLength: 1, maxLength: 150 }
         quantity: { type: number, exclusiveMinimum: 0, maximum: 1000000 }
         requestId: { type: string, minLength: 16, maxLength: 100 }
@@ -1843,8 +1861,10 @@ components:
         createdAt: { type: string }
     WvvnSession:
       type: object
-      required: [id, mode, netto, kware, status, actor, createdAt, finishedAt, itemCount, pieces, legacy, items]
+      required: [id, mode, netto, kware, status, actor, createdAt, finishedAt, itemCount, pieces, legacy, items, revision, reported]
       properties:
+        revision: { type: integer }
+        reported: { type: boolean }
         id: { type: integer }
         mode: { $ref: "#/components/schemas/WvvnMode" }
         netto: { type: boolean }
@@ -1857,6 +1877,27 @@ components:
         pieces: { type: number }
         legacy: { type: boolean }
         items: { type: array, items: { $ref: "#/components/schemas/WvvnItem" } }
+    WvvnSessionEdit:
+      type: object
+      required: [revision, mode, netto, kware, reason, items, acknowledgeReported]
+      properties:
+        revision: { type: integer, minimum: 0 }
+        mode: { $ref: "#/components/schemas/WvvnMode" }
+        netto: { type: boolean }
+        kware: { type: boolean }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+        acknowledgeReported: { type: boolean }
+        items:
+          type: array
+          minItems: 1
+          maxItems: 2000
+          items:
+            type: object
+            required: [quantity]
+            properties:
+              id: { type: integer }
+              code: { type: string, minLength: 1, maxLength: 150 }
+              quantity: { type: number, exclusiveMinimum: 0, maximum: 1000000 }
     WvvnArticleInput:
       type: object
       required: [number, name, ean, veEan, veFactor, active, expectedUpdatedAt]
@@ -1898,7 +1939,7 @@ components:
         defaultKware: { type: boolean }
         deviceHours: { type: ["integer", "null"], minimum: 1, maximum: 8760 }
         mailEnabled: { type: boolean }
-        mailTime: { type: string, pattern: "^([01][0-9]|2[0-3]):[0-5][0-9]$" }
+        mailTime: { type: string, pattern: "^00:00$" }
         salesRecipients: { type: string, maxLength: 2000 }
         destructionRecipients: { type: string, maxLength: 2000 }
     WvvnDeviceInput:
