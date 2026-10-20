@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { WEEKDAYS, addDays, berlinDate, diffDays, errMsg, fmtMin, fmtTime, isoDay, mondayOf, sel, useInvalidateClock } from "./lib";
 import { AssignmentDialog, ConfirmDelete, ExceptionDialog, ShiftDialog } from "./shift-dialogs";
+import { shiftColor, shiftStyle } from "./shift-colors";
 
 type Dlg = { k: "shift"; v: ClockShift | null } | { k: "assign"; v: ClockShiftAssignment | null } | { k: "exc"; v: ClockShiftException | null }
   | { k: "delShift"; v: ClockShift } | { k: "delAssign"; v: ClockShiftAssignment } | { k: "delExc"; v: ClockShiftException } | null;
@@ -34,6 +35,7 @@ export function ShiftsPanel({ canEdit }: { canEdit: boolean }) {
   const empById = useMemo(() => new Map(d?.employees.map((e) => [e.id, e]) ?? []), [d]);
   const nm = (id: number) => { const e = empById.get(id); return e ? `${e.lastName}, ${e.firstName}` : `#${id}`; };
   const sn = (id: number | null) => id == null ? "Frei" : d?.shifts.find((s) => s.id === id)?.name ?? `#${id}`;
+  const colorFor = (id: number | null) => d?.shifts.find((s) => s.id === id)?.color;
   const days = useMemo(() => valid ? Array.from({ length: span + 1 }, (_, i) => addDays(from, i)) : [], [valid, from, span]);
   const cell = useMemo(() => new Map<string, ClockShiftDay>(d?.days.map((x) => [`${x.employeeId}|${x.day}`, x]) ?? []), [d]);
   const rowsEmp = (d?.employees ?? []).filter((e) => emp ? String(e.id) === emp : e.active);
@@ -61,7 +63,7 @@ export function ShiftsPanel({ canEdit }: { canEdit: boolean }) {
       {d && <>
         <Card title="Planungskalender">
           <div className="flex flex-wrap gap-3 text-xs text-slate-600">
-            <span className="inline-flex items-center gap-1"><i className="w-3 h-3 rounded-sm bg-sky-100 border border-sky-300" />Zugewiesene Schicht</span>
+            {d.shifts.map((s) => <span key={s.id} className="inline-flex items-center gap-1"><i className="w-3 h-3 rounded-sm border border-slate-300" style={{ backgroundColor: shiftColor(s.color) }} />{s.name}</span>)}
             <span className="inline-flex items-center gap-1"><i className="w-3 h-3 rounded-sm bg-slate-200 border border-slate-300" />Frei (0 h)</span>
             <span className="inline-flex items-center gap-1"><i className="w-3 h-3 rounded-sm bg-amber-100 border border-amber-400" />Ausnahme</span>
             <span className="inline-flex items-center gap-1"><i className="w-3 h-3 rounded-sm border border-dashed border-slate-300" />Keine Zuweisung: allgemeine Zeitregeln gelten</span>
@@ -83,7 +85,10 @@ export function ShiftsPanel({ canEdit }: { canEdit: boolean }) {
                         else { cls = exc ? "bg-amber-100 border-amber-400 text-amber-900" : "bg-sky-100 border-sky-300 text-sky-900"; body = <><b>{c.shiftName}</b><div>{fmtTime(c.startsAt)}-{fmtTime(c.endsAt)}</div><div>{fmtMin(c.plannedMinutes)}</div></>; }
                         if (exc) body = <>{body}<div className="uppercase text-[9px] tracking-wide">Ausnahme</div></>;
                       }
-                      return <td key={x} className="p-0.5"><div className={`rounded border px-1 py-1 text-center leading-tight ${cls}`} data-testid={`cell-plan-${e.id}-${x}`}>{body}</div></td>;
+                      const colored = c?.shiftId != null && c.source !== "none";
+                      return <td key={x} className="p-0.5"><div className={`rounded border px-1 py-1 text-center leading-tight ${cls}`}
+                        style={colored ? { ...shiftStyle(colorFor(c.shiftId)), ...(c.source === "exception" ? { borderColor: "#d97706", borderWidth: 2 } : {}) } : undefined}
+                        data-testid={`cell-plan-${e.id}-${x}`}>{body}</div></td>;
                     })}
                   </tr>))}
                 {!rowsEmp.length && <tr><td colSpan={days.length + 1} className="p-8 text-center text-slate-500">Keine Mitarbeiter vorhanden.</td></tr>}
@@ -97,6 +102,7 @@ export function ShiftsPanel({ canEdit }: { canEdit: boolean }) {
           {!d.shifts.length ? <p className="text-sm text-slate-500 py-4 text-center">Noch keine Schichten angelegt. Legen Sie z. B. Früh- und Spätschicht an, um Mitarbeitern Schichten zuzuweisen.</p> :
             <ul className="divide-y">{d.shifts.map((s) => (
               <li key={s.id} className="flex items-center gap-2 py-2 text-sm" data-testid={`row-shift-${s.id}`}>
+                <span className="h-5 w-5 shrink-0 rounded border border-slate-300" style={{ backgroundColor: shiftColor(s.color) }} aria-label={`Schichtfarbe ${shiftColor(s.color)}`} />
                 <div className="flex-1 min-w-0"><div className="font-medium truncate">{s.name}</div><div className="text-xs text-slate-500">{s.startTime.slice(0, 5)} bis {s.endTime.slice(0, 5)}{s.endTime < s.startTime ? " (Folgetag)" : ""}, Pause {s.pauseMinutes} min</div></div>
                 {add(<><Button size="icon" variant="ghost" aria-label="Schicht bearbeiten" onClick={() => setDlg({ k: "shift", v: s })} data-testid={`button-edit-shift-${s.id}`}><Pencil className="w-4 h-4" /></Button>
                   <Button size="icon" variant="ghost" aria-label="Schicht löschen" onClick={() => setDlg({ k: "delShift", v: s })} data-testid={`button-delete-shift-${s.id}`}><Trash2 className="w-4 h-4 text-red-600" /></Button></>)}
@@ -111,7 +117,7 @@ export function ShiftsPanel({ canEdit }: { canEdit: boolean }) {
                   <div className="text-xs text-slate-500">{isoDay(a.startsOn)} bis {a.endsOn ? isoDay(a.endsOn) : "offen"}, {wd(a.weekdays)}</div></div>
                   {add(<><Button size="icon" variant="ghost" aria-label="Zuweisung bearbeiten" onClick={() => setDlg({ k: "assign", v: a })} data-testid={`button-edit-assignment-${a.id}`}><Pencil className="w-4 h-4" /></Button>
                     <Button size="icon" variant="ghost" aria-label="Zuweisung löschen" onClick={() => setDlg({ k: "delAssign", v: a })} data-testid={`button-delete-assignment-${a.id}`}><Trash2 className="w-4 h-4 text-red-600" /></Button></>)}</div>
-                <div className="flex flex-wrap gap-1 text-xs">{a.shiftIds.map((id, i) => <span key={i} className="rounded border bg-slate-50 px-1.5 py-0.5">W{i + 1}: {sn(id)}</span>)}
+                <div className="flex flex-wrap gap-1 text-xs">{a.shiftIds.map((id, i) => <span key={i} className="rounded border px-1.5 py-0.5" style={shiftStyle(colorFor(id))}>W{i + 1}: {sn(id)}</span>)}
                   <span className="text-slate-500 self-center">Wechsel jeden Montag, Start Woche ab {isoDay(a.anchorMonday)}</span></div>
               </li>))}</ul>}
         </Card>

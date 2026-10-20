@@ -19,4 +19,9 @@ export interface ClockShiftInput {
      * @maximum 1439
      */
   pauseMinutes: number;
+  /**
+     * Display color; omitted values retain the existing color or default to blue
+     * @pattern ^#[0-9a-fA-F]{6}$
+     */
+  color?: string;
 }

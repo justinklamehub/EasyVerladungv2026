@@ -779,6 +779,7 @@ export const GetStempeluhrStateResponse = zod.object({
   "netMinutes": zod.number().nullable(),
   "pauseOverride": zod.number().nullable(),
   "source": zod.string(),
+  "reason": zod.string().optional().describe('Current optional entry reason'),
   "updatedAt": zod.string()
 })),
   "audit": zod.array(zod.object({
@@ -804,6 +805,7 @@ export const getClockShiftPlanningResponseShiftsItemOneNameMax = 100;
 export const getClockShiftPlanningResponseShiftsItemOnePauseMinutesMin = 0;
 export const getClockShiftPlanningResponseShiftsItemOnePauseMinutesMax = 1439;
 
+export const getClockShiftPlanningResponseShiftsItemOneColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 
 export const getClockShiftPlanningResponseAssignmentsItemOneWeekdaysItemMax = 7;
 
@@ -837,7 +839,8 @@ export const GetClockShiftPlanningResponse = zod.object({
   "name": zod.string().min(1).max(getClockShiftPlanningResponseShiftsItemOneNameMax),
   "startTime": zod.string(),
   "endTime": zod.string(),
-  "pauseMinutes": zod.number().min(getClockShiftPlanningResponseShiftsItemOnePauseMinutesMin).max(getClockShiftPlanningResponseShiftsItemOnePauseMinutesMax)
+  "pauseMinutes": zod.number().min(getClockShiftPlanningResponseShiftsItemOnePauseMinutesMin).max(getClockShiftPlanningResponseShiftsItemOnePauseMinutesMax),
+  "color": zod.string().regex(getClockShiftPlanningResponseShiftsItemOneColorRegExp).optional().describe('Display color; omitted values retain the existing color or default to blue')
 }).and(zod.object({
   "id": zod.number(),
   "updatedAt": zod.string()
@@ -894,13 +897,15 @@ export const createClockShiftBodyNameMax = 100;
 export const createClockShiftBodyPauseMinutesMin = 0;
 export const createClockShiftBodyPauseMinutesMax = 1439;
 
+export const createClockShiftBodyColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 
 
 export const CreateClockShiftBody = zod.object({
   "name": zod.string().min(1).max(createClockShiftBodyNameMax),
   "startTime": zod.string(),
   "endTime": zod.string(),
-  "pauseMinutes": zod.number().min(createClockShiftBodyPauseMinutesMin).max(createClockShiftBodyPauseMinutesMax)
+  "pauseMinutes": zod.number().min(createClockShiftBodyPauseMinutesMin).max(createClockShiftBodyPauseMinutesMax),
+  "color": zod.string().regex(createClockShiftBodyColorRegExp).optional().describe('Display color; omitted values retain the existing color or default to blue')
 })
 
 
@@ -913,13 +918,15 @@ export const updateClockShiftBodyOneNameMax = 100;
 export const updateClockShiftBodyOnePauseMinutesMin = 0;
 export const updateClockShiftBodyOnePauseMinutesMax = 1439;
 
+export const updateClockShiftBodyOneColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 
 
 export const UpdateClockShiftBody = zod.object({
   "name": zod.string().min(1).max(updateClockShiftBodyOneNameMax),
   "startTime": zod.string(),
   "endTime": zod.string(),
-  "pauseMinutes": zod.number().min(updateClockShiftBodyOnePauseMinutesMin).max(updateClockShiftBodyOnePauseMinutesMax)
+  "pauseMinutes": zod.number().min(updateClockShiftBodyOnePauseMinutesMin).max(updateClockShiftBodyOnePauseMinutesMax),
+  "color": zod.string().regex(updateClockShiftBodyOneColorRegExp).optional().describe('Display color; omitted values retain the existing color or default to blue')
 }).and(zod.object({
   "expectedUpdatedAt": zod.string()
 }))
@@ -929,13 +936,15 @@ export const updateClockShiftResponseOneNameMax = 100;
 export const updateClockShiftResponseOnePauseMinutesMin = 0;
 export const updateClockShiftResponseOnePauseMinutesMax = 1439;
 
+export const updateClockShiftResponseOneColorRegExp = new RegExp('^#[0-9a-fA-F]{6}$');
 
 
 export const UpdateClockShiftResponse = zod.object({
   "name": zod.string().min(1).max(updateClockShiftResponseOneNameMax),
   "startTime": zod.string(),
   "endTime": zod.string(),
-  "pauseMinutes": zod.number().min(updateClockShiftResponseOnePauseMinutesMin).max(updateClockShiftResponseOnePauseMinutesMax)
+  "pauseMinutes": zod.number().min(updateClockShiftResponseOnePauseMinutesMin).max(updateClockShiftResponseOnePauseMinutesMax),
+  "color": zod.string().regex(updateClockShiftResponseOneColorRegExp).optional().describe('Display color; omitted values retain the existing color or default to blue')
 }).and(zod.object({
   "id": zod.number(),
   "updatedAt": zod.string()
@@ -1289,6 +1298,7 @@ export const UpdateClockEntryResponse = zod.object({
   "netMinutes": zod.number().nullable(),
   "pauseOverride": zod.number().nullable(),
   "source": zod.string(),
+  "reason": zod.string().optional().describe('Current optional entry reason'),
   "updatedAt": zod.string()
 })
 

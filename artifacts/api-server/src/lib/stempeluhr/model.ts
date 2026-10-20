@@ -1,5 +1,6 @@
 import { pool, type PoolClient } from "@workspace/db";
 import { DEFAULT_SETTINGS, calculate, type Settings } from "./calculation";
+import { ensureEntryReasons } from "./entry-reasons";
 
 export class ClockError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -64,6 +65,7 @@ export function ensureClockTables(): Promise<void> {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds',clock_timestamp()));
         CREATE INDEX IF NOT EXISTS clock_shift_exceptions_employee ON clock_shift_exceptions(employee_id) WHERE deleted_at IS NULL;
       `);
+      await ensureEntryReasons(c);
       const { updatedAt: _, ...defaults } = DEFAULT_SETTINGS;
       await c.query("INSERT INTO clock_settings(id,data) VALUES(1,$1) ON CONFLICT DO NOTHING", [defaults]);
       await c.query("COMMIT");
@@ -106,6 +108,7 @@ export function entry(r: Row) {
     shiftStart: r.rules.shiftWindow?.start ?? null, shiftEnd: r.rules.shiftWindow?.end ?? null,
     ...calculate(new Date(r.started_at), r.ended_at ? new Date(r.ended_at) : null, r.rules, r.pause_override),
     pauseOverride: r.pause_override, source: r.source, updatedAt: iso(r.updated_at),
+    reason: r.reason ?? "",
   };
 }
 export const ENTRY_SELECT = `SELECT e.*,m.card_number,m.first_name,m.last_name,m.provider,m.activity

@@ -2237,6 +2237,7 @@ components:
         startTime: { type: string }
         endTime: { type: string }
         pauseMinutes: { type: integer, minimum: 0, maximum: 1439 }
+        color: { type: string, pattern: "^#[0-9a-fA-F]{6}$", description: "Display color; omitted values retain the existing color or default to blue" }
     ClockShiftUpdate:
       allOf:
         - { $ref: "#/components/schemas/ClockShiftInput" }
@@ -2426,6 +2427,7 @@ components:
         netMinutes: { type: ["integer", "null"] }
         pauseOverride: { type: ["integer", "null"] }
         source: { type: string }
+        reason: { type: string, description: Current optional entry reason }
         updatedAt: { type: string }
     ClockDeletion:
       type: object

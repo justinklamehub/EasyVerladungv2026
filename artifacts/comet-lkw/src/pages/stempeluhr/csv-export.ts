@@ -9,13 +9,14 @@ export const CSV_FIELDS = [
   ["startedAt", "Kommen (erfasst/korrigiert)"], ["endedAt", "Gehen (erfasst/korrigiert)"],
   ["pauseOverride", "Pause manuell"], ["status", "Status"], ["source", "Quelle"],
   ["originalStartedAt", "Kommen (unverändertes Original)"], ["originalEndedAt", "Gehen (unverändertes Original)"],
+  ["reason", "Grund"],
 ] as const;
 export type CsvField = typeof CSV_FIELDS[number][0];
 export interface CsvColumn { id: CsvField; header: string; enabled: boolean }
 export interface ClockCsvConfig { version: 1; durationFormat: "hhmm" | "minutes"; columns: CsvColumn[] }
 
 export function defaultClockCsvConfig(): ClockCsvConfig {
-  return { version: 1, durationFormat: "hhmm", columns: CSV_FIELDS.map(([id, header], i) => ({ id, header, enabled: i < 9 })) };
+  return { version: 1, durationFormat: "hhmm", columns: CSV_FIELDS.map(([id, header], i) => ({ id, header, enabled: i < 9 || id === "reason" })) };
 }
 
 export function legacyClockCsvConfig(): ClockCsvConfig {
@@ -25,7 +26,7 @@ export function legacyClockCsvConfig(): ClockCsvConfig {
   };
   const order: CsvField[] = ["date", "cardNumber", "lastName", "firstName", "provider", "activity",
     "startedAt", "endedAt", "bookedStart", "bookedEnd", "grossMinutes", "pauseMinutes", "netMinutes",
-    "pauseOverride", "status", "source", "originalStartedAt", "originalEndedAt"];
+    "pauseOverride", "status", "source", "originalStartedAt", "originalEndedAt", "reason"];
   return { version: 1, durationFormat: "minutes", columns: order.map((id) => ({
     id, header: headers[id] ?? CSV_FIELDS.find(([field]) => field === id)![1], enabled: true,
   })) };
@@ -53,7 +54,14 @@ export function parseClockCsvConfig(value: unknown): ClockCsvConfig {
       typeof column.id !== "string" || typeof column.header !== "string" || typeof column.enabled !== "boolean")) {
     throw new Error("Gespeicherte CSV-Einstellungen sind ungültig.");
   }
-  const config = c as unknown as ClockCsvConfig;
+  const config = { ...c, columns: c.columns.map((column) => ({ ...column })) } as unknown as ClockCsvConfig;
+  // Add the new column without resetting personal order, labels, or disabled fields.
+  if (!config.columns.some((column) => column.id === "reason")) {
+    const headers = new Set(config.columns.map((column) => column.header.trim().toLocaleLowerCase("de")));
+    let header = "Grund", suffix = 1;
+    while (headers.has(header.toLocaleLowerCase("de"))) header = `Grund (Eintrag ${suffix++})`;
+    config.columns.push({ id: "reason", header, enabled: true });
+  }
   const error = validateClockCsvConfig(config);
   if (error) throw new Error(error);
   return { version: 1, durationFormat: config.durationFormat, columns: config.columns.map((column) => ({ ...column, header: column.header.trim() })) };
@@ -84,6 +92,7 @@ export function clockCsvRows(entries: ClockEntry[], config: ClockCsvConfig): unk
         return duration(entry.endedAt ? entry[id] : null, config.durationFormat);
       case "status": return entry.endedAt ? "abgeschlossen" : "offen";
       case "pauseOverride": return entry.pauseOverride ?? "";
+      case "reason": return entry.reason ?? "";
       default: return entry[id];
     }
   };

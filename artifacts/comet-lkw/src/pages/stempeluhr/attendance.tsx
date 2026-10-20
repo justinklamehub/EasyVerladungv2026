@@ -53,9 +53,9 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
       const tr = list.map((e) => {
         if (e.endedAt === null) open++; else { g += e.grossMinutes ?? 0; p += e.pauseMinutes ?? 0; n += e.netMinutes ?? 0; }
         const endTime = e.bookedEnd && berlinDate(e.bookedEnd) !== berlinDate(e.bookedStart) ? fmtDateTime(e.bookedEnd) : fmtTime(e.bookedEnd);
-        return `<tr><td>${esc(fmtDate(e.bookedStart))}</td><td>${esc(fmtTime(e.bookedStart))}</td><td>${e.endedAt ? esc(endTime) : "offen"}</td><td class="r">${esc(fmtMin(e.grossMinutes))}</td><td class="r">${esc(fmtMin(e.pauseMinutes))}</td><td class="r">${e.endedAt ? esc(fmtMin(e.netMinutes)) : "offen, kein Netto"}</td></tr>`;
+        return `<tr><td>${esc(fmtDate(e.bookedStart))}</td><td>${esc(fmtTime(e.bookedStart))}</td><td>${e.endedAt ? esc(endTime) : "offen"}</td><td class="r">${esc(fmtMin(e.grossMinutes))}</td><td class="r">${esc(fmtMin(e.pauseMinutes))}</td><td class="r">${e.endedAt ? esc(fmtMin(e.netMinutes)) : "offen, kein Netto"}</td><td style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(e.reason ?? "")}</td></tr>`;
       }).join("");
-      html += `<div class="sec"><h2>${esc(f.lastName)}, ${esc(f.firstName)} (${esc(f.cardNumber)}) - ${esc(f.provider)} ${esc(f.activity)}</h2><table><tr><th>Tag</th><th>Kommen</th><th>Gehen</th><th>Brutto</th><th>Pause</th><th>Netto</th></tr>${tr}<tr><th colspan="3">Summe abgeschlossene Einträge</th><th class="r">${esc(fmtMin(g))}</th><th class="r">${esc(fmtMin(p))}</th><th class="r">${esc(fmtMin(n))}</th></tr></table>${open ? `<p><b>${open} offene(r) Eintrag/Einträge ohne Nettosumme.</b></p>` : ""}</div>`;
+      html += `<div class="sec"><h2>${esc(f.lastName)}, ${esc(f.firstName)} (${esc(f.cardNumber)}) - ${esc(f.provider)} ${esc(f.activity)}</h2><table><tr><th>Tag</th><th>Kommen</th><th>Gehen</th><th>Brutto</th><th>Pause</th><th>Netto</th><th>Grund</th></tr>${tr}<tr><th colspan="3">Summe abgeschlossene Einträge</th><th class="r">${esc(fmtMin(g))}</th><th class="r">${esc(fmtMin(p))}</th><th class="r">${esc(fmtMin(n))}</th><th></th></tr></table>${open ? `<p><b>${open} offene(r) Eintrag/Einträge ohne Nettosumme.</b></p>` : ""}</div>`;
     }
     if (!by.size) html += "<p>Keine Einträge im Zeitraum.</p>";
     if (!openPrint("Stundenbericht", html)) toast({ title: "Popup blockiert", description: "Bitte Popups für diese Seite erlauben.", variant: "destructive" });
@@ -84,7 +84,7 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
       <div className="rounded-lg border bg-white overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="bg-slate-50 text-left text-xs text-slate-500"><tr>
-            {["Tag", "Mitarbeiter", "Kommen", "Gehen", "Brutto", "Pause", "Netto", "Status", ""].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
+            {["Tag", "Mitarbeiter", "Kommen", "Gehen", "Brutto", "Pause", "Netto", "Status", "Grund", ""].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
           <tbody>
             {rows.map((e) => (
               <tr key={e.id} className="border-t" data-testid={`row-entry-${e.id}`}>
@@ -96,12 +96,13 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
                 <td className="px-3 py-2 tabular-nums">{fmtMin(e.pauseMinutes)}{e.pauseOverride != null && <div className="text-xs text-amber-700">manuell</div>}</td>
                 <td className="px-3 py-2 tabular-nums">{e.endedAt ? fmtMin(e.netMinutes) : "–"}</td>
                 <td className="px-3 py-2">{e.endedAt ? <Badge variant="secondary">Abgeschlossen</Badge> : <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">Offen</Badge>}</td>
+                <td className="px-3 py-2 min-w-[10rem] max-w-xs whitespace-pre-wrap break-words [overflow-wrap:anywhere]" data-testid={`text-entry-reason-${e.id}`}>{e.reason || "–"}</td>
                 <td className="px-3 py-2 whitespace-nowrap text-right">
                   {has(P.correct) && <Button size="icon" variant="ghost" onClick={() => setEdit(e)} data-testid={`button-edit-entry-${e.id}`} aria-label="Bearbeiten"><Pencil className="w-4 h-4" /></Button>}
                   {has(P.delete) && <Button size="icon" variant="ghost" onClick={() => setDel(e)} data-testid={`button-delete-entry-${e.id}`} aria-label="Löschen"><Trash2 className="w-4 h-4 text-red-600" /></Button>}
                 </td>
               </tr>))}
-            {!rows.length && <tr><td colSpan={9} className="px-3 py-10 text-center text-slate-500">Keine Einträge im gewählten Zeitraum.</td></tr>}
+            {!rows.length && <tr><td colSpan={10} className="px-3 py-10 text-center text-slate-500">Keine Einträge im gewählten Zeitraum.</td></tr>}
           </tbody>
         </table>
       </div>
@@ -118,7 +119,7 @@ function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEn
   const [start, setStart] = useState(berlinInput(entry?.startedAt));
   const [end, setEnd] = useState(berlinInput(entry?.endedAt));
   const [pause, setPause] = useState(entry?.pauseOverride != null ? String(entry.pauseOverride) : "");
-  const [reason, setReason] = useState("");
+  const [reason, setReason] = useState(entry?.reason ?? "");
   const [err, setErr] = useState("");
   const busy = create.isPending || update.isPending;
 

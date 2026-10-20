@@ -38,6 +38,8 @@ export async function planning(c: PoolClient, from: string, to: string, employee
 async function validate(c: PoolClient, kind: ShiftKind, input: ClockShiftInput | ClockShiftAssignmentInput | ClockShiftExceptionInput, id?: number) {
   if (kind === "shift") {
     const b = input as ClockShiftInput;
+    const color = b.color ?? "#0284c7";
+    if (!/^#[0-9a-fA-F]{6}$/.test(color)) throw new ClockError("Bitte eine gültige Schichtfarbe im Format #RRGGBB wählen.");
     const time = /^([01]\d|2[0-3]):[0-5]\d$/;
     if (!b.name.trim()) throw new ClockError("Schichtname ist erforderlich.");
     if (![b.startTime, b.endTime].every((s) => time.test(s))) throw new ClockError("Uhrzeiten bitte als HH:MM angeben.");
@@ -48,7 +50,7 @@ async function validate(c: PoolClient, kind: ShiftKind, input: ClockShiftInput |
     if (!Number.isInteger(b.pauseMinutes) || b.pauseMinutes < 0 || b.pauseMinutes >= length) throw new ClockError("Die Pause muss kürzer als die Schicht sein.");
     const duplicate = await c.query("SELECT id FROM clock_shifts WHERE deleted_at IS NULL AND lower(data->>'name')=lower($1) AND ($2::integer IS NULL OR id<>$2)", [b.name.trim(), id ?? null]);
     if (duplicate.rowCount) throw new ClockError("Eine Schicht mit diesem Namen existiert bereits.", 409);
-    return { name: b.name.trim(), startTime: b.startTime, endTime: b.endTime, pauseMinutes: b.pauseMinutes };
+    return { name: b.name.trim(), startTime: b.startTime, endTime: b.endTime, pauseMinutes: b.pauseMinutes, color: color.toLowerCase() };
   }
   const b = input as ClockShiftAssignmentInput | ClockShiftExceptionInput;
   period(b.startsOn, b.endsOn);
@@ -77,6 +79,8 @@ export async function saveShift(c: PoolClient, kind: ShiftKind, input: ClockShif
   const old = id == null ? null : (await c.query(`SELECT * FROM ${table} WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, [id])).rows[0];
   if (id != null && !old) throw new ClockError("Schichteintrag nicht gefunden.", 404);
   if (old) checkVersion(old.updated_at, version!);
+  if (kind === "shift" && (input as ClockShiftInput).color === undefined)
+    input = { ...input, color: old?.data.color ?? "#0284c7" };
   const data = await validate(c, kind, input, id);
   let r: Row;
   if (old) r = (await c.query(`UPDATE ${table} SET data=$1,${kind === "shift" ? "" : "employee_id=$3,"}

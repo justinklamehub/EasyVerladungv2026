@@ -184,8 +184,8 @@ async function saveEntry(req: Request, updating: boolean) {
   const b = (updating ? UpdateClockEntryBody : CreateClockEntryBody).parse(req.body);
   z.number().int().positive().parse(b.employeeId);
   if (b.pauseOverride != null) z.number().int().parse(b.pauseOverride);
-  const reason = updating ? (b.reason ?? "").trim() : nonempty(b.reason ?? "", "Begründung");
-  if (!updating && reason.length < 3) throw new ClockError("Begründung muss mindestens drei Zeichen enthalten.");
+  const creationReason = updating ? "" : nonempty(b.reason ?? "", "Begründung");
+  if (!updating && creationReason.length < 3) throw new ClockError("Begründung muss mindestens drei Zeichen enthalten.");
   validateRange(dates.startedAt, dates.endedAt);
   const id = updating ? idParam(req) : 0;
   return transaction(async (c) => {
@@ -195,16 +195,17 @@ async function saveEntry(req: Request, updating: boolean) {
       checkVersion(old.updated_at, b.expectedUpdatedAt);
       if (old.employee_id !== b.employeeId) throw new ClockError("Der Mitarbeiter eines bestehenden Eintrags kann nicht geändert werden.");
     }
+    const reason = old ? (b.reason === undefined ? old.reason ?? "" : b.reason.trim()) : creationReason;
     if (!(await c.query("SELECT id FROM clock_employees WHERE id=$1", [b.employeeId])).rowCount) throw new ClockError("Mitarbeiter nicht gefunden.", 404);
     await checkOverlap(c, b.employeeId, dates.startedAt, dates.endedAt, id);
     const rules = old && localDay(new Date(dates.startedAt)) === localDay(new Date(old.started_at))
       ? old.rules : await shiftRules(c, b.employeeId, new Date(dates.startedAt));
     let savedId = id;
-    if (old) await c.query(`UPDATE clock_entries SET started_at=$2,ended_at=$3,pause_override=$4,rules=$5,
-      updated_at=date_trunc('milliseconds',clock_timestamp()) WHERE id=$1`, [id, dates.startedAt, dates.endedAt, b.pauseOverride, rules]);
+    if (old) await c.query(`UPDATE clock_entries SET started_at=$2,ended_at=$3,pause_override=$4,rules=$5,reason=$6,
+      updated_at=date_trunc('milliseconds',clock_timestamp()) WHERE id=$1`, [id, dates.startedAt, dates.endedAt, b.pauseOverride, rules, reason]);
     else {
-      const { rows } = await c.query(`INSERT INTO clock_entries(employee_id,started_at,ended_at,original_started_at,original_ended_at,rules,pause_override,source)
-        VALUES($1,$2,$3,$2,$3,$4,$5,'manual') RETURNING id`, [b.employeeId, dates.startedAt, dates.endedAt, rules, b.pauseOverride]);
+      const { rows } = await c.query(`INSERT INTO clock_entries(employee_id,started_at,ended_at,original_started_at,original_ended_at,rules,pause_override,source,reason)
+        VALUES($1,$2,$3,$2,$3,$4,$5,'manual',$6) RETURNING id`, [b.employeeId, dates.startedAt, dates.endedAt, rules, b.pauseOverride, reason]);
       savedId = rows[0].id;
     }
     const result = entry((await c.query(`${ENTRY_SELECT} WHERE e.id=$1`, [savedId])).rows[0]);

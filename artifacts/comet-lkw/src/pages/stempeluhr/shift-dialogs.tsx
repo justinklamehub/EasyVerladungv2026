@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { EmployeePicker, MAX_BULK } from "./employee-picker";
+import { SHIFT_COLORS, shiftColor, shiftStyle } from "./shift-colors";
 import { WEEKDAYS, addDays, berlinDate, errMsg, isoDay, mondayOf, sel } from "./lib";
 
 const box = "max-h-[90dvh] overflow-y-auto w-[calc(100vw-1rem)] sm:max-w-lg";
@@ -23,6 +24,7 @@ export function ShiftDialog({ shift, onClose, done }: { shift: ClockShift | null
   const [start, setStart] = useState(shift?.startTime.slice(0, 5) ?? "06:00");
   const [end, setEnd] = useState(shift?.endTime.slice(0, 5) ?? "14:00");
   const [pause, setPause] = useState(String(shift?.pauseMinutes ?? 30));
+  const [color, setColor] = useState(shiftColor(shift?.color));
   const [err, setErr] = useState("");
   const save = async () => {
     setErr("");
@@ -34,7 +36,7 @@ export function ShiftDialog({ shift, onClose, done }: { shift: ClockShift | null
     if (!Number.isInteger(p) || p < 0 || p > 1439) return setErr("Pause: ganze Minuten, 0 bis 1439.");
     const dur = (toMin(end) - toMin(start) + 1440) % 1440;
     if (p >= dur) return setErr(`Die Pause muss kürzer als die Schicht (${dur} Minuten) sein.`);
-    const data = { name: name.trim(), startTime: start, endTime: end, pauseMinutes: p };
+    const data = { name: name.trim(), startTime: start, endTime: end, pauseMinutes: p, color };
     try {
       if (shift) await update.mutateAsync({ id: shift.id, data: { ...data, expectedUpdatedAt: pinned! } }); else await create.mutateAsync({ data });
       done(); onClose();
@@ -50,6 +52,19 @@ export function ShiftDialog({ shift, onClose, done }: { shift: ClockShift | null
           <div><Label>Ende</Label><Input type="time" value={end} onChange={(e) => setEnd(e.target.value)} data-testid="input-shift-end" /></div>
         </div>
         <div><Label>Pause (Minuten, unbezahlt)</Label><Input inputMode="numeric" value={pause} onChange={(e) => setPause(e.target.value)} data-testid="input-shift-pause" /></div>
+        <div className="space-y-2">
+          <Label htmlFor="shift-color">Schichtfarbe</Label>
+          <div className="flex flex-wrap items-center gap-2">
+            <Input id="shift-color" type="color" value={color} onChange={(e) => setColor(e.target.value)} className="h-10 w-14 p-1 cursor-pointer" data-testid="input-shift-color" />
+            <span className="rounded border px-3 py-2 text-sm font-medium" style={shiftStyle(color)} data-testid="preview-shift-color">{name.trim() || "Schicht"} · {color.toUpperCase()}</span>
+          </div>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Vorgeschlagene Schichtfarben">
+            {SHIFT_COLORS.map((c) => <button key={c.value} type="button" aria-label={c.label} title={c.label} aria-pressed={color.toLowerCase() === c.value}
+              className={`h-8 w-8 rounded-full border-2 ${color.toLowerCase() === c.value ? "ring-2 ring-offset-2 ring-slate-900" : "border-white shadow-sm"}`}
+              style={{ backgroundColor: c.value }} onClick={() => setColor(c.value)} data-testid={`color-shift-${c.label.toLowerCase()}`} />)}
+          </div>
+          <p className="text-xs text-slate-500">Wird in der Schichtübersicht und im Planungskalender verwendet. Ausnahmen bleiben zusätzlich gekennzeichnet.</p>
+        </div>
         <p className="text-xs text-slate-500">Liegt das Ende vor dem Beginn, endet die Schicht am Folgetag (Nachtschicht). Gezählt wird nur die Zeit innerhalb der Schicht abzüglich Pause. Bereits erfasste Stempelungen bleiben unverändert.</p>
         <ErrBox e={err} />
       </div>

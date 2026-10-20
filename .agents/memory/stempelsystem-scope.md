@@ -45,6 +45,12 @@ Beim Bearbeiten von Zeiten muss die Begründung optional sein.
 
 **How to apply:** Korrekturen auch ohne Begründung zulassen, weiterhin protokollieren. Daraus keine Änderung der Begründungspflicht beim Löschen oder manuellen Anlegen ableiten.
 
+Der optionale Grund soll am Eintrag in der Anwesenheitsübersicht und beim Download sichtbar sein und beim erneuten Bearbeiten vorausgefüllt werden. Explizites Leeren entfernt die aktuelle Notiz, nicht den Änderungsverlauf; ein ausgelassenes Feld darf eine vorhandene Notiz nicht löschen.
+
+**Why:** Der Nutzer verlangt die Anzeige und den Export des Grundes. Historisch wurde das Bearbeitungsfeld immer leer geöffnet und der Text nur im Verlauf gespeichert: alte leere Korrekturgründe sind deshalb keine verlässliche Aufforderung, die letzte sinnvolle Notiz zu löschen.
+
+**How to apply:** Für Altdaten einmalig den letzten nicht leeren Grund einer Zeitkorrektur/manuellen Anlage übernehmen, keine fremden Auditaktionen. Nach der Übernahme eine bewusst geleerte Notiz nicht aus dem Verlauf wiederherstellen. Persönliche CSV-Spaltenreihenfolge und Überschriften beim Ergänzen neuer Felder erhalten.
+
 In der Stempeluhr müssen Schichten angelegt und pro Mitarbeiter zugeteilt werden können. Die Stundenberechnung muss die Schichten berücksichtigen. Wöchentliche Wechselschichten sind ausdrücklich gewünscht: „Wenn ich diese Woche Frühschicht habe, habe ich die Woche drauf Spätschicht.“
 
 **Why:** Der Nutzer verlangt ein klügeres System mit erstellbaren Schichten, individueller Zuteilung und automatischem Wochenwechsel statt ausschließlich gemeinsamer Zeitgrenzen.

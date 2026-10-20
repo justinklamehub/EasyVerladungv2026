@@ -17,6 +17,13 @@ test("shift CRUD, assignment rotation, exceptions, optimistic locking and saved 
     const emp = (await c.query("INSERT INTO clock_employees(card_number,first_name,last_name) VALUES($1,'Shift',$1) RETURNING id", [tag])).rows[0].id;
     const earlyInput = { name: tag + "_Früh", startTime: "06:00", endTime: "14:00", pauseMinutes: 30 };
     const early = await saveShift(c, "shift", earlyInput, tag);
+    assert.equal(early.color, "#0284c7", "older clients without a color remain compatible");
+    const colored = await saveShift(c, "shift", { ...earlyInput, color: "#16A34A" }, tag, early.id, early.updatedAt);
+    assert.equal(colored.color, "#16a34a");
+    const retained = await saveShift(c, "shift", earlyInput, tag, early.id, colored.updatedAt);
+    assert.equal(retained.color, "#16a34a", "omitting a color on update must not reset the saved color");
+    early.updatedAt = retained.updatedAt;
+    await assert.rejects(saveShift(c, "shift", { ...earlyInput, color: "not-a-color" }, tag), /Schichtfarbe/);
     const late = await saveShift(c, "shift", { ...earlyInput, name: tag + "_Spät", startTime: "14:00", endTime: "22:00" }, tag);
     await assert.rejects(saveShift(c, "shift", { ...earlyInput, startTime: "02:30" }, tag), /Zeitumstellung/);
     await assert.rejects(saveShift(c, "shift", { ...earlyInput, pauseMinutes: 480 }, tag), /Pause/);

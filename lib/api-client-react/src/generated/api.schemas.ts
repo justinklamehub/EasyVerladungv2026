@@ -369,6 +369,11 @@ export interface ClockShiftInput {
      * @maximum 1439
      */
   pauseMinutes: number;
+  /**
+     * Display color; omitted values retain the existing color or default to blue
+     * @pattern ^#[0-9a-fA-F]{6}$
+     */
+  color?: string;
 }
 
 export type ClockShiftUpdate = ClockShiftInput & ClockVersion;
@@ -595,6 +600,8 @@ export interface ClockEntry {
   /** @nullable */
   pauseOverride: number | null;
   source: string;
+  /** Current optional entry reason */
+  reason?: string;
   updatedAt: string;
 }
 

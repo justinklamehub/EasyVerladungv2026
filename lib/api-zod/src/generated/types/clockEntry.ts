@@ -40,5 +40,7 @@ export interface ClockEntry {
   /** @nullable */
   pauseOverride: number | null;
   source: string;
+  /** Current optional entry reason */
+  reason?: string;
   updatedAt: string;
 }
