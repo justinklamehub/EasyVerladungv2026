@@ -352,10 +352,120 @@ export interface ClockEmployeeInput {
   expectedUpdatedAt?: string;
 }
 
+export interface ClockVersion {
+  expectedUpdatedAt: string;
+}
+
+export interface ClockShiftInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  name: string;
+  startTime: string;
+  endTime: string;
+  /**
+     * @minimum 0
+     * @maximum 1439
+     */
+  pauseMinutes: number;
+}
+
+export type ClockShiftUpdate = ClockShiftInput & ClockVersion;
+
+export type ClockShift = ClockShiftInput & {
+  id: number;
+  updatedAt: string;
+};
+
+export interface ClockShiftAssignmentInput {
+  /** @minimum 1 */
+  employeeId: number;
+  startsOn: string;
+  /** @nullable */
+  endsOn: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 7
+     */
+  weekdays: number[];
+  /**
+     * @minItems 1
+     * @maxItems 12
+     */
+  shiftIds: number[];
+}
+
+export type ClockShiftAssignmentUpdate = ClockShiftAssignmentInput & ClockVersion;
+
+export type ClockShiftAssignment = ClockShiftAssignmentInput & {
+  id: number;
+  anchorMonday: string;
+  updatedAt: string;
+};
+
+export interface ClockShiftExceptionInput {
+  /** @minimum 1 */
+  employeeId: number;
+  startsOn: string;
+  endsOn: string;
+  /**
+     * @minItems 1
+     * @maxItems 7
+     */
+  weekdays: number[];
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  shiftId: number | null;
+  /** @maxLength 500 */
+  note: string;
+}
+
+export type ClockShiftExceptionUpdate = ClockShiftExceptionInput & ClockVersion;
+
+export type ClockShiftException = ClockShiftExceptionInput & {
+  id: number;
+  updatedAt: string;
+};
+
+export type ClockShiftDaySource = typeof ClockShiftDaySource[keyof typeof ClockShiftDaySource];
+
+
+export const ClockShiftDaySource = {
+  assignment: 'assignment',
+  exception: 'exception',
+  none: 'none',
+} as const;
+
+export interface ClockShiftDay {
+  employeeId: number;
+  day: string;
+  /** @nullable */
+  shiftId: number | null;
+  /** @nullable */
+  shiftName: string | null;
+  /** @nullable */
+  startsAt: string | null;
+  /** @nullable */
+  endsAt: string | null;
+  plannedMinutes: number;
+  source: ClockShiftDaySource;
+}
+
 export type ClockEmployee = ClockEmployeeInput & {
   id: number;
   updatedAt: string;
 };
+
+export interface ClockShiftPlanning {
+  shifts: ClockShift[];
+  assignments: ClockShiftAssignment[];
+  exceptions: ClockShiftException[];
+  employees: ClockEmployee[];
+  days: ClockShiftDay[];
+}
 
 export interface ClockBreakRule {
   /**
@@ -444,6 +554,14 @@ export interface ClockEntry {
   originalStartedAt: string;
   /** @nullable */
   originalEndedAt: string | null;
+  /** @nullable */
+  shiftName?: string | null;
+  /** @nullable */
+  shiftDay?: string | null;
+  /** @nullable */
+  shiftStart?: string | null;
+  /** @nullable */
+  shiftEnd?: string | null;
   bookedStart: string;
   /** @nullable */
   bookedEnd: string | null;
@@ -1777,6 +1895,12 @@ dateTo?: string;
 };
 
 export type GetStempeluhrStateParams = {
+from: string;
+to: string;
+employeeId?: number;
+};
+
+export type GetClockShiftPlanningParams = {
 from: string;
 to: string;
 employeeId?: number;

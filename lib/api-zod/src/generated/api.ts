@@ -768,6 +768,10 @@ export const GetStempeluhrStateResponse = zod.object({
   "endedAt": zod.string().nullable(),
   "originalStartedAt": zod.string(),
   "originalEndedAt": zod.string().nullable(),
+  "shiftName": zod.string().nullish(),
+  "shiftDay": zod.string().nullish(),
+  "shiftStart": zod.string().nullish(),
+  "shiftEnd": zod.string().nullish(),
   "bookedStart": zod.string(),
   "bookedEnd": zod.string().nullable(),
   "grossMinutes": zod.number().nullable(),
@@ -786,6 +790,316 @@ export const GetStempeluhrStateResponse = zod.object({
   "before": zod.record(zod.string(), zod.unknown()).nullable(),
   "after": zod.record(zod.string(), zod.unknown()).nullable()
 }))
+})
+
+
+export const GetClockShiftPlanningQueryParams = zod.object({
+  "from": zod.coerce.string(),
+  "to": zod.coerce.string(),
+  "employeeId": zod.coerce.number().optional()
+})
+
+export const getClockShiftPlanningResponseShiftsItemOneNameMax = 100;
+
+export const getClockShiftPlanningResponseShiftsItemOnePauseMinutesMin = 0;
+export const getClockShiftPlanningResponseShiftsItemOnePauseMinutesMax = 1439;
+
+
+export const getClockShiftPlanningResponseAssignmentsItemOneWeekdaysItemMax = 7;
+
+export const getClockShiftPlanningResponseAssignmentsItemOneWeekdaysMax = 7;
+
+
+export const getClockShiftPlanningResponseAssignmentsItemOneShiftIdsMax = 12;
+
+
+export const getClockShiftPlanningResponseExceptionsItemOneWeekdaysItemMax = 7;
+
+export const getClockShiftPlanningResponseExceptionsItemOneWeekdaysMax = 7;
+
+
+export const getClockShiftPlanningResponseExceptionsItemOneNoteMax = 500;
+
+export const getClockShiftPlanningResponseEmployeesItemOneCardNumberMax = 80;
+
+export const getClockShiftPlanningResponseEmployeesItemOneFirstNameMax = 100;
+
+export const getClockShiftPlanningResponseEmployeesItemOneLastNameMax = 100;
+
+export const getClockShiftPlanningResponseEmployeesItemOneProviderMax = 150;
+
+export const getClockShiftPlanningResponseEmployeesItemOneActivityMax = 150;
+
+
+
+export const GetClockShiftPlanningResponse = zod.object({
+  "shifts": zod.array(zod.object({
+  "name": zod.string().min(1).max(getClockShiftPlanningResponseShiftsItemOneNameMax),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "pauseMinutes": zod.number().min(getClockShiftPlanningResponseShiftsItemOnePauseMinutesMin).max(getClockShiftPlanningResponseShiftsItemOnePauseMinutesMax)
+}).and(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string()
+}))),
+  "assignments": zod.array(zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string().nullable(),
+  "weekdays": zod.array(zod.number().min(1).max(getClockShiftPlanningResponseAssignmentsItemOneWeekdaysItemMax)).min(1).max(getClockShiftPlanningResponseAssignmentsItemOneWeekdaysMax),
+  "shiftIds": zod.array(zod.number().min(1)).min(1).max(getClockShiftPlanningResponseAssignmentsItemOneShiftIdsMax)
+}).and(zod.object({
+  "id": zod.number(),
+  "anchorMonday": zod.string(),
+  "updatedAt": zod.string()
+}))),
+  "exceptions": zod.array(zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string(),
+  "weekdays": zod.array(zod.number().min(1).max(getClockShiftPlanningResponseExceptionsItemOneWeekdaysItemMax)).min(1).max(getClockShiftPlanningResponseExceptionsItemOneWeekdaysMax),
+  "shiftId": zod.number().min(1).nullable(),
+  "note": zod.string().max(getClockShiftPlanningResponseExceptionsItemOneNoteMax)
+}).and(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string()
+}))),
+  "employees": zod.array(zod.object({
+  "cardNumber": zod.string().min(1).max(getClockShiftPlanningResponseEmployeesItemOneCardNumberMax),
+  "firstName": zod.string().min(1).max(getClockShiftPlanningResponseEmployeesItemOneFirstNameMax),
+  "lastName": zod.string().min(1).max(getClockShiftPlanningResponseEmployeesItemOneLastNameMax),
+  "provider": zod.string().max(getClockShiftPlanningResponseEmployeesItemOneProviderMax),
+  "activity": zod.string().max(getClockShiftPlanningResponseEmployeesItemOneActivityMax),
+  "active": zod.boolean(),
+  "expectedUpdatedAt": zod.string().optional()
+}).and(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string()
+}))),
+  "days": zod.array(zod.object({
+  "employeeId": zod.number(),
+  "day": zod.string(),
+  "shiftId": zod.number().nullable(),
+  "shiftName": zod.string().nullable(),
+  "startsAt": zod.string().nullable(),
+  "endsAt": zod.string().nullable(),
+  "plannedMinutes": zod.number(),
+  "source": zod.enum(['assignment', 'exception', 'none'])
+}))
+})
+
+
+export const createClockShiftBodyNameMax = 100;
+
+export const createClockShiftBodyPauseMinutesMin = 0;
+export const createClockShiftBodyPauseMinutesMax = 1439;
+
+
+
+export const CreateClockShiftBody = zod.object({
+  "name": zod.string().min(1).max(createClockShiftBodyNameMax),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "pauseMinutes": zod.number().min(createClockShiftBodyPauseMinutesMin).max(createClockShiftBodyPauseMinutesMax)
+})
+
+
+export const UpdateClockShiftParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const updateClockShiftBodyOneNameMax = 100;
+
+export const updateClockShiftBodyOnePauseMinutesMin = 0;
+export const updateClockShiftBodyOnePauseMinutesMax = 1439;
+
+
+
+export const UpdateClockShiftBody = zod.object({
+  "name": zod.string().min(1).max(updateClockShiftBodyOneNameMax),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "pauseMinutes": zod.number().min(updateClockShiftBodyOnePauseMinutesMin).max(updateClockShiftBodyOnePauseMinutesMax)
+}).and(zod.object({
+  "expectedUpdatedAt": zod.string()
+}))
+
+export const updateClockShiftResponseOneNameMax = 100;
+
+export const updateClockShiftResponseOnePauseMinutesMin = 0;
+export const updateClockShiftResponseOnePauseMinutesMax = 1439;
+
+
+
+export const UpdateClockShiftResponse = zod.object({
+  "name": zod.string().min(1).max(updateClockShiftResponseOneNameMax),
+  "startTime": zod.string(),
+  "endTime": zod.string(),
+  "pauseMinutes": zod.number().min(updateClockShiftResponseOnePauseMinutesMin).max(updateClockShiftResponseOnePauseMinutesMax)
+}).and(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string()
+}))
+
+
+export const DeleteClockShiftParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteClockShiftBody = zod.object({
+  "expectedUpdatedAt": zod.string()
+})
+
+
+
+export const createClockShiftAssignmentBodyWeekdaysItemMax = 7;
+
+export const createClockShiftAssignmentBodyWeekdaysMax = 7;
+
+
+export const createClockShiftAssignmentBodyShiftIdsMax = 12;
+
+
+
+export const CreateClockShiftAssignmentBody = zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string().nullable(),
+  "weekdays": zod.array(zod.number().min(1).max(createClockShiftAssignmentBodyWeekdaysItemMax)).min(1).max(createClockShiftAssignmentBodyWeekdaysMax),
+  "shiftIds": zod.array(zod.number().min(1)).min(1).max(createClockShiftAssignmentBodyShiftIdsMax)
+})
+
+
+export const UpdateClockShiftAssignmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateClockShiftAssignmentBodyOneWeekdaysItemMax = 7;
+
+export const updateClockShiftAssignmentBodyOneWeekdaysMax = 7;
+
+
+export const updateClockShiftAssignmentBodyOneShiftIdsMax = 12;
+
+
+
+export const UpdateClockShiftAssignmentBody = zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string().nullable(),
+  "weekdays": zod.array(zod.number().min(1).max(updateClockShiftAssignmentBodyOneWeekdaysItemMax)).min(1).max(updateClockShiftAssignmentBodyOneWeekdaysMax),
+  "shiftIds": zod.array(zod.number().min(1)).min(1).max(updateClockShiftAssignmentBodyOneShiftIdsMax)
+}).and(zod.object({
+  "expectedUpdatedAt": zod.string()
+}))
+
+
+export const updateClockShiftAssignmentResponseOneWeekdaysItemMax = 7;
+
+export const updateClockShiftAssignmentResponseOneWeekdaysMax = 7;
+
+
+export const updateClockShiftAssignmentResponseOneShiftIdsMax = 12;
+
+
+
+export const UpdateClockShiftAssignmentResponse = zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string().nullable(),
+  "weekdays": zod.array(zod.number().min(1).max(updateClockShiftAssignmentResponseOneWeekdaysItemMax)).min(1).max(updateClockShiftAssignmentResponseOneWeekdaysMax),
+  "shiftIds": zod.array(zod.number().min(1)).min(1).max(updateClockShiftAssignmentResponseOneShiftIdsMax)
+}).and(zod.object({
+  "id": zod.number(),
+  "anchorMonday": zod.string(),
+  "updatedAt": zod.string()
+}))
+
+
+export const DeleteClockShiftAssignmentParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteClockShiftAssignmentBody = zod.object({
+  "expectedUpdatedAt": zod.string()
+})
+
+
+
+export const createClockShiftExceptionBodyWeekdaysItemMax = 7;
+
+export const createClockShiftExceptionBodyWeekdaysMax = 7;
+
+
+export const createClockShiftExceptionBodyNoteMax = 500;
+
+
+
+export const CreateClockShiftExceptionBody = zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string(),
+  "weekdays": zod.array(zod.number().min(1).max(createClockShiftExceptionBodyWeekdaysItemMax)).min(1).max(createClockShiftExceptionBodyWeekdaysMax),
+  "shiftId": zod.number().min(1).nullable(),
+  "note": zod.string().max(createClockShiftExceptionBodyNoteMax)
+})
+
+
+export const UpdateClockShiftExceptionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+export const updateClockShiftExceptionBodyOneWeekdaysItemMax = 7;
+
+export const updateClockShiftExceptionBodyOneWeekdaysMax = 7;
+
+
+export const updateClockShiftExceptionBodyOneNoteMax = 500;
+
+
+
+export const UpdateClockShiftExceptionBody = zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string(),
+  "weekdays": zod.array(zod.number().min(1).max(updateClockShiftExceptionBodyOneWeekdaysItemMax)).min(1).max(updateClockShiftExceptionBodyOneWeekdaysMax),
+  "shiftId": zod.number().min(1).nullable(),
+  "note": zod.string().max(updateClockShiftExceptionBodyOneNoteMax)
+}).and(zod.object({
+  "expectedUpdatedAt": zod.string()
+}))
+
+
+export const updateClockShiftExceptionResponseOneWeekdaysItemMax = 7;
+
+export const updateClockShiftExceptionResponseOneWeekdaysMax = 7;
+
+
+export const updateClockShiftExceptionResponseOneNoteMax = 500;
+
+
+
+export const UpdateClockShiftExceptionResponse = zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string(),
+  "weekdays": zod.array(zod.number().min(1).max(updateClockShiftExceptionResponseOneWeekdaysItemMax)).min(1).max(updateClockShiftExceptionResponseOneWeekdaysMax),
+  "shiftId": zod.number().min(1).nullable(),
+  "note": zod.string().max(updateClockShiftExceptionResponseOneNoteMax)
+}).and(zod.object({
+  "id": zod.number(),
+  "updatedAt": zod.string()
+}))
+
+
+export const DeleteClockShiftExceptionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const DeleteClockShiftExceptionBody = zod.object({
+  "expectedUpdatedAt": zod.string()
 })
 
 
@@ -920,6 +1234,10 @@ export const UpdateClockEntryResponse = zod.object({
   "endedAt": zod.string().nullable(),
   "originalStartedAt": zod.string(),
   "originalEndedAt": zod.string().nullable(),
+  "shiftName": zod.string().nullish(),
+  "shiftDay": zod.string().nullish(),
+  "shiftStart": zod.string().nullish(),
+  "shiftEnd": zod.string().nullish(),
   "bookedStart": zod.string(),
   "bookedEnd": zod.string().nullable(),
   "grossMinutes": zod.number().nullable(),

@@ -49,4 +49,10 @@ In der Stempeluhr müssen Schichten angelegt und pro Mitarbeiter zugeteilt werde
 
 **Why:** Der Nutzer verlangt ein klügeres System mit erstellbaren Schichten, individueller Zuteilung und automatischem Wochenwechsel statt ausschließlich gemeinsamer Zeitgrenzen.
 
-**How to apply:** Schichtzuordnung und wöchentliche Rotation in die bestehende Stempeluhr integrieren. Die konkrete Bedeutung der Schicht für die anrechenbare Stempelzeit ist gesondert mit dem Nutzer zu klären; aus dem Wunsch keine pauschale Gutschrift ungearbeiteter Stunden ableiten.
+**How to apply:** Schichtzuordnung und wöchentliche Rotation in die bestehende Stempeluhr integrieren. Der Nutzer hat „Gestempelte Zeit innerhalb der Schicht“ bestätigt: nur tatsächlich gestempelte Anwesenheit innerhalb der zugewiesenen Schicht anrechnen, abzüglich Pause. Keine pauschale Gutschrift der geplanten Schichtstunden und keine automatische Gutschrift für zu frühes Kommen oder zu spätes Gehen.
+
+Neue Schichtpläne und spätere Planänderungen dürfen bereits gespeicherte Buchungen nicht stillschweigend rückwirkend neu bewerten. Mitarbeiter ohne Schichtzuordnung verwenden weiterhin die bisherigen allgemeinen Regeln.
+
+**Why:** Die Einführung der Planung soll vorhandene Zeiterfassungs- und Importdaten nicht nachträglich verändern oder unzugeteilte Mitarbeiter von der bisherigen Zeiterfassung ausschließen. Dies ist eine bewusste Kompatibilitätsentscheidung, keine pauschale rückwirkende Umstellung.
+
+**How to apply:** Neue Buchungen berücksichtigen den dann geltenden Plan; auch über einen Wochenwechsel hinweg behalten bestehende Buchungen ihre Berechnungsgrundlage. Eine nachträgliche Neubewertung alter Zeiträume wäre eine gesonderte, ausdrücklich freizugebende Funktion.

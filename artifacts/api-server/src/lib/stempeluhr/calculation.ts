@@ -2,6 +2,7 @@ export interface TimeRules {
   earliestStart: string | null;
   latestEnd: string | null;
   breakRules: { fromMinutes: number; deductionMinutes: number }[];
+  shiftWindow?: { day: string; name: string; shiftId: number | null; start: string; end: string };
 }
 export interface Settings extends TimeRules {
   terminalHours: number | null;
@@ -46,6 +47,16 @@ export function nextDay(day: string) {
   return date.toISOString().slice(0, 10);
 }
 export function calculate(start: Date, end: Date | null, rules: TimeRules, pauseOverride: number | null = null) {
+  if (rules.shiftWindow) {
+    const lower = Date.parse(rules.shiftWindow.start), upper = Date.parse(rules.shiftWindow.end);
+    const bookedStart = new Date(Math.min(upper, Math.max(start.getTime(), lower)));
+    if (!end) return { bookedStart: bookedStart.toISOString(), bookedEnd: null, grossMinutes: null, pauseMinutes: null, netMinutes: null };
+    const bookedEnd = new Date(Math.max(bookedStart.getTime(), Math.min(end.getTime(), upper)));
+    const grossMinutes = Math.max(0, Math.floor((bookedEnd.getTime() - bookedStart.getTime()) / 60000));
+    const rule = [...rules.breakRules].sort((a, b) => b.fromMinutes - a.fromMinutes).find((r) => grossMinutes >= r.fromMinutes);
+    const pauseMinutes = Math.min(grossMinutes, pauseOverride ?? rule?.deductionMinutes ?? 0);
+    return { bookedStart: bookedStart.toISOString(), bookedEnd: bookedEnd.toISOString(), grossMinutes, pauseMinutes, netMinutes: grossMinutes - pauseMinutes };
+  }
   let bookedStart = start;
   if (rules.earliestStart) {
     const boundary = berlinInstant(localDay(start), rules.earliestStart);

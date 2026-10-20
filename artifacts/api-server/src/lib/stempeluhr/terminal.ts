@@ -3,6 +3,7 @@ import type { Request, Response } from "express";
 import type { PoolClient } from "@workspace/db";
 import { can } from "../permissions";
 import { audit, checkOverlap, ClockError, entry, ENTRY_SELECT, iso, settings, transaction, type Row } from "./model";
+import { shiftRules } from "./shifts";
 
 export const TERMINAL_COOKIE = "easy_clock_terminal";
 const hash = (token: string) => createHash("sha256").update(token).digest("hex");
@@ -94,8 +95,9 @@ export async function stamp(req: Request, card: string, requestId: string, res?:
     let id: number, action: "in" | "out";
     if (!open.rowCount) {
       await checkOverlap(c, m.id, now.toISOString(), null);
+      const rules = await shiftRules(c, m.id, now);
       const r = await c.query(`INSERT INTO clock_entries(employee_id,started_at,original_started_at,rules,source)
-        VALUES($1,$2,$2,$3,'terminal') RETURNING id`, [m.id, now, s]);
+        VALUES($1,$2,$2,$3,'terminal') RETURNING id`, [m.id, now, rules]);
       id = r.rows[0].id; action = "in";
     } else {
       const e = open.rows[0];

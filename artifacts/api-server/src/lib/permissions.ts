@@ -14,6 +14,7 @@ export type Permission =
   | "wvvn.settings"
   | "wvvn.import"
   | "stempeluhr.view"
+  | "stempeluhr.shifts"
   | "stempeluhr.terminal"
   | "stempeluhr.employees"
   | "stempeluhr.correct"
@@ -84,7 +85,7 @@ export const ALL_CONFIGURABLE_ROLES: ConfigurableRole[] = [
 export const ALL_PERMISSIONS: Permission[] = [
   "wvvn.view", "wvvn.edit", "wvvn.remove", "wvvn.scan", "wvvn.finish", "wvvn.delete", "wvvn.devices",
   "wvvn.articles", "wvvn.export", "wvvn.settings", "wvvn.import",
-  "stempeluhr.view", "stempeluhr.terminal", "stempeluhr.employees", "stempeluhr.correct",
+  "stempeluhr.view", "stempeluhr.shifts", "stempeluhr.terminal", "stempeluhr.employees", "stempeluhr.correct",
   "stempeluhr.delete", "stempeluhr.export", "stempeluhr.settings", "stempeluhr.import",
   "pallet.create",
   "pallet.edit",
@@ -143,6 +144,7 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "wvvn.settings": { label: "Modulregeln und E-Mail-Versand einstellen", category: "Werksverkauf / Vernichtung" },
   "wvvn.import": { label: "Artikeldaten und historische Listen importieren", category: "Werksverkauf / Vernichtung" },
   "stempeluhr.view": { label: "Anwesenheiten und Änderungsprotokoll ansehen", category: "Stempeluhr" },
+  "stempeluhr.shifts": { label: "Schichten, Mitarbeiter-Zuteilungen und Wochenwechsel verwalten", category: "Stempeluhr" },
   "stempeluhr.terminal": { label: "Stempelterminals freischalten und sperren", category: "Stempeluhr" },
   "stempeluhr.employees": { label: "Mitarbeiter und Barcodekarten verwalten", category: "Stempeluhr" },
   "stempeluhr.correct": { label: "Zeiten anlegen und mit Begründung korrigieren", category: "Stempeluhr" },

@@ -13,6 +13,7 @@ import { Employees } from "./employees";
 import { AuditList } from "./audit";
 import { SettingsPanel, TerminalPanel } from "./settings";
 import { ImportPanel } from "./import";
+import { ShiftsPanel } from "./shifts";
 
 export default function StempeluhrPage() {
   const { has, any } = useClockAccess();
@@ -29,6 +30,7 @@ export default function StempeluhrPage() {
     { id: "anwesenheit", label: "Anwesenheit", ok: showEntries },
     { id: "mitarbeiter", label: "Mitarbeiter", ok: showEmployees },
     { id: "verlauf", label: "Verlauf", ok: showAudit },
+    { id: "schichten", label: "Schichten", ok: any(P.view, P.employees, P.export, P.shifts) },
     { id: "terminal", label: "Terminal", ok: has(P.terminal) },
     { id: "einstellungen", label: "Einstellungen", ok: has(P.settings) },
     { id: "import", label: "Import", ok: has(P.import) },
@@ -90,6 +92,7 @@ export default function StempeluhrPage() {
       {s && active === "anwesenheit" && <Attendance entries={s.entries} employees={s.employees} has={has} from={from} to={to} />}
       {s && active === "mitarbeiter" && <Employees employees={s.employees} entries={s.entries} canEdit={has(P.employees)} />}
       {s && active === "verlauf" && <AuditList audit={s.audit} />}
+      {active === "schichten" && <ShiftsPanel canEdit={has(P.shifts)} />}
       {active === "terminal" && <TerminalPanel />}
       {active === "einstellungen" && <SettingsPanel />}
       {active === "import" && <ImportPanel />}

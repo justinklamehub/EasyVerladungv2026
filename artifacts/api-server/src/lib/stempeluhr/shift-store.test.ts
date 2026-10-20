@@ -1,0 +1,63 @@
+import { test, after } from "node:test";
+import assert from "node:assert/strict";
+import { randomUUID } from "node:crypto";
+import { pool } from "@workspace/db";
+import { ensureClockTables, entry, ENTRY_SELECT } from "./model";
+import { saveShift, removeShift, planning, shiftRules } from "./shifts";
+import { berlinInstant } from "./calculation";
+
+after(async () => { await pool.end(); });
+test("shift CRUD, assignment rotation, exceptions, optimistic locking and saved bookings stay consistent (rollback only)", async () => {
+  await ensureClockTables();
+  const c = await pool.connect();
+  const tag = `CLOCK_SHIFT_TEST_${randomUUID()}`;
+  try {
+    await c.query("BEGIN");
+    await c.query("SELECT pg_advisory_xact_lock(674092)");
+    const emp = (await c.query("INSERT INTO clock_employees(card_number,first_name,last_name) VALUES($1,'Shift',$1) RETURNING id", [tag])).rows[0].id;
+    const earlyInput = { name: tag + "_Früh", startTime: "06:00", endTime: "14:00", pauseMinutes: 30 };
+    const early = await saveShift(c, "shift", earlyInput, tag);
+    const late = await saveShift(c, "shift", { ...earlyInput, name: tag + "_Spät", startTime: "14:00", endTime: "22:00" }, tag);
+    await assert.rejects(saveShift(c, "shift", { ...earlyInput, startTime: "02:30" }, tag), /Zeitumstellung/);
+    await assert.rejects(saveShift(c, "shift", { ...earlyInput, pauseMinutes: 480 }, tag), /Pause/);
+    await assert.rejects(saveShift(c, "shift", earlyInput, tag), /existiert bereits/);
+    const assignmentInput = { employeeId: emp, startsOn: "2026-12-21", endsOn: null, weekdays: [1, 2, 3, 4, 5], shiftIds: [early.id, late.id] };
+    await assert.rejects(saveShift(c, "assignment", { ...assignmentInput, shiftIds: [2147483647] }, tag), /existiert nicht/);
+    await assert.rejects(saveShift(c, "assignment", { ...assignmentInput, shiftIds: [1.5] }, tag), /Schicht-ID/);
+    const assignment = await saveShift(c, "assignment", assignmentInput, tag);
+    assert.equal(assignment.anchorMonday, "2026-12-21");
+    await assert.rejects(saveShift(c, "assignment", { ...assignmentInput, startsOn: "2026-12-28" }, tag), /überlappende/);
+    await assert.rejects(removeShift(c, "shift", early.id, early.updatedAt, tag), /noch zugeteilt/);
+    let p = await planning(c, "2026-12-21", "2027-01-04", emp);
+    assert.equal(p.days.find((d) => d.day === "2026-12-28")?.shiftId, late.id);
+    assert.equal(p.days.find((d) => d.day === "2027-01-04")?.shiftId, early.id);
+    const exceptionInput = { employeeId: emp, startsOn: "2026-12-22", endsOn: "2026-12-22", weekdays: [2], shiftId: late.id, note: "Tausch" };
+    const exception = await saveShift(c, "exception", exceptionInput, tag);
+    p = await planning(c, "2026-12-21", "2026-12-28", emp);
+    assert.equal(p.days.length, 8);
+    assert.equal(p.days.find((d) => d.day === "2026-12-22")?.source, "exception");
+    assert.equal(p.days.find((d) => d.day === "2026-12-22")?.shiftId, late.id);
+    const free = await saveShift(c, "exception", { ...exceptionInput, shiftId: null }, tag, exception.id, exception.updatedAt);
+    await assert.rejects(saveShift(c, "exception", exceptionInput, tag, exception.id, exception.updatedAt), /inzwischen geändert/);
+    p = await planning(c, "2026-12-22", "2026-12-22", emp);
+    assert.equal(p.days[0].shiftName, "Frei");
+    const start = berlinInstant("2026-12-21", "05:30"), end = berlinInstant("2026-12-21", "15:30");
+    const rules = await shiftRules(c, emp, start);
+    const booked = (await c.query(`INSERT INTO clock_entries(employee_id,started_at,ended_at,original_started_at,original_ended_at,rules,source)
+      VALUES($1,$2,$3,$2,$3,$4,'manual') RETURNING id`, [emp, start, end, rules])).rows[0].id;
+    const projected = async () => entry((await c.query(`${ENTRY_SELECT} WHERE e.id=$1`, [booked])).rows[0]);
+    assert.equal((await projected()).netMinutes, 450);
+    const changed = await saveShift(c, "shift", { ...earlyInput, endTime: "15:00" }, tag, early.id, early.updatedAt);
+    assert.equal((await projected()).netMinutes, 450);
+    assert.equal((await projected()).shiftName, earlyInput.name);
+    await assert.rejects(removeShift(c, "shift", early.id, early.updatedAt, tag), /inzwischen geändert/);
+    await assert.rejects(planning(c, "2026-12-21", "2027-05-01", emp), /62 Tage/);
+    await removeShift(c, "exception", free.id, free.updatedAt, tag);
+    await removeShift(c, "assignment", assignment.id, assignment.updatedAt, tag);
+    await removeShift(c, "shift", changed.id, changed.updatedAt, tag);
+    await removeShift(c, "shift", late.id, late.updatedAt, tag);
+    assert.equal((await projected()).netMinutes, 450);
+    assert.equal((await shiftRules(c, emp, start)).shiftWindow, undefined);
+    assert.ok((await c.query("SELECT count(*)::int AS n FROM clock_audit WHERE actor=$1", [tag])).rows[0].n >= 9);
+  } finally { await c.query("ROLLBACK"); c.release(); }
+});

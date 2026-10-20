@@ -8,7 +8,14 @@ export const P = {
   view: "stempeluhr.view", terminal: "stempeluhr.terminal", employees: "stempeluhr.employees",
   correct: "stempeluhr.correct", delete: "stempeluhr.delete", export: "stempeluhr.export",
   settings: "stempeluhr.settings", import: "stempeluhr.import",
+  shifts: "stempeluhr.shifts",
 } as const;
+
+export const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
+export const isoDay = (s: string) => { const [y, m, d] = s.split("-"); return `${d}.${m}.${y}`; };
+export const mondayOf = (s: string) => { const d = new Date(`${s}T12:00:00Z`); d.setUTCDate(d.getUTCDate() - (d.getUTCDay() + 6) % 7); return d.toISOString().slice(0, 10); };
+export const addDays = (s: string, n: number) => { const d = new Date(`${s}T12:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+export const diffDays = (a: string, b: string) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 86400000);
 
 export function useClockAccess() {
   const { user } = useAuth();

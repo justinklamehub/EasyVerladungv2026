@@ -9,17 +9,23 @@ import {
   CommitClockImportBody, CommitClockImportResponse, GetClockTerminalResponse, UnlockClockTerminalBody,
   UnlockClockTerminalResponse, StampClockTerminalBody, StampClockTerminalResponse, GetClockTerminalsResponse,
   GetNextClockCardNumberResponse,
+  GetClockShiftPlanningQueryParams, GetClockShiftPlanningResponse,
+  CreateClockShiftBody, UpdateClockShiftBody, UpdateClockShiftResponse, DeleteClockShiftBody,
+  CreateClockShiftAssignmentBody, UpdateClockShiftAssignmentBody, UpdateClockShiftAssignmentResponse,
+  DeleteClockShiftAssignmentBody, CreateClockShiftExceptionBody,
+  UpdateClockShiftExceptionBody, UpdateClockShiftExceptionResponse, DeleteClockShiftExceptionBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
 import { can, type Permission } from "../lib/permissions";
 import { read, transaction, audit, settings, entry, employee, checkVersion, checkOverlap, validateRange, ClockError, ENTRY_SELECT, iso } from "../lib/stempeluhr/model";
-import { berlinInstant, nextDay } from "../lib/stempeluhr/calculation";
+import { berlinInstant, nextDay, localDay } from "../lib/stempeluhr/calculation";
+import { planning, saveShift, removeShift, shiftRules } from "../lib/stempeluhr/shifts";
 import { activeTerminal, terminalResult, renewUnlimitedCookie, unlock, lock, stamp } from "../lib/stempeluhr/terminal";
 import { importLegacy } from "../lib/stempeluhr/import";
 import { allocateClockCardNumber, previewClockCardNumber, assertClockCardUnchanged, assertAutomaticClockCardNumber } from "../lib/stempeluhr/employee-numbers";
 
 const router = Router();
-const keys: Permission[] = ["stempeluhr.view", "stempeluhr.terminal", "stempeluhr.employees", "stempeluhr.correct",
+const keys: Permission[] = ["stempeluhr.view", "stempeluhr.shifts", "stempeluhr.terminal", "stempeluhr.employees", "stempeluhr.correct",
   "stempeluhr.delete", "stempeluhr.export", "stempeluhr.settings", "stempeluhr.import"];
 const actor = (req: Request) => req.session.username || `Benutzer ${req.session.userId}`;
 const idParam = (req: Request) => z.coerce.number().int().positive().parse(req.params.id);
@@ -90,6 +96,35 @@ router.get("/stempeluhr/employees/next-card-number", requireAuth, handler(async 
   res.setHeader("Cache-Control", "no-store");
   res.json(GetNextClockCardNumberResponse.parse({ cardNumber: await read(previewClockCardNumber) }));
 }));
+router.get("/stempeluhr/shift-planning", requireAuth, handler(async (req, res) => {
+  await permissions(req, ["stempeluhr.view", "stempeluhr.shifts", "stempeluhr.employees", "stempeluhr.export"]);
+  const b = GetClockShiftPlanningQueryParams.parse(req.query);
+  if (b.employeeId != null) z.number().int().positive().parse(b.employeeId);
+  res.json(GetClockShiftPlanningResponse.parse(await read((c) => planning(c, b.from, b.to, b.employeeId))));
+}));
+for (const group of [
+  { path: "shifts", kind: "shift", create: CreateClockShiftBody, update: UpdateClockShiftBody, deletion: DeleteClockShiftBody, created: UpdateClockShiftResponse, updated: UpdateClockShiftResponse },
+  { path: "shift-assignments", kind: "assignment", create: CreateClockShiftAssignmentBody, update: UpdateClockShiftAssignmentBody, deletion: DeleteClockShiftAssignmentBody, created: UpdateClockShiftAssignmentResponse, updated: UpdateClockShiftAssignmentResponse },
+  { path: "shift-exceptions", kind: "exception", create: CreateClockShiftExceptionBody, update: UpdateClockShiftExceptionBody, deletion: DeleteClockShiftExceptionBody, created: UpdateClockShiftExceptionResponse, updated: UpdateClockShiftExceptionResponse },
+] as const) {
+  router.post(`/stempeluhr/${group.path}`, requireAuth, handler(async (req, res) => {
+    await permissions(req, ["stempeluhr.shifts"]);
+    const b = group.create.parse(req.body);
+    const result = await transaction((c) => saveShift(c, group.kind, b, actor(req)));
+    res.status(201).json(group.created.parse(result));
+  }));
+  router.put(`/stempeluhr/${group.path}/:id`, requireAuth, handler(async (req, res) => {
+    await permissions(req, ["stempeluhr.shifts"]);
+    const b = group.update.parse(req.body);
+    res.json(group.updated.parse(await transaction((c) => saveShift(c, group.kind, b, actor(req), idParam(req), b.expectedUpdatedAt))));
+  }));
+  router.delete(`/stempeluhr/${group.path}/:id`, requireAuth, handler(async (req, res) => {
+    await permissions(req, ["stempeluhr.shifts"]);
+    const b = group.deletion.parse(req.body);
+    await transaction((c) => removeShift(c, group.kind, idParam(req), b.expectedUpdatedAt, actor(req)));
+    res.sendStatus(204);
+  }));
+}
 router.post("/stempeluhr/employees", requireAuth, handler(async (req, res) => {
   await permissions(req, ["stempeluhr.employees"]);
   const b = CreateClockEmployeeBody.parse(req.body);
@@ -156,13 +191,14 @@ async function saveEntry(req: Request, updating: boolean) {
     }
     if (!(await c.query("SELECT id FROM clock_employees WHERE id=$1", [b.employeeId])).rowCount) throw new ClockError("Mitarbeiter nicht gefunden.", 404);
     await checkOverlap(c, b.employeeId, dates.startedAt, dates.endedAt, id);
+    const rules = old && localDay(new Date(dates.startedAt)) === localDay(new Date(old.started_at))
+      ? old.rules : await shiftRules(c, b.employeeId, new Date(dates.startedAt));
     let savedId = id;
-    if (old) await c.query(`UPDATE clock_entries SET started_at=$2,ended_at=$3,pause_override=$4,
-      updated_at=date_trunc('milliseconds',clock_timestamp()) WHERE id=$1`, [id, dates.startedAt, dates.endedAt, b.pauseOverride]);
+    if (old) await c.query(`UPDATE clock_entries SET started_at=$2,ended_at=$3,pause_override=$4,rules=$5,
+      updated_at=date_trunc('milliseconds',clock_timestamp()) WHERE id=$1`, [id, dates.startedAt, dates.endedAt, b.pauseOverride, rules]);
     else {
-      const s = await settings(c);
       const { rows } = await c.query(`INSERT INTO clock_entries(employee_id,started_at,ended_at,original_started_at,original_ended_at,rules,pause_override,source)
-        VALUES($1,$2,$3,$2,$3,$4,$5,'manual') RETURNING id`, [b.employeeId, dates.startedAt, dates.endedAt, s, b.pauseOverride]);
+        VALUES($1,$2,$3,$2,$3,$4,$5,'manual') RETURNING id`, [b.employeeId, dates.startedAt, dates.endedAt, rules, b.pauseOverride]);
       savedId = rows[0].id;
     }
     const result = entry((await c.query(`${ENTRY_SELECT} WHERE e.id=$1`, [savedId])).rows[0]);

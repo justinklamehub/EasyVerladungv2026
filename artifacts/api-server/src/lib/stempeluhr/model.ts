@@ -50,6 +50,19 @@ export function ensureClockTables(): Promise<void> {
           terminal_id INTEGER NOT NULL REFERENCES clock_terminals(id), request_id TEXT NOT NULL, card_number TEXT NOT NULL,
           result JSONB NOT NULL);
         CREATE UNIQUE INDEX IF NOT EXISTS clock_receipt_request ON clock_receipts(terminal_id,request_id);
+        CREATE TABLE IF NOT EXISTS clock_shifts (
+          id SERIAL PRIMARY KEY, data JSONB NOT NULL, deleted_at TIMESTAMPTZ,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds',clock_timestamp()));
+        CREATE TABLE IF NOT EXISTS clock_shift_assignments (
+          id SERIAL PRIMARY KEY, employee_id INTEGER NOT NULL REFERENCES clock_employees(id),
+          data JSONB NOT NULL, deleted_at TIMESTAMPTZ,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds',clock_timestamp()));
+        CREATE INDEX IF NOT EXISTS clock_shift_assignments_employee ON clock_shift_assignments(employee_id) WHERE deleted_at IS NULL;
+        CREATE TABLE IF NOT EXISTS clock_shift_exceptions (
+          id SERIAL PRIMARY KEY, employee_id INTEGER NOT NULL REFERENCES clock_employees(id),
+          data JSONB NOT NULL, deleted_at TIMESTAMPTZ,
+          updated_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds',clock_timestamp()));
+        CREATE INDEX IF NOT EXISTS clock_shift_exceptions_employee ON clock_shift_exceptions(employee_id) WHERE deleted_at IS NULL;
       `);
       const { updatedAt: _, ...defaults } = DEFAULT_SETTINGS;
       await c.query("INSERT INTO clock_settings(id,data) VALUES(1,$1) ON CONFLICT DO NOTHING", [defaults]);
@@ -89,6 +102,8 @@ export function entry(r: Row) {
     id: r.id, employeeId: r.employee_id, cardNumber: r.card_number, firstName: r.first_name, lastName: r.last_name,
     provider: r.provider, activity: r.activity, startedAt: iso(r.started_at), endedAt: r.ended_at ? iso(r.ended_at) : null,
     originalStartedAt: iso(r.original_started_at), originalEndedAt: r.original_ended_at ? iso(r.original_ended_at) : null,
+    shiftName: r.rules.shiftWindow?.name ?? null, shiftDay: r.rules.shiftWindow?.day ?? null,
+    shiftStart: r.rules.shiftWindow?.start ?? null, shiftEnd: r.rules.shiftWindow?.end ?? null,
     ...calculate(new Date(r.started_at), r.ended_at ? new Date(r.ended_at) : null, r.rules, r.pause_override),
     pauseOverride: r.pause_override, source: r.source, updatedAt: iso(r.updated_at),
   };

@@ -20,6 +20,14 @@ export interface ClockEntry {
   originalStartedAt: string;
   /** @nullable */
   originalEndedAt: string | null;
+  /** @nullable */
+  shiftName?: string | null;
+  /** @nullable */
+  shiftDay?: string | null;
+  /** @nullable */
+  shiftStart?: string | null;
+  /** @nullable */
+  shiftEnd?: string | null;
   bookedStart: string;
   /** @nullable */
   bookedEnd: string | null;

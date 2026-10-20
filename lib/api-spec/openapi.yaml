@@ -338,6 +338,136 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ClockState" }
+  /stempeluhr/shift-planning:
+    get:
+      operationId: getClockShiftPlanning
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string } }
+        - { name: to, in: query, required: true, schema: { type: string } }
+        - { name: employeeId, in: query, schema: { type: integer } }
+      responses:
+        "200":
+          description: Shift templates, assignments, exceptions and calculated daily planning (at most 62 days)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockShiftPlanning" }
+  /stempeluhr/shifts:
+    post:
+      operationId: createClockShift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockShiftInput" }
+      responses:
+        "201":
+          description: Created shift template
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockShift" }
+  /stempeluhr/shifts/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    put:
+      operationId: updateClockShift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockShiftUpdate" }
+      responses:
+        "200":
+          description: Updated template (existing bookings retain their snapshot)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockShift" }
+    delete:
+      operationId: deleteClockShift
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockVersion" }
+      responses:
+        "204": { description: Unused shift template removed; referenced templates cannot be deleted }
+  /stempeluhr/shift-assignments:
+    post:
+      operationId: createClockShiftAssignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockShiftAssignmentInput" }
+      responses:
+        "201":
+          description: Employee assignment with weekly cycle anchored to the Monday of startsOn
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockShiftAssignment" }
+  /stempeluhr/shift-assignments/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    put:
+      operationId: updateClockShiftAssignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockShiftAssignmentUpdate" }
+      responses:
+        "200":
+          description: Updated assignment, existing bookings unchanged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockShiftAssignment" }
+    delete:
+      operationId: deleteClockShiftAssignment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockVersion" }
+      responses:
+        "204": { description: "Assignment removed, existing bookings unchanged" }
+  /stempeluhr/shift-exceptions:
+    post:
+      operationId: createClockShiftException
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockShiftExceptionInput" }
+      responses:
+        "201":
+          description: Explicit shift or day-off exception, higher priority than weekly rotation
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockShiftException" }
+  /stempeluhr/shift-exceptions/{id}:
+    parameters:
+      - { name: id, in: path, required: true, schema: { type: integer } }
+    put:
+      operationId: updateClockShiftException
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockShiftExceptionUpdate" }
+      responses:
+        "200":
+          description: Updated exception, existing bookings unchanged
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockShiftException" }
+    delete:
+      operationId: deleteClockShiftException
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ClockVersion" }
+      responses:
+        "204": { description: Exception removed; normal rotation resumes }
   /stempeluhr/employees:
     post:
       operationId: createClockEmployee
@@ -2078,6 +2208,108 @@ components:
         activity: { type: string, maxLength: 150 }
         active: { type: boolean }
         expectedUpdatedAt: { type: string }
+    ClockVersion:
+      type: object
+      required: [expectedUpdatedAt]
+      properties:
+        expectedUpdatedAt: { type: string }
+    ClockShiftInput:
+      type: object
+      required: [name, startTime, endTime, pauseMinutes]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        startTime: { type: string }
+        endTime: { type: string }
+        pauseMinutes: { type: integer, minimum: 0, maximum: 1439 }
+    ClockShiftUpdate:
+      allOf:
+        - { $ref: "#/components/schemas/ClockShiftInput" }
+        - { $ref: "#/components/schemas/ClockVersion" }
+    ClockShift:
+      allOf:
+        - { $ref: "#/components/schemas/ClockShiftInput" }
+        - type: object
+          required: [id, updatedAt]
+          properties:
+            id: { type: integer }
+            updatedAt: { type: string }
+    ClockShiftAssignmentInput:
+      type: object
+      required: [employeeId, startsOn, endsOn, weekdays, shiftIds]
+      properties:
+        employeeId: { type: integer, minimum: 1 }
+        startsOn: { type: string }
+        endsOn: { type: ["string", "null"] }
+        weekdays:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+        shiftIds:
+          type: array
+          minItems: 1
+          maxItems: 12
+          items: { type: integer, minimum: 1 }
+    ClockShiftAssignmentUpdate:
+      allOf:
+        - { $ref: "#/components/schemas/ClockShiftAssignmentInput" }
+        - { $ref: "#/components/schemas/ClockVersion" }
+    ClockShiftAssignment:
+      allOf:
+        - { $ref: "#/components/schemas/ClockShiftAssignmentInput" }
+        - type: object
+          required: [id, anchorMonday, updatedAt]
+          properties:
+            id: { type: integer }
+            anchorMonday: { type: string }
+            updatedAt: { type: string }
+    ClockShiftExceptionInput:
+      type: object
+      required: [employeeId, startsOn, endsOn, weekdays, shiftId, note]
+      properties:
+        employeeId: { type: integer, minimum: 1 }
+        startsOn: { type: string }
+        endsOn: { type: string }
+        weekdays:
+          type: array
+          minItems: 1
+          maxItems: 7
+          items: { type: integer, minimum: 1, maximum: 7 }
+        shiftId: { type: ["integer", "null"], minimum: 1 }
+        note: { type: string, maxLength: 500 }
+    ClockShiftExceptionUpdate:
+      allOf:
+        - { $ref: "#/components/schemas/ClockShiftExceptionInput" }
+        - { $ref: "#/components/schemas/ClockVersion" }
+    ClockShiftException:
+      allOf:
+        - { $ref: "#/components/schemas/ClockShiftExceptionInput" }
+        - type: object
+          required: [id, updatedAt]
+          properties:
+            id: { type: integer }
+            updatedAt: { type: string }
+    ClockShiftDay:
+      type: object
+      required: [employeeId, day, shiftId, shiftName, startsAt, endsAt, plannedMinutes, source]
+      properties:
+        employeeId: { type: integer }
+        day: { type: string }
+        shiftId: { type: ["integer", "null"] }
+        shiftName: { type: ["string", "null"] }
+        startsAt: { type: ["string", "null"] }
+        endsAt: { type: ["string", "null"] }
+        plannedMinutes: { type: integer }
+        source: { type: string, enum: [assignment, exception, none] }
+    ClockShiftPlanning:
+      type: object
+      required: [shifts, assignments, exceptions, employees, days]
+      properties:
+        shifts: { type: array, items: { $ref: "#/components/schemas/ClockShift" } }
+        assignments: { type: array, items: { $ref: "#/components/schemas/ClockShiftAssignment" } }
+        exceptions: { type: array, items: { $ref: "#/components/schemas/ClockShiftException" } }
+        employees: { type: array, items: { $ref: "#/components/schemas/ClockEmployee" } }
+        days: { type: array, items: { $ref: "#/components/schemas/ClockShiftDay" } }
     ClockEmployee:
       allOf:
         - { $ref: "#/components/schemas/ClockEmployeeInput" }
@@ -2145,6 +2377,10 @@ components:
         endedAt: { type: ["string", "null"] }
         originalStartedAt: { type: string }
         originalEndedAt: { type: ["string", "null"] }
+        shiftName: { type: ["string", "null"] }
+        shiftDay: { type: ["string", "null"] }
+        shiftStart: { type: ["string", "null"] }
+        shiftEnd: { type: ["string", "null"] }
         bookedStart: { type: string }
         bookedEnd: { type: ["string", "null"] }
         grossMinutes: { type: ["integer", "null"] }
