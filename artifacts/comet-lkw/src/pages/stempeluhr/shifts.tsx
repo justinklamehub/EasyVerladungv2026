@@ -103,7 +103,7 @@ export function ShiftsPanel({ canEdit }: { canEdit: boolean }) {
               </li>))}</ul>}
         </Card>
 
-        <Card title="Zuweisungen und Wochenzyklus" action={add(<Button size="sm" disabled={!d.shifts.length} onClick={() => setDlg({ k: "assign", v: null })} data-testid="button-new-assignment"><Plus className="w-4 h-4 mr-1" />Zuweisung</Button>)}>
+        <Card title="Zuweisungen und Wochenzyklus" action={add(<Button size="sm" disabled={!d.shifts.length} onClick={() => setDlg({ k: "assign", v: null })} data-testid="button-new-assignment"><Plus className="w-4 h-4 mr-1" />Mehrere zuweisen</Button>)}>
           {!list(d.assignments).length ? <p className="text-sm text-slate-500 py-4 text-center">{d.shifts.length ? "Keine Zuweisungen. Ohne Zuweisung gelten die allgemeinen Zeitregeln." : "Erst Schichten anlegen."}</p> :
             <ul className="divide-y">{list(d.assignments).map((a) => (
               <li key={a.id} className="py-2 text-sm space-y-1" data-testid={`row-assignment-${a.id}`}>
@@ -128,7 +128,7 @@ export function ShiftsPanel({ canEdit }: { canEdit: boolean }) {
         </Card>
 
         {dlg?.k === "shift" && <ShiftDialog key={dlg.v?.id ?? "new"} shift={dlg.v} onClose={() => setDlg(null)} done={done} />}
-        {dlg?.k === "assign" && <AssignmentDialog key={dlg.v?.id ?? "new"} item={dlg.v} employees={sorted} shifts={d.shifts} defaultEmployee={emp} onClose={() => setDlg(null)} done={done} />}
+        {dlg?.k === "assign" && <AssignmentDialog key={dlg.v?.id ?? "new"} item={dlg.v} employees={sorted} shifts={d.shifts} defaultEmployee={emp} assignments={d.assignments} onClose={() => setDlg(null)} done={done} />}
         {dlg?.k === "exc" && <ExceptionDialog key={dlg.v?.id ?? "new"} item={dlg.v} employees={sorted} shifts={d.shifts} defaultEmployee={emp} onClose={() => setDlg(null)} done={done} />}
         {dlg?.k === "delShift" && <ConfirmDelete title="Schicht löschen" text={`Schicht "${dlg.v.name}" löschen? Wird sie noch in Zuweisungen oder Ausnahmen verwendet, kann sie nicht gelöscht werden.`} onClose={() => setDlg(null)} onConfirm={async () => { await delShift.mutateAsync({ id: dlg.v.id, data: { expectedUpdatedAt: dlg.v.updatedAt } }); done(); }} />}
         {dlg?.k === "delAssign" && <ConfirmDelete title="Zuweisung löschen" text={`Zuweisung von ${nm(dlg.v.employeeId)} ab ${isoDay(dlg.v.startsOn)} löschen? Bereits erfasste Stempelungen bleiben erhalten.`} onClose={() => setDlg(null)} onConfirm={async () => { await delAssign.mutateAsync({ id: dlg.v.id, data: { expectedUpdatedAt: dlg.v.updatedAt } }); done(); }} />}

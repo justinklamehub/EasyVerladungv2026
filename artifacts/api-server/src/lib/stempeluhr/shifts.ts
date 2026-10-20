@@ -1,5 +1,5 @@
 import type { PoolClient } from "@workspace/db";
-import type { ClockShiftInput, ClockShiftAssignmentInput, ClockShiftExceptionInput } from "@workspace/api-zod";
+import type { ClockShiftInput, ClockShiftAssignmentInput, ClockShiftAssignmentsInput, ClockShiftExceptionInput } from "@workspace/api-zod";
 import { audit, checkVersion, ClockError, employee, iso, settings, type Row } from "./model";
 import { addDays, monday, plannedDay, rulesForShift, type ShiftData } from "./shift-calculation";
 
@@ -88,6 +88,37 @@ export async function saveShift(c: PoolClient, kind: ShiftKind, input: ClockShif
   await audit(c, actor, kind === "shift" ? "Schichtvorlage gespeichert" : kind === "assignment" ? "Schicht zugeteilt" : "Schichtausnahme gespeichert",
     "Bestehende Buchungen behalten ihren gespeicherten Regelstand.", old ? mapped(old) : null, result);
   return result;
+}
+/** The caller holds the module transaction lock: validate everyone before inserting anything. */
+export async function saveShiftAssignments(c: PoolClient, input: ClockShiftAssignmentsInput, actor: string) {
+  const { employeeIds, ...shared } = input;
+  if (!employeeIds.length || employeeIds.length > 500 || employeeIds.some((id) => !Number.isSafeInteger(id) || id < 1)
+    || new Set(employeeIds).size !== employeeIds.length)
+    throw new ClockError("Bitte 1 bis 500 unterschiedliche Mitarbeiter auswählen.");
+  period(shared.startsOn, shared.endsOn);
+  const people = (await c.query("SELECT id,first_name,last_name,active FROM clock_employees WHERE id=ANY($1::integer[]) ORDER BY last_name,first_name", [employeeIds])).rows;
+  if (people.length !== employeeIds.length || people.some((p) => !p.active))
+    throw new ClockError("Keine Zuweisung gespeichert. Ein ausgewählter Mitarbeiter fehlt oder ist nicht mehr aktiv. Bitte die Auswahl aktualisieren.", 409);
+  const overlaps = (await c.query(`SELECT DISTINCT employee_id FROM clock_shift_assignments
+    WHERE deleted_at IS NULL AND employee_id=ANY($1::integer[])
+    AND data->>'startsOn'<=COALESCE($2,'9999-12-31') AND COALESCE(data->>'endsOn','9999-12-31')>=$3`,
+    [employeeIds, shared.endsOn, shared.startsOn])).rows;
+  if (overlaps.length) {
+    const affected = new Set(overlaps.map((r) => r.employee_id));
+    const names = people.filter((p) => affected.has(p.id)).map((p) => `${p.last_name}, ${p.first_name}`);
+    throw new ClockError(`Keine Zuweisung gespeichert. Überschneidung bei: ${names.slice(0, 20).join("; ")}${names.length > 20 ? `; und ${names.length - 20} weiteren` : ""}. Vorhandene Zeiträume zuerst anpassen oder betroffene Mitarbeiter abwählen.`, 409);
+  }
+  // Common dates, weekdays and shift references are checked once, not once per employee.
+  const validated = await validate(c, "assignment", { ...shared, employeeId: employeeIds[0] });
+  const { employeeId: _, ...common } = validated as ClockShiftAssignmentInput & { anchorMonday: string };
+  const rows = (await c.query(`INSERT INTO clock_shift_assignments(employee_id,data)
+    SELECT id, $2::jsonb || jsonb_build_object('employeeId',id)
+    FROM unnest($1::integer[]) WITH ORDINALITY AS selected(id,position) ORDER BY position RETURNING *`,
+    [employeeIds, common])).rows;
+  const results = rows.map(mapped);
+  for (const result of results)
+    await audit(c, actor, "Schicht zugeteilt", `Sammelzuweisung für ${employeeIds.length} Mitarbeiter. Bestehende Buchungen behalten ihren gespeicherten Regelstand.`, null, result);
+  return results;
 }
 export async function removeShift(c: PoolClient, kind: ShiftKind, id: number, version: string, actor: string) {
   const table = TABLES[kind];

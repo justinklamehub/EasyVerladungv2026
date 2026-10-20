@@ -38,6 +38,7 @@ import type {
   ClockShiftAssignment,
   ClockShiftAssignmentInput,
   ClockShiftAssignmentUpdate,
+  ClockShiftAssignmentsInput,
   ClockShiftException,
   ClockShiftExceptionInput,
   ClockShiftExceptionUpdate,
@@ -2186,6 +2187,71 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateClockShiftAssignmentMutationOptions(options));
+    }
+
+export const getCreateClockShiftAssignmentsUrl = () => {
+
+
+
+
+  return `/api/stempeluhr/shift-assignments/bulk`
+}
+
+export const createClockShiftAssignments = async (clockShiftAssignmentsInput: ClockShiftAssignmentsInput, options?: RequestInit): Promise<ClockShiftAssignment[]> => {
+
+  return customFetch<ClockShiftAssignment[]>(getCreateClockShiftAssignmentsUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      clockShiftAssignmentsInput,)
+  }
+);}
+
+
+
+
+export const getCreateClockShiftAssignmentsMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockShiftAssignments>>, TError,{data: BodyType<ClockShiftAssignmentsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createClockShiftAssignments>>, TError,{data: BodyType<ClockShiftAssignmentsInput>}, TContext> => {
+
+const mutationKey = ['createClockShiftAssignments'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createClockShiftAssignments>>, {data: BodyType<ClockShiftAssignmentsInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  createClockShiftAssignments(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateClockShiftAssignmentsMutationResult = NonNullable<Awaited<ReturnType<typeof createClockShiftAssignments>>>
+    export type CreateClockShiftAssignmentsMutationBody = BodyType<ClockShiftAssignmentsInput>
+    export type CreateClockShiftAssignmentsMutationError = ErrorType<unknown>
+
+    export const useCreateClockShiftAssignments = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockShiftAssignments>>, TError,{data: BodyType<ClockShiftAssignmentsInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createClockShiftAssignments>>,
+        TError,
+        {data: BodyType<ClockShiftAssignmentsInput>},
+        TContext
+      > => {
+      return useMutation(getCreateClockShiftAssignmentsMutationOptions(options));
     }
 
 export const getUpdateClockShiftAssignmentUrl = (id: number,) => {

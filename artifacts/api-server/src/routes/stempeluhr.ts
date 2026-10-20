@@ -13,13 +13,14 @@ import {
   CreateClockShiftBody, UpdateClockShiftBody, UpdateClockShiftResponse, DeleteClockShiftBody,
   CreateClockShiftAssignmentBody, UpdateClockShiftAssignmentBody, UpdateClockShiftAssignmentResponse,
   DeleteClockShiftAssignmentBody, CreateClockShiftExceptionBody,
+  CreateClockShiftAssignmentsBody, CreateClockShiftAssignmentsResponse,
   UpdateClockShiftExceptionBody, UpdateClockShiftExceptionResponse, DeleteClockShiftExceptionBody,
 } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
 import { can, type Permission } from "../lib/permissions";
 import { read, transaction, audit, settings, entry, employee, checkVersion, checkOverlap, validateRange, ClockError, ENTRY_SELECT, iso } from "../lib/stempeluhr/model";
 import { berlinInstant, nextDay, localDay } from "../lib/stempeluhr/calculation";
-import { planning, saveShift, removeShift, shiftRules } from "../lib/stempeluhr/shifts";
+import { planning, saveShift, saveShiftAssignments, removeShift, shiftRules } from "../lib/stempeluhr/shifts";
 import { activeTerminal, terminalResult, renewUnlimitedCookie, unlock, lock, stamp } from "../lib/stempeluhr/terminal";
 import { importLegacy } from "../lib/stempeluhr/import";
 import { allocateClockCardNumber, previewClockCardNumber, assertClockCardUnchanged, assertAutomaticClockCardNumber } from "../lib/stempeluhr/employee-numbers";
@@ -101,6 +102,11 @@ router.get("/stempeluhr/shift-planning", requireAuth, handler(async (req, res) =
   const b = GetClockShiftPlanningQueryParams.parse(req.query);
   if (b.employeeId != null) z.number().int().positive().parse(b.employeeId);
   res.json(GetClockShiftPlanningResponse.parse(await read((c) => planning(c, b.from, b.to, b.employeeId))));
+}));
+router.post("/stempeluhr/shift-assignments/bulk", requireAuth, handler(async (req, res) => {
+  await permissions(req, ["stempeluhr.shifts"]);
+  const input = CreateClockShiftAssignmentsBody.parse(req.body);
+  res.json(CreateClockShiftAssignmentsResponse.parse(await transaction((c) => saveShiftAssignments(c, input, actor(req)))));
 }));
 for (const group of [
   { path: "shifts", kind: "shift", create: CreateClockShiftBody, update: UpdateClockShiftBody, deletion: DeleteClockShiftBody, created: UpdateClockShiftResponse, updated: UpdateClockShiftResponse },

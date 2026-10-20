@@ -29,6 +29,7 @@ export * from './clockSettings';
 export * from './clockShift';
 export * from './clockShiftAssignment';
 export * from './clockShiftAssignmentInput';
+export * from './clockShiftAssignmentsInput';
 export * from './clockShiftAssignmentUpdate';
 export * from './clockShiftDay';
 export * from './clockShiftDaySource';

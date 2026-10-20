@@ -1,12 +1,14 @@
-import { useState } from "react";
-import { useCreateClockShift, useUpdateClockShift, useCreateClockShiftAssignment, useUpdateClockShiftAssignment, useCreateClockShiftException, useUpdateClockShiftException } from "@workspace/api-client-react";
+import { useMemo, useState } from "react";
+import { useCreateClockShift, useUpdateClockShift, useCreateClockShiftAssignments, useUpdateClockShiftAssignment, useCreateClockShiftException, useUpdateClockShiftException } from "@workspace/api-client-react";
 import type { ClockShift, ClockShiftAssignment, ClockShiftException, ClockEmployee } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowDown, ArrowUp, Plus, Trash2 } from "lucide-react";
-import { WEEKDAYS, addDays, errMsg, isoDay, mondayOf, sel } from "./lib";
+import { toast } from "@/hooks/use-toast";
+import { EmployeePicker, MAX_BULK } from "./employee-picker";
+import { WEEKDAYS, addDays, berlinDate, errMsg, isoDay, mondayOf, sel } from "./lib";
 
 const box = "max-h-[90dvh] overflow-y-auto w-[calc(100vw-1rem)] sm:max-w-lg";
 const ErrBox = ({ e }: { e: string }) => e ? <div role="alert" className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2" data-testid="text-shift-error">{e}</div> : null;
@@ -66,11 +68,14 @@ function WeekdayPick({ value, onChange }: { value: number[]; onChange: (v: numbe
   );
 }
 
-export function AssignmentDialog({ item, employees, shifts, defaultEmployee, onClose, done }: { item: ClockShiftAssignment | null; employees: ClockEmployee[]; shifts: ClockShift[]; defaultEmployee?: string; onClose: () => void; done: () => void }) {
-  const create = useCreateClockShiftAssignment(); const update = useUpdateClockShiftAssignment();
+export function AssignmentDialog({ item, employees, shifts, defaultEmployee, assignments = [], onClose, done }: { item: ClockShiftAssignment | null; assignments?: ClockShiftAssignment[]; employees: ClockEmployee[]; shifts: ClockShift[]; defaultEmployee?: string; onClose: () => void; done: () => void }) {
+  const create = useCreateClockShiftAssignments(); const update = useUpdateClockShiftAssignment();
+  const pending = create.isPending || update.isPending;
+  const active = useMemo(() => employees.filter((e) => e.active), [employees]);
+  const [picked, setPicked] = useState<Set<number>>(() => { const d = Number(defaultEmployee); return !item && d && active.some((e) => e.id === d) ? new Set([d]) : new Set(); });
   const [pinned] = useState(item?.updatedAt);
   const [emp, setEmp] = useState(item ? String(item.employeeId) : defaultEmployee ?? "");
-  const [from, setFrom] = useState(item?.startsOn ?? "");
+  const [from, setFrom] = useState(item?.startsOn ?? berlinDate(new Date()));
   const [to, setTo] = useState(item?.endsOn ?? "");
   const [days, setDays] = useState<number[]>(item?.weekdays ?? [1, 2, 3, 4, 5]);
   const [cycle, setCycle] = useState<string[]>(item ? item.shiftIds.map(String) : [""]);
@@ -79,31 +84,54 @@ export function AssignmentDialog({ item, employees, shifts, defaultEmployee, onC
   const sname = (id: string) => shifts.find((s) => String(s.id) === id)?.name ?? "?";
   const save = async () => {
     setErr("");
-    if (!emp) return setErr("Mitarbeiter wählen.");
+    if (item && !emp) return setErr("Mitarbeiter wählen.");
+    if (!item && !picked.size) return setErr("Mindestens einen Mitarbeiter wählen.");
+    if (!item && picked.size > MAX_BULK) return setErr(`Höchstens ${MAX_BULK} Mitarbeiter je Vorgang.`);
     if (!dateRe.test(from)) return setErr("Startdatum angeben.");
     if (to && (!dateRe.test(to) || to < from)) return setErr("Das Enddatum darf nicht vor dem Startdatum liegen.");
     if (!days.length) return setErr("Mindestens einen Wochentag wählen.");
     if (cycle.some((c) => !c)) return setErr("Jede Woche des Zyklus braucht eine Schicht.");
     const data = { employeeId: Number(emp), startsOn: from, endsOn: to || null, weekdays: days, shiftIds: cycle.map(Number) };
     try {
-      if (item) await update.mutateAsync({ id: item.id, data: { ...data, expectedUpdatedAt: pinned! } }); else await create.mutateAsync({ data });
+      if (item) { await update.mutateAsync({ id: item.id, data: { ...data, expectedUpdatedAt: pinned! } }); }
+      else {
+        const r = await create.mutateAsync({ data: { employeeIds: [...picked], startsOn: from, endsOn: to || null, weekdays: days, shiftIds: data.shiftIds } });
+        toast(`${r.length} Zuweisung${r.length === 1 ? "" : "en"} angelegt.`);
+      }
       done(); onClose();
     } catch (e) { setErr(errMsg(e)); }
   };
   const mon = dateRe.test(from) ? mondayOf(from) : null;
+  const conflicts = useMemo(() => {
+    const m = new Map<number, string>();
+    if (item || !dateRe.test(from) || (to && (!dateRe.test(to) || to < from))) return m;
+    for (const a of assignments) {
+      if (!picked.has(a.employeeId) || m.has(a.employeeId)) continue;
+      if (a.startsOn <= (to || "9999-12-31") && (!a.endsOn || a.endsOn >= from)) m.set(a.employeeId, `${isoDay(a.startsOn)} bis ${a.endsOn ? isoDay(a.endsOn) : "offen"}`);
+    }
+    return m;
+  }, [item, assignments, picked, from, to]);
+  const hasConflict = conflicts.size > 0;
+  const preset = (n: number) => setCycle(Array.from({ length: n }, (_, i) => cycle[i] ?? cycle[0] ?? ""));
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}><DialogContent className={box}>
-      <DialogHeader><DialogTitle>{item ? "Zuweisung bearbeiten" : "Schichten zuweisen"}</DialogTitle></DialogHeader>
-      <div className="space-y-3">
-        <div><Label>Mitarbeiter</Label>
-          <select className={sel} value={emp} onChange={(e) => setEmp(e.target.value)} disabled={!!item} data-testid="select-assign-employee">
+    <Dialog open onOpenChange={(o) => !o && !pending && onClose()}><DialogContent className={box} aria-describedby="assign-desc">
+      <DialogHeader><DialogTitle>{item ? "Zuweisung bearbeiten" : "Schichten zuweisen"}</DialogTitle>
+        <DialogDescription id="assign-desc">{item ? "Bestehende Zuweisung ändern. Mitarbeiter bleibt unverändert." : "Weisen Sie einem oder mehreren Mitarbeitern dieselben Schichten zu. Alles oder nichts: Bei einem Fehler oder Konflikt wird keine Zuweisung gespeichert und nichts überschrieben."}</DialogDescription></DialogHeader>
+      <fieldset disabled={pending} className="space-y-3 min-w-0 border-0 p-0 m-0">
+        {item ? <div><Label>Mitarbeiter</Label>
+          <select className={sel} value={emp} onChange={(e) => setEmp(e.target.value)} disabled data-testid="select-assign-employee">
             <option value="">Bitte wählen</option>{employees.map((e) => <option key={e.id} value={e.id}>{empName(e)}</option>)}</select></div>
+          : <EmployeePicker employees={active} selected={picked} onChange={setPicked} conflicts={conflicts} />}
         <div className="grid grid-cols-2 gap-3">
           <div><Label>Gültig ab</Label><Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} data-testid="input-assign-from" /></div>
           <div><Label>Bis (leer = offen)</Label><Input type="date" value={to} onChange={(e) => setTo(e.target.value)} data-testid="input-assign-to" /></div>
         </div>
         <div><Label>Arbeitstage</Label><WeekdayPick value={days} onChange={setDays} /></div>
         <div className="space-y-2"><Label>Wochenzyklus (1 bis 12 Wochen, in Reihenfolge)</Label>
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant={cycle.length === 1 ? "default" : "outline"} onClick={() => preset(1)} data-testid="button-preset-fixed">Feste Schicht (1 Woche)</Button>
+            <Button type="button" size="sm" variant={cycle.length === 2 ? "default" : "outline"} onClick={() => preset(2)} data-testid="button-preset-rotating">Wöchentlicher Wechsel (2 Wochen)</Button>
+          </div>
           {cycle.map((c, i) => (
             <div key={i} className="flex gap-1 items-center">
               <span className="w-16 shrink-0 text-xs text-slate-500">Woche {i + 1}</span>
@@ -121,8 +149,8 @@ export function AssignmentDialog({ item, employees, shifts, defaultEmployee, onC
             <div key={k} className="flex justify-between"><span>Woche ab {isoDay(addDays(mon, k * 7))}</span><span>{cycle[k % cycle.length] ? sname(cycle[k % cycle.length]) : "-"}</span></div>)) : <div>Startdatum wählen. Position 1 gilt für die Woche des Startdatums.</div>}
         </div>
         <ErrBox e={err} />
-      </div>
-      <DialogFooter><Button variant="outline" onClick={onClose}>Abbrechen</Button><Button onClick={save} disabled={create.isPending || update.isPending} data-testid="button-save-assignment">Speichern</Button></DialogFooter>
+      </fieldset>
+      <DialogFooter className="sticky bottom-0 bg-background pt-2 gap-2"><Button variant="outline" onClick={onClose} disabled={pending}>Abbrechen</Button><Button onClick={save} disabled={pending || hasConflict} data-testid="button-save-assignment">{pending ? "Speichert..." : item ? "Speichern" : `Für ${picked.size} Mitarbeiter speichern`}</Button></DialogFooter>
     </DialogContent></Dialog>
   );
 }

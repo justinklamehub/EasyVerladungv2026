@@ -970,6 +970,50 @@ export const CreateClockShiftAssignmentBody = zod.object({
 })
 
 
+
+export const createClockShiftAssignmentsBodyEmployeeIdsMax = 500;
+
+export const createClockShiftAssignmentsBodyWeekdaysItemMax = 7;
+
+export const createClockShiftAssignmentsBodyWeekdaysMax = 7;
+
+
+export const createClockShiftAssignmentsBodyShiftIdsMax = 12;
+
+
+
+export const CreateClockShiftAssignmentsBody = zod.object({
+  "employeeIds": zod.array(zod.number().min(1)).min(1).max(createClockShiftAssignmentsBodyEmployeeIdsMax),
+  "startsOn": zod.string(),
+  "endsOn": zod.string().nullable(),
+  "weekdays": zod.array(zod.number().min(1).max(createClockShiftAssignmentsBodyWeekdaysItemMax)).min(1).max(createClockShiftAssignmentsBodyWeekdaysMax),
+  "shiftIds": zod.array(zod.number().min(1)).min(1).max(createClockShiftAssignmentsBodyShiftIdsMax)
+})
+
+
+export const createClockShiftAssignmentsResponseOneWeekdaysItemMax = 7;
+
+export const createClockShiftAssignmentsResponseOneWeekdaysMax = 7;
+
+
+export const createClockShiftAssignmentsResponseOneShiftIdsMax = 12;
+
+
+
+export const CreateClockShiftAssignmentsResponseItem = zod.object({
+  "employeeId": zod.number().min(1),
+  "startsOn": zod.string(),
+  "endsOn": zod.string().nullable(),
+  "weekdays": zod.array(zod.number().min(1).max(createClockShiftAssignmentsResponseOneWeekdaysItemMax)).min(1).max(createClockShiftAssignmentsResponseOneWeekdaysMax),
+  "shiftIds": zod.array(zod.number().min(1)).min(1).max(createClockShiftAssignmentsResponseOneShiftIdsMax)
+}).and(zod.object({
+  "id": zod.number(),
+  "anchorMonday": zod.string(),
+  "updatedAt": zod.string()
+}))
+export const CreateClockShiftAssignmentsResponse = zod.array(CreateClockShiftAssignmentsResponseItem)
+
+
 export const UpdateClockShiftAssignmentParams = zod.object({
   "id": zod.coerce.number()
 })

@@ -56,3 +56,9 @@ Neue Schichtpläne und spätere Planänderungen dürfen bereits gespeicherte Buc
 **Why:** Die Einführung der Planung soll vorhandene Zeiterfassungs- und Importdaten nicht nachträglich verändern oder unzugeteilte Mitarbeiter von der bisherigen Zeiterfassung ausschließen. Dies ist eine bewusste Kompatibilitätsentscheidung, keine pauschale rückwirkende Umstellung.
 
 **How to apply:** Neue Buchungen berücksichtigen den dann geltenden Plan; auch über einen Wochenwechsel hinweg behalten bestehende Buchungen ihre Berechnungsgrundlage. Eine nachträgliche Neubewertung alter Zeiträume wäre eine gesonderte, ausdrücklich freizugebende Funktion.
+
+Die Schichtzuweisung soll einfach und auch für mehrere Mitarbeiter gleichzeitig möglich sein.
+
+**Why:** Der Nutzer verlangt ausdrücklich eine einfachere Zuweisung „auch in masse“, nicht nur wiederholtes Ausfüllen eines Einzelmitarbeiterformulars.
+
+**How to apply:** Bei Weiterentwicklungen der Schichtzuweisung die gemeinsame Bearbeitung einer Mitarbeiterauswahl berücksichtigen; nicht wieder auf ausschließlich einzelne Zuweisungsvorgänge zurückgehen.

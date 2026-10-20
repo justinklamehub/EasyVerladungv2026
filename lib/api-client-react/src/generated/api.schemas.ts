@@ -396,6 +396,27 @@ export interface ClockShiftAssignmentInput {
   shiftIds: number[];
 }
 
+export interface ClockShiftAssignmentsInput {
+  /**
+     * @minItems 1
+     * @maxItems 500
+     */
+  employeeIds: number[];
+  startsOn: string;
+  /** @nullable */
+  endsOn: string | null;
+  /**
+     * @minItems 1
+     * @maxItems 7
+     */
+  weekdays: number[];
+  /**
+     * @minItems 1
+     * @maxItems 12
+     */
+  shiftIds: number[];
+}
+
 export type ClockShiftAssignmentUpdate = ClockShiftAssignmentInput & ClockVersion;
 
 export type ClockShiftAssignment = ClockShiftAssignmentInput & {
