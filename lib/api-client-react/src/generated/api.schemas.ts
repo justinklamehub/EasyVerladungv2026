@@ -92,6 +92,17 @@ export interface WvvnSession {
   items: WvvnItem[];
 }
 
+export interface WvvnSessionDeletion {
+  /** @minimum 0 */
+  revision: number;
+  /**
+     * @minLength 3
+     * @maxLength 1000
+     */
+  reason: string;
+  acknowledgeReported: boolean;
+}
+
 export type WvvnSessionEditItemsItem = {
   id?: number;
   /**

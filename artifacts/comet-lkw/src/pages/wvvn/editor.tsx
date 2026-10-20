@@ -42,8 +42,9 @@ export function SessionEditor({ session: s, onClose, onDone }: { session: WvvnSe
     m.mutate({ id: s.id, data: { revision: baseRevision, mode, netto, kware, reason: rs, acknowledgeReported: ack, items } }, { onSuccess: () => { inv(); onDone(); }, onError: (e) => setErr(errMsg(e)) });
   };
   return (
-    <Dialog open onOpenChange={(o) => !o && onClose()}><DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+    <Dialog open onOpenChange={(o) => !o && !m.isPending && onClose()}><DialogContent className="w-[calc(100%-2rem)] max-w-3xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
       <DialogHeader><DialogTitle>Liste #{s.id} bearbeiten</DialogTitle></DialogHeader>
+      {s.legacy && <p className="text-xs text-amber-800">Archivliste: Änderungen werden protokolliert. Diese Liste wird weiterhin nicht automatisch per E-Mail gemeldet.</p>}
       {s.reported && (
         <div className="rounded-md border border-amber-300 bg-amber-50 p-2 text-sm text-amber-900">
           Diese Liste wurde bereits in einem Bericht versendet. Der gesendete Bericht bleibt unverändert; die Korrektur wird nicht automatisch erneut gesendet.
@@ -55,9 +56,9 @@ export function SessionEditor({ session: s, onClose, onDone }: { session: WvvnSe
         <label className="flex items-end gap-2 text-sm pb-2"><Switch checked={netto} onCheckedChange={setNetto} />Netto-Kunde</label>
       </div>
       <div className="divide-y rounded-md border">{rows.map((r) => (
-        <div key={r.key} className="flex items-center gap-2 p-2 text-sm" data-testid={`edit-row-${r.key}`}>
+        <div key={r.key} className="flex flex-wrap items-center gap-2 p-2 text-sm" data-testid={`edit-row-${r.key}`}>
           <div className="min-w-0 flex-1 truncate">{r.label}<span className="text-xs text-slate-500"> · {r.code}</span></div>
-          <Input className="w-24" inputMode="decimal" value={r.qty} onChange={(e) => setRows((x) => x.map((y) => y.key === r.key ? { ...y, qty: e.target.value } : y))} />
+          <Input className="w-24 shrink-0" inputMode="decimal" value={r.qty} onChange={(e) => setRows((x) => x.map((y) => y.key === r.key ? { ...y, qty: e.target.value } : y))} />
           <span className="text-xs w-8">{r.unit}</span>
           <Button size="sm" variant="outline" onClick={() => setRows((x) => x.filter((y) => y.key !== r.key))}>Entfernen</Button>
         </div>))}

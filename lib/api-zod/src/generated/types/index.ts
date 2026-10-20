@@ -181,6 +181,7 @@ export * from './wvvnMode';
 export * from './wvvnReport';
 export * from './wvvnScannerState';
 export * from './wvvnSession';
+export * from './wvvnSessionDeletion';
 export * from './wvvnSessionEdit';
 export * from './wvvnSessionEditItemsItem';
 export * from './wvvnSessionInput';

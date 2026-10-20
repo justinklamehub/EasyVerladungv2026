@@ -44,3 +44,9 @@ Beim Bearbeiten von Zeiten muss die Begründung optional sein.
 **Why:** Der Nutzer hat ausdrücklich verlangt, das bisherige Pflichtfeld beim Bearbeiten optional zu machen.
 
 **How to apply:** Korrekturen auch ohne Begründung zulassen, weiterhin protokollieren. Daraus keine Änderung der Begründungspflicht beim Löschen oder manuellen Anlegen ableiten.
+
+In der Stempeluhr müssen Schichten angelegt und pro Mitarbeiter zugeteilt werden können. Die Stundenberechnung muss die Schichten berücksichtigen. Wöchentliche Wechselschichten sind ausdrücklich gewünscht: „Wenn ich diese Woche Frühschicht habe, habe ich die Woche drauf Spätschicht.“
+
+**Why:** Der Nutzer verlangt ein klügeres System mit erstellbaren Schichten, individueller Zuteilung und automatischem Wochenwechsel statt ausschließlich gemeinsamer Zeitgrenzen.
+
+**How to apply:** Schichtzuordnung und wöchentliche Rotation in die bestehende Stempeluhr integrieren. Die konkrete Bedeutung der Schicht für die anrechenbare Stempelzeit ist gesondert mit dem Nutzer zu klären; aus dem Wunsch keine pauschale Gutschrift ungearbeiteter Stunden ableiten.

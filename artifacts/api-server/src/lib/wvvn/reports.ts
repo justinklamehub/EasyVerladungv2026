@@ -25,7 +25,7 @@ export async function prepareReport(c: PoolClient, mode: string, now: Date, manu
   const pending = await c.query("SELECT * FROM wvvn_reports WHERE mode=$1 AND status IN ('pending','failed') ORDER BY id LIMIT 1", [mode]);
   if (pending.rowCount) return pending.rows[0];
   if (!manual && (await c.query("SELECT 1 FROM wvvn_reports WHERE mode=$1 AND automatic_day=$2", [mode, date])).rowCount) return null;
-  const closed = await c.query(`SELECT id FROM wvvn_sessions WHERE status='done' AND legacy_id IS NULL AND report_id IS NULL AND mode=$1
+   const closed = await c.query(`SELECT id FROM wvvn_sessions WHERE status='done' AND deleted_at IS NULL AND legacy_id IS NULL AND report_id IS NULL AND mode=$1
     AND ($2::text IS NULL OR finished_at < ($2::date::timestamp AT TIME ZONE 'Europe/Berlin')) ORDER BY id`, [mode, cutoffDate]);
   if (!closed.rowCount) return null;
   const ids = closed.rows.map((row) => row.id);

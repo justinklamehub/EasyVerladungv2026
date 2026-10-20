@@ -4,7 +4,7 @@ import { usePermissions } from "@/hooks/use-permissions";
 
 export const P = {
   view: "wvvn.view", scan: "wvvn.scan", delete: "wvvn.delete", finish: "wvvn.finish", devices: "wvvn.devices",
-  articles: "wvvn.articles", export: "wvvn.export", settings: "wvvn.settings", import: "wvvn.import", edit: "wvvn.edit",
+  articles: "wvvn.articles", export: "wvvn.export", settings: "wvvn.settings", import: "wvvn.import", edit: "wvvn.edit", remove: "wvvn.remove",
 } as const;
 
 export function useWvvnAccess() {

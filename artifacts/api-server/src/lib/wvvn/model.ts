@@ -60,6 +60,7 @@ export async function ensureWvvnTables() {
     );
     ALTER TABLE wvvn_sessions ADD COLUMN IF NOT EXISTS legacy_data JSONB NOT NULL DEFAULT '{}';
     ALTER TABLE wvvn_sessions ADD COLUMN IF NOT EXISTS revision INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE wvvn_sessions ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ;
     ALTER TABLE wvvn_items ADD COLUMN IF NOT EXISTS input_method TEXT NOT NULL DEFAULT 'manual';
     ALTER TABLE wvvn_reports ADD COLUMN IF NOT EXISTS automatic_day TEXT;
     CREATE UNIQUE INDEX IF NOT EXISTS wvvn_automatic_day ON wvvn_reports(mode,automatic_day) WHERE automatic_day IS NOT NULL;
@@ -138,7 +139,7 @@ export const session = (r: Row, items: WvvnItem[] = []): WvvnSession => ({
   legacy: r.legacy_id != null, revision: Number(r.revision ?? 0), reported: r.report_id != null, items,
 });
 export async function sessionDetail(c: PoolClient, id: number) {
-  const r = await c.query("SELECT * FROM wvvn_sessions WHERE id=$1", [id]);
+  const r = await c.query("SELECT * FROM wvvn_sessions WHERE id=$1 AND deleted_at IS NULL", [id]);
   if (!r.rowCount) throw new WvvnError("Liste nicht gefunden.", 404);
   const items = (await c.query("SELECT * FROM wvvn_items WHERE session_id=$1 AND deleted_at IS NULL ORDER BY id DESC", [id])).rows.map(item);
   return session(r.rows[0], items);

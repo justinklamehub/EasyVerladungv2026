@@ -2,7 +2,7 @@ import { after, test } from "node:test";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { pool, type PoolClient } from "@workspace/db";
-import { editCompletedSession } from "./edit";
+import { editCompletedSession, deleteCompletedSession } from "./edit";
 import { ensureWvvnTables, sessionDetail } from "./model";
 import { reportWindow, prepareReport } from "./reports";
 import { UpdateWvvnSessionBody } from "@workspace/api-zod";
@@ -31,6 +31,7 @@ test("report snapshot selects only previous-day completed work, keeps modes sepa
       assert.ok(sql.includes("finished_at < ($2::date::timestamp AT TIME ZONE 'Europe/Berlin')"));
       assert.deepEqual(args, ["WERKSVERKAUF", "2026-10-20"]);
       assert.ok(sql.includes("legacy_id IS NULL"));
+      assert.ok(sql.includes("deleted_at IS NULL"));
       return result([{ id: 10 }, { id: 11 }]);
     }
     if (sql.startsWith("SELECT i.*")) {
@@ -92,8 +93,6 @@ test("completed-list corrections preserve original units, are versioned, and gua
     assert.equal(revised.items.length, 1);
     assert.equal((await c.query("SELECT csv FROM wvvn_reports WHERE id=$1", [r.id])).rows[0].csv, "original CSV");
     assert.equal((await c.query("SELECT count(*)::int AS n FROM wvvn_revisions WHERE session_id=$1", [s.id])).rows[0].n, 2);
-    const legacy = (await c.query("SELECT id FROM wvvn_sessions WHERE legacy_id IS NOT NULL LIMIT 1")).rows[0];
-    if (legacy) await assert.rejects(editCompletedSession(c, legacy.id, body, tag), /Altdaten/);
     assert.equal((await sessionDetail(c, s.id)).reported, true);
     assert.ok(rec.id > 0);
     // PostgreSQL itself interprets Berlin day boundaries correctly across DST.
@@ -104,5 +103,62 @@ test("completed-list corrections preserve original units, are versioned, and gua
       ('2026-10-25'::date::timestamp AT TIME ZONE 'Europe/Berlin')))/3600 AS autumn`)).rows[0];
     assert.equal(Number(dst.spring), 23);
     assert.equal(Number(dst.autumn), 25);
+  } finally { await c.query("ROLLBACK"); c.release(); }
+});
+
+test("completed new and archive lists can be corrected and deleted with audit; all fixtures roll back", async () => {
+  await ensureWvvnTables();
+  const c = await pool.connect();
+  const tag = `WVVN_DELETE_${randomUUID()}`;
+  try {
+    await c.query("BEGIN");
+    for (const legacy of [false, true]) {
+      const s = (await c.query(`INSERT INTO wvvn_sessions(owner_key,actor,mode,netto,kware,status,finished_at,legacy_id)
+        VALUES($1,$1,'WERKSVERKAUF',false,true,'done',now(),$2) RETURNING id`, [tag + legacy, legacy ? -Math.floor(Math.random() * 2e9 + 1) : null])).rows[0];
+      const it = (await c.query(`INSERT INTO wvvn_items(session_id,article_number,article_name,scanned_code,unit,quantity,ve_factor,pieces)
+        VALUES($1,$2,'Archivposition',$2,'VE',1,12,12) RETURNING id`, [s.id, tag])).rows[0];
+      const edit = { revision: 0, mode: "WERKSVERKAUF" as const, netto: false, kware: true, reason: "Korrektur geprüft",
+        acknowledgeReported: false, items: [{ id: it.id, quantity: 2 }] };
+      assert.equal((await editCompletedSession(c, s.id, edit, tag)).pieces, 24);
+      const deletion = { revision: 1, reason: "Doppelte Liste", acknowledgeReported: false };
+      await assert.rejects(deleteCompletedSession(c, s.id, { ...deletion, revision: 0 }, tag), /inzwischen geändert/);
+      await assert.rejects(deleteCompletedSession(c, s.id, { ...deletion, reason: " " }, tag), /Änderungsgrund/);
+      await deleteCompletedSession(c, s.id, deletion, tag);
+      await assert.rejects(sessionDetail(c, s.id), /nicht gefunden/);
+      await assert.rejects(deleteCompletedSession(c, s.id, deletion, tag), /nicht gefunden/);
+      await assert.rejects(editCompletedSession(c, s.id, { ...edit, revision: 2 }, tag), /nicht gefunden/);
+      assert.equal((await c.query("SELECT count(*)::int AS n FROM wvvn_items WHERE session_id=$1", [s.id])).rows[0].n, 1);
+      const revisions = (await c.query("SELECT * FROM wvvn_revisions WHERE session_id=$1 ORDER BY revision", [s.id])).rows;
+      assert.equal(revisions.length, 2);
+      assert.equal(revisions[1].before_data.pieces, 24);
+      assert.equal(revisions[1].after_data.deleted, true);
+      assert.equal(revisions[1].actor, tag);
+    }
+    const s = (await c.query(`INSERT INTO wvvn_sessions(owner_key,actor,mode,netto,kware,status)
+      VALUES($1,$1,'VERNICHTUNG',false,true,'open') RETURNING id`, [tag])).rows[0];
+    await assert.rejects(deleteCompletedSession(c, s.id, { revision: 0, reason: "Nicht abgeschlossen", acknowledgeReported: false }, tag), /Nur abgeschlossene/);
+  } finally { await c.query("ROLLBACK"); c.release(); }
+});
+
+test("deletion blocks unresolved reports and requires acknowledgement for sent snapshots", async () => {
+  await ensureWvvnTables();
+  const c = await pool.connect();
+  const tag = `WVVN_DELETE_REPORT_${randomUUID()}`;
+  try {
+    await c.query("BEGIN");
+    const r = (await c.query(`INSERT INTO wvvn_reports(mode,report_date,running_no,status,csv)
+      SELECT 'VERNICHTUNG','2099-01-01',COALESCE(MAX(running_no),0)+10000,'pending','immutable CSV' FROM wvvn_reports
+      WHERE mode='VERNICHTUNG' RETURNING id`)).rows[0];
+    const s = (await c.query(`INSERT INTO wvvn_sessions(owner_key,actor,mode,netto,kware,status,finished_at,report_id)
+      VALUES($1,$1,'VERNICHTUNG',false,true,'done',now(),$2) RETURNING id`, [tag, r.id])).rows[0];
+    const body = { revision: 0, reason: "Fehlerhafte Liste", acknowledgeReported: true };
+    for (const status of ["pending", "sending", "failed", "uncertain"]) {
+      await c.query("UPDATE wvvn_reports SET status=$1 WHERE id=$2", [status, r.id]);
+      await assert.rejects(deleteCompletedSession(c, s.id, body, tag), /Versand zugeordnet/);
+    }
+    await c.query("UPDATE wvvn_reports SET status='sent' WHERE id=$1", [r.id]);
+    await assert.rejects(deleteCompletedSession(c, s.id, { ...body, acknowledgeReported: false }, tag), /bestätigen/);
+    await deleteCompletedSession(c, s.id, body, tag);
+    assert.equal((await c.query("SELECT csv FROM wvvn_reports WHERE id=$1", [r.id])).rows[0].csv, "immutable CSV");
   } finally { await c.query("ROLLBACK"); c.release(); }
 });

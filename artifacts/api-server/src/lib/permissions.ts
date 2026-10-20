@@ -4,6 +4,7 @@ import { sql } from "drizzle-orm";
 export type Permission =
   | "wvvn.view"
   | "wvvn.edit"
+  | "wvvn.remove"
   | "wvvn.scan"
   | "wvvn.finish"
   | "wvvn.delete"
@@ -81,7 +82,7 @@ export const ALL_CONFIGURABLE_ROLES: ConfigurableRole[] = [
 ];
 
 export const ALL_PERMISSIONS: Permission[] = [
-  "wvvn.view", "wvvn.edit", "wvvn.scan", "wvvn.finish", "wvvn.delete", "wvvn.devices",
+  "wvvn.view", "wvvn.edit", "wvvn.remove", "wvvn.scan", "wvvn.finish", "wvvn.delete", "wvvn.devices",
   "wvvn.articles", "wvvn.export", "wvvn.settings", "wvvn.import",
   "stempeluhr.view", "stempeluhr.terminal", "stempeluhr.employees", "stempeluhr.correct",
   "stempeluhr.delete", "stempeluhr.export", "stempeluhr.settings", "stempeluhr.import",
@@ -132,6 +133,7 @@ export const ALL_PERMISSIONS: Permission[] = [
 export const PERMISSION_LABELS: Record<Permission, { label: string; category: string }> = {
   "wvvn.view": { label: "Listen, Berichte und Protokoll ansehen", category: "Werksverkauf / Vernichtung" },
   "wvvn.edit": { label: "Abgeschlossene Listen korrigieren (mit Änderungsprotokoll)", category: "Werksverkauf / Vernichtung" },
+  "wvvn.remove": { label: "Abgeschlossene Listen löschen (mit Löschprotokoll)", category: "Werksverkauf / Vernichtung" },
   "wvvn.scan": { label: "Artikel scannen und eigene Listen erfassen", category: "Werksverkauf / Vernichtung" },
   "wvvn.finish": { label: "Eigene Listen abschließen", category: "Werksverkauf / Vernichtung" },
   "wvvn.delete": { label: "Positionen aus eigenen offenen Listen entfernen", category: "Werksverkauf / Vernichtung" },

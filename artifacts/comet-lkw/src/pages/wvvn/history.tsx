@@ -6,14 +6,15 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SessionEditor } from "./editor";
+import { SessionDeletion } from "./delete-session";
 import { MODES, MODE_LABEL, catLabel, downloadCsv, errMsg, fmtDateTime, fmtNum, sel } from "./lib";
 
-export function History({ sessions, truncated, from, to, setFrom, setTo, canExport, canEdit, loading }: {
-  sessions: WvvnSession[]; truncated: boolean; from: string; to: string; setFrom: (v: string) => void; setTo: (v: string) => void; canExport: boolean; canEdit: boolean; loading: boolean;
+export function History({ sessions, truncated, from, to, setFrom, setTo, canExport, canEdit, canRemove, loading }: {
+  sessions: WvvnSession[]; truncated: boolean; from: string; to: string; setFrom: (v: string) => void; setTo: (v: string) => void; canExport: boolean; canEdit: boolean; canRemove: boolean; loading: boolean;
 }) {
   const [mode, setMode] = useState("");
   const [status, setStatus] = useState("");
-  const [open, setOpen] = useState<number | null>(null);
+  const [open, setOpen] = useState<{ id: number; action: "view" | "edit" | "delete" } | null>(null);
   const shown = useMemo(() => sessions.filter((s) => (!mode || s.mode === mode) && (!status || s.status === status)), [sessions, mode, status]);
   const total = shown.reduce((a, s) => a + s.pieces, 0);
   return (
@@ -31,27 +32,33 @@ export function History({ sessions, truncated, from, to, setFrom, setTo, canExpo
       ) : (
         <div className="rounded-lg border bg-white overflow-x-auto">
           <table className="w-full text-sm"><thead className="bg-slate-50 text-xs text-slate-500"><tr>
-            {["Nr.", "Modus", "Netto", "Kategorie", "Status", "Erfasst von", "Erstellt", "Abgeschlossen", "Pos.", "Stück"].map((h) => <th key={h} className="text-left px-3 py-2 font-medium">{h}</th>)}</tr></thead>
+            {["Nr.", "Modus", "Netto", "Kategorie", "Status", "Erfasst von", "Erstellt", "Abgeschlossen", "Pos.", "Stück", "Aktionen"].map((h) => <th key={h} className="text-left px-3 py-2 font-medium">{h}</th>)}</tr></thead>
             <tbody>{shown.map((s) => (
-              <tr key={s.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={() => setOpen(s.id)} data-testid={`row-session-${s.id}`}>
+              <tr key={s.id} className="border-t hover:bg-slate-50 cursor-pointer" onClick={() => setOpen({ id: s.id, action: "view" })} data-testid={`row-session-${s.id}`}>
                 <td className="px-3 py-2">#{s.id}{s.legacy ? " (Archiv)" : ""}</td><td className="px-3 py-2">{MODE_LABEL[s.mode]}</td>
                 <td className="px-3 py-2">{s.netto ? "Ja" : "Nein"}</td><td className="px-3 py-2">{catLabel(s.kware)}</td>
                 <td className="px-3 py-2">{s.status === "open" ? "Offen" : "Abgeschlossen"}</td><td className="px-3 py-2">{s.actor}</td>
                 <td className="px-3 py-2">{fmtDateTime(s.createdAt)}</td><td className="px-3 py-2">{fmtDateTime(s.finishedAt)}</td>
-                <td className="px-3 py-2">{s.itemCount}</td><td className="px-3 py-2 font-medium">{fmtNum(s.pieces)}</td></tr>))}</tbody></table>
+                <td className="px-3 py-2">{s.itemCount}</td><td className="px-3 py-2 font-medium">{fmtNum(s.pieces)}</td>
+                <td className="px-3 py-2"><div className="flex gap-2">
+                  <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setOpen({ id: s.id, action: "view" }); }}>Öffnen</Button>
+                  {canEdit && s.status === "done" && <Button size="sm" variant="outline" onClick={(e) => { e.stopPropagation(); setOpen({ id: s.id, action: "edit" }); }} data-testid={`button-edit-session-${s.id}`}>Bearbeiten</Button>}
+                  {canRemove && s.status === "done" && <Button size="sm" variant="destructive" onClick={(e) => { e.stopPropagation(); setOpen({ id: s.id, action: "delete" }); }} data-testid={`button-delete-session-${s.id}`}>Löschen</Button>}
+                </div></td></tr>))}</tbody></table>
         </div>
       )}
-      {open != null && <Detail id={open} canExport={canExport} canEdit={canEdit} onClose={() => setOpen(null)} />}
+      {open != null && <Detail key={`${open.id}-${open.action}`} id={open.id} initialAction={open.action} canExport={canExport} canEdit={canEdit} canRemove={canRemove} onClose={() => setOpen(null)} />}
     </div>
   );
 }
 
-function Detail({ id, canExport, canEdit, onClose }: { id: number; canExport: boolean; canEdit: boolean; onClose: () => void }) {
-  const q = useGetWvvnSession(id, { query: { queryKey: [`/api/wvvn/sessions/${id}`], enabled: true } });
+function Detail({ id, initialAction, canExport, canEdit, canRemove, onClose }: { id: number; initialAction: "view" | "edit" | "delete"; canExport: boolean; canEdit: boolean; canRemove: boolean; onClose: () => void }) {
+  const q = useGetWvvnSession(id, { query: { queryKey: [`/api/wvvn/sessions/${id}`], enabled: true, retry: false } });
   const [err, setErr] = useState("");
   const s = q.data;
-  const [editing, setEditing] = useState(false);
-  if (editing && s) return <SessionEditor session={s} onClose={() => setEditing(false)} onDone={onClose} />;
+  const [action, setAction] = useState(initialAction);
+  if (action === "edit" && s && canEdit && s.status === "done") return <SessionEditor session={s} onClose={() => setAction("view")} onDone={onClose} />;
+  if (action === "delete" && s && canRemove && s.status === "done") return <SessionDeletion session={s} onClose={() => setAction("view")} onDone={onClose} />;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
@@ -62,7 +69,10 @@ function Detail({ id, canExport, canEdit, onClose }: { id: number; canExport: bo
           <div className="space-y-3 text-sm">
             <p>{MODE_LABEL[s.mode]} · Netto: {s.netto ? "Ja" : "Nein"} · Kategorie: {catLabel(s.kware)} · {s.status === "open" ? "Offen" : "Abgeschlossen"} · {s.actor} · {fmtNum(s.pieces)} Stück{s.legacy ? " · Archiv" : ""}</p>
             {canExport && <Button size="sm" variant="outline" data-testid="button-export-session" onClick={() => { setErr(""); downloadCsv(`sessions/${id}/csv`, `wvvn-liste-${id}.csv`).catch((e) => setErr(errMsg(e))); }}>CSV exportieren</Button>}
-            {canEdit && s.status === "done" && !s.legacy && <Button size="sm" className="ml-2" onClick={() => setEditing(true)} data-testid="button-edit-session">Liste bearbeiten</Button>}
+            <div className="flex flex-wrap gap-2">
+              {canEdit && s.status === "done" && <Button size="sm" onClick={() => setAction("edit")} data-testid="button-edit-session">Liste bearbeiten</Button>}
+              {canRemove && s.status === "done" && <Button size="sm" variant="destructive" onClick={() => setAction("delete")} data-testid="button-delete-session">Liste löschen</Button>}
+            </div>
             {s.reported && <p className="text-xs text-amber-700">Bereits in einem Bericht gemeldet.</p>}
             {err && <p className="text-red-700">{err}</p>}
             <table className="w-full"><thead className="text-xs text-slate-500"><tr><th className="text-left py-1">Artikel</th><th className="text-left">Code</th><th className="text-right">Menge</th><th className="text-right">Stück</th><th className="text-right">Zeit</th></tr></thead>

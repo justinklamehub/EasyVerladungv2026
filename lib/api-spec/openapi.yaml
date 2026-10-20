@@ -105,6 +105,17 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/WvvnSession" }
   /wvvn/sessions/{id}:
+    delete:
+      operationId: deleteWvvnSession
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: integer } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WvvnSessionDeletion" }
+      responses:
+        "204": { description: Completed list removed with revision check and audit; sent reports unchanged }
     put:
       operationId: updateWvvnSession
       parameters:
@@ -1877,6 +1888,13 @@ components:
         pieces: { type: number }
         legacy: { type: boolean }
         items: { type: array, items: { $ref: "#/components/schemas/WvvnItem" } }
+    WvvnSessionDeletion:
+      type: object
+      required: [revision, reason, acknowledgeReported]
+      properties:
+        revision: { type: integer, minimum: 0 }
+        reason: { type: string, minLength: 3, maxLength: 1000 }
+        acknowledgeReported: { type: boolean }
     WvvnSessionEdit:
       type: object
       required: [revision, mode, netto, kware, reason, items, acknowledgeReported]

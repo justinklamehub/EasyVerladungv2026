@@ -113,6 +113,7 @@ import type {
   WvvnLookup,
   WvvnScannerState,
   WvvnSession,
+  WvvnSessionDeletion,
   WvvnSessionEdit,
   WvvnSessionInput,
   WvvnSettings,
@@ -614,6 +615,72 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getCreateWvvnSessionMutationOptions(options));
+    }
+
+export const getDeleteWvvnSessionUrl = (id: number,) => {
+
+
+
+
+  return `/api/wvvn/sessions/${id}`
+}
+
+export const deleteWvvnSession = async (id: number,
+    wvvnSessionDeletion: WvvnSessionDeletion, options?: RequestInit): Promise<void> => {
+
+  return customFetch<void>(getDeleteWvvnSessionUrl(id),
+  {
+    ...options,
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      wvvnSessionDeletion,)
+  }
+);}
+
+
+
+
+export const getDeleteWvvnSessionMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWvvnSession>>, TError,{id: number;data: BodyType<WvvnSessionDeletion>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof deleteWvvnSession>>, TError,{id: number;data: BodyType<WvvnSessionDeletion>}, TContext> => {
+
+const mutationKey = ['deleteWvvnSession'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof deleteWvvnSession>>, {id: number;data: BodyType<WvvnSessionDeletion>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  deleteWvvnSession(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type DeleteWvvnSessionMutationResult = NonNullable<Awaited<ReturnType<typeof deleteWvvnSession>>>
+    export type DeleteWvvnSessionMutationBody = BodyType<WvvnSessionDeletion>
+    export type DeleteWvvnSessionMutationError = ErrorType<unknown>
+
+    export const useDeleteWvvnSession = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof deleteWvvnSession>>, TError,{id: number;data: BodyType<WvvnSessionDeletion>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof deleteWvvnSession>>,
+        TError,
+        {id: number;data: BodyType<WvvnSessionDeletion>},
+        TContext
+      > => {
+      return useMutation(getDeleteWvvnSessionMutationOptions(options));
     }
 
 export const getUpdateWvvnSessionUrl = (id: number,) => {

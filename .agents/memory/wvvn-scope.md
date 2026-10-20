@@ -27,6 +27,12 @@ Vor der ersten Artikelabfrage müssen Scannerbenutzer ausdrücklich „Werksverk
 
 **How to apply:** Ohne bestätigten Vorgang keine Suche oder Erfassung anbieten. K-Ware und Retoure sind Alternativen, keine voneinander unabhängigen Merkmale. Nach Abschluss stehen Artikel und Mengen in einer Liste bereit, die nur Benutzer mit einer eigenen Bearbeitungsberechtigung korrigieren können.
 
+Abgeschlossene Listen müssen berechtigte Benutzer bearbeiten und löschen können; das umfasst auch abgeschlossene importierte Archivlisten. Historische offene Archivlisten werden dadurch nicht automatisch abgeschlossen.
+
+**Why:** Der Nutzer hat erneut ausdrücklich verlangt: „Ich muss die abgeschlossenen Listen auch bearbeiten können, oder löschen können als berechtigter User.“ Die vorherige Beschränkung auf neue Listen ließ den hauptsächlich importierten Bestand nicht bearbeiten.
+
+**How to apply:** Bearbeiten und Löschen als getrennte Berechtigungen behandeln; das Recht zum Entfernen eigener offener Scannerpositionen berechtigt nicht zum Löschen ganzer abgeschlossener Listen. Änderungen und Löschungen mit Grund und ursprünglichem Stand nachvollziehbar halten. Bereits versandte Berichte unverändert bewahren, laufende/ungeklärte Versandzuordnungen schützen und gelöschte Listen nicht künftig melden. Korrigierte Archivlisten weiterhin nicht automatisch versenden.
+
 Tageslisten sollen automatisch um 00:00 Uhr an einen einstellbaren Verteiler gehen, getrennt nach Werksverkauf und Vernichtung; eine gemeinsame E-Mail wäre ebenfalls zulässig.
 
 **Why:** Der Nutzer hat Mitternacht ausdrücklich als Tagesabschluss vorgegeben.

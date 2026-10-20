@@ -1,20 +1,25 @@
 import type { PoolClient } from "@workspace/db";
-import type { WvvnSessionEdit } from "@workspace/api-zod";
+import type { WvvnSessionEdit, WvvnSessionDeletion } from "@workspace/api-zod";
 import { articles, audit, quantityPieces, resolveArticle, sessionDetail, WvvnError } from "./model";
 
-/** Only authenticated permission-checked callers may invoke this correction path. */
-export async function editCompletedSession(c: PoolClient, sessionId: number, body: WvvnSessionEdit, actor: string) {
+/** Caller owns the module transaction and has checked its action-specific permission. */
+async function completedSession(c: PoolClient, sessionId: number, body: WvvnSessionDeletion) {
   const original = (await c.query("SELECT * FROM wvvn_sessions WHERE id=$1 FOR UPDATE", [sessionId])).rows[0];
-  if (!original) throw new WvvnError("Liste nicht gefunden.", 404);
-  if (original.status !== "done" || original.legacy_id != null)
-    throw new WvvnError("Nur abgeschlossene neue Listen können hier korrigiert werden. Altdaten bleiben unverändertes Archiv.", 409);
+  if (!original || original.deleted_at) throw new WvvnError("Liste nicht gefunden.", 404);
+  if (original.status !== "done")
+    throw new WvvnError("Nur abgeschlossene Listen können hier bearbeitet oder gelöscht werden.", 409);
   if (original.revision !== body.revision) throw new WvvnError("Liste wurde inzwischen geändert. Bitte neu laden und Änderungen erneut prüfen.", 409);
   if (!body.reason.trim() || body.reason.trim().length < 3) throw new WvvnError("Bitte einen nachvollziehbaren Änderungsgrund angeben.");
   if (original.report_id != null) {
     const report = (await c.query("SELECT status FROM wvvn_reports WHERE id=$1", [original.report_id])).rows[0];
     if (report?.status !== "sent") throw new WvvnError("Diese Liste ist einem noch nicht abschließend geklärten Versand zugeordnet. Bericht zuerst prüfen; die Versanddatei darf nicht unbemerkt veralten.", 409);
-    if (!body.acknowledgeReported) throw new WvvnError("Bitte bestätigen: Der bereits versandte Bericht bleibt unverändert. Die Korrektur wird nicht automatisch erneut versendet.", 409);
+     if (!body.acknowledgeReported) throw new WvvnError("Bitte bestätigen: Der bereits versandte Bericht bleibt unverändert. Die Änderung wird nicht automatisch erneut versendet.", 409);
   }
+}
+
+/** Only authenticated permission-checked callers may invoke this correction path. */
+export async function editCompletedSession(c: PoolClient, sessionId: number, body: WvvnSessionEdit, actor: string) {
+  await completedSession(c, sessionId, body);
   const before = await sessionDetail(c, sessionId);
   const existing = new Map(before.items.map((i) => [i.id, i]));
   const retained = new Set<number>();
@@ -53,4 +58,15 @@ export async function editCompletedSession(c: PoolClient, sessionId: number, bod
   await audit(c, actor, "Abgeschlossene Liste korrigiert",
     `#${sessionId}, Stand ${after.revision}, ${before.pieces} → ${after.pieces} Stück. Grund: ${body.reason.trim()}${after.reported ? " Bereits versandter Bericht bleibt unverändert; keine automatische erneute Meldung." : ""}`);
   return after;
+}
+
+export async function deleteCompletedSession(c: PoolClient, sessionId: number, body: WvvnSessionDeletion, actor: string) {
+  await completedSession(c, sessionId, body);
+  const before = await sessionDetail(c, sessionId);
+  const result = await c.query("UPDATE wvvn_sessions SET deleted_at=now(),revision=revision+1 WHERE id=$1 RETURNING revision,deleted_at", [sessionId]);
+  const { revision, deleted_at } = result.rows[0];
+  await c.query(`INSERT INTO wvvn_revisions(session_id,revision,actor,reason,before_data,after_data) VALUES($1,$2,$3,$4,$5,$6)`,
+    [sessionId, revision, actor, body.reason.trim(), JSON.stringify(before), JSON.stringify({ ...before, revision, deleted: true, deletedAt: deleted_at })]);
+  await audit(c, actor, "Abgeschlossene Liste gelöscht",
+    `#${sessionId}, Stand ${revision}, ${before.itemCount} Positionen, ${before.pieces} Stück. Grund: ${body.reason.trim()}${before.reported ? " Bereits versandter Bericht bleibt unverändert; keine automatische erneute Meldung." : ""}`);
 }

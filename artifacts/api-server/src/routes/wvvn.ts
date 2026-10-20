@@ -2,7 +2,7 @@ import { Router, type Request, type Response } from "express";
 import {
   GetWvvnStateResponse, GetWvvnScannerStateResponse, CreateWvvnSessionBody, AddWvvnItemBody,
   UpdateWvvnSettingsBody, UpdateWvvnArticleBody, UnlockWvvnScannerBody,
-  PreviewWvvnImportBody, CommitWvvnImportBody, GetWvvnSessionResponse, LookupWvvnArticleResponse, UpdateWvvnSessionBody,
+   PreviewWvvnImportBody, CommitWvvnImportBody, GetWvvnSessionResponse, LookupWvvnArticleResponse, UpdateWvvnSessionBody, DeleteWvvnSessionBody,
 } from "@workspace/api-zod";
 import { pool } from "@workspace/db";
 import { requireAuth } from "../lib/auth";
@@ -12,7 +12,7 @@ import { articles, article, audit, buildCsv, defaults, device, iso, quantityPiec
 import { commitImport, prepareImport } from "../lib/wvvn/import";
 import { recipients, sendReports } from "../lib/wvvn/reports";
 import { checkData, records } from "../lib/einlagerung/model";
-import { editCompletedSession } from "../lib/wvvn/edit";
+import { editCompletedSession, deleteCompletedSession } from "../lib/wvvn/edit";
 
 const router = Router();
 const actor = (req: Request) => req.session.username || "COMET";
@@ -73,10 +73,10 @@ router.get("/wvvn/state", requireAuth, handler(async (req, res) => {
   const from = date(req.query.from), to = date(req.query.to);
   if (from && to && from > to) throw new WvvnError("Von-Datum muss vor dem Bis-Datum liegen.");
   const result = await transaction(async (c) => {
-    const view = permissions["wvvn.view"] || permissions["wvvn.export"] || permissions["wvvn.edit"];
+     const view = permissions["wvvn.view"] || permissions["wvvn.export"] || permissions["wvvn.edit"] || permissions["wvvn.remove"];
     const list = view ? await c.query(`SELECT s.*,count(i.id)::integer AS item_count,COALESCE(sum(i.pieces),0) AS pieces
       FROM wvvn_sessions s LEFT JOIN wvvn_items i ON i.session_id=s.id AND i.deleted_at IS NULL
-      WHERE ($1::text IS NULL OR COALESCE(s.finished_at,s.created_at)>=($1::date::timestamp AT TIME ZONE 'Europe/Berlin'))
+       WHERE s.deleted_at IS NULL AND ($1::text IS NULL OR COALESCE(s.finished_at,s.created_at)>=($1::date::timestamp AT TIME ZONE 'Europe/Berlin'))
         AND ($2::text IS NULL OR COALESCE(s.finished_at,s.created_at)<(($2::date+1)::timestamp AT TIME ZONE 'Europe/Berlin'))
       GROUP BY s.id ORDER BY COALESCE(s.finished_at,s.created_at) DESC,s.id DESC LIMIT 301`, [from, to]) : { rows: [] };
     return {
@@ -173,8 +173,14 @@ router.post("/wvvn/scanner/sessions/:id/finalize", handler(async (req, res) => {
   }); res.json(GetWvvnSessionResponse.parse(result));
 }));
 router.get("/wvvn/sessions/:id", requireAuth, handler(async (req, res) => {
-  if (!await can(req.session.role!, "wvvn.view") && !await can(req.session.role!, "wvvn.export")) await requirePermission(req, "wvvn.edit");
+   if (!await can(req.session.role!, "wvvn.view") && !await can(req.session.role!, "wvvn.export") && !await can(req.session.role!, "wvvn.edit")) await requirePermission(req, "wvvn.remove");
   res.json(GetWvvnSessionResponse.parse(await transaction((c) => sessionDetail(c, id(req.params.id)))));
+}));
+router.delete("/wvvn/sessions/:id", requireAuth, handler(async (req, res) => {
+  await requirePermission(req, "wvvn.remove");
+  const body = DeleteWvvnSessionBody.parse(req.body);
+  await transaction((c) => deleteCompletedSession(c, id(req.params.id), body, actor(req)));
+  res.sendStatus(204);
 }));
 router.put("/wvvn/sessions/:id", requireAuth, handler(async (req, res) => {
   await requirePermission(req, "wvvn.edit");

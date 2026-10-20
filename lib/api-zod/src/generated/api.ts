@@ -251,6 +251,24 @@ export const CreateWvvnSessionResponse = zod.object({
 })
 
 
+export const DeleteWvvnSessionParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const deleteWvvnSessionBodyRevisionMin = 0;
+
+export const deleteWvvnSessionBodyReasonMin = 3;
+export const deleteWvvnSessionBodyReasonMax = 1000;
+
+
+
+export const DeleteWvvnSessionBody = zod.object({
+  "revision": zod.number().min(deleteWvvnSessionBodyRevisionMin),
+  "reason": zod.string().min(deleteWvvnSessionBodyReasonMin).max(deleteWvvnSessionBodyReasonMax),
+  "acknowledgeReported": zod.boolean()
+})
+
+
 export const UpdateWvvnSessionParams = zod.object({
   "id": zod.coerce.number()
 })
