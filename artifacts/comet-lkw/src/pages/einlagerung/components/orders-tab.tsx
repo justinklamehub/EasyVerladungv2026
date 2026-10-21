@@ -17,13 +17,14 @@ import { ordersExcel, ordersPrintHtml } from "./orders-output";
 import { useRecordActions } from "../use-einlagerung";
 import { datasetOf, errMsg, nf, P, toRec, type D, type Model, type Rec } from "../lib";
 import { useLiveFilters } from "@/lib/live-view-control";
+import { usePickupPlanning, PickupFilter, PickupCell, PickupEditor } from "./pickup-planning";
 
 const STATUS = [{ value: "offen", label: "Offen" }, { value: "erledigt", label: "Erledigt" }, { value: "storniert", label: "Storniert" }];
 
 export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   state: EinlagerungState; model: Model; has: (k: string) => boolean; reservationsOnly?: boolean;
 }) {
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] = useState(() => new URLSearchParams(window.location.search).get("deliveryNumber") ?? "");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [filters, setFilters] = useState<OrderFilters>(emptyOrderFilters);
   const [exporting, setExporting] = useState(false);
@@ -33,6 +34,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   const [del, setDel] = useState<Rec | null>(null);
   const { save, remove } = useRecordActions();
   const { toast } = useToast();
+  const pickup = usePickupPlanning(!reservationsOnly);
   useLiveFilters([
     { id: "search", label: reservationsOnly ? "Vormerkungen suchen" : "Lageraufträge suchen",
       kind: "text", value: searchText, change: setSearchText },
@@ -71,7 +73,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   });
   const allReservations = (q.data?.reservations ?? []).map(toRec).filter((r) => !resFilter || r.d.status === resFilter);
   const allOrders = (q.data?.orders ?? []) as D[];
-  const orders = allOrders.filter((o) => matchesOrderFilters(orderFilterRow(o), filters));
+  const orders = allOrders.filter((o) => matchesOrderFilters(orderFilterRow(o), filters) && pickup.matches(o.deliveryNumber)).map(pickup.enrich);
   const resv = allReservations.filter((r) => matchesOrderFilters(reservationFilterRow(r), filters));
   const facetRows = [
     ...(!reservationsOnly ? allOrders.map(orderFilterRow) : []),
@@ -79,7 +81,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   ];
   const stats = summarizeOrders(orders);
   const outputDisabled = !imported || q.isLoading || q.isError || q.isFetching ||
-    searchText.trim() !== appliedSearch || orders.length === 0;
+    searchText.trim() !== appliedSearch || orders.length === 0 || !pickup.query.isSuccess || pickup.query.isError;
   const printOrders = () => {
     if (outputDisabled) return;
     const popup = window.open("", "_blank", "width=1100,height=800");
@@ -118,7 +120,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
       setExporting(false);
     }
   };
-  const activeFilterCount = Object.values(filters).reduce((n, values) => n + values.length, 0) + (searchText.trim() ? 1 : 0);
+  const activeFilterCount = Object.values(filters).reduce((n, values) => n + values.length, 0) + (searchText.trim() ? 1 : 0) + Number(pickup.filter !== "all");
   const setStatus = async (r: Rec, status: string) => {
     try { await save("reservation", r, { ...r.d, status }); toast({ title: `Reservierung ${status}` }); }
     catch (e) { toast({ title: "Statuswechsel fehlgeschlagen", description: errMsg(e), variant: "destructive" }); }
@@ -126,6 +128,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
 
   return (
     <div className="space-y-6">
+      {!reservationsOnly && <><PickupFilter planning={pickup} /><PickupEditor planning={pickup} /></>}
       <form className="app-filter-bar border p-3 space-y-3" onSubmit={(e) => {
         e.preventDefault();
         if (searchText.trim() === appliedSearch) void q.refetch();
@@ -151,7 +154,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <span>Mehrfachauswahl möglich · Filter werden automatisch angewendet</span>
           {activeFilterCount > 0 && <Button type="button" size="sm" variant="ghost" data-testid="button-orders-reset" onClick={() => {
-            setFilters(emptyOrderFilters()); setSearchText(""); setAppliedSearch("");
+            setFilters(emptyOrderFilters()); setSearchText(""); setAppliedSearch(""); pickup.setFilter("all");
           }}>Alle Filter zurücksetzen ({activeFilterCount})</Button>}
           {q.isFetching && <span role="status">Wird aktualisiert …</span>}
         </div>
@@ -198,7 +201,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
         ) : orders.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">Keine Aufträge für diese Filter.</p> : (
           <div className="overflow-x-auto">
             <Table className="app-table">
-              <TableHeader><TableRow><TableHead>Liefernummer</TableHead><TableHead>Regal</TableHead><TableHead>Spedition</TableHead><TableHead>Relation</TableHead><TableHead>Termin</TableHead><TableHead>Kalenderwoche</TableHead><TableHead>Plus-KW</TableHead><TableHead className="text-right">Paletten</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow><TableHead>Liefernummer</TableHead><TableHead>Regal</TableHead><TableHead>Spedition</TableHead><TableHead>Relation</TableHead><TableHead>Termin</TableHead><TableHead>Kalenderwoche</TableHead><TableHead>Plus-KW</TableHead><TableHead className="text-right">Paletten</TableHead><TableHead>Abholplanung / LKW</TableHead></TableRow></TableHeader>
               <TableBody>
                 {orders.map((o, i) => (
                   <TableRow key={i} data-testid={`row-order-${i}`}>
@@ -206,6 +209,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
                     <TableCell className="font-medium">{String(o.shelf ?? "")}</TableCell><TableCell>{String(o.spedition ?? "")}</TableCell>
                     <TableCell>{String(o.relation ?? "")}</TableCell><TableCell>{String(o.termin ?? "")}</TableCell><TableCell>{String(o.calendarWeek ?? "")}</TableCell>
                     <TableCell>{String(o.plusKw ?? "")}</TableCell><TableCell className="text-right">{nf(Number(o.paletten) || 0)}</TableCell>
+                    <TableCell><PickupCell number={o.deliveryNumber} planning={pickup} canEdit={has(P.pickup)} /></TableCell>
                   </TableRow>
                 ))}
               </TableBody>

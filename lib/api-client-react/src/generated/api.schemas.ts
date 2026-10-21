@@ -1074,6 +1074,36 @@ export interface EinlagerungDataset {
   rowCount: number;
 }
 
+export interface WarehousePickupPlanInput {
+  planned: boolean;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  shipmentId: number | null;
+  /** @nullable */
+  expectedUpdatedAt: string | null;
+}
+
+export interface WarehousePickupShipment {
+  id: number;
+  kennzeichen: string;
+  speditionName: string;
+  etaDate: string;
+  etaTime: string;
+  status: string;
+  relation: string;
+}
+
+export interface WarehousePickupPlan {
+  deliveryNumber: string;
+  planned: boolean;
+  /** @nullable */
+  shipmentId: number | null;
+  updatedAt: string;
+  shipment: WarehousePickupShipment | null;
+}
+
 export type EinlagerungStateOccupancyItem = {
   shelf: string;
   ist: number;

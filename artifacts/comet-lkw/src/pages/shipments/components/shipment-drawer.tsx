@@ -34,6 +34,7 @@ import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { usePermissions } from "@/hooks/use-permissions";
+import { PickupShipmentSummary } from "@/pages/einlagerung/components/pickup-shipment-summary";
 import { format } from "date-fns";
 import { getSocket } from "@/lib/socket";
 import { onShipmentEditing, type ShipmentEditor } from "@/hooks/use-socket";
@@ -638,6 +639,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             );
           })()}
         </SheetHeader>
+        {open && shipmentId && (drawerPerms["einlagerung.view"] || drawerPerms["einlagerung.pickup.plan"]) && <PickupShipmentSummary shipmentId={shipmentId} />}
 
         {isLoading ? (
           <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>

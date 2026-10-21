@@ -19,6 +19,7 @@ export const P = {
   import: "einlagerung.import",
   replace: "einlagerung.replace",
   settings: "einlagerung.settings",
+  pickup: "einlagerung.pickup.plan",
 } as const;
 
 export const ALL_KEYS: string[] = Object.values(P);

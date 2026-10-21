@@ -884,6 +884,38 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/EinlagerungRecord"
+  /einlagerung/pickup-plans:
+    get:
+      operationId: listWarehousePickupPlans
+      tags: [einlagerung]
+      responses:
+        "200":
+          description: Importunabhängige Abholplanung je Liefernummer
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/WarehousePickupPlan"}
+  /einlagerung/pickup-plans/{deliveryNumber}:
+    put:
+      operationId: saveWarehousePickupPlan
+      tags: [einlagerung]
+      parameters:
+        - name: deliveryNumber
+          in: path
+          required: true
+          schema: {type: string, minLength: 1, maxLength: 100}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/WarehousePickupPlanInput"}
+      responses:
+        "200":
+          description: Gespeicherte Abholplanung
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/WarehousePickupPlan"}
   /einlagerung/state:
     get:
       operationId: getEinlagerungState
@@ -2771,6 +2803,36 @@ components:
         importedAt: {type: string}
         importedBy: {type: string}
         rowCount: {type: integer}
+    WarehousePickupPlanInput:
+      type: object
+      required: [planned, shipmentId, expectedUpdatedAt]
+      properties:
+        planned: {type: boolean}
+        shipmentId: {type: [integer, "null"], minimum: 1}
+        expectedUpdatedAt: {type: [string, "null"]}
+    WarehousePickupShipment:
+      type: object
+      required: [id, kennzeichen, speditionName, etaDate, etaTime, status, relation]
+      properties:
+        id: {type: integer}
+        kennzeichen: {type: string}
+        speditionName: {type: string}
+        etaDate: {type: string}
+        etaTime: {type: string}
+        status: {type: string}
+        relation: {type: string}
+    WarehousePickupPlan:
+      type: object
+      required: [deliveryNumber, planned, shipmentId, updatedAt, shipment]
+      properties:
+        deliveryNumber: {type: string}
+        planned: {type: boolean}
+        shipmentId: {type: [integer, "null"]}
+        updatedAt: {type: string}
+        shipment:
+          anyOf:
+            - {$ref: "#/components/schemas/WarehousePickupShipment"}
+            - {type: "null"}
     EinlagerungState:
       type: object
       required: [records, datasets, settings, occupancy, events, speditionen]

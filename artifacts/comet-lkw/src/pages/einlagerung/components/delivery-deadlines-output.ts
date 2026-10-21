@@ -5,7 +5,7 @@ export const DEADLINE_LABELS: Record<DeadlineStatus, string> = {
   critical: "Kritisch", soon: "Bald fällig", upcoming: "Demnächst",
   safe: "Unkritisch", week: "KW-Termine", unknown: "Ohne gültigen Termin",
 };
-const HEADERS = ["Status", "Termin", "Rest", "Regal", "Lieferungsnummer", "Debitorennummer", "Debitorname", "Spedition", "Relation", "Plus-KW", "Paletten"];
+const HEADERS = ["Status", "Termin", "Rest", "Regal", "Lieferungsnummer", "Debitorennummer", "Debitorname", "Spedition", "Relation", "Plus-KW", "Paletten", "Abholplanung", "LKW-Anmeldung"];
 
 // The table, printout and export must all use this exact selection, in the same order.
 export function filterDeadlineRows(rows: DeadlineOrder[], filter: DeadlineStatus | "all", search: string) {
@@ -27,6 +27,7 @@ function cells(r: DeadlineOrder): string[] {
     String(r.order.spedition ?? ""), String(r.order.relation ?? ""),
     r.order.plusKw ? String(r.order.plusKw) : "–",
     (Number(r.order.paletten) || 0).toLocaleString("de-DE", { useGrouping: false }),
+    String(r.order.pickupStatus ?? ""), String(r.order.pickupTruck ?? ""),
   ];
 }
 
@@ -37,17 +38,17 @@ export async function deadlineExcel(shown: DeadlineOrder[], details?: string[][]
   sheet.addRow(HEADERS);
   sheet.getRow(1).font = { bold: true };
   sheet.views = [{ state: "frozen", ySplit: 1 }];
-  const widths = [24, 22, 38, 20, 22, 22, 36, 32, 22, 12, 14];
+  const widths = [24, 22, 38, 20, 22, 22, 36, 32, 22, 12, 14, 26, 70];
   widths.forEach((width, i) => {
     const column = sheet.getColumn(i + 1);
     column.width = width;
     // Explicit string values + text formatting prevent Excel's date/number
     // inference for shelf names, relations, KW labels and leading zeroes.
-    column.numFmt = i < HEADERS.length - 1 ? "@" : "#,##0.###";
+    column.numFmt = i === 10 ? "#,##0.###" : "@";
   });
   for (const item of shown) {
     const values: (string | number)[] = cells(item);
-    values[HEADERS.length - 1] = Number(item.order.paletten) || 0;
+    values[10] = Number(item.order.paletten) || 0;
     sheet.addRow(values);
   }
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: sheet.rowCount, column: HEADERS.length } };

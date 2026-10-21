@@ -4,12 +4,14 @@ import {
   UpdateEinlagerungRecordResponse, SearchEinlagerungQueryParams, SearchEinlagerungResponse,
   SetEinlagerungShelfStatusBody, SetEinlagerungShelfStatusResponse, UpdateEinlagerungSettingsResponse,
   PreviewEinlagerungImportResponse, CommitEinlagerungImportResponse,
+  ListWarehousePickupPlansResponse, SaveWarehousePickupPlanBody, SaveWarehousePickupPlanResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
 import { can, type Permission } from "../lib/permissions";
 import { checkData, dataset, event, getSettings, read, record, records, schemas, settingsSchema, transaction, WarehouseError } from "../lib/einlagerung/model";
 import { commitImport, importSchema, prepareImport } from "../lib/einlagerung/import";
 import { loadWarehouse, occupancy, search } from "../lib/einlagerung/search";
+import { listPickupPlans, pickupShipmentAccess, savePickupPlan } from "../lib/einlagerung/pickup-plans";
 
 const router = Router();
 // Only explicitly registered scanner aliases bypass authentication.
@@ -18,7 +20,7 @@ const scannerOrAuth: RequestHandler = (req, res, next) =>
   isScanner(req) ? next() : requireAuth(req, res, next);
 const actor = (req: Request) => req.session.username || "Öffentlicher Scanner";
 const manage: Permission[] = ["einlagerung.view", "einlagerung.scan", "einlagerung.strategy", "einlagerung.master",
-  "einlagerung.reservation.create", "einlagerung.reservation.edit", "einlagerung.import", "einlagerung.settings"];
+  "einlagerung.reservation.create", "einlagerung.reservation.edit", "einlagerung.import", "einlagerung.settings", "einlagerung.pickup.plan"];
 async function permission(req: Request, permissions: Permission[]) {
   if (isScanner(req)) return;
   for (const p of permissions) if (await can(req.session.role!, p)) return;
@@ -171,6 +173,17 @@ router.put("/einlagerung/settings", requireAuth, handler(async (req, res) => {
     return next;
   });
   res.json(UpdateEinlagerungSettingsResponse.parse(body));
+}));
+router.get("/einlagerung/pickup-plans", requireAuth, handler(async (req, res) => {
+  await permission(req, manage);
+  const result = await read(async (c) => listPickupPlans(c, await pickupShipmentAccess(c, req.session.role!, req.session.speditionId)));
+  res.json(ListWarehousePickupPlansResponse.parse(result));
+}));
+router.put("/einlagerung/pickup-plans/:deliveryNumber", requireAuth, handler(async (req, res) => {
+  await permission(req, ["einlagerung.pickup.plan"]);
+  const result = await transaction(async (c) => savePickupPlan(c, String(req.params.deliveryNumber),
+    SaveWarehousePickupPlanBody.parse(req.body), actor(req), await pickupShipmentAccess(c, req.session.role!, req.session.speditionId)));
+  res.json(SaveWarehousePickupPlanResponse.parse(result));
 }));
 router.post("/einlagerung/import/preview", requireAuth, handler(async (req, res) => {
   await permission(req, ["einlagerung.import"]);

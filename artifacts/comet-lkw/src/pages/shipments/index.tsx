@@ -175,8 +175,14 @@ export default function ShipmentsPage() {
   }, [effectiveDates.from, effectiveDates.to]);
   const [bulkStatus, setBulkStatus] = useState("__none__");
   const [bulkWareStatus, setBulkWareStatus] = useState("__none__");
-  const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(null);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("shipmentId"));
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  });
+  const [isDrawerOpen, setIsDrawerOpen] = useState(() => {
+    const id = Number(new URLSearchParams(window.location.search).get("shipmentId"));
+    return Number.isSafeInteger(id) && id > 0;
+  });
   const [isBulkOpen, setIsBulkOpen] = useState(false);
   const [isTemplatesOpen, setIsTemplatesOpen] = useState(false);
   const [templateInitialRows, setTemplateInitialRows] = useState<Partial<RowData>[] | undefined>(undefined);

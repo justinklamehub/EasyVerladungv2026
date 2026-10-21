@@ -24,9 +24,9 @@ export default function EinlagerungPage() {
   const tabs = [
     { id: "lagerplan", label: "Lagerübersicht", ok: has(P.view) },
     { id: "artikel", label: "Artikelsuche", ok: has(P.view) || has(P.scan) },
-    { id: "auftraege", label: "Aufträge", ok: has(P.view) || has(P.resCreate) || has(P.resEdit) },
+    { id: "auftraege", label: "Aufträge", ok: has(P.view) || has(P.resCreate) || has(P.resEdit) || has(P.pickup) },
     { id: "vormerkungen", label: "Vormerkungen", ok: has(P.view) || has(P.resCreate) || has(P.resEdit) },
-    { id: "liefertermine", label: "Liefertermine", ok: has(P.view) },
+    { id: "liefertermine", label: "Liefertermine", ok: has(P.view) || has(P.pickup) },
     { id: "strategie", label: "Strategie", ok: has(P.strategy) },
     { id: "stammdaten", label: "Stammdaten", ok: has(P.master) },
     { id: "import", label: "Import", ok: has(P.import) },
@@ -64,7 +64,7 @@ export default function EinlagerungPage() {
       {state && active === "artikel" && <div className="w-full min-w-0"><ArticleLookup has={has} /></div>}
       {state && active === "auftraege" && <OrdersTab state={state} model={model} has={has} />}
       {state && active === "vormerkungen" && <OrdersTab key="vormerkungen" state={state} model={model} has={has} reservationsOnly />}
-      {state && active === "liefertermine" && <DeliveryDeadlinesTab state={state} />}
+      {state && active === "liefertermine" && <DeliveryDeadlinesTab state={state} has={has} />}
       {state && active === "strategie" && <StrategyTab state={state} model={model} has={has} />}
       {state && active === "stammdaten" && <MasterTab state={state} model={model} has={has} />}
       {state && active === "import" && <ImportTab state={state} has={has} />}

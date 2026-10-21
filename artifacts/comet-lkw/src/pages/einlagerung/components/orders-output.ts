@@ -1,6 +1,6 @@
 import { summarizeOrders, TEXT_FILTER_PREFIX, type OrderFilters, type OrderRow } from "./orders-filters";
 
-const HEADERS = ["Liefernummer", "Regal", "Spedition", "Relation", "Termin", "Kalenderwoche", "Plus-KW", "Paletten"];
+const HEADERS = ["Liefernummer", "Regal", "Spedition", "Relation", "Termin", "Kalenderwoche", "Plus-KW", "Paletten", "Abholplanung", "LKW-Anmeldung"];
 const KEYS = ["deliveryNumber", "shelf", "spedition", "relation", "termin", "calendarWeek", "plusKw"] as const;
 const TIME_ZONE = "Europe/Berlin";
 const string = (v: unknown) => String(v ?? "");
@@ -29,12 +29,12 @@ export async function ordersExcel(rows: OrderRow[], filters: OrderFilters, searc
   sheet.addRow(HEADERS);
   sheet.getRow(1).font = { bold: true };
   sheet.views = [{ state: "frozen", ySplit: 1 }];
-  [22, 20, 32, 24, 22, 20, 14, 14].forEach((width, i) => {
+  [22, 20, 32, 24, 22, 20, 14, 14, 26, 70].forEach((width, i) => {
     sheet.getColumn(i + 1).width = width;
-    sheet.getColumn(i + 1).numFmt = i < 7 ? "@" : "#,##0.###";
+    sheet.getColumn(i + 1).numFmt = i === 7 ? "#,##0.###" : "@";
   });
   for (const row of rows) sheet.addRow([
-    ...KEYS.map((key) => string(row[key])), Number(row.paletten) || 0,
+    ...KEYS.map((key) => string(row[key])), Number(row.paletten) || 0, string(row.pickupStatus), string(row.pickupTruck),
   ]);
   sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: sheet.rowCount, column: HEADERS.length } };
   const info = workbook.addWorksheet("Filter und Summen");
@@ -71,7 +71,7 @@ ${orderOutputFilters(filters, search).map(([label, value]) => `<p><strong>${esca
 <p>${number(sum.orders)} Aufträge · ${number(sum.pallets)} Paletten · ${number(sum.positions)} Auftragspositionen · ${number(sum.shelves)} Regale · ${number(sum.carriers)} Speditionen</p>
 <p>Liefernummern und HU-Nummern werden über alle Positionen nur einmal gezählt.${sum.unidentified ? ` ${number(sum.unidentified)} Positionen ohne Liefernummer werden separat als Auftrag gezählt.` : ""}</p>
 <table><thead><tr>${HEADERS.map((h) => `<th scope="col">${escapeHtml(h)}</th>`).join("")}</tr></thead>
-<tbody>${rows.map((row) => `<tr>${[...KEYS.map((key) => string(row[key])), number(Number(row.paletten) || 0)]
+<tbody>${rows.map((row) => `<tr>${[...KEYS.map((key) => string(row[key])), number(Number(row.paletten) || 0), string(row.pickupStatus), string(row.pickupTruck)]
     .map((cell) => `<td>${escapeHtml(cell)}</td>`).join("")}</tr>`).join("")}</tbody></table>
 </body></html>`;
 }

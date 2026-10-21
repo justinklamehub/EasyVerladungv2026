@@ -59,6 +59,7 @@ export type Permission =
   | "einlagerung.import"
   | "einlagerung.replace"
   | "einlagerung.settings"
+  | "einlagerung.pickup.plan"
   | "system.view"
   | "system.update"
   | "system.liveview"
@@ -124,6 +125,7 @@ export const ALL_PERMISSIONS: Permission[] = [
   "einlagerung.import",
   "einlagerung.replace",
   "einlagerung.settings",
+  "einlagerung.pickup.plan",
   "system.view",
   "system.update",
   "system.liveview",
@@ -168,6 +170,7 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "einlagerung.import": { label: "CSV-Daten importieren", category: "Einlagerung" },
   "einlagerung.replace": { label: "Datenstände durch Import ersetzen", category: "Einlagerung" },
   "einlagerung.settings": { label: "Einlagerungseinstellungen ändern", category: "Einlagerung" },
+  "einlagerung.pickup.plan": { label: "Abholungen planen und LKW zuordnen", category: "Einlagerung" },
   "pallet.create":        { label: "Buchung erstellen",       category: "Palettenbuchungen" },
   "pallet.edit":          { label: "Buchung bearbeiten",      category: "Palettenbuchungen" },
   "pallet.delete":        { label: "Buchung löschen",         category: "Palettenbuchungen" },

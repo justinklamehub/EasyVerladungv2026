@@ -117,6 +117,8 @@ import type {
   User,
   UserInput,
   UserUpdate,
+  WarehousePickupPlan,
+  WarehousePickupPlanInput,
   WvvnArticle,
   WvvnArticleInput,
   WvvnDeviceInput,
@@ -4567,6 +4569,143 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
         TContext
       > => {
       return useMutation(getSetScannerEinlagerungShelfStatusMutationOptions(options));
+    }
+
+export const getListWarehousePickupPlansUrl = () => {
+
+
+
+
+  return `/api/einlagerung/pickup-plans`
+}
+
+export const listWarehousePickupPlans = async ( options?: RequestInit): Promise<WarehousePickupPlan[]> => {
+
+  return customFetch<WarehousePickupPlan[]>(getListWarehousePickupPlansUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListWarehousePickupPlansQueryKey = () => {
+    return [
+    `/api/einlagerung/pickup-plans`
+    ] as const;
+    }
+
+
+export const getListWarehousePickupPlansQueryOptions = <TData = Awaited<ReturnType<typeof listWarehousePickupPlans>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWarehousePickupPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListWarehousePickupPlansQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listWarehousePickupPlans>>> = ({ signal }) => listWarehousePickupPlans({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listWarehousePickupPlans>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListWarehousePickupPlansQueryResult = NonNullable<Awaited<ReturnType<typeof listWarehousePickupPlans>>>
+export type ListWarehousePickupPlansQueryError = ErrorType<unknown>
+
+
+
+export function useListWarehousePickupPlans<TData = Awaited<ReturnType<typeof listWarehousePickupPlans>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listWarehousePickupPlans>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListWarehousePickupPlansQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getSaveWarehousePickupPlanUrl = (deliveryNumber: string,) => {
+
+
+
+
+  return `/api/einlagerung/pickup-plans/${deliveryNumber}`
+}
+
+export const saveWarehousePickupPlan = async (deliveryNumber: string,
+    warehousePickupPlanInput: WarehousePickupPlanInput, options?: RequestInit): Promise<WarehousePickupPlan> => {
+
+  return customFetch<WarehousePickupPlan>(getSaveWarehousePickupPlanUrl(deliveryNumber),
+  {
+    ...options,
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      warehousePickupPlanInput,)
+  }
+);}
+
+
+
+
+export const getSaveWarehousePickupPlanMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWarehousePickupPlan>>, TError,{deliveryNumber: string;data: BodyType<WarehousePickupPlanInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveWarehousePickupPlan>>, TError,{deliveryNumber: string;data: BodyType<WarehousePickupPlanInput>}, TContext> => {
+
+const mutationKey = ['saveWarehousePickupPlan'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveWarehousePickupPlan>>, {deliveryNumber: string;data: BodyType<WarehousePickupPlanInput>}> = (props) => {
+          const {deliveryNumber,data} = props ?? {};
+
+          return  saveWarehousePickupPlan(deliveryNumber,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveWarehousePickupPlanMutationResult = NonNullable<Awaited<ReturnType<typeof saveWarehousePickupPlan>>>
+    export type SaveWarehousePickupPlanMutationBody = BodyType<WarehousePickupPlanInput>
+    export type SaveWarehousePickupPlanMutationError = ErrorType<unknown>
+
+    export const useSaveWarehousePickupPlan = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWarehousePickupPlan>>, TError,{deliveryNumber: string;data: BodyType<WarehousePickupPlanInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveWarehousePickupPlan>>,
+        TError,
+        {deliveryNumber: string;data: BodyType<WarehousePickupPlanInput>},
+        TContext
+      > => {
+      return useMutation(getSaveWarehousePickupPlanMutationOptions(options));
     }
 
 export const getGetEinlagerungStateUrl = () => {

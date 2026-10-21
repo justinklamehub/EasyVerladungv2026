@@ -15,6 +15,12 @@ Die Einlagerungsstrategie soll in das aktuelle COMET-Projekt integriert werden: 
 
 **How to apply:** Bei der Umsetzung bestehende Gestaltung und Berechtigungsverwaltung verwenden; Lagerstruktur und Strategie nicht fest im Programm vorgeben.
 
+Pro Lieferung soll in „Aufträge“ und „Liefertermine“ gepflegt werden können, ob die Abholung eingeplant ist, optional mit Verknüpfung zu einer LKW-Anmeldung. Die Abholplanung muss beim Aktualisieren und Ersetzen der Importdaten erhalten bleiben.
+
+**Why:** Der Nutzer hat ausdrücklich Status plus optionale LKW-Verknüpfung gewählt und den Erhalt beim Updaten/Ersetzen gefordert.
+
+**How to apply:** Die Liefernummer ist die fachliche Identität über alle Positionen und Importstände hinweg; keine Bindung an eine austauschbare Importzeile. Fehlende Lieferungen oder gelöschte/stornierte LKW-Anmeldungen dürfen die gespeicherte Planung nicht automatisch löschen. Eine Zuordnung ist keine Änderung des LKW-Status oder Palettenbestands.
+
 Bestände, Retouren und eingelagerte Aufträge sollen weiterhin per CSV-Upload aktualisiert werden, nicht über eine automatische Anbindung.
 
 **Why:** Der Nutzer hat „CSV-Upload wie bisher“ gewählt.

@@ -1940,6 +1940,58 @@ export const SetScannerEinlagerungShelfStatusResponse = zod.object({
 })
 
 
+export const ListWarehousePickupPlansResponseItem = zod.object({
+  "deliveryNumber": zod.string(),
+  "planned": zod.boolean(),
+  "shipmentId": zod.number().nullable(),
+  "updatedAt": zod.string(),
+  "shipment": zod.union([zod.object({
+  "id": zod.number(),
+  "kennzeichen": zod.string(),
+  "speditionName": zod.string(),
+  "etaDate": zod.string(),
+  "etaTime": zod.string(),
+  "status": zod.string(),
+  "relation": zod.string()
+}),zod.null()])
+})
+export const ListWarehousePickupPlansResponse = zod.array(ListWarehousePickupPlansResponseItem)
+
+
+export const saveWarehousePickupPlanPathDeliveryNumberMax = 100;
+
+
+
+export const SaveWarehousePickupPlanParams = zod.object({
+  "deliveryNumber": zod.coerce.string().min(1).max(saveWarehousePickupPlanPathDeliveryNumberMax)
+})
+
+
+
+
+export const SaveWarehousePickupPlanBody = zod.object({
+  "planned": zod.boolean(),
+  "shipmentId": zod.number().min(1).nullable(),
+  "expectedUpdatedAt": zod.string().nullable()
+})
+
+export const SaveWarehousePickupPlanResponse = zod.object({
+  "deliveryNumber": zod.string(),
+  "planned": zod.boolean(),
+  "shipmentId": zod.number().nullable(),
+  "updatedAt": zod.string(),
+  "shipment": zod.union([zod.object({
+  "id": zod.number(),
+  "kennzeichen": zod.string(),
+  "speditionName": zod.string(),
+  "etaDate": zod.string(),
+  "etaTime": zod.string(),
+  "status": zod.string(),
+  "relation": zod.string()
+}),zod.null()])
+})
+
+
 export const getEinlagerungStateResponseSettingsStaleHoursMax = 8760;
 
 export const getEinlagerungStateResponseSettingsDeadlineThresholdsCriticalDaysMin = 0;

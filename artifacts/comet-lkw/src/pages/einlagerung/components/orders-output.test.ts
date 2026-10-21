@@ -5,6 +5,20 @@ import { emptyOrderFilters, matchesOrderFilters, orderFilterRow, type OrderRow }
 import { ordersExcel, ordersPrintHtml } from "./orders-output";
 
 const now = new Date("2026-10-07T12:00:00Z");
+test("Abholplanung und LKW erscheinen in Excel und HTML-sicher im Druck", async () => {
+  const own = [{ deliveryNumber: "80009", shelf: "A1", paletten: 2, pickupStatus: "Abholung eingeplant", pickupTruck: 'LKW #11 · <Test> & "Spedition"' }];
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(await ordersExcel(own, emptyOrderFilters(), "", now));
+  const sheet = book.getWorksheet("Aufträge")!;
+  assert.equal(sheet.getCell("I1").value, "Abholplanung");
+  assert.equal(sheet.getCell("I2").value, own[0].pickupStatus);
+  assert.equal(sheet.getCell("J2").value, own[0].pickupTruck);
+  assert.equal(sheet.getCell("H2").value, 2);
+  const html = ordersPrintHtml(own, emptyOrderFilters(), "", now);
+  assert.match(html, /Abholung eingeplant/);
+  assert.match(html, /&lt;Test&gt; &amp; &quot;Spedition&quot;/);
+  assert.ok(!html.includes("<Test>"));
+});
 const rows: OrderRow[] = [
   { deliveryNumber: "80000001", shelf: "01-02", spedition: "DHL", relation: "001", termin: "07.10.2026", calendarWeek: "41.2026", plusKw: "2", hus: ["HU1", "HU2"], paletten: 2 },
   { deliveryNumber: "80000001", shelf: "03-04", spedition: "DHL", relation: "001", termin: "07.10.2026", calendarWeek: "41.2026", hus: ["HU2", "HU3"], paletten: 2 },

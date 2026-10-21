@@ -4,6 +4,9 @@ import { calendarWeek } from "./calendar";
 
 export type Client = PoolClient;
 export type Data = Record<string, any>;
+export function deliveryNumberOf(row: Data): string {
+  return [row.beleg, row.verkaufsbeleg].map((value) => String(value ?? "").trim()).find((value) => /^8\d+$/.test(value)) || "";
+}
 export type WarehouseRecord = { id: number; kind: string; data: Data; updatedAt: string };
 export class WarehouseError extends Error {
   constructor(message: string, public status = 400) { super(message); }
@@ -69,6 +72,13 @@ export async function ensureWarehouseTables() {
       id SERIAL PRIMARY KEY, action TEXT NOT NULL, username TEXT NOT NULL,
       detail TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now()
     );
+    CREATE TABLE IF NOT EXISTS einlagerung_pickup_plans (
+      delivery_number TEXT PRIMARY KEY, planned BOOLEAN NOT NULL DEFAULT false,
+      shipment_id INTEGER,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds',clock_timestamp()),
+      CHECK (planned OR shipment_id IS NULL)
+    );
+    CREATE INDEX IF NOT EXISTS einlagerung_pickup_shipment_idx ON einlagerung_pickup_plans(shipment_id);
   `);
 }
 
@@ -169,8 +179,7 @@ export function aggregateStock(rows: Data[], type: string, all: WarehouseRecord[
     const carrier = carriers.find((r) => (row.spediteur && r.data.number === row.spediteur) || r.data.name === row.spediteur_name1);
     const speditionId = carrier?.data.speditionId ?? null;
     const spedition = row.spediteur_name1 || row.spediteur || "";
-    const deliveryNumber = [row.beleg, row.verkaufsbeleg]
-      .map((value) => String(value ?? "").trim()).find((value) => /^8\d+$/.test(value)) || "";
+    const deliveryNumber = deliveryNumberOf(row);
     const keyParts = type === "istbestand" ? [shelf, row.material]
       : type === "retouren" ? [shelf, row.parcours || row.name]
       : [shelf, speditionId || spedition, row.relation, row.lfdat, row.plus_kw];

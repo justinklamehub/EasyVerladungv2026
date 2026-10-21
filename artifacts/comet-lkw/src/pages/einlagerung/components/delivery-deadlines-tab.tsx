@@ -13,7 +13,8 @@ import { DEADLINE_COLUMNS, defaultDeadlineColumns } from "./deadline-columns";
 import { DeadlineColumnSettings, useDeadlineColumns } from "./deadline-column-settings";
 import { summarizeOrders } from "./orders-filters";
 import { deadlineFacetOptions, deadlineFilterDetails, deadlineRangeInvalid, emptyDeadlineFilters, filterDeliveryRows } from "./deadline-filters";
-import { errMsg, datasetOf, nf, type D } from "../lib";
+import { errMsg, datasetOf, nf, P, type D } from "../lib";
+import { usePickupPlanning, PickupFilter, PickupCell, PickupEditor } from "./pickup-planning";
 import {
   DEFAULT_DEADLINE_THRESHOLDS, DEADLINE_TIME_ZONE, classifyDeliveryOrders, deadlineSummary, validDeadlineThresholds,
   type DeadlineStatus,
@@ -29,8 +30,9 @@ const META: Record<DeadlineStatus, { label: string; cls: string }> = {
 };
 const ORDER: DeadlineStatus[] = ["critical", "soon", "upcoming", "safe", "week", "unknown"];
 
-export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
+export function DeliveryDeadlinesTab({ state, has }: { state: EinlagerungState; has: (permission: string) => boolean }) {
   const { toast } = useToast();
+  const pickup = usePickupPlanning();
   const params = { mode: "auftraege", groupByDelivery: true } as const;
   const q = useSearchEinlagerung(params, { query: { queryKey: getSearchEinlagerungQueryKey(params), refetchInterval: 30000, refetchIntervalInBackground: false } });
   const [now, setNow] = useState(() => new Date());
@@ -52,13 +54,13 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
   const statusSum = deadlineSummary(statusRows);
   const kwRows = statusRows.filter((r) => r.dateLabel.startsWith("KW "));
   const kwSum = { orders: kwRows.length, pallets: kwRows.reduce((n, r) => n + (Number(r.order.paletten) || 0), 0) };
-  const shown = useMemo(() => filterDeliveryRows(rows, filters), [rows, filters]);
+  const shown = filterDeliveryRows(rows, filters).filter((r) => pickup.matches(r.order.deliveryNumber)).map((r) => ({ ...r, order: pickup.enrich(r.order) }));
   const shownTotals = summarizeOrders(shown.map((r) => r.order));
-  const filterDetails = deadlineFilterDetails(filters);
+  const filterDetails = [...deadlineFilterDetails(filters), ["Abholplanung", pickup.filter === "all" ? "Alle Lieferungen" : pickup.filter === "planned" ? "Abholung eingeplant" : "Noch nicht eingeplant"] as [string, string]];
   const rangeInvalid = deadlineRangeInvalid(filters);
   const activeFilterCount = filters.statuses.length + Object.values(filters.facets).reduce((n, values) => n + values.length, 0) +
-    Number(!!filters.search.trim()) + Number(!!(filters.debitorPrefix ?? "").trim()) + Number(filters.overdueOnly) + Number(!!filters.dateFrom) + Number(!!filters.dateTo);
-  const outputDisabled = q.isLoading || q.isError || q.isFetching || rangeInvalid || shown.length === 0;
+    Number(!!filters.search.trim()) + Number(!!(filters.debitorPrefix ?? "").trim()) + Number(filters.overdueOnly) + Number(!!filters.dateFrom) + Number(!!filters.dateTo) + Number(pickup.filter !== "all");
+  const outputDisabled = q.isLoading || q.isError || q.isFetching || rangeInvalid || shown.length === 0 || !pickup.query.isSuccess || pickup.query.isError;
   const printShown = () => {
     if (outputDisabled) return;
     const popup = window.open("", "_blank", "width=1100,height=800");
@@ -106,6 +108,8 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
 
   return (
     <section className="min-w-0 rounded-xl border border-slate-200 bg-white" data-testid="panel-delivery-deadlines">
+      <div className="p-3"><PickupFilter planning={pickup} /></div>
+      <PickupEditor planning={pickup} />
       <div className="px-4 py-3 border-b border-slate-200 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold text-slate-900">Kritische Liefertermine</h2>
@@ -171,7 +175,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
            <Button type="button" size="sm" variant={filters.overdueOnly ? "default" : "outline"} aria-pressed={filters.overdueOnly}
              data-testid="filter-deadline-overdue" onClick={() => setFilters((previous) => ({ ...previous, overdueOnly: !previous.overdueOnly }))}>Nur überfällig</Button>
            {activeFilterCount > 0 && <Button type="button" size="sm" variant="ghost" data-testid="button-deadline-reset-all"
-             onClick={() => setFilters(emptyDeadlineFilters())}>Alle Filter zurücksetzen ({activeFilterCount})</Button>}
+             onClick={() => { setFilters(emptyDeadlineFilters()); pickup.setFilter("all"); }}>Alle Filter zurücksetzen ({activeFilterCount})</Button>}
          </div>
          <p className="text-xs text-slate-500">Mehrfachauswahl: innerhalb eines Filters „oder“, zwischen Filtern „und“. Mehrere Suchbegriffe müssen alle vorkommen.</p>
          {rangeInvalid && <p role="alert" className="text-sm text-red-700">Bitte einen gültigen Zeitraum wählen: „ab“ darf nicht nach „bis“ liegen.</p>}
@@ -209,6 +213,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
                 {visibleColumns.map(({ id }) => <TableHead key={id} scope="col" data-column={id} className={id === "paletten" ? "text-right" : undefined}>
                   {DEADLINE_COLUMNS.find(([columnId]) => columnId === id)![1]}
                 </TableHead>)}
+                <TableHead>Abholplanung / LKW</TableHead>
               </TableRow></TableHeader>
               <TableBody>{shown.map((r, i) => (
                 <TableRow key={`${r.order.shelf}-${r.order.speditionId}-${i}`} data-testid={`row-deadline-${i}`}>
@@ -227,6 +232,7 @@ export function DeliveryDeadlinesTab({ state }: { state: EinlagerungState }) {
                       </TableCell>;
                     }
                   })}
+                  <TableCell><PickupCell number={r.order.deliveryNumber} planning={pickup} canEdit={has(P.pickup)} /></TableCell>
                 </TableRow>
               ))}</TableBody>
             </Table>
