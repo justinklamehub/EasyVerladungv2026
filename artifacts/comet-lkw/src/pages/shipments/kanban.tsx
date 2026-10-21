@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { shipmentRefreshOptions } from "./refresh-options";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useListShipments, useListSpeditionen, useUpdateShipment, getListShipmentsQueryKey } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
@@ -360,7 +361,9 @@ export default function KanbanPage() {
     dateTo: filterDateTo || undefined,
   };
 
-  const { data: rawShipments, isLoading } = useListShipments(queryParams);
+  const { data: rawShipments, isLoading } = useListShipments(queryParams, {
+    query: { queryKey: getListShipmentsQueryKey(queryParams), ...shipmentRefreshOptions },
+  });
 
   const canDrag     = !!permissions["kanban.use"];
   const canEditWare = !!permissions["shipment.edit"];

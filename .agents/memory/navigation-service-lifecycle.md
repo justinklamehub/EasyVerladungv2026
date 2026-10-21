@@ -3,6 +3,12 @@ name: Hintergrunddienste und mobile Navigation
 description: Warum Benachrichtigungen, Präsenz und Push nicht vom geöffneten Navigationsmenü abhängen dürfen.
 ---
 
+Die Verladungsübersicht wird vom Benutzer „Monitor“ dauerhaft und ohne Eingaben angezeigt. Sie muss auch ohne eingehende Echtzeit-Meldungen automatisch aktuell bleiben.
+
+**Why:** Der Nutzer meldete eine nicht automatisch aktualisierte Anzeige beim untätigen Monitor-Benutzer.
+
+**How to apply:** Tabellen- und Kartenübersicht unabhängig von Benutzername und Eingaben regelmäßig abgleichen; keine Seiten-Neuladungen erzwingen, die offene Formulare oder Filter verwerfen.
+
 Hintergrunddienste der App bleiben aktiv, auch wenn eine temporäre mobile Navigation geschlossen und deren Inhalt ausgehängt wird.
 
 **Why:** Ein nur bei geöffnetem Menü eingeblendeter Sidebar-Inhalt würde sonst Socket-Abonnements und die Meldung der aktuellen Seite beenden. Nachrichtenindikatoren und Online-Seitenangaben wären dann ohne sichtbaren Fehler veraltet.
