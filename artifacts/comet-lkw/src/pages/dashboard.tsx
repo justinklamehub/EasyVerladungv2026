@@ -50,7 +50,7 @@ export default function DashboardPage() {
   const statusData = (data?.byStatus ?? []).map((s) => ({ name: s.status, count: s.count }));
 
   return (
-    <div className="mx-auto max-w-[1400px] space-y-4 overflow-x-hidden">
+    <div className="w-full min-w-0 space-y-4 overflow-x-hidden">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>

@@ -80,7 +80,7 @@ export function ImportPanel() {
     </div>);
 
   return (
-    <div className="rounded-lg border bg-white p-4 space-y-4 max-w-3xl">
+    <div className="w-full min-w-0 rounded-lg border bg-white p-4 space-y-4">
       <h2 className="font-semibold">Altdaten importieren</h2>
       <p className="text-sm text-slate-600">Den alten SQL-Export, zwei CSV-Dateien oder eine normalisierte JSON-Datei auswählen. Aus SQL werden ausschließlich Datenwerte der Tabellen mitarbeiter und anwesenheit gelesen – der Dump wird niemals ausgeführt. Kartennummern bleiben Text mit führenden Nullen. Bestehende Daten werden nie überschrieben.</p>
       <div key={fileSelection} className="grid sm:grid-cols-2 gap-3">

@@ -209,7 +209,7 @@ export default function SystemStatusPage() {
   };
 
   return (
-    <div className="min-w-0 space-y-6 max-w-[1200px] mx-auto [overflow-wrap:anywhere]">
+    <div className="w-full min-w-0 space-y-6 [overflow-wrap:anywhere]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Systemstatus</h1>

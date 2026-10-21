@@ -106,7 +106,7 @@ export default function ProfilPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
         <div className="w-14 h-14 rounded-full bg-slate-800 flex items-center justify-center text-lg font-bold text-white shrink-0">

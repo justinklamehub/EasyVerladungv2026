@@ -19,7 +19,7 @@ export default function ImpressumPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 p-4 flex justify-center">
-      <div className="w-full max-w-2xl py-8">
+      <div className="w-full min-w-0 py-8">
         <Link href="/login" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 transition-colors mb-4">
           <ArrowLeft className="w-4 h-4" /> Zurück zur Anmeldung
         </Link>

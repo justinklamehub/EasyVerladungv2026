@@ -52,7 +52,7 @@ export default function StempeluhrPage() {
   };
 
   return (
-    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-5">
+    <div className="w-full min-w-0 space-y-5">
       <div className="flex flex-wrap items-start gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2"><Timer className="w-6 h-6 text-slate-500" />Stempeluhr</h1>

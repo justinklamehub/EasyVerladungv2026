@@ -111,7 +111,7 @@ export default function ScannerEinlagerungAuftraegePage() {
   );
 
   if (accessLoading || (allowed && stateQ.isLoading)) {
-    return <div className="min-h-[100dvh] bg-slate-100">{header}<main className="max-w-xl mx-auto p-4 space-y-3"><Skeleton className="h-40" /><Skeleton className="h-40" /></main></div>;
+    return <div className="min-h-[100dvh] bg-slate-100">{header}<main className="w-full min-w-0 p-4 space-y-3"><Skeleton className="h-40" /><Skeleton className="h-40" /></main></div>;
   }
   if (!allowed) {
     return <div className="min-h-[100dvh] bg-slate-100">{header}<p className="p-8 text-center text-sm text-slate-600" data-testid="no-access">Keine Berechtigung für die Einlagerung.</p></div>;
@@ -123,7 +123,7 @@ export default function ScannerEinlagerungAuftraegePage() {
   return (
     <div className="min-h-[100dvh] bg-slate-100 text-slate-900">
       {header}
-      <main className="max-w-xl mx-auto p-4 space-y-4">
+      <main className="w-full min-w-0 p-4 space-y-4">
         <div className="grid grid-cols-2 rounded-xl border border-slate-200 bg-white p-1 gap-1" role="tablist" aria-label="Auftrags-Scanner">
           {([["search", "Aufträge suchen"], ["reserve", "Vormerkungen"]] as const).map(([value, label]) => (
             <button key={value} type="button" role="tab" aria-selected={view === value}

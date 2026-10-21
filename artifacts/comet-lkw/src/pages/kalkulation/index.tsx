@@ -225,7 +225,7 @@ export default function KalkulationPage() {
   const defaultZoom = 6;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Calculator className="w-6 h-6 text-primary" />

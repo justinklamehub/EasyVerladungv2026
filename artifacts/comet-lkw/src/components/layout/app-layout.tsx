@@ -36,7 +36,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, [pushController.error, toast]);
   const [location] = useLocation();
   const isMobile = useIsMobile();
-  const compactMobileLayout = isMobile && (location.startsWith("/einlagerung") || location === "/system-status");
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -46,7 +45,6 @@ export function AppLayout({ children }: { children: ReactNode }) {
   // Drawer schliesst nach Navigation oder beim Wechsel auf Desktop.
   useEffect(() => { setDrawerOpen(false); }, [location, isMobile]);
 
-  const mainPadding = isMobile ? (compactMobileLayout ? "p-3" : "p-3 sm:p-4") : "p-6";
 
   return (
     <ChatProvider>
@@ -98,7 +96,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
             </div>
           )}
           <ConnectionBanner />
-          <main className={`flex-1 overflow-auto relative ${mainPadding}`} data-testid="app-main"
+          <main className="flex-1 min-h-0 min-w-0 w-full overflow-auto relative p-3 sm:p-4" data-testid="app-main"
             style={{ paddingBottom: "calc(6rem + env(safe-area-inset-bottom, 0px))" }}>
             {children}
           </main>

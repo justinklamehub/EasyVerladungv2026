@@ -49,7 +49,7 @@ export function SettingsTab({ state }: { state: EinlagerungState }) {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-xl border border-slate-200 bg-white p-4 space-y-4 max-w-xl">
+      <section className="w-full min-w-0 rounded-xl border border-slate-200 bg-white p-4 space-y-4">
         <div className="flex items-center justify-between gap-4">
           <div><Label htmlFor="s-hf">Volle Regale ausblenden</Label><p className="text-xs text-slate-500">Standard für Lagerplan und Vorschläge.</p></div>
           <Switch id="s-hf" checked={hideFull} onCheckedChange={setHideFull} data-testid="switch-settings-hide-full" />

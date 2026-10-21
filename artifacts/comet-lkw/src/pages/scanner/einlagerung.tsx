@@ -13,10 +13,10 @@ export default function ScannerEinlagerungPage() {
           <div className="font-bold">Einlagerung</div>
         </div>
       </header>
-      <div className="max-w-xl mx-auto px-4 pt-3">
+      <div className="w-full min-w-0 px-4 pt-3">
         <button className="text-sm underline text-slate-600" onClick={() => setLocation("/scanner/einlagerung-auftraege")} data-testid="button-orders-scanner">Zur Aufträge Übersicht</button>
       </div>
-      <main className="max-w-xl mx-auto p-4"><ArticleLookup has={has} large scannerMode /></main>
+      <main className="w-full min-w-0 p-4"><ArticleLookup has={has} large scannerMode /></main>
     </div>
   );
 }

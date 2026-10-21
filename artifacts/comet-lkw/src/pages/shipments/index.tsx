@@ -570,7 +570,7 @@ export default function ShipmentsPage() {
   if (showStorniert) activeChips.push({ id: "storniert", label: "Stornierte sichtbar", remove: () => setShowStorniert(false) });
 
   return (
-    <div className="space-y-5 max-w-[1600px] mx-auto">
+    <div className="w-full min-w-0 space-y-5">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-4 border-b border-border/70">
         <div>
           <div className="flex items-center gap-3">

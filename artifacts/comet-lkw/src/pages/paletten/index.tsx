@@ -556,7 +556,7 @@ export default function PalettenPage() {
   const colSpan = isCometUser ? 7 : 6;
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
+    <div className="w-full min-w-0 space-y-6">
       {werkbestandError && <p role="alert" className="rounded border border-red-200 bg-red-50 p-3 text-sm text-red-700">{werkbestandError} <Button variant="outline" size="sm" onClick={loadWerkbestand}>Erneut versuchen</Button></p>}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>

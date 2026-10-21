@@ -50,7 +50,7 @@ export default function SpeditionsfreigebePage() {
   const activeReceived = (received ?? []).filter(r => r.permissionLevel === "view" || r.permissionLevel === "edit");
 
   return (
-    <div className="space-y-8 max-w-[900px] mx-auto">
+    <div className="w-full min-w-0 space-y-8">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Speditionsfreigabe</h1>
         <p className="text-sm text-slate-500 mt-1">

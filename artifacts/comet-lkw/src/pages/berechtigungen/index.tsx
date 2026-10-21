@@ -178,7 +178,7 @@ export default function BerechtigungenPage() {
   const availableGroups = Array.from(new Set([...BUILT_IN_GROUPS, ...displayRoles.map((r) => r.roleGroup)]));
 
   return (
-    <div className="p-6 max-w-[1200px] mx-auto space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-3">

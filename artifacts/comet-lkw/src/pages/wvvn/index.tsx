@@ -15,7 +15,7 @@ function Scan({ canDelete, canFinish }: { canDelete: boolean; canFinish: boolean
   if (q.isLoading) return <Skeleton className="h-48" />;
   if (q.isError || !q.data) return <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700 flex justify-between gap-3"><span>{errMsg(q.error)}</span><Button size="sm" variant="outline" onClick={() => q.refetch()}>Erneut versuchen</Button></div>;
   if (!q.data.unlocked) return <div className="rounded-lg border bg-white p-6 text-sm text-slate-600">Erfassung nicht freigegeben.</div>;
-  return <div className="max-w-2xl"><ScanWorkspace state={q.data} canScan canDelete={canDelete || !!q.data.device} canFinish={canFinish || !!q.data.device} /></div>;
+  return <div className="w-full min-w-0"><ScanWorkspace state={q.data} canScan canDelete={canDelete || !!q.data.device} canFinish={canFinish || !!q.data.device} /></div>;
 }
 
 export default function WvvnPage() {
@@ -41,11 +41,11 @@ export default function WvvnPage() {
   const [tab, setTab] = useState("");
   const active = tabs.find((t) => t.id === tab)?.id ?? tabs[0]?.id;
 
-  if (!allowed) return <div className="p-6 max-w-3xl mx-auto"><div className="rounded-lg border bg-white p-10 text-center text-sm text-slate-500" data-testid="text-denied">Für Werksverkauf / Vernichtung sind keine Bereiche für Ihr Konto freigegeben.</div></div>;
+  if (!allowed) return <div className="w-full min-w-0"><div className="rounded-lg border bg-white p-10 text-center text-sm text-slate-500" data-testid="text-denied">Für Werksverkauf / Vernichtung sind keine Bereiche für Ihr Konto freigegeben.</div></div>;
   const stateTab = active !== "scan" && active !== "import";
 
   return (
-    <div className="p-3 sm:p-6 max-w-7xl mx-auto space-y-5">
+    <div className="w-full min-w-0 space-y-5">
       <div className="flex flex-wrap items-start gap-3">
         <div>
           <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2"><PackageX className="w-6 h-6 text-slate-500" />Werksverkauf / Vernichtung</h1>

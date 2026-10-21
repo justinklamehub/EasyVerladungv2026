@@ -31,7 +31,7 @@ export function SettingsPanel() {
     } catch (e) { setMsg({ ok: false, t: errMsg(e) }); }
   };
   return (
-    <div className="rounded-lg border bg-white p-4 space-y-4 max-w-2xl">
+    <div className="w-full min-w-0 rounded-lg border bg-white p-4 space-y-4">
       <h2 className="font-semibold">Zeit- und Terminal-Einstellungen</h2>
       <p className="text-xs text-slate-500">Neue Einstellungen gelten nur für neue Einträge. Zeiten in Berlin.</p>
       <div className="grid grid-cols-2 gap-3">
@@ -67,7 +67,7 @@ export function TerminalPanel() {
   const [label, setLabel] = useState(""); const [err, setErr] = useState("");
   const run = async (fn: () => Promise<unknown>) => { setErr(""); try { await fn(); invalidate(); } catch (e) { setErr(errMsg(e)); } };
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="w-full min-w-0 space-y-5">
       <div className="rounded-lg border bg-white p-4 space-y-3">
         <h2 className="font-semibold">Dieses Gerät als Terminal freischalten</h2>
         <p className="text-sm text-slate-600">Nach der Freischaltung bleibt ein eigenes, geschütztes Terminal-Cookie auf diesem Gerät bestehen. Bitte melden Sie sich danach aus Ihrem Easy-Konto ab; Mitarbeiter stempeln ohne eigenes Login, das Terminal bleibt freigeschaltet. Öffnen Sie dann /stempeluhr-terminal.</p>

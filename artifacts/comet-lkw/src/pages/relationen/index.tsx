@@ -15,7 +15,7 @@ export default function RelationenPage() {
   }
 
   return (
-    <div className="max-w-xl mx-auto py-8 px-4 space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div>
         <h1 className="text-xl font-semibold text-slate-800 flex items-center gap-2">
           <Route className="w-5 h-5 text-primary" />

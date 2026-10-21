@@ -10,7 +10,7 @@ export default function AuditlogPage() {
   const { data: pageData, isLoading } = useListAuditLog({ page, limit: 50 });
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto">
+    <div className="w-full min-w-0 space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Änderungslog</h1>
         <p className="text-sm text-slate-500">Lückenlose Protokollierung aller Systemänderungen.</p>

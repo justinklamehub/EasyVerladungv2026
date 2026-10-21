@@ -2187,7 +2187,7 @@ export default function SettingsPage() {
   const s = settings ?? {};
 
   return (
-    <div className="p-6 max-w-4xl mx-auto space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Einstellungen</h1>
         <p className="text-sm text-slate-500 mt-1">Globale Systemkonfiguration — nur für COMET-Admins sichtbar</p>

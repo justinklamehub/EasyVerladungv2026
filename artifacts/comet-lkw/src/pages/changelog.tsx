@@ -28,7 +28,7 @@ export default function ChangelogPage() {
   });
 
   return (
-    <div className="space-y-6 max-w-3xl mx-auto">
+    <div className="w-full min-w-0 space-y-6">
       <div>
         <div className="flex items-center gap-3 mb-1">
           <FileClock className="w-6 h-6 text-primary" />

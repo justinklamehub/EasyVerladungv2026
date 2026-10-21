@@ -46,7 +46,7 @@ export default function WvvnScannerPage() {
 
   return (
     <div className="min-h-[100dvh] bg-slate-50">
-      <div className="max-w-2xl mx-auto p-3 space-y-4">
+      <div className="w-full min-w-0 p-3 space-y-4">
         <header className="flex items-center gap-2">
           <ScanLine className="w-6 h-6 text-slate-600" />
           <div className="flex-1"><h1 className="text-xl font-bold text-slate-900">Werksverkauf / Vernichtung</h1>
