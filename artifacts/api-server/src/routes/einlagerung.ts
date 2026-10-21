@@ -5,6 +5,7 @@ import {
   SetEinlagerungShelfStatusBody, SetEinlagerungShelfStatusResponse, UpdateEinlagerungSettingsResponse,
   PreviewEinlagerungImportResponse, CommitEinlagerungImportResponse,
   ListWarehousePickupPlansResponse, SaveWarehousePickupPlanBody, SaveWarehousePickupPlanResponse,
+  SaveWarehousePickupPlansBulkBody, SaveWarehousePickupPlansBulkResponse,
 } from "@workspace/api-zod";
 import { requireAuth } from "../lib/auth";
 import { can, type Permission } from "../lib/permissions";
@@ -12,6 +13,7 @@ import { checkData, dataset, event, getSettings, read, record, records, schemas,
 import { commitImport, importSchema, prepareImport } from "../lib/einlagerung/import";
 import { loadWarehouse, occupancy, search } from "../lib/einlagerung/search";
 import { listPickupPlans, pickupShipmentAccess, savePickupPlan } from "../lib/einlagerung/pickup-plans";
+import { savePickupBatch } from "../lib/einlagerung/pickup-batch";
 
 const router = Router();
 // Only explicitly registered scanner aliases bypass authentication.
@@ -178,6 +180,12 @@ router.get("/einlagerung/pickup-plans", requireAuth, handler(async (req, res) =>
   await permission(req, manage);
   const result = await read(async (c) => listPickupPlans(c, await pickupShipmentAccess(c, req.session.role!, req.session.speditionId)));
   res.json(ListWarehousePickupPlansResponse.parse(result));
+}));
+router.post("/einlagerung/pickup-plans/bulk", requireAuth, handler(async (req, res) => {
+  await permission(req, ["einlagerung.pickup.plan"]);
+  const result = await transaction(async (c) => savePickupBatch(c, SaveWarehousePickupPlansBulkBody.parse(req.body),
+    actor(req), await pickupShipmentAccess(c, req.session.role!, req.session.speditionId)));
+  res.json(SaveWarehousePickupPlansBulkResponse.parse(result));
 }));
 router.put("/einlagerung/pickup-plans/:deliveryNumber", requireAuth, handler(async (req, res) => {
   await permission(req, ["einlagerung.pickup.plan"]);

@@ -896,6 +896,23 @@ paths:
               schema:
                 type: array
                 items: {$ref: "#/components/schemas/WarehousePickupPlan"}
+  /einlagerung/pickup-plans/bulk:
+    post:
+      operationId: saveWarehousePickupPlansBulk
+      tags: [einlagerung]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/WarehousePickupBatchInput"}
+      responses:
+        "200":
+          description: Gemeinsam und vollständig gespeicherte Abholplanungen
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/WarehousePickupPlan"}
   /einlagerung/pickup-plans/{deliveryNumber}:
     put:
       operationId: saveWarehousePickupPlan
@@ -2803,6 +2820,24 @@ components:
         importedAt: {type: string}
         importedBy: {type: string}
         rowCount: {type: integer}
+    WarehousePickupBatchTarget:
+      type: object
+      required: [deliveryNumber, expectedUpdatedAt]
+      properties:
+        deliveryNumber: {type: string, pattern: "^8\\d+$", maxLength: 100}
+        expectedUpdatedAt: {type: [string, "null"]}
+    WarehousePickupBatchInput:
+      type: object
+      required: [deliveries, planned, shipmentMode, shipmentId]
+      properties:
+        deliveries:
+          type: array
+          minItems: 1
+          maxItems: 10000
+          items: {$ref: "#/components/schemas/WarehousePickupBatchTarget"}
+        planned: {type: boolean}
+        shipmentMode: {type: string, enum: [keep, assign, remove]}
+        shipmentId: {type: [integer, "null"], minimum: 1}
     WarehousePickupPlanInput:
       type: object
       required: [planned, shipmentId, expectedUpdatedAt]

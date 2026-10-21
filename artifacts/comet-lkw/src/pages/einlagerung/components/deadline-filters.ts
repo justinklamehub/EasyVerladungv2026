@@ -1,9 +1,11 @@
 import { type DeadlineOrder, type DeadlineStatus } from "./delivery-deadlines";
+import { deliveryNumberMatcher, deliveryNumberDetails } from "./delivery-number-list";
 import { DEADLINE_LABELS } from "./delivery-deadlines-output";
 import { emptyOrderFilters, matchesOrderFilters, orderFacetOptions, orderFilterRow, TEXT_FILTER_PREFIX, type OrderFilters, type OrderFilterKey } from "./orders-filters";
 
 export interface DeadlineFilters {
   search: string;
+  deliveryNumbers?: string[];
   debitorPrefix?: string;
   statuses: DeadlineStatus[];
   facets: OrderFilters;
@@ -12,7 +14,7 @@ export interface DeadlineFilters {
   dateTo: string;
 }
 export const emptyDeadlineFilters = (): DeadlineFilters => ({
-  search: "", debitorPrefix: "", statuses: [], facets: emptyOrderFilters(), overdueOnly: false, dateFrom: "", dateTo: "",
+  search: "", deliveryNumbers: [], debitorPrefix: "", statuses: [], facets: emptyOrderFilters(), overdueOnly: false, dateFrom: "", dateTo: "",
 });
 function day(value: string) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
@@ -28,7 +30,9 @@ export function filterDeliveryRows(rows: DeadlineOrder[], filters: DeadlineFilte
   if (deadlineRangeInvalid(filters)) return [];
   const terms = filters.search.trim().toLocaleLowerCase("de").split(/\s+/).filter(Boolean);
   const debitorPrefix = (filters.debitorPrefix ?? "").trim();
+  const matchesNumber = deliveryNumberMatcher(filters.deliveryNumbers ?? []);
   return rows.filter((row) => {
+    if (!matchesNumber(row.order.deliveryNumber)) return false;
     if (debitorPrefix && !String(row.order.debitor ?? "").split(",")
       .some((debitor) => debitor.trim().startsWith(debitorPrefix))) return false;
     if (!ignoreStatuses && filters.statuses.length && !filters.statuses.some((s) =>
@@ -56,6 +60,7 @@ export function deadlineFilterDetails(filters: DeadlineFilters) {
   return [
     ["Status", filters.statuses.length ? filters.statuses.map((s) => DEADLINE_LABELS[s]).join(" oder ") : "Alle"],
     ["Suche", filters.search.trim() || "Keine"],
+    ...deliveryNumberDetails(filters.deliveryNumbers ?? []),
     ["Debitorennummer beginnt mit", (filters.debitorPrefix ?? "").trim() || "Alle"],
     ["Speditionen", list(filters.facets.spedition)], ["Relationen", list(filters.facets.relation)],
     ["Termine / KW", list(filters.facets.termin)], ["Regale", list(filters.facets.shelf)],

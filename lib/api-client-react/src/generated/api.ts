@@ -117,6 +117,7 @@ import type {
   User,
   UserInput,
   UserUpdate,
+  WarehousePickupBatchInput,
   WarehousePickupPlan,
   WarehousePickupPlanInput,
   WvvnArticle,
@@ -4641,6 +4642,71 @@ export function useListWarehousePickupPlans<TData = Awaited<ReturnType<typeof li
 
 
 
+
+export const getSaveWarehousePickupPlansBulkUrl = () => {
+
+
+
+
+  return `/api/einlagerung/pickup-plans/bulk`
+}
+
+export const saveWarehousePickupPlansBulk = async (warehousePickupBatchInput: WarehousePickupBatchInput, options?: RequestInit): Promise<WarehousePickupPlan[]> => {
+
+  return customFetch<WarehousePickupPlan[]>(getSaveWarehousePickupPlansBulkUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      warehousePickupBatchInput,)
+  }
+);}
+
+
+
+
+export const getSaveWarehousePickupPlansBulkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWarehousePickupPlansBulk>>, TError,{data: BodyType<WarehousePickupBatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof saveWarehousePickupPlansBulk>>, TError,{data: BodyType<WarehousePickupBatchInput>}, TContext> => {
+
+const mutationKey = ['saveWarehousePickupPlansBulk'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof saveWarehousePickupPlansBulk>>, {data: BodyType<WarehousePickupBatchInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  saveWarehousePickupPlansBulk(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SaveWarehousePickupPlansBulkMutationResult = NonNullable<Awaited<ReturnType<typeof saveWarehousePickupPlansBulk>>>
+    export type SaveWarehousePickupPlansBulkMutationBody = BodyType<WarehousePickupBatchInput>
+    export type SaveWarehousePickupPlansBulkMutationError = ErrorType<unknown>
+
+    export const useSaveWarehousePickupPlansBulk = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof saveWarehousePickupPlansBulk>>, TError,{data: BodyType<WarehousePickupBatchInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof saveWarehousePickupPlansBulk>>,
+        TError,
+        {data: BodyType<WarehousePickupBatchInput>},
+        TContext
+      > => {
+      return useMutation(getSaveWarehousePickupPlansBulkMutationOptions(options));
+    }
 
 export const getSaveWarehousePickupPlanUrl = (deliveryNumber: string,) => {
 

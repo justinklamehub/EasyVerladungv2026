@@ -20,7 +20,7 @@ export function orderOutputFilters(filters: OrderFilters, search: string) {
 }
 
 // Receive exactly the already-filtered table rows; never refetch unfiltered data.
-export async function ordersExcel(rows: OrderRow[], filters: OrderFilters, search: string, createdAt = new Date()) {
+export async function ordersExcel(rows: OrderRow[], filters: OrderFilters, search: string, createdAt = new Date(), details: string[][] = []) {
   const ExcelJS = (await import("exceljs")).default;
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "Easy-Verladung";
@@ -43,6 +43,7 @@ export async function ordersExcel(rows: OrderRow[], filters: OrderFilters, searc
   info.addRow(["Auswertung", "Einlagerung – Aufträge"]);
   info.addRow(["Stand", createdAt.toLocaleString("de-DE", { timeZone: TIME_ZONE }) + ` (${TIME_ZONE})`]);
   orderOutputFilters(filters, search).forEach((row) => info.addRow(row));
+  details.forEach((row) => info.addRow(row));
   const sum = summarizeOrders(rows);
   [
     ["Aufträge", sum.orders], ["Auftragspositionen", sum.positions], ["Paletten", sum.pallets],
@@ -53,7 +54,7 @@ export async function ordersExcel(rows: OrderRow[], filters: OrderFilters, searc
   return workbook.xlsx.writeBuffer();
 }
 
-export function ordersPrintHtml(rows: OrderRow[], filters: OrderFilters, search: string, createdAt = new Date()) {
+export function ordersPrintHtml(rows: OrderRow[], filters: OrderFilters, search: string, createdAt = new Date(), details: string[][] = []) {
   const sum = summarizeOrders(rows);
   const number = (n: number) => n.toLocaleString("de-DE");
   return `<!doctype html><html lang="de"><head><meta charset="utf-8">
@@ -67,7 +68,7 @@ th,td { border: 1px solid #cbd5e1; padding: 6px; text-align: left; overflow-wrap
 th { background: #f1f5f9; } th:last-child,td:last-child { text-align: right; }
 </style></head><body><h1>Easy-Verladung – Aufträge</h1>
 <p>Stand: ${escapeHtml(createdAt.toLocaleString("de-DE", { timeZone: TIME_ZONE }))} (${TIME_ZONE})</p>
-${orderOutputFilters(filters, search).map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`).join("")}
+${[...orderOutputFilters(filters, search), ...details].map(([label, value]) => `<p><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</p>`).join("")}
 <p>${number(sum.orders)} Aufträge · ${number(sum.pallets)} Paletten · ${number(sum.positions)} Auftragspositionen · ${number(sum.shelves)} Regale · ${number(sum.carriers)} Speditionen</p>
 <p>Liefernummern und HU-Nummern werden über alle Positionen nur einmal gezählt.${sum.unidentified ? ` ${number(sum.unidentified)} Positionen ohne Liefernummer werden separat als Auftrag gezählt.` : ""}</p>
 <table><thead><tr>${HEADERS.map((h) => `<th scope="col">${escapeHtml(h)}</th>`).join("")}</tr></thead>

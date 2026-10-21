@@ -1074,6 +1074,40 @@ export interface EinlagerungDataset {
   rowCount: number;
 }
 
+export interface WarehousePickupBatchTarget {
+  /**
+     * @maxLength 100
+     * @pattern ^8\d+$
+     */
+  deliveryNumber: string;
+  /** @nullable */
+  expectedUpdatedAt: string | null;
+}
+
+export type WarehousePickupBatchInputShipmentMode = typeof WarehousePickupBatchInputShipmentMode[keyof typeof WarehousePickupBatchInputShipmentMode];
+
+
+export const WarehousePickupBatchInputShipmentMode = {
+  keep: 'keep',
+  assign: 'assign',
+  remove: 'remove',
+} as const;
+
+export interface WarehousePickupBatchInput {
+  /**
+     * @minItems 1
+     * @maxItems 10000
+     */
+  deliveries: WarehousePickupBatchTarget[];
+  planned: boolean;
+  shipmentMode: WarehousePickupBatchInputShipmentMode;
+  /**
+     * @minimum 1
+     * @nullable
+     */
+  shipmentId: number | null;
+}
+
 export interface WarehousePickupPlanInput {
   planned: boolean;
   /**

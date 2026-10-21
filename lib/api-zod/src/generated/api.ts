@@ -1958,6 +1958,43 @@ export const ListWarehousePickupPlansResponseItem = zod.object({
 export const ListWarehousePickupPlansResponse = zod.array(ListWarehousePickupPlansResponseItem)
 
 
+export const saveWarehousePickupPlansBulkBodyDeliveriesItemDeliveryNumberMax = 100;
+
+
+export const saveWarehousePickupPlansBulkBodyDeliveriesItemDeliveryNumberRegExp = new RegExp('^8\\d+$');
+export const saveWarehousePickupPlansBulkBodyDeliveriesMax = 10000;
+
+
+
+
+export const SaveWarehousePickupPlansBulkBody = zod.object({
+  "deliveries": zod.array(zod.object({
+  "deliveryNumber": zod.string().max(saveWarehousePickupPlansBulkBodyDeliveriesItemDeliveryNumberMax).regex(saveWarehousePickupPlansBulkBodyDeliveriesItemDeliveryNumberRegExp),
+  "expectedUpdatedAt": zod.string().nullable()
+})).min(1).max(saveWarehousePickupPlansBulkBodyDeliveriesMax),
+  "planned": zod.boolean(),
+  "shipmentMode": zod.enum(['keep', 'assign', 'remove']),
+  "shipmentId": zod.number().min(1).nullable()
+})
+
+export const SaveWarehousePickupPlansBulkResponseItem = zod.object({
+  "deliveryNumber": zod.string(),
+  "planned": zod.boolean(),
+  "shipmentId": zod.number().nullable(),
+  "updatedAt": zod.string(),
+  "shipment": zod.union([zod.object({
+  "id": zod.number(),
+  "kennzeichen": zod.string(),
+  "speditionName": zod.string(),
+  "etaDate": zod.string(),
+  "etaTime": zod.string(),
+  "status": zod.string(),
+  "relation": zod.string()
+}),zod.null()])
+})
+export const SaveWarehousePickupPlansBulkResponse = zod.array(SaveWarehousePickupPlansBulkResponseItem)
+
+
 export const saveWarehousePickupPlanPathDeliveryNumberMax = 100;
 
 

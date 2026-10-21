@@ -21,6 +21,18 @@ Pro Lieferung soll in „Aufträge“ und „Liefertermine“ gepflegt werden k�
 
 **How to apply:** Die Liefernummer ist die fachliche Identität über alle Positionen und Importstände hinweg; keine Bindung an eine austauschbare Importzeile. Fehlende Lieferungen oder gelöschte/stornierte LKW-Anmeldungen dürfen die gespeicherte Planung nicht automatisch löschen. Eine Zuordnung ist keine Änderung des LKW-Status oder Palettenbestands.
 
+Wenn der zugeordnete LKW „Abgefertigt“ ist, soll dies auch in der Einlagerungstabelle vermerkt sein. Kopierte Liefernummern aus Excel sollen alle als aktive Filter wirken; die Auftragsfilter sollen analog zu „Liefertermine“ funktionieren.
+
+**Why:** Der Nutzer hat diese Ergänzungen ausdrücklich verlangt.
+
+**How to apply:** Den Abgefertigt-Vermerk aus dem aktuellen Status der verknüpften Anmeldung ableiten, ohne Importdaten umzuschreiben. Nummernlisten als exakte Textwerte erhalten und mit „oder“ verknüpfen, andere Filter mit „und“. Einfügen einer ganzen Excel-Liste darf nicht als Suche nach allen Nummern in derselben Zeile behandelt werden.
+
+Auch die Abholplanung muss in Masse möglich sein.
+
+**Why:** Der Nutzer hat ausdrücklich verlangt: „Die Planung muss auch in Masse möglich sein.“
+
+**How to apply:** Bei Änderungen an der Abholplanung die gemeinsame Bearbeitung mehrerer Lieferungen in Aufträge und Liefertermine erhalten.
+
 Bestände, Retouren und eingelagerte Aufträge sollen weiterhin per CSV-Upload aktualisiert werden, nicht über eine automatische Anbindung.
 
 **Why:** Der Nutzer hat „CSV-Upload wie bisher“ gewählt.

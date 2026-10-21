@@ -15,6 +15,10 @@ import { summarizeOrders } from "./orders-filters";
 import { deadlineFacetOptions, deadlineFilterDetails, deadlineRangeInvalid, emptyDeadlineFilters, filterDeliveryRows } from "./deadline-filters";
 import { errMsg, datasetOf, nf, P, type D } from "../lib";
 import { usePickupPlanning, PickupFilter, PickupCell, PickupEditor } from "./pickup-planning";
+import { usePickupSelection, PickupSelectionAll, PickupSelectionRow, PickupSelectionBar } from "./pickup-selection";
+import { pickupFilterLabel } from "./pickup-status";
+import { DeliveryNumberFilter } from "./delivery-number-filter";
+import { pastedDeliveryNumbers } from "./delivery-number-list";
 import {
   DEFAULT_DEADLINE_THRESHOLDS, DEADLINE_TIME_ZONE, classifyDeliveryOrders, deadlineSummary, validDeadlineThresholds,
   type DeadlineStatus,
@@ -56,11 +60,12 @@ export function DeliveryDeadlinesTab({ state, has }: { state: EinlagerungState; 
   const kwSum = { orders: kwRows.length, pallets: kwRows.reduce((n, r) => n + (Number(r.order.paletten) || 0), 0) };
   const shown = filterDeliveryRows(rows, filters).filter((r) => pickup.matches(r.order.deliveryNumber)).map((r) => ({ ...r, order: pickup.enrich(r.order) }));
   const shownTotals = summarizeOrders(shown.map((r) => r.order));
-  const filterDetails = [...deadlineFilterDetails(filters), ["Abholplanung", pickup.filter === "all" ? "Alle Lieferungen" : pickup.filter === "planned" ? "Abholung eingeplant" : "Noch nicht eingeplant"] as [string, string]];
+  const filterDetails = [...deadlineFilterDetails(filters), ["Abholplanung", pickupFilterLabel(pickup.filter)] as [string, string]];
   const rangeInvalid = deadlineRangeInvalid(filters);
   const activeFilterCount = filters.statuses.length + Object.values(filters.facets).reduce((n, values) => n + values.length, 0) +
-    Number(!!filters.search.trim()) + Number(!!(filters.debitorPrefix ?? "").trim()) + Number(filters.overdueOnly) + Number(!!filters.dateFrom) + Number(!!filters.dateTo) + Number(pickup.filter !== "all");
+    Number(!!filters.search.trim()) + Number(!!(filters.debitorPrefix ?? "").trim()) + Number(filters.overdueOnly) + Number(!!filters.dateFrom) + Number(!!filters.dateTo) + Number(pickup.filter !== "all") + (filters.deliveryNumbers?.length ?? 0);
   const outputDisabled = q.isLoading || q.isError || q.isFetching || rangeInvalid || shown.length === 0 || !pickup.query.isSuccess || pickup.query.isError;
+  const selection = usePickupSelection(shown.map((r) => r.order), outputDisabled || !has(P.pickup));
   const printShown = () => {
     if (outputDisabled) return;
     const popup = window.open("", "_blank", "width=1100,height=800");
@@ -110,6 +115,7 @@ export function DeliveryDeadlinesTab({ state, has }: { state: EinlagerungState; 
     <section className="min-w-0 rounded-xl border border-slate-200 bg-white" data-testid="panel-delivery-deadlines">
       <div className="p-3"><PickupFilter planning={pickup} /></div>
       <PickupEditor planning={pickup} />
+      {has(P.pickup) && <div className="px-3 pb-3"><PickupSelectionBar selection={selection} planning={pickup} /></div>}
       <div className="px-4 py-3 border-b border-slate-200 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="font-semibold text-slate-900">Kritische Liefertermine</h2>
@@ -149,6 +155,10 @@ export function DeliveryDeadlinesTab({ state, has }: { state: EinlagerungState; 
          <div className="relative">
           <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-slate-400" />
            <Input aria-label="Lieferung, Debitorennummer, Debitorname, HU, Beleg, Regal, Spedition, Relation oder Termin suchen" placeholder="Lieferung, Debitor, HU, Termin …" value={filters.search}
+             onPaste={(e) => {
+               const numbers = pastedDeliveryNumbers(e.clipboardData.getData("text/plain"));
+               if (numbers) { e.preventDefault(); setFilters((p) => ({ ...p, search: "", deliveryNumbers: numbers })); }
+             }}
              onChange={(e) => setFilters((previous) => ({ ...previous, search: e.target.value }))} className="pl-8" data-testid="input-deadline-search" />
         </div>
          {([["spedition", "Speditionen"], ["relation", "Relationen"], ["termin", "Termine / KW"], ["shelf", "Regale"]] as const).map(([key, label]) =>
@@ -159,6 +169,7 @@ export function DeliveryDeadlinesTab({ state, has }: { state: EinlagerungState; 
          )}
          </div>
          <div className="flex flex-wrap items-end gap-3">
+           <div className="w-full sm:w-64"><DeliveryNumberFilter value={filters.deliveryNumbers ?? []} onChange={(deliveryNumbers) => setFilters((p) => ({ ...p, deliveryNumbers }))} testId="filter-deadline-delivery-numbers" /></div>
            <label className="space-y-1 text-xs text-slate-600">Debitorennummer beginnt mit
              <Input type="text" inputMode="numeric" aria-label="Debitorennummer beginnt mit"
                placeholder="z. B. 51045" value={filters.debitorPrefix ?? ""} data-testid="filter-deadline-debitor-prefix"
@@ -210,6 +221,7 @@ export function DeliveryDeadlinesTab({ state, has }: { state: EinlagerungState; 
             <Table className="app-table">
               <caption className="sr-only">Aufträge nach Lieferungsnummer getrennt, nach Liefertermin aufsteigend sortiert</caption>
                <TableHeader className="sticky top-0 z-10"><TableRow>
+                {has(P.pickup) && <TableHead className="w-10"><PickupSelectionAll selection={selection} /></TableHead>}
                 {visibleColumns.map(({ id }) => <TableHead key={id} scope="col" data-column={id} className={id === "paletten" ? "text-right" : undefined}>
                   {DEADLINE_COLUMNS.find(([columnId]) => columnId === id)![1]}
                 </TableHead>)}
@@ -217,6 +229,7 @@ export function DeliveryDeadlinesTab({ state, has }: { state: EinlagerungState; 
               </TableRow></TableHeader>
               <TableBody>{shown.map((r, i) => (
                 <TableRow key={`${r.order.shelf}-${r.order.speditionId}-${i}`} data-testid={`row-deadline-${i}`}>
+                  {has(P.pickup) && <TableCell><PickupSelectionRow number={r.order.deliveryNumber} selection={selection} /></TableCell>}
                   {visibleColumns.map(({ id }) => {
                     switch (id) {
                       case "status": return <TableCell key={id} data-column={id}><span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold whitespace-nowrap ${META[r.status].cls}`}>{META[r.status].label}</span></TableCell>;

@@ -18,6 +18,12 @@ import { useRecordActions } from "../use-einlagerung";
 import { datasetOf, errMsg, nf, P, toRec, type D, type Model, type Rec } from "../lib";
 import { useLiveFilters } from "@/lib/live-view-control";
 import { usePickupPlanning, PickupFilter, PickupCell, PickupEditor } from "./pickup-planning";
+import { pickupFilterLabel } from "./pickup-status";
+import { classifyDeliveryOrders, DEFAULT_DEADLINE_THRESHOLDS, validDeadlineThresholds } from "./delivery-deadlines";
+import { deadlineFacetOptions, deadlineFilterDetails, deadlineRangeInvalid, emptyDeadlineFilters, filterDeliveryRows, type DeadlineFilters } from "./deadline-filters";
+import { pastedDeliveryNumbers } from "./delivery-number-list";
+import { OrderExtraFilters } from "./order-extra-filters";
+import { usePickupSelection, PickupSelectionAll, PickupSelectionRow, PickupSelectionBar } from "./pickup-selection";
 
 const STATUS = [{ value: "offen", label: "Offen" }, { value: "erledigt", label: "Erledigt" }, { value: "storniert", label: "Storniert" }];
 
@@ -27,6 +33,11 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   const [searchText, setSearchText] = useState(() => new URLSearchParams(window.location.search).get("deliveryNumber") ?? "");
   const [appliedSearch, setAppliedSearch] = useState("");
   const [filters, setFilters] = useState<OrderFilters>(emptyOrderFilters);
+  const [advanced, setAdvanced] = useState<DeadlineFilters>(() => {
+    const delivery = new URLSearchParams(window.location.search).get("deliveryNumber")?.trim();
+    return { ...emptyDeadlineFilters(), deliveryNumbers: delivery && /^\d+$/.test(delivery) ? [delivery] : [] };
+  });
+  const [now, setNow] = useState(() => new Date());
   const [exporting, setExporting] = useState(false);
   const [resFilter, setResFilter] = useState("offen");
   const [edit, setEdit] = useState<Rec | null>(null);
@@ -46,6 +57,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
     const timer = setTimeout(() => setAppliedSearch(searchText.trim()), 300);
     return () => clearTimeout(timer);
   }, [searchText]);
+  useEffect(() => { const timer = setInterval(() => setNow(new Date()), 60000); return () => clearInterval(timer); }, []);
   const params = useMemo<SearchEinlagerungParams>(() => {
     const p: SearchEinlagerungParams = { mode: "auftraege", groupByDelivery: true };
     if (appliedSearch) p.q = appliedSearch;
@@ -73,7 +85,13 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   });
   const allReservations = (q.data?.reservations ?? []).map(toRec).filter((r) => !resFilter || r.d.status === resFilter);
   const allOrders = (q.data?.orders ?? []) as D[];
-  const orders = allOrders.filter((o) => matchesOrderFilters(orderFilterRow(o), filters) && pickup.matches(o.deliveryNumber)).map(pickup.enrich);
+  const classified = useMemo(() => {
+    const th = state.settings.deadlineThresholds;
+    return classifyDeliveryOrders((q.data?.orders ?? []) as D[], th && validDeadlineThresholds(th) ? th : DEFAULT_DEADLINE_THRESHOLDS, now);
+  }, [q.data?.orders, state.settings.deadlineThresholds, now]);
+  const combined = { ...advanced, facets: filters };
+  const orders = filterDeliveryRows(classified, combined).map((r) => r.order).filter((o) => pickup.matches(o.deliveryNumber)).map(pickup.enrich);
+  const extraOutputFilters = [...deadlineFilterDetails(combined).filter(([key]) => !["Suche", "Speditionen", "Relationen", "Termine / KW", "Regale"].includes(key)), ["Abholplanung", pickupFilterLabel(pickup.filter)]];
   const resv = allReservations.filter((r) => matchesOrderFilters(reservationFilterRow(r), filters));
   const facetRows = [
     ...(!reservationsOnly ? allOrders.map(orderFilterRow) : []),
@@ -81,7 +99,8 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
   ];
   const stats = summarizeOrders(orders);
   const outputDisabled = !imported || q.isLoading || q.isError || q.isFetching ||
-    searchText.trim() !== appliedSearch || orders.length === 0 || !pickup.query.isSuccess || pickup.query.isError;
+    searchText.trim() !== appliedSearch || orders.length === 0 || !pickup.query.isSuccess || pickup.query.isError || deadlineRangeInvalid(combined);
+  const selection = usePickupSelection(orders, outputDisabled || !has(P.pickup));
   const printOrders = () => {
     if (outputDisabled) return;
     const popup = window.open("", "_blank", "width=1100,height=800");
@@ -92,7 +111,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
     try {
       popup.opener = null;
       popup.document.open();
-      popup.document.write(ordersPrintHtml(orders, filters, appliedSearch));
+      popup.document.write(ordersPrintHtml(orders, filters, appliedSearch, new Date(), extraOutputFilters));
       popup.document.close();
       popup.focus();
       popup.print();
@@ -105,7 +124,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
     if (outputDisabled || exporting) return;
     setExporting(true);
     try {
-      const buffer = await ordersExcel(orders, filters, appliedSearch);
+      const buffer = await ordersExcel(orders, filters, appliedSearch, new Date(), extraOutputFilters);
       const url = URL.createObjectURL(new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
       const link = document.createElement("a");
       link.href = url;
@@ -120,7 +139,8 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
       setExporting(false);
     }
   };
-  const activeFilterCount = Object.values(filters).reduce((n, values) => n + values.length, 0) + (searchText.trim() ? 1 : 0) + Number(pickup.filter !== "all");
+  const activeFilterCount = Object.values(filters).reduce((n, values) => n + values.length, 0) + (searchText.trim() ? 1 : 0) + Number(pickup.filter !== "all") +
+    (reservationsOnly ? 0 : (advanced.deliveryNumbers?.length ?? 0) + advanced.statuses.length + Number(!!advanced.debitorPrefix?.trim()) + Number(!!advanced.dateFrom) + Number(!!advanced.dateTo) + Number(advanced.overdueOnly));
   const setStatus = async (r: Rec, status: string) => {
     try { await save("reservation", r, { ...r.d, status }); toast({ title: `Reservierung ${status}` }); }
     catch (e) { toast({ title: "Statuswechsel fehlgeschlagen", description: errMsg(e), variant: "destructive" }); }
@@ -128,7 +148,7 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
 
   return (
     <div className="space-y-6">
-      {!reservationsOnly && <><PickupFilter planning={pickup} /><PickupEditor planning={pickup} /></>}
+      {!reservationsOnly && <><PickupFilter planning={pickup} /><PickupEditor planning={pickup} />{has(P.pickup) && <PickupSelectionBar selection={selection} planning={pickup} />}</>}
       <form className="app-filter-bar border p-3 space-y-3" onSubmit={(e) => {
         e.preventDefault();
         if (searchText.trim() === appliedSearch) void q.refetch();
@@ -136,6 +156,11 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
       }}>
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-6 gap-3 items-start">
         <Input value={searchText} onChange={(e) => setSearchText(e.target.value)}
+          onPaste={(e) => {
+            if (reservationsOnly) return;
+            const numbers = pastedDeliveryNumbers(e.clipboardData.getData("text/plain"));
+            if (numbers) { e.preventDefault(); setAdvanced((p) => ({ ...p, deliveryNumbers: numbers })); setSearchText(""); setAppliedSearch(""); }
+          }}
           placeholder={reservationsOnly ? "Vormerkung, Regal, Hinweis oder ID" : "Suche"}
           aria-label={reservationsOnly ? "Vormerkungen suchen" : "Aufträge suchen"} data-testid="input-orders-q" />
         {([
@@ -146,15 +171,18 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
         ] as const).map(([key, label, testId]) =>
           <OrderMultiFilter key={key} label={label} value={filters[key]}
             onChange={(value) => setFilters((previous) => ({ ...previous, [key]: value }))}
-            options={orderFacetOptions(facetRows, filters, key)}
+            options={reservationsOnly ? orderFacetOptions(facetRows, filters, key) : deadlineFacetOptions(classified, combined, key)}
             allowCustom={key === "relation" || key === "termin"} testId={testId} />
         )}
         <Button type="submit" data-testid="button-orders-search"><Search className="w-4 h-4 mr-2" />Suchen</Button>
         </div>
+        {!reservationsOnly && <><OrderExtraFilters filters={advanced} setFilters={setAdvanced} />
+          {deadlineRangeInvalid(combined) && <p role="alert" className="text-sm text-red-700">Bitte einen gültigen Zeitraum wählen: „ab“ darf nicht nach „bis“ liegen.</p>}
+          <p className="text-xs text-slate-500">Liefernummern aus Excel als Liste einfügen. Innerhalb eines Filters gilt „oder“, zwischen Filtern „und“.</p></>}
         <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
           <span>Mehrfachauswahl möglich · Filter werden automatisch angewendet</span>
           {activeFilterCount > 0 && <Button type="button" size="sm" variant="ghost" data-testid="button-orders-reset" onClick={() => {
-            setFilters(emptyOrderFilters()); setSearchText(""); setAppliedSearch(""); pickup.setFilter("all");
+            setFilters(emptyOrderFilters()); setSearchText(""); setAppliedSearch(""); pickup.setFilter("all"); setAdvanced(emptyDeadlineFilters());
           }}>Alle Filter zurücksetzen ({activeFilterCount})</Button>}
           {q.isFetching && <span role="status">Wird aktualisiert …</span>}
         </div>
@@ -201,10 +229,11 @@ export function OrdersTab({ state, model, has, reservationsOnly = false }: {
         ) : orders.length === 0 ? <p className="p-8 text-center text-sm text-slate-500">Keine Aufträge für diese Filter.</p> : (
           <div className="overflow-x-auto">
             <Table className="app-table">
-              <TableHeader><TableRow><TableHead>Liefernummer</TableHead><TableHead>Regal</TableHead><TableHead>Spedition</TableHead><TableHead>Relation</TableHead><TableHead>Termin</TableHead><TableHead>Kalenderwoche</TableHead><TableHead>Plus-KW</TableHead><TableHead className="text-right">Paletten</TableHead><TableHead>Abholplanung / LKW</TableHead></TableRow></TableHeader>
+              <TableHeader><TableRow>{has(P.pickup) && <TableHead className="w-10"><PickupSelectionAll selection={selection} /></TableHead>}<TableHead>Liefernummer</TableHead><TableHead>Regal</TableHead><TableHead>Spedition</TableHead><TableHead>Relation</TableHead><TableHead>Termin</TableHead><TableHead>Kalenderwoche</TableHead><TableHead>Plus-KW</TableHead><TableHead className="text-right">Paletten</TableHead><TableHead>Abholplanung / LKW</TableHead></TableRow></TableHeader>
               <TableBody>
                 {orders.map((o, i) => (
                   <TableRow key={i} data-testid={`row-order-${i}`}>
+                    {has(P.pickup) && <TableCell><PickupSelectionRow number={o.deliveryNumber} selection={selection} /></TableCell>}
                     <TableCell>{String(o.deliveryNumber || "—")}</TableCell>
                     <TableCell className="font-medium">{String(o.shelf ?? "")}</TableCell><TableCell>{String(o.spedition ?? "")}</TableCell>
                     <TableCell>{String(o.relation ?? "")}</TableCell><TableCell>{String(o.termin ?? "")}</TableCell><TableCell>{String(o.calendarWeek ?? "")}</TableCell>

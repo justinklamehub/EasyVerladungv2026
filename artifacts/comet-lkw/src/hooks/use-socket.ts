@@ -9,6 +9,7 @@ import {
   getListUsersQueryKey,
   getListReconciliationsQueryKey,
   getGetDashboardQueryKey,
+  getListWarehousePickupPlansQueryKey,
 } from "@workspace/api-client-react";
 
 export interface ShipmentEditor {
@@ -64,7 +65,10 @@ export function useSocket() {
     socket.on("disconnect", onDisconnect);
 
     // Shipment events
-    const invalidateShipments = () => queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+    const invalidateShipments = () => {
+      queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getListWarehousePickupPlansQueryKey() });
+    };
     socket.on("shipment.created", invalidateShipments);
     socket.on("shipment.updated", invalidateShipments);
     socket.on("shipment.status_changed", invalidateShipments);
