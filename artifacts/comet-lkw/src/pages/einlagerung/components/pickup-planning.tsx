@@ -11,14 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { errMsg } from "../lib";
-import { matchesPickupFilter, PICKUP_FILTERS, pickupStage, pickupStatus } from "./pickup-status";
-
-export function pickupTruck(plan?: WarehousePickupPlan) {
-  if (!plan?.shipmentId) return "";
-  const s = plan.shipment;
-  return s ? [`LKW #${s.id}`, s.kennzeichen, s.speditionName, [s.etaDate.split("-").reverse().join("."), s.etaTime].filter(Boolean).join(" "), s.status].filter(Boolean).join(" · ")
-    : `LKW #${plan.shipmentId} – Anmeldung nicht verfügbar oder nicht freigegeben`;
-}
+import { matchesPickupFilter, PICKUP_FILTERS, pickupStage, pickupStatus, pickupTruck } from "./pickup-status";
 
 export function usePickupPlanning(enabled = true) {
   const query = useListWarehousePickupPlans({ query: { queryKey: getListWarehousePickupPlansQueryKey(), enabled, refetchInterval: 30000, refetchIntervalInBackground: false } });

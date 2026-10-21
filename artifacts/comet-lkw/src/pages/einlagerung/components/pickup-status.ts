@@ -1,5 +1,14 @@
 import type { WarehousePickupPlan } from "@workspace/api-client-react";
 
+export function pickupTruck(plan?: WarehousePickupPlan) {
+  if (!plan?.shipmentId) return "";
+  const s = plan.shipment;
+  if (!s) return `LKW #${plan.shipmentId} – Anmeldung nicht verfügbar oder nicht freigegeben`;
+  const date = s.etaDate ? s.etaDate.split("-").reverse().join(".") : "";
+  const eta = date || s.etaTime ? `${date || "Datum offen"} ${s.etaTime || "(Uhrzeit offen)"}` : "nicht angegeben";
+  return `LKW #${s.id} - ${s.speditionName || "Spediteur nicht angegeben"} - ETA ${eta}`;
+}
+
 export type PickupStage = "unplanned" | "planned" | "completed" | "cancelled" | "unavailable";
 export const PICKUP_FILTERS = [
   ["all", "Alle Lieferungen"], ["unplanned", "Noch nicht eingeplant"],

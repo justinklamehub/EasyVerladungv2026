@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { WarehousePickupPlan } from "@workspace/api-client-react";
 import { parseDeliveryNumbers, pastedDeliveryNumbers, deliveryNumberMatcher, deliveryNumberDetails } from "./delivery-number-list";
-import { pickupStage, pickupStatus, matchesPickupFilter, pickupFilterLabel } from "./pickup-status";
+import { pickupStage, pickupStatus, matchesPickupFilter, pickupFilterLabel, pickupTruck } from "./pickup-status";
 import { classifyDeliveryOrders } from "./delivery-deadlines";
 import { deadlineFilterDetails, emptyDeadlineFilters, filterDeliveryRows } from "./deadline-filters";
 import { pickupNumbers, visiblePickupSelection } from "./pickup-selection-state";
@@ -45,6 +45,16 @@ test("Ungültige oder zu große Excel-Listen werden vollständig abgelehnt, nie 
 
 const plan: WarehousePickupPlan = { deliveryNumber: "80000001", planned: true, shipmentId: 11, updatedAt: "2026-10-21T12:00:00.000Z",
   shipment: { id: 11, kennzeichen: "TEST-11", speditionName: "Test", etaDate: "2026-10-21", etaTime: "12:00", status: "Angemeldet", relation: "Nord" } };
+
+test("LKW-Text zeigt ausschließlich ID, Spediteur und ETA; der Status bleibt separat", () => {
+  assert.equal(pickupTruck(plan), "LKW #11 - Test - ETA 21.10.2026 12:00");
+  const completed = { ...plan, shipment: { ...plan.shipment!, status: "Abgefertigt" } };
+  assert.equal(pickupTruck(completed), pickupTruck(plan));
+  assert.equal(pickupStatus(completed), "LKW abgefertigt");
+  assert.equal(pickupTruck(undefined), "");
+  assert.match(pickupTruck({ ...plan, shipment: null }), /nicht verfügbar oder nicht freigegeben/);
+  assert.equal(pickupTruck({ ...plan, shipment: { ...plan.shipment!, etaDate: "", etaTime: "" } }), "LKW #11 - Test - ETA nicht angegeben");
+});
 
 test("Abgefertigt wird aus dem aktuellen LKW-Status abgeleitet, ohne die importfeste Planung umzuschreiben", () => {
   const before = structuredClone(plan);

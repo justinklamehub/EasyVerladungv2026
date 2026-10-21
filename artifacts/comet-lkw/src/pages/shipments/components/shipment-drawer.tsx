@@ -172,6 +172,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   const isSpedUser  = ["speditions_admin", "speditions_bearbeiter"].includes(role);
   const isEditing   = !!shipmentId;
   const drawerPerms = usePermissions();
+  const canViewPickup = open && isEditing && !!(drawerPerms["einlagerung.view"] || drawerPerms["einlagerung.pickup.plan"]);
   const canEditPerm        = !!drawerPerms["shipment.edit"];
   const canLockPerm        = !!drawerPerms["shipment.lock"];
   const canDeleteAustrag   = !!drawerPerms["austrag.delete"];
@@ -639,14 +640,14 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             );
           })()}
         </SheetHeader>
-        {open && shipmentId && (drawerPerms["einlagerung.view"] || drawerPerms["einlagerung.pickup.plan"]) && <PickupShipmentSummary shipmentId={shipmentId} />}
 
         {isLoading ? (
           <div className="flex justify-center p-8"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
         ) : (
           <Tabs defaultValue="details">
-            <TabsList className="mb-4 w-full">
+            <TabsList className="mb-4 w-full h-auto flex-wrap gap-1">
               <TabsTrigger value="details" className="flex-1">Details</TabsTrigger>
+              {canViewPickup && <TabsTrigger value="einlagerung" className="flex-1" data-testid="tab-shipment-pickup">Lieferungen</TabsTrigger>}
               {isEditing && <TabsTrigger value="history" className="flex-1">Verlauf</TabsTrigger>}
               {isEditing && <TabsTrigger value="paletten" className="flex-1">Paletten</TabsTrigger>}
               {isEditing && isCometUser && <TabsTrigger value="austragen" className="flex-1">Austragen</TabsTrigger>}
@@ -867,6 +868,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               )}
             </TabsContent>
 
+            {canViewPickup && shipmentId && <TabsContent value="einlagerung" data-testid="panel-shipment-pickup">
+              <PickupShipmentSummary key={shipmentId} shipmentId={shipmentId} />
+            </TabsContent>}
             {isEditing && (
               <TabsContent value="history" className="space-y-4">
                 {/* ── Status-Timeline ── */}

@@ -33,6 +33,18 @@ Auch die Abholplanung muss in Masse möglich sein.
 
 **How to apply:** Bei Änderungen an der Abholplanung die gemeinsame Bearbeitung mehrerer Lieferungen in Aufträge und Liefertermine erhalten.
 
+In den LKW-Details sollen die eingeplanten Lieferungen aus der Einlagerung einen eigenen Tab haben. Die Liefernummern sollen für Excel kopierbar sein, pro Zeile eine Liefernummer.
+
+**Why:** Der Nutzer hat die getrennte Ansicht und das zeilenweise Kopierformat ausdrücklich verlangt.
+
+**How to apply:** Den eigenen Tab und die Kopierfunktion erhalten; der Tab soll auf ausdrücklichen Nutzerwunsch „Lieferungen“ heißen. Die kopierte Liste enthält keine Überschrift und keine zusätzlichen Trennspalten.
+
+Der LKW-Verknüpfungstext in der Abholplanung soll „LKW ID - Spediteur - ETA Datum + Zeit“ enthalten.
+
+**Why:** Der Nutzer hat dieses Anzeigeformat ausdrücklich vorgegeben.
+
+**How to apply:** Kennzeichen und LKW-Status nicht in diesen Verknüpfungstext aufnehmen; der Abholstatus bleibt separat sichtbar.
+
 Bestände, Retouren und eingelagerte Aufträge sollen weiterhin per CSV-Upload aktualisiert werden, nicht über eine automatische Anbindung.
 
 **Why:** Der Nutzer hat „CSV-Upload wie bisher“ gewählt.
