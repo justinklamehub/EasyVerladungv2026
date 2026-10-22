@@ -22,6 +22,8 @@ import { RichTextEditor } from "@/components/ui/rich-text-editor";
 import { DeliveryReportCard } from "./delivery-report-card";
 import { ServerOperationsCard } from "./server-operations-card";
 import { MaintenanceModeCard } from "./maintenance-mode-card";
+import { ShipmentRefreshCard } from "./shipment-refresh-card";
+import { SHIPMENT_REFRESH_KEY } from "@workspace/api-zod/shipment-refresh";
 import { getGetMaintenanceStatusQueryKey } from "@workspace/api-client-react";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
@@ -2166,6 +2168,7 @@ export default function SettingsPage() {
     onSuccess: (_data, variables) => {
       queryClient.invalidateQueries({ queryKey: ["settings"] });
       if (variables.key === "maintenance_mode") queryClient.invalidateQueries({ queryKey: getGetMaintenanceStatusQueryKey() });
+      if (variables.key === SHIPMENT_REFRESH_KEY) queryClient.invalidateQueries({ queryKey: ["settings-public"] });
       toast({ title: "Einstellung gespeichert" });
     },
     onError: (e: any) => {
@@ -2255,6 +2258,7 @@ export default function SettingsPage() {
 
         {/* ── Tab: Allgemein ── */}
         <TabsContent value="allgemein" className="space-y-5 mt-0">
+          <ShipmentRefreshCard value={s[SHIPMENT_REFRESH_KEY]} onSave={handleSave} isSaving={isSavingKey(SHIPMENT_REFRESH_KEY)} />
           {SECTIONS.map((section) => {
             const SectionIcon = section.icon;
             return (

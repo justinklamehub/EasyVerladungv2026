@@ -6,11 +6,12 @@ import { requireAuth } from "../lib/auth";
 import { reportRecipients, validReportTime } from "../lib/delivery-report-content";
 import { deliveryMailDays, deliveryMailScope } from "@workspace/api-zod/delivery-mail";
 import { GetMaintenanceStatusResponse } from "@workspace/api-zod";
+import { SHIPMENT_REFRESH_KEY, parseShipmentRefreshSeconds } from "@workspace/api-zod/shipment-refresh";
 import { getMaintenanceStatus, invalidateMaintenanceStatus, validateMaintenanceSettings, disconnectNonAdminSockets } from "../lib/maintenance-mode";
 
 const router = Router();
 
-const PUBLIC_KEYS = ["app_name", "company_name", "login_subtitle", "company_logo", "page_title", "sidebar_nav_config", "sidebar_categories", "sidebar_order", "sidebar_role_visibility", "impressum_text", "datenschutz_text", "custom_design", "ticket_categories"] as const;
+const PUBLIC_KEYS = ["app_name", "company_name", "login_subtitle", "company_logo", "page_title", "sidebar_nav_config", "sidebar_categories", "sidebar_order", "sidebar_role_visibility", "impressum_text", "datenschutz_text", "custom_design", "ticket_categories", SHIPMENT_REFRESH_KEY] as const;
 
 router.get("/maintenance/status", async (req, res) => {
   try {
@@ -132,6 +133,7 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
       "sla_eta_warn_min",
       "sla_eta_danger_min",
       "maintenance_mode",
+      SHIPMENT_REFRESH_KEY,
     ];
     if (!ALLOWED_KEYS.includes(key)) {
       return res.status(400).json({ error: "Unbekannter Einstellungsschlüssel" });
@@ -141,6 +143,10 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
       return res.status(400).json({ error: "Ungültiger Speicher-Backend-Wert" });
     }
     let storedValue = value;
+    if (key === SHIPMENT_REFRESH_KEY) {
+      try { storedValue = String(parseShipmentRefreshSeconds(value)); }
+      catch { return res.status(400).json({ error: "Bitte eine ganze Zahl von 5 bis 3600 Sekunden eingeben." }); }
+    }
     let maintenanceConfig: ReturnType<typeof validateMaintenanceSettings>["config"];
     if (key === "maintenance_mode") {
       const validation = validateMaintenanceSettings(value);
@@ -193,6 +199,9 @@ router.put<{ key: string }>("/settings/:key", requireAuth, async (req, res) => {
         set: { value: storedValue, updatedBy: req.session.userId!, updatedAt: new Date() },
       });
 
+    if (key === SHIPMENT_REFRESH_KEY) {
+      req.app.get("io")?.emit("settings.updated", { key });
+    }
     if (key === "maintenance_mode" && maintenanceConfig) {
       invalidateMaintenanceStatus();
       const io = req.app.get("io");

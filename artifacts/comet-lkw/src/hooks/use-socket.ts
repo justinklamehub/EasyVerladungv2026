@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getSocket } from "@/lib/socket";
+import { SHIPMENT_REFRESH_KEY } from "@workspace/api-zod/shipment-refresh";
 import {
   getListShipmentsQueryKey,
   getListPalletMovementsQueryKey,
@@ -63,6 +64,10 @@ export function useSocket() {
 
     socket.on("connect", onConnect);
     socket.on("disconnect", onDisconnect);
+    const onSettingsUpdated = (data: { key: string }) => {
+      if (data.key === SHIPMENT_REFRESH_KEY) queryClient.invalidateQueries({ queryKey: ["settings-public"] });
+    };
+    socket.on("settings.updated", onSettingsUpdated);
 
     // Shipment events
     const invalidateShipments = () => {
@@ -145,6 +150,7 @@ export function useSocket() {
     return () => {
       socket.off("connect", onConnect);
       socket.off("disconnect", onDisconnect);
+      socket.off("settings.updated", onSettingsUpdated);
       socket.off("shipment.created", invalidateShipments);
       socket.off("shipment.updated", invalidateShipments);
       socket.off("shipment.status_changed", invalidateShipments);

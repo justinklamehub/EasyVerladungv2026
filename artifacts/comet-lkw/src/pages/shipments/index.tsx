@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
-import { shipmentRefreshOptions } from "./refresh-options";
+import { useShipmentRefreshOptions } from "./use-shipment-refresh";
 import { useListShipments, useListSpeditionen, useUpdateShipment, useLockShipment, useUnlockShipment, Shipment } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -294,6 +294,7 @@ export default function ShipmentsPage() {
     dateTo: effectiveDates.to || undefined,
   };
 
+  const shipmentRefreshOptions = useShipmentRefreshOptions();
   const { data: shipments, isLoading } = useListShipments(queryParams, {
     query: { queryKey: getListShipmentsQueryKey(queryParams), ...shipmentRefreshOptions },
   });

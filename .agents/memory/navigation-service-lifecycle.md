@@ -5,6 +5,12 @@ description: Warum Benachrichtigungen, Präsenz und Push nicht vom geöffneten N
 
 Die Verladungsübersicht wird vom Benutzer „Monitor“ dauerhaft und ohne Eingaben angezeigt. Sie muss auch ohne eingehende Echtzeit-Meldungen automatisch aktuell bleiben.
 
+Das Aktualisierungsintervall soll global einstellbar sein, nicht als benutzerspezifische Monitor-Sonderlösung.
+
+**Why:** Der Nutzer möchte das Intervall zentral selbst definieren können.
+
+**How to apply:** Änderungen auch in bereits geöffneten Übersichten übernehmen, unabhängig davon, ob deren Echtzeit-Verbindung funktioniert.
+
 **Why:** Der Nutzer meldete eine nicht automatisch aktualisierte Anzeige beim untätigen Monitor-Benutzer.
 
 **How to apply:** Tabellen- und Kartenübersicht unabhängig von Benutzername und Eingaben regelmäßig abgleichen; keine Seiten-Neuladungen erzwingen, die offene Formulare oder Filter verwerfen.

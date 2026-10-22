@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { shipmentRefreshOptions } from "./refresh-options";
+import { useShipmentRefreshOptions } from "./use-shipment-refresh";
 import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useListShipments, useListSpeditionen, useUpdateShipment, getListShipmentsQueryKey } from "@workspace/api-client-react";
 import { Badge } from "@/components/ui/badge";
@@ -361,6 +361,7 @@ export default function KanbanPage() {
     dateTo: filterDateTo || undefined,
   };
 
+  const shipmentRefreshOptions = useShipmentRefreshOptions();
   const { data: rawShipments, isLoading } = useListShipments(queryParams, {
     query: { queryKey: getListShipmentsQueryKey(queryParams), ...shipmentRefreshOptions },
   });

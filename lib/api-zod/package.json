@@ -7,7 +7,8 @@
     ".": "./src/index.ts",
     "./delivery-deadlines": "./src/delivery-deadlines.ts",
     "./delivery-mail": "./src/delivery-mail.ts",
-    "./shipment-work-views": "./src/shipment-work-views.ts"
+    "./shipment-work-views": "./src/shipment-work-views.ts",
+    "./shipment-refresh": "./src/shipment-refresh.ts"
   },
   "dependencies": {
     "zod": "catalog:"

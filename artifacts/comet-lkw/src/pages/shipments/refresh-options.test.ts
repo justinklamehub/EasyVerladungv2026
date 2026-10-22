@@ -1,6 +1,20 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { shipmentRefreshOptions } from "./refresh-options";
+import { shipmentRefreshOptions, getShipmentRefreshOptions } from "./refresh-options";
+import { parseShipmentRefreshSeconds, resolveShipmentRefreshSeconds } from "@workspace/api-zod/shipment-refresh";
+
+test("Globales Intervall validiert ganze Sekunden und behält ohne gespeicherten Wert 30 Sekunden", () => {
+  for (const value of ["5", "10", "30", "300", "3600"]) {
+    assert.equal(parseShipmentRefreshSeconds(value), Number(value));
+    assert.equal(getShipmentRefreshOptions(value).refetchInterval, Number(value) * 1000);
+  }
+  for (const value of ["", "0", "4", "-1", "3601", "10.5", "1e2", "Infinity", "abc", null, true, 30, {}, []]) {
+    assert.throws(() => parseShipmentRefreshSeconds(value));
+    assert.equal(resolveShipmentRefreshSeconds(value), 30);
+  }
+  assert.equal(getShipmentRefreshOptions(undefined).refetchInterval, 30_000);
+  assert.equal(getShipmentRefreshOptions("60").refetchIntervalInBackground, true);
+});
 
 test("Monitor gleicht ohne Eingaben oder Socket-Meldungen ab, auch ohne Fokus; Fokus und Netzrückkehr holen Daten nach", async (t) => {
   const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
@@ -16,9 +30,12 @@ test("Monitor gleicht ohne Eingaben oder Socket-Meldungen ab, auch ohne Fokus; F
   client.mount();
   let calls = 0;
   const key = ["/api/shipments", { dateFrom: "2026-10-21", status: "Angemeldet" }];
-  const observer = new QueryObserver(client, {
+  const queryOptions = {
     queryKey: key,
     queryFn: async () => [{ id: 320, revision: ++calls }],
+  };
+  const observer = new QueryObserver(client, {
+    ...queryOptions,
     ...shipmentRefreshOptions,
   });
   const unsubscribe = observer.subscribe(() => {});
@@ -47,10 +64,24 @@ test("Monitor gleicht ohne Eingaben oder Socket-Meldungen ab, auch ohne Fokus; F
     onlineManager.setOnline(true);
     await settle();
     assert.equal(calls, 5, "Netzrückkehr lädt ohne Interaktion nach");
+    observer.setOptions({ ...queryOptions, ...getShipmentRefreshOptions("10") });
+    t.mock.timers.tick(9_999);
+    await settle();
+    assert.equal(calls, 5);
+    t.mock.timers.tick(1);
+    await settle();
+    assert.equal(calls, 6, "Ein geänderter globaler Wert passt den laufenden Timer ohne Neuladen an");
+    observer.setOptions({ ...queryOptions, ...getShipmentRefreshOptions("90") });
+    t.mock.timers.tick(89_999);
+    await settle();
+    assert.equal(calls, 6, "Auch ein längeres Intervall ersetzt den bisherigen Timer");
+    t.mock.timers.tick(1);
+    await settle();
+    assert.equal(calls, 7);
     unsubscribe();
     t.mock.timers.tick(30_000);
     await settle();
-    assert.equal(calls, 5, "Nach Verlassen der Ansicht stoppt der zusätzliche Abgleich");
+    assert.equal(calls, 7, "Nach Verlassen der Ansicht stoppt der zusätzliche Abgleich");
   } finally {
     unsubscribe();
     client.unmount();
