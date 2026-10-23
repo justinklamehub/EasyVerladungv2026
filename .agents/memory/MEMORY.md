@@ -35,3 +35,4 @@
 - [Zod-Fehlerklassen](zod-error-versions.md) — Generierte und manuelle Schemas können unterschiedliche Fehlerklassen werfen; ungültige Eingaben über HTTP prüfen.
 - [Werksverkauf / Vernichtung](wvvn-scope.md) — Gemeinsame Artikel mit Einlagerung, freigeschaltete Scannergeräte und historische offene Listen als Archiv.
 - [Volle Seitenbreite](full-width-layout.md) — Alle Inhaltsseiten und Tabellen sollen die verfügbare Breite nutzen; keine zentrierten Maximalbreiten oder doppelten Seitenabstände.
+- [Kalenderdaten und Zeitzonen](calendar-date-timezones.md) — Reine Datumswerte unverändert übertragen; UTC allein verdeckt Fehler des PostgreSQL-Treibers bei lokaler Mitternacht.

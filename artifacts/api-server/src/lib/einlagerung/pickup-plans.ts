@@ -15,7 +15,9 @@ export async function pickupShipmentAccess(c: Client, role: string, speditionId?
 
 export async function listPickupPlans(c: Client, access: number[] | null) {
   // Restrict linked truck details by the same carrier-sharing scope as /shipments.
-  const r = await c.query(`SELECT p.*,s.id AS visible_shipment_id,s.kennzeichen,s.eta_date,s.eta_time,s.status,s.relation,
+  // DATE is a calendar day, not an instant. Return SQL text so node-postgres
+  // cannot turn local midnight into a Date that shifts when serialized as UTC.
+  const r = await c.query(`SELECT p.*,s.id AS visible_shipment_id,s.kennzeichen,to_char(s.eta_date,'YYYY-MM-DD') AS eta_date,s.eta_time,s.status,s.relation,
     sp.name AS spedition_name FROM einlagerung_pickup_plans p
     LEFT JOIN shipments s ON s.id=p.shipment_id AND ($1::integer[] IS NULL OR s.spedition_id=ANY($1))
     LEFT JOIN speditionen sp ON sp.id=s.spedition_id ORDER BY p.delivery_number`, [access]);
@@ -24,7 +26,7 @@ export async function listPickupPlans(c: Client, access: number[] | null) {
     updatedAt: new Date(r.updated_at).toISOString(),
     shipment: r.visible_shipment_id == null ? null : {
       id: r.visible_shipment_id, kennzeichen: r.kennzeichen ?? "", speditionName: r.spedition_name ?? "",
-      etaDate: r.eta_date == null ? "" : (typeof r.eta_date === "string" ? r.eta_date : r.eta_date.toISOString().slice(0, 10)),
+      etaDate: r.eta_date ?? "",
       etaTime: r.eta_time ?? "", status: r.status ?? "", relation: r.relation ?? "",
     },
   }));

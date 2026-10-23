@@ -48,6 +48,9 @@ const plan: WarehousePickupPlan = { deliveryNumber: "80000001", planned: true, s
 
 test("LKW-Text zeigt ausschließlich ID, Spediteur und ETA; der Status bleibt separat", () => {
   assert.equal(pickupTruck(plan), "LKW #11 - Test - ETA 21.10.2026 12:00");
+  assert.equal(pickupTruck({ ...plan, shipmentId: 340, shipment: {
+    ...plan.shipment!, id: 340, speditionName: "Seatrader", etaDate: "2026-10-26", etaTime: "00:00",
+  } }), "LKW #340 - Seatrader - ETA 26.10.2026 00:00");
   const completed = { ...plan, shipment: { ...plan.shipment!, status: "Abgefertigt" } };
   assert.equal(pickupTruck(completed), pickupTruck(plan));
   assert.equal(pickupStatus(completed), "LKW abgefertigt");
