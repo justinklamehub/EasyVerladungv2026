@@ -12,6 +12,7 @@ import { Download, Pencil, Plus, Printer, Trash2 } from "lucide-react";
 import { P, berlinDate, berlinInput, berlinToIso, downloadCsv, errMsg, esc, fmtDate, fmtDateTime, fmtMin, fmtTime, openPrint, sel, useInvalidateClock } from "./lib";
 import { clockCsvRows } from "./csv-export";
 import { CsvExportSettings, useClockCsvPreferences } from "./csv-export-settings";
+import { attendanceShiftOptions, filterAttendance, NO_SHIFT } from "./attendance-filters";
 
 type Has = (k: string) => boolean;
 interface Props { entries: ClockEntry[]; employees: ClockEmployee[]; has: Has; from: string; to: string }
@@ -21,16 +22,13 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
   const invalidate = useInvalidateClock();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [shift, setShift] = useState("");
   const [edit, setEdit] = useState<ClockEntry | "new" | null>(null);
   const [del, setDel] = useState<ClockEntry | null>(null);
   const csv = useClockCsvPreferences(has(P.export));
 
-  const rows = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    return entries.filter((e) =>
-      (status === "all" || (status === "open") === (e.endedAt === null)) &&
-      (!q || `${e.firstName} ${e.lastName} ${e.cardNumber} ${e.provider} ${e.activity}`.toLowerCase().includes(q)));
-  }, [entries, search, status]);
+  const shiftOptions = useMemo(() => attendanceShiftOptions(entries, shift), [entries, shift]);
+  const rows = useMemo(() => filterAttendance(entries, { search, status, shift }), [entries, search, status, shift]);
 
   const tot = useMemo(() => {
     let g = 0, p = 0, n = 0, open = 0;
@@ -67,6 +65,12 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
         <div className="flex-1 min-w-[10rem]"><Label>Suche</Label><Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Name, Karte, Dienstleister" data-testid="input-search" /></div>
         <div><Label>Status</Label>
           <select className={sel} value={status} onChange={(e) => setStatus(e.target.value)} data-testid="select-status"><option value="all">Alle</option><option value="open">Offen</option><option value="closed">Abgeschlossen</option></select></div>
+        <div className="min-w-[12rem]"><Label htmlFor="clock-shift-filter">Schicht</Label>
+          <select id="clock-shift-filter" className={sel} value={shift} onChange={(e) => setShift(e.target.value)} data-testid="select-shift-filter">
+            <option value="">Alle Schichten</option>
+            <option value={NO_SHIFT}>Ohne Schicht</option>
+            {shiftOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+          </select></div>
         {has(P.export) && <Button variant="outline" onClick={exportCsv} disabled={!csv.query.data || csv.query.isError} data-testid="button-export-csv"><Download className="w-4 h-4 mr-1" />CSV</Button>}
         {has(P.export) && csv.query.data && <CsvExportSettings config={csv.query.data} onSave={csv.save.mutateAsync} saving={csv.save.isPending} />}
         {has(P.export) && <Button variant="outline" onClick={report} data-testid="button-report"><Printer className="w-4 h-4 mr-1" />Bericht drucken</Button>}
@@ -102,7 +106,7 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
                   {has(P.delete) && <Button size="icon" variant="ghost" onClick={() => setDel(e)} data-testid={`button-delete-entry-${e.id}`} aria-label="Löschen"><Trash2 className="w-4 h-4 text-red-600" /></Button>}
                 </td>
               </tr>))}
-            {!rows.length && <tr><td colSpan={10} className="px-3 py-10 text-center text-slate-500">Keine Einträge im gewählten Zeitraum.</td></tr>}
+            {!rows.length && <tr><td colSpan={10} className="px-3 py-10 text-center text-slate-500">Keine Einträge für den gewählten Zeitraum und die gesetzten Filter.</td></tr>}
           </tbody>
         </table>
       </div>
