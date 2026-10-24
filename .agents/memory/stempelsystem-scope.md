@@ -68,3 +68,9 @@ Die Schichtzuweisung soll einfach und auch für mehrere Mitarbeiter gleichzeitig
 **Why:** Der Nutzer verlangt ausdrücklich eine einfachere Zuweisung „auch in masse“, nicht nur wiederholtes Ausfüllen eines Einzelmitarbeiterformulars.
 
 **How to apply:** Bei Weiterentwicklungen der Schichtzuweisung die gemeinsame Bearbeitung einer Mitarbeiterauswahl berücksichtigen; nicht wieder auf ausschließlich einzelne Zuweisungsvorgänge zurückgehen.
+
+Der Schichtfilter soll Früh-/Spätschicht beziehungsweise die im Tab „Schichten“ angelegten Definitionen anbieten, nicht nur Schichtnamen aus geladenen Zeitbuchungen.
+
+**Why:** Der Nutzer hat die ursprüngliche, nur aus Buchungen erzeugte Auswahl ausdrücklich korrigiert.
+
+**How to apply:** Die Auswahl unabhängig von Zeitraum und Mitarbeiter aus den Schichtdefinitionen laden. Historische Schichtnamen zusätzlich erhalten; alte Buchungen nicht nach aktuellen Plänen umdeuten.

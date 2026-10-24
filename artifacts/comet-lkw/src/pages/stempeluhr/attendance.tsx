@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useCreateClockEntry, useUpdateClockEntry, useDeleteClockEntry } from "@workspace/api-client-react";
+import { useCreateClockEntry, useUpdateClockEntry, useDeleteClockEntry, useGetClockShiftPlanning, getGetClockShiftPlanningQueryKey } from "@workspace/api-client-react";
 import type { ClockEntry, ClockEmployee } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,8 +26,17 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
   const [edit, setEdit] = useState<ClockEntry | "new" | null>(null);
   const [del, setDel] = useState<ClockEntry | null>(null);
   const csv = useClockCsvPreferences(has(P.export));
+  const today = berlinDate(new Date());
+  // The catalog is independent of attendance dates and employee selection.
+  // A single planning day loads all definitions without the 62-day range limit.
+  const shiftParams = { from: today, to: today };
+  const shifts = useGetClockShiftPlanning(shiftParams, { query: {
+    queryKey: getGetClockShiftPlanningQueryKey(shiftParams),
+    enabled: [P.view, P.employees, P.export, P.shifts].some((permission) => has(permission)),
+    staleTime: 10_000, refetchInterval: 30_000, refetchOnWindowFocus: true,
+  } });
 
-  const shiftOptions = useMemo(() => attendanceShiftOptions(entries, shift), [entries, shift]);
+  const shiftOptions = useMemo(() => attendanceShiftOptions(entries, shift, shifts.data?.shifts), [entries, shift, shifts.data?.shifts]);
   const rows = useMemo(() => filterAttendance(entries, { search, status, shift }), [entries, search, status, shift]);
 
   const tot = useMemo(() => {
@@ -78,6 +87,11 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
       </div>
 
       {has(P.export) && csv.query.isLoading && <p className="text-xs text-slate-500">CSV-Einstellungen werden geladen …</p>}
+      {shifts.isLoading && <p className="text-xs text-slate-500">Schichten werden geladen …</p>}
+      {shifts.isError && <div role="alert" className="text-sm text-red-700">
+        Schichten konnten nicht geladen werden: {errMsg(shifts.error)}{" "}
+        <Button size="sm" variant="outline" onClick={() => shifts.refetch()}>Erneut versuchen</Button>
+      </div>}
       {has(P.export) && csv.query.isError && <div role="alert" className="text-sm text-red-700">{errMsg(csv.query.error)} <Button size="sm" variant="outline" onClick={() => csv.query.refetch()}>Erneut versuchen</Button></div>}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">

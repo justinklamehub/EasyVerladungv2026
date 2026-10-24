@@ -5,8 +5,11 @@ export const shiftFilterValue = (name: string) => `shift:${name.trim()}`;
 type ShiftEntry = Pick<ClockEntry, "shiftName">;
 type FilterEntry = Pick<ClockEntry, "shiftName" | "endedAt" | "firstName" | "lastName" | "cardNumber" | "provider" | "activity">;
 
-export function attendanceShiftOptions(entries: readonly ShiftEntry[], selected = "") {
-  const names = new Set(entries.map((entry) => entry.shiftName?.trim() ?? "").filter(Boolean));
+export function attendanceShiftOptions(entries: readonly ShiftEntry[], selected = "", configuredShifts: readonly { name: string }[] = []) {
+  const names = new Set([
+    ...configuredShifts.map((shift) => shift.name.trim()),
+    ...entries.map((entry) => entry.shiftName?.trim() ?? ""),
+  ].filter(Boolean));
   // Preserve an explicit selection when another filter/date range has no matches.
   if (selected.startsWith("shift:")) names.add(selected.slice(6));
   return [...names].sort((a, b) => a.localeCompare(b, "de")).map((name) => ({

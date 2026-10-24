@@ -46,6 +46,18 @@ test("Schichtauswahl enthält historische Namen genau einmal und erhält eine Au
   assert.notEqual(shiftFilterValue("none"), NO_SHIFT);
 });
 
+test("Schichtauswahl lädt Früh-/Spätschicht aus den Schichtdefinitionen, auch ohne Buchungen", () => {
+  const configured = [{ name: "Frühschicht" }, { name: "Spätschicht" }, { name: "Nachtschicht" }];
+  const options = attendanceShiftOptions([], "", configured);
+  assert.deepEqual(options.map((option) => option.label), ["Frühschicht", "Nachtschicht", "Spätschicht"]);
+  assert.equal(options.find((option) => option.label === "Spätschicht")?.value, shiftFilterValue("Spätschicht"));
+  assert.deepEqual(filterAttendance([], { ...filters, shift: shiftFilterValue("Spätschicht") }), []);
+  const historic = attendanceShiftOptions(entries, "", configured);
+  assert.equal(historic.filter((option) => option.label === "Frühschicht").length, 1);
+  assert.ok(historic.some((option) => option.label === "Historische Schicht"));
+  assert.ok(historic.some((option) => option.label === "Nachtschicht"), "Definitionen bleiben auch bei Mitarbeiter-/Zeitraumfilter verfügbar");
+});
+
 test("Wechselschichten derselben Person werden getrennt ausgewertet; CSV und Summen erhalten nur die gefilterten Zeilen", () => {
   const rotating = [base, { ...base, id: 7, shiftName: "Spätschicht", netMinutes: 420 }];
   const before = structuredClone(rotating);
