@@ -25,6 +25,8 @@ import { slaWarning, SlaThresholds, SLA_DEFAULTS } from "@/lib/sla";
 import { resolveWorkViewDates, type ShipmentWorkViewFilters, type WorkViewDate } from "@workspace/api-zod/shipment-work-views";
 import { WorkViewsBar } from "./components/work-views-bar";
 import { useLiveFilters } from "@/lib/live-view-control";
+import { printDeckblatt } from "@/lib/print-deckblatt";
+import { Printer } from "lucide-react";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
@@ -302,6 +304,27 @@ export default function ShipmentsPage() {
   const updateShipment = useUpdateShipment();
   const lockShipment = useLockShipment();
   const unlockShipment = useUnlockShipment();
+  const [printingId, setPrintingId] = useState<number | null>(null);
+
+  async function handlePrintDeckblatt(shipment: Shipment) {
+    if (!isCometUser || printingId !== null) return;
+    setPrintingId(shipment.id);
+    try {
+      const opened = await printDeckblatt({
+        ...shipment,
+        shipmentId: shipment.id,
+        speditionName: shipment.speditionName ?? speditionen?.find((s) => s.id === shipment.speditionId)?.name ?? null,
+        username: user?.username ?? user?.email ?? "—",
+      });
+      if (!opened) return;
+      await updateShipment.mutateAsync({ id: shipment.id, data: { wareStatus: "ausgedruckt" } });
+      await queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+    } catch {
+      toast({ title: "Fehler beim Deckblatt", description: "Deckblatt oder Druckstatus konnte nicht erstellt bzw. gespeichert werden.", variant: "destructive" });
+    } finally {
+      setPrintingId(null);
+    }
+  }
 
   const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
@@ -1093,6 +1116,20 @@ export default function ShipmentsPage() {
                         <span title="Wareneingangsprotokoll vorhanden">
                           <ClipboardCheck className="w-3.5 h-3.5 text-blue-500" />
                         </span>
+                      )}
+                      {isCometUser && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="Deckblatt drucken"
+                          aria-label="Deckblatt drucken"
+                          data-testid={`button-deckblatt-${shipment.id}`}
+                          disabled={printingId !== null}
+                          onClick={(event) => { event.stopPropagation(); void handlePrintDeckblatt(shipment); }}
+                        >
+                          {printingId === shipment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                        </Button>
                       )}
                       {shipment.gesperrtFuerSpedition ? (
                         <Lock className="w-4 h-4 text-red-500" />

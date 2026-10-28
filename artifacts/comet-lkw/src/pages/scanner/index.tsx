@@ -175,8 +175,6 @@ export default function ScannerLandingPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [matchedTyp, setMatchedTyp] = useState<string | null>(null);
   const [, setLocation] = useLocation();
-  const canEinlagerung = true;
-  const canEinlagerungAuftraege = true;
 
   async function doFetch(val: string) {
     setIsSearching(true);
@@ -300,34 +298,6 @@ export default function ScannerLandingPage() {
         <div style={{ fontSize: 12, color: "#64748b", marginTop: 6 }}>FB LOG – 016</div>
       </div>
 
-      {canEinlagerung && (
-        <div style={{ width: "100%", maxWidth: 480, marginBottom: 16 }}>
-          <button
-            style={{ width: "100%", padding: "14px 16px", fontSize: 14, fontWeight: 700, letterSpacing: "0.08em", background: "#ffffff", color: "#0f172a", border: "1px solid #0f172a", borderRadius: 10, cursor: "pointer" }}
-            onClick={() => setLocation("/scanner/einlagerung")}
-            data-testid="button-scanner-einlagerung"
-          >
-            LAGERÜBERSICHT - ARTIKEL / PRIORITÄTEN
-          </button>
-        </div>
-      )}
-      {canEinlagerungAuftraege && (
-        <div style={{ width: "100%", maxWidth: 480, marginBottom: 16 }}>
-          <button
-            style={{ width: "100%", padding: "14px 16px", fontSize: 14, fontWeight: 700, background: "#ffffff", color: "#0f172a", border: "1px solid #0f172a", borderRadius: 10, cursor: "pointer" }}
-            onClick={() => setLocation("/scanner/einlagerung-auftraege")}
-            data-testid="button-scanner-einlagerung-auftraege"
-          >AUFTRÄGE ÜBERSICHT - SUCHEN / VORMERKEN</button>
-        </div>
-      )}
-
-      <div style={{ width: "100%", maxWidth: 480, marginBottom: 16 }}>
-        <button
-          style={{ width: "100%", padding: "14px 16px", fontSize: 14, fontWeight: 700, background: "#ffffff", color: "#0f172a", border: "1px solid #0f172a", borderRadius: 10, cursor: "pointer" }}
-          onClick={() => setLocation("/scanner/werksverkauf-vernichtung")}
-          data-testid="button-scanner-wvvn"
-        >WERKSVERKAUF / VERNICHTUNG</button>
-      </div>
       {/* Blanko-Checkliste direkter Einstieg */}
       <div style={{ width: "100%", maxWidth: 480, marginBottom: 16 }}>
         <button

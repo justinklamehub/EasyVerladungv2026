@@ -537,8 +537,9 @@ export async function printDeckblatt(data: DeckblattData) {
   const win = window.open("", "_blank", "width=900,height=1200");
   if (!win) {
     alert("Popup wurde blockiert. Bitte Popup-Blocker für diese Seite deaktivieren.");
-    return;
+    return false;
   }
   win.document.write(html);
   win.document.close();
+  return true;
 }

@@ -26,10 +26,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, Lock, LockOpen, AlertCircle, AlertTriangle, Pencil, Trash2, ClipboardCheck, Plus, Clock, Printer, ShieldAlert, FileDown, ImageIcon, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Loader2, Lock, LockOpen, AlertCircle, AlertTriangle, Pencil, Trash2, ClipboardCheck, Plus, Clock, ShieldAlert, FileDown, ImageIcon, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { printGefahrgutCheckliste } from "@/lib/print-gefahrgut";
 import { printWareneingangProtokoll } from "@/lib/print-wareneingang";
-import { printDeckblatt } from "@/lib/print-deckblatt";
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
@@ -546,26 +545,6 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
   const isSaving = updateMutation.isPending || createMutation.isPending;
 
-  async function handlePrintDeckblatt() {
-    if (!shipment || !shipmentId) return;
-    const sped = speditionen?.find((s) => s.id === shipment.speditionId);
-    await printDeckblatt({
-      shipmentId: shipment.id,
-      bezeichnung: shipment.bezeichnung,
-      kennzeichen: shipment.kennzeichen,
-      relation: shipment.relation,
-      lkwArt: shipment.lkwArt,
-      etaDate: shipment.etaDate,
-      etaTime: (shipment as any).etaTime,
-      tor: shipment.tor,
-      status: shipment.status,
-      bemerkungen: shipment.bemerkungen,
-      speditionName: (shipment as any).speditionName ?? sped?.name ?? null,
-      username: user?.username ?? user?.email ?? "—",
-    });
-    updateMutation.mutate({ id: shipmentId, data: { wareStatus: "ausgedruckt" } });
-  }
-
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -580,17 +559,6 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                 <Badge variant="outline" className="bg-red-50 text-red-700 border-red-300 flex items-center gap-1">
                   <Lock className="w-3 h-3" />Gesperrt
                 </Badge>
-              )}
-              {isCometUser && isEditing && shipment && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={handlePrintDeckblatt}
-                  title="Deckblatt drucken"
-                >
-                  <Printer className="w-3 h-3 mr-1" />Deckblatt
-                </Button>
               )}
               {canLockPerm && isEditing && (
                 isLocked ? (
