@@ -17,10 +17,7 @@ export interface ClockEntryInput {
      * @nullable
      */
   pauseOverride: number | null;
-  /**
-     * @minLength 3
-     * @maxLength 1000
-     */
-  reason: string;
+  /** @maxLength 1000 */
+  reason?: string;
   expectedUpdatedAt?: string;
 }

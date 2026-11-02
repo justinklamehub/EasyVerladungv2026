@@ -39,11 +39,11 @@ CSV-Spaltenlayouts sind persönliche Einstellungen pro Benutzerkonto, keine glob
 
 **How to apply:** Auswahl, Beschriftung, Reihenfolge und Anzeigeformat getrennt von der Zeitberechnung speichern. CSV-Anpassungen dürfen die zugrunde liegenden Buchungen und Arbeitszeitberechnungen nicht verändern.
 
-Beim Bearbeiten von Zeiten muss die Begründung optional sein.
+Beim Bearbeiten von Zeiten und beim manuellen Erfassen muss die Begründung optional sein.
 
-**Why:** Der Nutzer hat ausdrücklich verlangt, das bisherige Pflichtfeld beim Bearbeiten optional zu machen.
+**Why:** Der Nutzer hat ausdrücklich verlangt, das bisherige Pflichtfeld beim Bearbeiten und anschließend auch bei der manuellen Zeiterfassung optional zu machen.
 
-**How to apply:** Korrekturen auch ohne Begründung zulassen, weiterhin protokollieren. Daraus keine Änderung der Begründungspflicht beim Löschen oder manuellen Anlegen ableiten.
+**How to apply:** Korrekturen und manuelle Zeiterfassung auch ohne Begründung zulassen, weiterhin protokollieren. Die Begründungspflicht beim Löschen bleibt unverändert.
 
 Der optionale Grund soll am Eintrag in der Anwesenheitsübersicht und beim Download sichtbar sein und beim erneuten Bearbeiten vorausgefüllt werden. Explizites Leeren entfernt die aktuelle Notiz, nicht den Änderungsverlauf; ein ausgelassenes Feld darf eine vorhandene Notiz nicht löschen.
 

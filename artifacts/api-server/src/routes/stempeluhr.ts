@@ -184,8 +184,7 @@ async function saveEntry(req: Request, updating: boolean) {
   const b = (updating ? UpdateClockEntryBody : CreateClockEntryBody).parse(req.body);
   z.number().int().positive().parse(b.employeeId);
   if (b.pauseOverride != null) z.number().int().parse(b.pauseOverride);
-  const creationReason = updating ? "" : nonempty(b.reason ?? "", "Begründung");
-  if (!updating && creationReason.length < 3) throw new ClockError("Begründung muss mindestens drei Zeichen enthalten.");
+  const creationReason = b.reason?.trim() ?? "";
   validateRange(dates.startedAt, dates.endedAt);
   const id = updating ? idParam(req) : 0;
   return transaction(async (c) => {

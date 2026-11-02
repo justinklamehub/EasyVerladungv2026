@@ -19,9 +19,16 @@ test("optional correction reasons still have a length limit", () => {
   assert.equal(UpdateClockEntryBody.safeParse({ ...entry, reason: "x".repeat(1001) }).success, false);
 });
 
-test("manual creation and deletion still require a reason", () => {
+test("manual creation accepts omitted, empty and short optional reasons", () => {
+  for (const reason of [undefined, "", " ", "OK", "Zeit nachgetragen"]) {
+    assert.equal(CreateClockEntryBody.safeParse({ ...entry, reason }).success, true);
+  }
+  assert.equal(CreateClockEntryBody.safeParse(entry).success, true);
+  assert.equal(CreateClockEntryBody.safeParse({ ...entry, reason: "x".repeat(1001) }).success, false);
+});
+
+test("deletion still requires a reason", () => {
   for (const reason of [undefined, "", "OK"]) {
-    assert.equal(CreateClockEntryBody.safeParse({ ...entry, reason }).success, false);
     assert.equal(DeleteClockEntryBody.safeParse({ reason, expectedUpdatedAt: "2026-10-19T14:00:00Z" }).success, false);
   }
 });

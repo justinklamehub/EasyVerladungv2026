@@ -1240,7 +1240,6 @@ export const DeleteClockEmployeeParams = zod.object({
 export const createClockEntryBodyPauseOverrideMin = 0;
 export const createClockEntryBodyPauseOverrideMax = 1440;
 
-export const createClockEntryBodyReasonMin = 3;
 export const createClockEntryBodyReasonMax = 1000;
 
 
@@ -1250,7 +1249,7 @@ export const CreateClockEntryBody = zod.object({
   "startedAt": zod.coerce.date(),
   "endedAt": zod.coerce.date().nullable(),
   "pauseOverride": zod.number().min(createClockEntryBodyPauseOverrideMin).max(createClockEntryBodyPauseOverrideMax).nullable(),
-  "reason": zod.string().min(createClockEntryBodyReasonMin).max(createClockEntryBodyReasonMax),
+  "reason": zod.string().max(createClockEntryBodyReasonMax).optional(),
   "expectedUpdatedAt": zod.string().optional()
 })
 
