@@ -36,3 +36,4 @@
 - [Werksverkauf / Vernichtung](wvvn-scope.md) — Gemeinsame Artikel mit Einlagerung, freigeschaltete Scannergeräte und historische offene Listen als Archiv.
 - [Volle Seitenbreite](full-width-layout.md) — Alle Inhaltsseiten und Tabellen sollen die verfügbare Breite nutzen; keine zentrierten Maximalbreiten oder doppelten Seitenabstände.
 - [Kalenderdaten und Zeitzonen](calendar-date-timezones.md) — Reine Datumswerte unverändert übertragen; UTC allein verdeckt Fehler des PostgreSQL-Treibers bei lokaler Mitternacht.
+- [Checklisten-Zuordnung](checklist-assignment-scope.md) — „Checklisten“ meint die Blanko-Zuordnung; Kennzeichensuche muss auch verladene und abgefertigte LKW anbieten.
