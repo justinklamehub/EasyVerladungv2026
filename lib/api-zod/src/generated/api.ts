@@ -2770,6 +2770,118 @@ export const DeleteShipmentParams = zod.object({
 
 
 /**
+ * @summary Get current cover sheet data with shipment.print permission
+ */
+export const GetShipmentDeckblattParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const GetShipmentDeckblattResponse = zod.object({
+  "id": zod.number(),
+  "bezeichnung": zod.string().nullish(),
+  "kennzeichen": zod.string().nullish(),
+  "relation": zod.string().nullish(),
+  "speditionId": zod.number().nullish(),
+  "speditionName": zod.string().nullish(),
+  "subSpedition": zod.string().nullish(),
+  "bemerkungen": zod.string().nullish(),
+  "telefon": zod.string().nullish(),
+  "etaDate": zod.string().nullish(),
+  "etaTime": zod.string().nullish(),
+  "ataDate": zod.string().nullish(),
+  "ataTime": zod.string().nullish(),
+  "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
+  "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
+  "tor": zod.string().nullish(),
+  "cometBearbeitet": zod.boolean(),
+  "gesperrtFuerSpedition": zod.boolean(),
+  "createdBy": zod.number().nullish(),
+  "createdByName": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedBy": zod.number().nullish(),
+  "updatedByName": zod.string().nullish(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Mark cover sheet printed with shipment.print permission
+ */
+export const MarkShipmentPrintedParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const MarkShipmentPrintedResponse = zod.object({
+  "id": zod.number(),
+  "bezeichnung": zod.string().nullish(),
+  "kennzeichen": zod.string().nullish(),
+  "relation": zod.string().nullish(),
+  "speditionId": zod.number().nullish(),
+  "speditionName": zod.string().nullish(),
+  "subSpedition": zod.string().nullish(),
+  "bemerkungen": zod.string().nullish(),
+  "telefon": zod.string().nullish(),
+  "etaDate": zod.string().nullish(),
+  "etaTime": zod.string().nullish(),
+  "ataDate": zod.string().nullish(),
+  "ataTime": zod.string().nullish(),
+  "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
+  "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
+  "tor": zod.string().nullish(),
+  "cometBearbeitet": zod.boolean(),
+  "gesperrtFuerSpedition": zod.boolean(),
+  "createdBy": zod.number().nullish(),
+  "createdByName": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedBy": zod.number().nullish(),
+  "updatedByName": zod.string().nullish(),
+  "updatedAt": zod.string()
+})
+
+
+/**
+ * @summary Advance exactly one status with shipment.advance permission
+ */
+export const AdvanceShipmentStatusParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const AdvanceShipmentStatusBody = zod.object({
+  "expectedStatus": zod.enum(['Angemeldet', 'Angekommen', 'in Verladung'])
+})
+
+export const AdvanceShipmentStatusResponse = zod.object({
+  "id": zod.number(),
+  "bezeichnung": zod.string().nullish(),
+  "kennzeichen": zod.string().nullish(),
+  "relation": zod.string().nullish(),
+  "speditionId": zod.number().nullish(),
+  "speditionName": zod.string().nullish(),
+  "subSpedition": zod.string().nullish(),
+  "bemerkungen": zod.string().nullish(),
+  "telefon": zod.string().nullish(),
+  "etaDate": zod.string().nullish(),
+  "etaTime": zod.string().nullish(),
+  "ataDate": zod.string().nullish(),
+  "ataTime": zod.string().nullish(),
+  "lkwArt": zod.union([zod.literal('Container'),zod.literal('Anlieferung'),zod.literal('Abholung'),zod.literal('Retoure'),zod.literal('Sattelzug'),zod.literal('Wechselbrücke'),zod.literal('Sonstige'),zod.literal('Korrektur'),zod.literal(null)]).nullish(),
+  "status": zod.enum(['Angemeldet', 'Erwartet', 'Angekommen', 'Verladen', 'Abgefertigt', 'Storniert']),
+  "wareStatus": zod.string().nullish(),
+  "tor": zod.string().nullish(),
+  "cometBearbeitet": zod.boolean(),
+  "gesperrtFuerSpedition": zod.boolean(),
+  "createdBy": zod.number().nullish(),
+  "createdByName": zod.string().nullish(),
+  "createdAt": zod.string(),
+  "updatedBy": zod.number().nullish(),
+  "updatedByName": zod.string().nullish(),
+  "updatedAt": zod.string()
+})
+
+
+/**
  * @summary Lock shipment for spedition
  */
 export const LockShipmentParams = zod.object({

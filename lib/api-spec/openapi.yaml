@@ -1546,6 +1546,71 @@ paths:
         "200":
           description: Deleted
 
+  /shipments/{id}/deckblatt:
+    get:
+      operationId: getShipmentDeckblatt
+      tags: [shipments]
+      summary: Get current cover sheet data with shipment.print permission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Authorized cover sheet data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "403":
+          description: Printing not permitted
+  /shipments/{id}/printed:
+    post:
+      operationId: markShipmentPrinted
+      tags: [shipments]
+      summary: Mark cover sheet printed with shipment.print permission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: Shipment marked printed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "403":
+          description: Printing not permitted
+  /shipments/{id}/advance-status:
+    post:
+      operationId: advanceShipmentStatus
+      tags: [shipments]
+      summary: Advance exactly one status with shipment.advance permission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ShipmentStatusAdvanceInput"
+      responses:
+        "200":
+          description: Shipment advanced one step
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Shipment"
+        "403":
+          description: Advancing not permitted
+        "409":
+          description: Status changed concurrently or no next status exists
   /shipments/{id}/lock:
     post:
       operationId: lockShipment
@@ -2430,6 +2495,13 @@ components:
           description: Laufzeit für neue Terminalfreigaben in Stunden; null bedeutet unbegrenzt.
         debounceSeconds: { type: integer, minimum: 5, maximum: 120 }
         updatedAt: { type: string }
+    ShipmentStatusAdvanceInput:
+      type: object
+      required: [expectedStatus]
+      properties:
+        expectedStatus:
+          type: string
+          enum: [Angemeldet, Angekommen, in Verladung]
     ClockEntryInput:
       type: object
       required: [employeeId, startedAt, endedAt, pauseOverride]

@@ -23,6 +23,7 @@ import { DeliveryReportCard } from "./delivery-report-card";
 import { ServerOperationsCard } from "./server-operations-card";
 import { MaintenanceModeCard } from "./maintenance-mode-card";
 import { ShipmentRefreshCard } from "./shipment-refresh-card";
+import { ShipmentActionPermissionsCard } from "./shipment-action-permissions-card";
 import { SHIPMENT_REFRESH_KEY } from "@workspace/api-zod/shipment-refresh";
 import { getGetMaintenanceStatusQueryKey } from "@workspace/api-client-react";
 
@@ -2258,6 +2259,7 @@ export default function SettingsPage() {
 
         {/* ── Tab: Allgemein ── */}
         <TabsContent value="allgemein" className="space-y-5 mt-0">
+          <ShipmentActionPermissionsCard />
           <ShipmentRefreshCard value={s[SHIPMENT_REFRESH_KEY]} onSave={handleSave} isSaving={isSavingKey(SHIPMENT_REFRESH_KEY)} />
           {SECTIONS.map((section) => {
             const SectionIcon = section.icon;

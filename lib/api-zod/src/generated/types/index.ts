@@ -129,6 +129,8 @@ export * from './shipmentInputLkwArt';
 export * from './shipmentInputStatus';
 export * from './shipmentLkwArt';
 export * from './shipmentStatus';
+export * from './shipmentStatusAdvanceInput';
+export * from './shipmentStatusAdvanceInputExpectedStatus';
 export * from './shipmentUpdate';
 export * from './shipmentUpdateLkwArt';
 export * from './shipmentUpdateStatus';

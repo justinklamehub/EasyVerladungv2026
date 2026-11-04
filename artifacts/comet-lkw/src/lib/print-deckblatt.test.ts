@@ -44,3 +44,18 @@ test("blocked popup does not generate a QR or report printing success", async (t
   assert.equal(await printDeckblatt({ shipmentId: 42, username: "Test" }), false);
   assert.equal(qr.mock.callCount(), 0);
 });
+
+test("authorization failure closes the reserved popup without rendering a cover sheet", async (t) => {
+  const write = t.mock.fn();
+  const close = t.mock.fn();
+  const originalWindow = Object.getOwnPropertyDescriptor(globalThis, "window");
+  Object.defineProperty(globalThis, "window", { configurable: true, value: {
+    open: () => ({ closed: false, close, document: { title: "", write, close() {} } }),
+  } });
+  t.after(() => {
+    if (originalWindow) Object.defineProperty(globalThis, "window", originalWindow); else Reflect.deleteProperty(globalThis, "window");
+  });
+  await assert.rejects(printDeckblatt({ shipmentId: 71, username: "Test" }, async () => { throw new Error("Keine Berechtigung"); }), /Keine Berechtigung/);
+  assert.equal(close.mock.callCount(), 1);
+  assert.equal(write.mock.callCount(), 0);
+});

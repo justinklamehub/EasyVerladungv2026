@@ -531,6 +531,19 @@ export interface ClockSettings {
   updatedAt: string;
 }
 
+export type ShipmentStatusAdvanceInputExpectedStatus = typeof ShipmentStatusAdvanceInputExpectedStatus[keyof typeof ShipmentStatusAdvanceInputExpectedStatus];
+
+
+export const ShipmentStatusAdvanceInputExpectedStatus = {
+  Angemeldet: 'Angemeldet',
+  Angekommen: 'Angekommen',
+  in_Verladung: 'in Verladung',
+} as const;
+
+export interface ShipmentStatusAdvanceInput {
+  expectedStatus: ShipmentStatusAdvanceInputExpectedStatus;
+}
+
 export interface ClockEntryInput {
   employeeId: number;
   startedAt: string;

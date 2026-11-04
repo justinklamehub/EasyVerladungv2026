@@ -27,6 +27,8 @@ export type Permission =
   | "pallet.delete"
   | "shipment.create"
   | "shipment.edit"
+  | "shipment.print"
+  | "shipment.advance"
   | "shipment.delete"
   | "shipment.lock"
   | "shipment.reschedule"
@@ -93,6 +95,8 @@ export const ALL_PERMISSIONS: Permission[] = [
   "pallet.delete",
   "shipment.create",
   "shipment.edit",
+  "shipment.print",
+  "shipment.advance",
   "shipment.delete",
   "shipment.lock",
   "shipment.reschedule",
@@ -176,6 +180,8 @@ export const PERMISSION_LABELS: Record<Permission, { label: string; category: st
   "pallet.delete":        { label: "Buchung löschen",         category: "Palettenbuchungen" },
   "shipment.create":      { label: "Sendung erstellen",       category: "Verladungen" },
   "shipment.edit":        { label: "Sendung bearbeiten",      category: "Verladungen" },
+  "shipment.print":       { label: "Deckblatt drucken (Tabellenbutton)", category: "Verladungen" },
+  "shipment.advance":     { label: "Weiter: nächsten Verladungsstatus setzen", category: "Verladungen" },
   "shipment.delete":      { label: "Sendung löschen",         category: "Verladungen" },
   "shipment.lock":        { label: "Sendung sperren",         category: "Verladungen" },
   "shipment.reschedule":  { label: "Datum verschieben (DnD)", category: "Verladungen" },
@@ -235,6 +241,11 @@ export function invalidatePermissionsCache() {
 
 /** Ensures every role has a row for every permission (new perms default to false). */
 export async function seedMissingPermissions(): Promise<void> {
+  // Preserve previous cover-sheet access. Explicit saved denials are never overwritten.
+  await db.execute(sql`INSERT INTO role_permissions (role, permission, allowed)
+    SELECT role_key, 'shipment.print', true FROM roles
+    WHERE role_key IN ('comet_lager', 'comet_leitstand')
+    ON CONFLICT (role, permission) DO NOTHING`);
   for (const permission of ALL_PERMISSIONS.filter((p) => p.startsWith("einlagerung."))) {
     const defaults = permission === "einlagerung.view"
       ? ["comet_lager", "comet_leitstand", "comet_viewer"]

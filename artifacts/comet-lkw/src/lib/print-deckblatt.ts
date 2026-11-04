@@ -40,7 +40,7 @@ function escHtml(str: string): string {
     .replace(/"/g, "&quot;");
 }
 
-export async function printDeckblatt(data: DeckblattData) {
+export async function printDeckblatt(data: DeckblattData, loadAuthorizedData?: () => Promise<DeckblattData>) {
   // Capture the clicked shipment before any async work or live table refresh.
   data = { ...data };
   const win = window.open("", "_blank", "width=900,height=1200");
@@ -48,6 +48,17 @@ export async function printDeckblatt(data: DeckblattData) {
     alert("Popup wurde blockiert. Bitte Popup-Blocker für diese Seite deaktivieren.");
     return false;
   }
+  if (loadAuthorizedData) {
+    try {
+      const authorized = await loadAuthorizedData();
+      if (authorized.shipmentId !== data.shipmentId) throw new Error("Die Deckblattdaten gehören nicht zur angeklickten Verladung.");
+      data = { ...authorized };
+    } catch (error) {
+      win.close();
+      throw error;
+    }
+  }
+  if (win.closed) return false;
   win.document.title = `Deckblatt ${data.kennzeichen || data.bezeichnung || data.shipmentId}`;
   const now = new Date();
   const printTs = format(now, "dd.MM.yyyy HH:mm:ss", { locale: de });

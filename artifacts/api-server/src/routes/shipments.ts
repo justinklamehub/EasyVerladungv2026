@@ -1,4 +1,6 @@
-import { Router } from "express";
+import { Router, type Request, type Response } from "express";
+import { AdvanceShipmentStatusBody } from "@workspace/api-zod";
+import { nextShipmentStatus, isInternalShipmentActionRole, SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION } from "@workspace/api-zod/shipment-actions";
 import { db, pool } from "@workspace/db";
 import {
   shipmentsTable,
@@ -11,6 +13,7 @@ import {
 import { eq, and, gte, sql } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
+import { shipmentArrivalFields } from "../lib/shipment-arrival";
 import { emitToRooms } from "../lib/socket-emit";
 import { can } from "../lib/permissions";
 import { notify } from "../lib/notify";
@@ -470,18 +473,49 @@ router.get("/shipments/:id", requireAuth, async (req, res) => {
   }
 });
 
-router.patch("/shipments/:id", requireAuth, async (req, res) => {
+router.get("/shipments/:id/deckblatt", requireAuth, async (req, res) => {
+  try {
+    if (!isInternalShipmentActionRole(req.session.role!) || !(await can(req.session.role!, SHIPMENT_PRINT_PERMISSION))) {
+      return res.status(403).json({ error: "Keine Berechtigung zum Deckblattdruck" });
+    }
+    const id = Number(req.params.id);
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: "Ungültige Verladungs-ID" });
+    const [shipment] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, id)).limit(1);
+    if (!shipment) return res.status(404).json({ error: "Verladung nicht gefunden" });
+    return res.json(await buildShipmentResponse(shipment));
+  } catch (err) {
+    req.log.error({ err }, "Deckblattdaten konnten nicht geladen werden");
+    return res.status(500).json({ error: "Deckblattdaten konnten nicht geladen werden" });
+  }
+});
+
+router.patch("/shipments/:id", requireAuth, (req, res) => updateShipment(req, res, "edit"));
+router.post("/shipments/:id/printed", requireAuth, (req, res) => updateShipment(req, res, "print"));
+router.post("/shipments/:id/advance-status", requireAuth, (req, res) => updateShipment(req, res, "advance"));
+
+async function updateShipment(req: Request, res: Response, action: "edit" | "print" | "advance") {
   try {
     const role = req.session.role!;
     const sessionSpeditionId = req.session.speditionId;
     const id = Number(req.params.id);
 
-    if (!(await can(role, "shipment.edit"))) {
+    const permission = action === "print" ? SHIPMENT_PRINT_PERMISSION : action === "advance" ? SHIPMENT_ADVANCE_PERMISSION : "shipment.edit";
+    if ((action !== "edit" && !isInternalShipmentActionRole(role)) || !(await can(role, permission))) {
       return res.status(403).json({ error: "Keine Berechtigung" });
     }
+    if (!Number.isSafeInteger(id) || id <= 0) return res.status(400).json({ error: "Ungültige Verladungs-ID" });
 
     const [existing] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, id)).limit(1);
     if (!existing) return res.status(404).json({ error: "Not found" });
+    let nextStatus: string | null = null;
+    if (action === "advance") {
+      const input = AdvanceShipmentStatusBody.safeParse(req.body);
+      if (!input.success) return res.status(400).json({ error: "Gültiger Ausgangsstatus erforderlich" });
+      nextStatus = nextShipmentStatus(existing.status);
+      if (input.data.expectedStatus !== existing.status || !nextStatus) {
+        return res.status(409).json({ error: "Der Status hat sich bereits geändert oder es gibt keinen nächsten Status. Bitte Ansicht aktualisieren." });
+      }
+    }
 
     if (SPED_ROLES.includes(role)) {
       const { readIds, writeIds } = await getSpeditionAccess(sessionSpeditionId ?? null);
@@ -508,10 +542,20 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
     const COMET_ALLOWED = [...SPED_ALLOWED, "status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet", "speditionId", "subSpedition"];
     const allowedFields = isCometUser ? COMET_ALLOWED : SPED_ALLOWED;
 
+    const changedAt = new Date();
     const updates: Record<string, any> = {};
-    for (const field of allowedFields) {
-      if ((req.body as Record<string, any>)[field] !== undefined) {
-        updates[field] = (req.body as Record<string, any>)[field];
+    if (action === "print") {
+      updates.wareStatus = "ausgedruckt";
+    } else if (action === "advance") {
+      updates.status = nextStatus;
+      if (existing.status === "Angemeldet" && nextStatus === "Angekommen") {
+        Object.assign(updates, shipmentArrivalFields(changedAt));
+      }
+    } else {
+      for (const field of allowedFields) {
+        if ((req.body as Record<string, any>)[field] !== undefined) {
+          updates[field] = (req.body as Record<string, any>)[field];
+        }
       }
     }
 
@@ -525,16 +569,17 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
 
     const isStatusChange = updates.status !== undefined && updates.status !== existing.status;
     if (isStatusChange) {
-      updates.statusChangedAt = new Date();
+      updates.statusChangedAt = changedAt;
     }
     updates.updatedBy = req.session.userId;
-    updates.updatedAt = new Date();
+    updates.updatedAt = changedAt;
 
     const [shipment] = await db
       .update(shipmentsTable)
       .set(updates)
-      .where(eq(shipmentsTable.id, id))
+      .where(action === "advance" ? and(eq(shipmentsTable.id, id), eq(shipmentsTable.status, existing.status)) : eq(shipmentsTable.id, id))
       .returning();
+    if (!shipment) return res.status(409).json({ error: "Der Status wurde gleichzeitig geändert. Bitte Ansicht aktualisieren." });
 
     // Clear SLA notification records so they can re-fire on the new status
     if (isStatusChange) {
@@ -606,7 +651,7 @@ router.patch("/shipments/:id", requireAuth, async (req, res) => {
     console.error(err);
     return res.status(500).json({ error: "Internal server error" });
   }
-});
+}
 
 router.delete("/shipments/:id", requireAuth, async (req, res) => {
   try {

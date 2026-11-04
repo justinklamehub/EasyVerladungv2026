@@ -99,6 +99,7 @@ import type {
   SendWvvnReports200,
   Shipment,
   ShipmentInput,
+  ShipmentStatusAdvanceInput,
   ShipmentUpdate,
   ShipmentWorkViewsPreference,
   ShipmentWorkViewsPreferenceInput,
@@ -7169,6 +7170,225 @@ export const useDeleteShipment = <TError = ErrorType<unknown>,
         TContext
       > => {
       return useMutation(getDeleteShipmentMutationOptions(options));
+    }
+
+export const getGetShipmentDeckblattUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/deckblatt`
+}
+
+/**
+ * @summary Get current cover sheet data with shipment.print permission
+ */
+export const getShipmentDeckblatt = async (id: number, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getGetShipmentDeckblattUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetShipmentDeckblattQueryKey = (id: number,) => {
+    return [
+    `/api/shipments/${id}/deckblatt`
+    ] as const;
+    }
+
+
+export const getGetShipmentDeckblattQueryOptions = <TData = Awaited<ReturnType<typeof getShipmentDeckblatt>>, TError = ErrorType<void>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentDeckblatt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetShipmentDeckblattQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getShipmentDeckblatt>>> = ({ signal }) => getShipmentDeckblatt(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(id), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getShipmentDeckblatt>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetShipmentDeckblattQueryResult = NonNullable<Awaited<ReturnType<typeof getShipmentDeckblatt>>>
+export type GetShipmentDeckblattQueryError = ErrorType<void>
+
+
+/**
+ * @summary Get current cover sheet data with shipment.print permission
+ */
+
+export function useGetShipmentDeckblatt<TData = Awaited<ReturnType<typeof getShipmentDeckblatt>>, TError = ErrorType<void>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getShipmentDeckblatt>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetShipmentDeckblattQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getMarkShipmentPrintedUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/printed`
+}
+
+/**
+ * @summary Mark cover sheet printed with shipment.print permission
+ */
+export const markShipmentPrinted = async (id: number, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getMarkShipmentPrintedUrl(id),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+export const getMarkShipmentPrintedMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markShipmentPrinted>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof markShipmentPrinted>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['markShipmentPrinted'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof markShipmentPrinted>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  markShipmentPrinted(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type MarkShipmentPrintedMutationResult = NonNullable<Awaited<ReturnType<typeof markShipmentPrinted>>>
+
+    export type MarkShipmentPrintedMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark cover sheet printed with shipment.print permission
+ */
+export const useMarkShipmentPrinted = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof markShipmentPrinted>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof markShipmentPrinted>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getMarkShipmentPrintedMutationOptions(options));
+    }
+
+export const getAdvanceShipmentStatusUrl = (id: number,) => {
+
+
+
+
+  return `/api/shipments/${id}/advance-status`
+}
+
+/**
+ * @summary Advance exactly one status with shipment.advance permission
+ */
+export const advanceShipmentStatus = async (id: number,
+    shipmentStatusAdvanceInput: ShipmentStatusAdvanceInput, options?: RequestInit): Promise<Shipment> => {
+
+  return customFetch<Shipment>(getAdvanceShipmentStatusUrl(id),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      shipmentStatusAdvanceInput,)
+  }
+);}
+
+
+
+
+export const getAdvanceShipmentStatusMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof advanceShipmentStatus>>, TError,{id: number;data: BodyType<ShipmentStatusAdvanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof advanceShipmentStatus>>, TError,{id: number;data: BodyType<ShipmentStatusAdvanceInput>}, TContext> => {
+
+const mutationKey = ['advanceShipmentStatus'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof advanceShipmentStatus>>, {id: number;data: BodyType<ShipmentStatusAdvanceInput>}> = (props) => {
+          const {id,data} = props ?? {};
+
+          return  advanceShipmentStatus(id,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdvanceShipmentStatusMutationResult = NonNullable<Awaited<ReturnType<typeof advanceShipmentStatus>>>
+    export type AdvanceShipmentStatusMutationBody = BodyType<ShipmentStatusAdvanceInput>
+    export type AdvanceShipmentStatusMutationError = ErrorType<void>
+
+    /**
+ * @summary Advance exactly one status with shipment.advance permission
+ */
+export const useAdvanceShipmentStatus = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof advanceShipmentStatus>>, TError,{id: number;data: BodyType<ShipmentStatusAdvanceInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof advanceShipmentStatus>>,
+        TError,
+        {id: number;data: BodyType<ShipmentStatusAdvanceInput>},
+        TContext
+      > => {
+      return useMutation(getAdvanceShipmentStatusMutationOptions(options));
     }
 
 export const getLockShipmentUrl = (id: number,) => {

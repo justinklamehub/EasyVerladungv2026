@@ -26,8 +26,10 @@ import { resolveWorkViewDates, type ShipmentWorkViewFilters, type WorkViewDate }
 import { WorkViewsBar } from "./components/work-views-bar";
 import { useLiveFilters } from "@/lib/live-view-control";
 import { printDeckblatt } from "@/lib/print-deckblatt";
-import { Printer } from "lucide-react";
+import { Printer, ChevronsRight } from "lucide-react";
 import { stableShipmentComparison } from "./stable-sort";
+import { SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION, nextShipmentStatus, isInternalShipmentActionRole } from "@workspace/api-zod/shipment-actions";
+import { getShipmentDeckblatt, useMarkShipmentPrinted, useAdvanceShipmentStatus, getGetShipmentQueryKey, getGetShipmentHistoryQueryKey, type ShipmentStatusAdvanceInput } from "@workspace/api-client-react";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
@@ -142,6 +144,8 @@ export default function ShipmentsPage() {
   const canCreate = !!permissions["shipment.create"];
   const canEdit   = !!permissions["shipment.edit"];
   const canLock   = !!permissions["shipment.lock"];
+  const canPrint = isInternalShipmentActionRole(role) && !!permissions[SHIPMENT_PRINT_PERMISSION];
+  const canAdvance = isInternalShipmentActionRole(role) && !!permissions[SHIPMENT_ADVANCE_PERMISSION];
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("__all__");
@@ -306,9 +310,22 @@ export default function ShipmentsPage() {
   const lockShipment = useLockShipment();
   const unlockShipment = useUnlockShipment();
   const [printingId, setPrintingId] = useState<number | null>(null);
+  const [advancingId, setAdvancingId] = useState<number | null>(null);
+  const actionBusy = useRef(false);
+  const markPrinted = useMarkShipmentPrinted();
+  const advanceStatus = useAdvanceShipmentStatus();
+
+  async function invalidateShipmentAction(id: number) {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() }),
+      queryClient.invalidateQueries({ queryKey: getGetShipmentQueryKey(id) }),
+      queryClient.invalidateQueries({ queryKey: getGetShipmentHistoryQueryKey(id) }),
+    ]);
+  }
 
   async function handlePrintDeckblatt(shipment: Shipment) {
-    if (!isCometUser || printingId !== null) return;
+    if (!canPrint || actionBusy.current) return;
+    actionBusy.current = true;
     setPrintingId(shipment.id);
     try {
       const opened = await printDeckblatt({
@@ -316,14 +333,36 @@ export default function ShipmentsPage() {
         shipmentId: shipment.id,
         speditionName: shipment.speditionName ?? speditionen?.find((s) => s.id === shipment.speditionId)?.name ?? null,
         username: user?.username ?? user?.email ?? "—",
+      }, async () => {
+        const current = await getShipmentDeckblatt(shipment.id);
+        return { ...current, shipmentId: current.id, username: user?.username ?? user?.email ?? "—" };
       });
       if (!opened) return;
-      await updateShipment.mutateAsync({ id: shipment.id, data: { wareStatus: "ausgedruckt" } });
-      await queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
+      await markPrinted.mutateAsync({ id: shipment.id });
+      await invalidateShipmentAction(shipment.id);
     } catch {
       toast({ title: "Fehler beim Deckblatt", description: "Deckblatt oder Druckstatus konnte nicht erstellt bzw. gespeichert werden.", variant: "destructive" });
     } finally {
       setPrintingId(null);
+      actionBusy.current = false;
+    }
+  }
+
+  async function handleAdvanceShipment(shipment: Shipment) {
+    const nextStatus = nextShipmentStatus(shipment.status);
+    if (!canAdvance || !nextStatus || actionBusy.current) return;
+    actionBusy.current = true;
+    setAdvancingId(shipment.id);
+    try {
+      await advanceStatus.mutateAsync({ id: shipment.id, data: { expectedStatus: shipment.status as ShipmentStatusAdvanceInput["expectedStatus"] } });
+      await invalidateShipmentAction(shipment.id);
+      toast({ title: `Status auf „${nextStatus}“ gesetzt` });
+    } catch {
+      await invalidateShipmentAction(shipment.id);
+      toast({ title: "Status konnte nicht weitergesetzt werden", description: "Berechtigung oder Ausgangsstatus hat sich möglicherweise geändert. Die Ansicht wurde aktualisiert.", variant: "destructive" });
+    } finally {
+      setAdvancingId(null);
+      actionBusy.current = false;
     }
   }
 
@@ -1118,7 +1157,7 @@ export default function ShipmentsPage() {
                           <ClipboardCheck className="w-3.5 h-3.5 text-blue-500" />
                         </span>
                       )}
-                      {isCometUser && (
+                      {canPrint && (
                         <Button
                           size="icon"
                           variant="ghost"
@@ -1126,10 +1165,24 @@ export default function ShipmentsPage() {
                           title="Deckblatt drucken"
                           aria-label="Deckblatt drucken"
                           data-testid={`button-deckblatt-${shipment.id}`}
-                          disabled={printingId !== null}
+                          disabled={printingId !== null || advancingId !== null}
                           onClick={(event) => { event.stopPropagation(); void handlePrintDeckblatt(shipment); }}
                         >
                           {printingId === shipment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                        </Button>
+                      )}
+                      {canAdvance && (
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7"
+                          title={nextShipmentStatus(shipment.status) ? `Weiter zu „${nextShipmentStatus(shipment.status)}“` : "Kein nächster Status in der Weiter-Folge"}
+                          aria-label={nextShipmentStatus(shipment.status) ? `Weiter zu ${nextShipmentStatus(shipment.status)}` : "Weiter – kein nächster Status"}
+                          data-testid={`button-advance-shipment-${shipment.id}`}
+                          disabled={!nextShipmentStatus(shipment.status) || printingId !== null || advancingId !== null}
+                          onClick={(event) => { event.stopPropagation(); void handleAdvanceShipment(shipment); }}
+                        >
+                          {advancingId === shipment.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronsRight className="w-4 h-4" />}
                         </Button>
                       )}
                       {shipment.gesperrtFuerSpedition ? (
