@@ -3181,6 +3181,10 @@ components:
       type: object
       required: [id, name, kuerzel, status, createdAt]
       properties:
+        canCreateShipment:
+          type: boolean
+          readOnly: true
+          description: Eigene Spedition oder empfangene Bearbeitungsfreigabe. Das Rollenrecht shipment.create ist zusätzlich erforderlich.
         id:
           type: integer
         name:

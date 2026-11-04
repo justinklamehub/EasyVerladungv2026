@@ -72,22 +72,7 @@ const COMET_OPERATIVE_FIELDS = ["status", "tor", "ataDate", "ataTime", "gesperrt
 const COMET_ROLES = ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"];
 const SPED_ROLES = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"];
 
-interface SpedAccess {
-  readIds: number[];
-  writeIds: number[];
-}
-
-async function getSpeditionAccess(sessionSpeditionId: number | null): Promise<SpedAccess> {
-  if (!sessionSpeditionId) return { readIds: [], writeIds: [] };
-  const permissions = await db
-    .select()
-    .from(speditionPermissionsTable)
-    .where(eq(speditionPermissionsTable.receivingSpeditionId, sessionSpeditionId));
-  const active = permissions.filter((p) => p.permissionLevel === "view" || p.permissionLevel === "edit");
-  const readIds = [sessionSpeditionId, ...active.map((p) => p.grantingSpeditionId)];
-  const writeIds = [sessionSpeditionId, ...active.filter((p) => p.permissionLevel === "edit").map((p) => p.grantingSpeditionId)];
-  return { readIds, writeIds };
-}
+import { getSpeditionAccess } from "../lib/spedition-access";
 
 async function buildShipmentResponse(shipment: any) {
   const speds = await db.select().from(speditionenTable);
@@ -190,8 +175,11 @@ router.post("/shipments", requireAuth, async (req, res) => {
     const body = req.body;
     const targetSpeditionId = body.speditionId || sessionSpeditionId || null;
 
-    if (SPED_ROLES.includes(role) && targetSpeditionId !== sessionSpeditionId) {
-      return res.status(403).json({ error: "Forbidden: cannot create shipment for another spedition" });
+    if (SPED_ROLES.includes(role)) {
+      const { writeIds } = await getSpeditionAccess(sessionSpeditionId ?? null);
+      if (!writeIds.includes(targetSpeditionId)) {
+        return res.status(403).json({ error: "Keine Bearbeitungsfreigabe zum Anlegen für diese Spedition." });
+      }
     }
 
     if (targetSpeditionId) {
@@ -339,16 +327,21 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
     const sessionSpeditionId = req.session.speditionId;
 
     if (SPED_ROLES.includes(role)) {
+      const { writeIds } = await getSpeditionAccess(sessionSpeditionId ?? null);
       const invalid = shipments.some(
-        (s: any) => s.speditionId && s.speditionId !== sessionSpeditionId,
+        (s: any) => !writeIds.includes(s.speditionId || sessionSpeditionId || null),
       );
       if (invalid) {
-        return res.status(403).json({ error: "Forbidden: spedition users can only bulk-create for own spedition" });
+        return res.status(403).json({ error: "Keine Bearbeitungsfreigabe zum Anlegen für mindestens eine der ausgewählten Speditionen." });
       }
     }
 
-    const bulkSpeditionId = shipments[0]?.speditionId || sessionSpeditionId || null;
-    if (bulkSpeditionId) {
+    const countsBySpedition = new Map<number, number>();
+    for (const shipment of shipments) {
+      const targetId = shipment.speditionId || sessionSpeditionId || null;
+      if (targetId) countsBySpedition.set(targetId, (countsBySpedition.get(targetId) ?? 0) + 1);
+    }
+    for (const [bulkSpeditionId, requestedCount] of countsBySpedition) {
       const effectiveLimit = await getEffectiveDailyLimit(bulkSpeditionId);
       if (effectiveLimit != null) {
         const todayStart = new Date();
@@ -364,9 +357,9 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
             error: `Tageslimit erreicht: Diese Spedition darf maximal ${effectiveLimit} Verladung${effectiveLimit !== 1 ? "en" : ""} pro Tag anlegen.`,
           });
         }
-        if (shipments.length > remaining) {
+        if (requestedCount > remaining) {
           return res.status(429).json({
-            error: `Tageslimit überschritten: Noch ${remaining} von ${effectiveLimit} Verladung${effectiveLimit !== 1 ? "en" : ""} heute möglich, aber ${shipments.length} angefordert.`,
+            error: `Tageslimit überschritten: Noch ${remaining} von ${effectiveLimit} Verladung${effectiveLimit !== 1 ? "en" : ""} heute möglich, aber ${requestedCount} angefordert.`,
           });
         }
       }

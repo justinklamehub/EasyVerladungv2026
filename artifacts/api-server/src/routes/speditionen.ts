@@ -4,6 +4,7 @@ import { speditionenTable, speditionPermissionsTable, speditionContactsTable, sp
 import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
+import { getSpeditionAccess } from "../lib/spedition-access";
 import { emitToRooms } from "../lib/socket-emit";
 import type { Server as IOServer } from "socket.io";
 
@@ -45,7 +46,14 @@ function mapSpedition(r: any) {
 router.get("/speditionen", requireAuth, async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM speditionen ORDER BY name");
-    return res.json(result.rows.map(mapSpedition));
+    const isSpedition = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"].includes(req.session.role!);
+    const { writeIds } = isSpedition
+      ? await getSpeditionAccess(req.session.speditionId ?? null)
+      : { writeIds: [] };
+    return res.json(result.rows.map((row) => ({
+      ...mapSpedition(row),
+      canCreateShipment: !isSpedition || writeIds.includes(row.id),
+    })));
   } catch (err) {
     return res.status(500).json({ error: "Internal server error" });
   }

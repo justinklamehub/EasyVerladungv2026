@@ -496,7 +496,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                   </th>
                   {isCometUser && <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[120px]">Tor</th>}
                   {isCometUser && <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[120px]">Status</th>}
-                  {isCometUser && (
+                  {(isCometUser || isSpedUser) && (
                     <th className="sticky top-0 bg-slate-50 text-left px-2 py-2 text-xs font-semibold text-slate-600 border-b border-slate-200 min-w-[160px]">
                       Spedition <span className="text-red-500">*</span>
                     </th>
@@ -580,12 +580,12 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                           </Select>
                         </td>
                       )}
-                      {isCometUser && (
+                      {(isCometUser || isSpedUser) && (
                         <td className="px-1 py-1.5 border-b border-slate-100">
-                          <Select value={row.speditionId} onValueChange={(v) => updateRow(row.id, "speditionId", v)}>
+                          <Select value={row.speditionId || (isSpedUser && user?.speditionId ? String(user.speditionId) : "")} onValueChange={(v) => updateRow(row.id, "speditionId", v)}>
                             <SelectTrigger className={cn("h-8 text-sm", rowErrors?.has("speditionId") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Spedition" /></SelectTrigger>
                             <SelectContent>
-                              {(speditionen ?? []).map((s) => (
+                              {(speditionen ?? []).filter(s => isCometUser || s.id === user?.speditionId || s.canCreateShipment).map((s) => (
                                 <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>
                               ))}
                             </SelectContent>
@@ -604,9 +604,9 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                       )}
                       <td className="px-1 py-1.5 border-b border-slate-100">
                         {(() => {
-                          const spedId = isCometUser
-                            ? (row.speditionId ? parseInt(row.speditionId, 10) : null)
-                            : (user?.speditionId ?? null);
+                          const spedId = row.speditionId
+                            ? parseInt(row.speditionId, 10)
+                            : (isSpedUser ? user?.speditionId ?? null : null);
                           const listId = spedId ? `relation-datalist-${spedId}` : undefined;
                           return (
                             <Input

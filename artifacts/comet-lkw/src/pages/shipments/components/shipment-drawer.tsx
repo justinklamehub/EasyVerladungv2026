@@ -504,6 +504,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
       data.speditionId = form.speditionId ? parseInt(form.speditionId) : undefined;
       data.subSpedition = form.subSpedition || null;
     }
+    if (!isEditing && isSpedUser) {
+      data.speditionId = form.speditionId ? parseInt(form.speditionId) : user?.speditionId;
+    }
     if (isEditing && shipmentId) {
       updateMutation.mutate({ id: shipmentId, data });
     } else {
@@ -642,13 +645,13 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
             </TabsList>
 
             <TabsContent value="details" className="space-y-4">
-              {isCometUser && canEditPerm && (
+              {((isCometUser && canEditPerm) || (!isEditing && isSpedUser)) && (
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Spedition {!isEditing && <span className="text-red-500">*</span>}</Label>
                   <Select value={form.speditionId} onValueChange={v => { setForm(f => ({ ...f, speditionId: v })); setFormErrors(prev => { if (!prev.has("speditionId")) return prev; const next = new Set(prev); next.delete("speditionId"); return next; }); }}>
                     <SelectTrigger className={cn("h-9", formErrors.has("speditionId") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Spedition wählen" /></SelectTrigger>
                     <SelectContent>
-                      {speditionen?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                      {speditionen?.filter(s => isCometUser || s.id === user?.speditionId || s.canCreateShipment).map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>
