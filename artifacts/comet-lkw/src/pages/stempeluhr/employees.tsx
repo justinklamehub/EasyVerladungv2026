@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { useToast } from "@/hooks/use-toast";
 import { CreditCard, Pencil, Plus, Trash2, UserX } from "lucide-react";
 import { errMsg, esc, openPrint, useInvalidateClock } from "./lib";
+import { selectedCardEmployees, toggleVisibleCards } from "./card-selection";
 
 export function Employees({ employees, entries, canEdit }: { employees: ClockEmployee[]; entries: ClockEntry[]; canEdit: boolean }) {
   const { toast } = useToast();
@@ -17,9 +18,14 @@ export function Employees({ employees, entries, canEdit }: { employees: ClockEmp
   const update = useUpdateClockEmployee(); const remove = useDeleteClockEmployee();
   const [q, setQ] = useState(""); const [edit, setEdit] = useState<ClockEmployee | "new" | null>(null);
   const [del, setDel] = useState<ClockEmployee | null>(null); const [err, setErr] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const list = useMemo(() => employees.filter((e) => `${e.firstName} ${e.lastName} ${e.cardNumber} ${e.provider} ${e.activity}`.toLowerCase().includes(q.trim().toLowerCase())), [employees, q]);
+  const selected = useMemo(() => selectedCardEmployees(employees, selectedIds), [employees, selectedIds]);
+  const visibleSelected = list.filter((e) => selectedIds.has(e.id)).length;
+  const activeCards = list.filter((e) => e.active);
 
   const cards = async (items: ClockEmployee[]) => {
+    if (!items.length) return;
     try {
       const mod = await import("jsbarcode"); const JsBarcode = (mod as any).default ?? mod;
       const html = items.map((e) => {
@@ -45,16 +51,25 @@ export function Employees({ employees, entries, canEdit }: { employees: ClockEmp
     <div className="space-y-4">
       <div className="flex flex-wrap gap-2 items-end">
         <div className="flex-1 min-w-[10rem]"><Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Mitarbeiter suchen" data-testid="input-employee-search" /></div>
-        {canEdit && <Button variant="outline" onClick={() => cards(list.filter((e) => e.active))} disabled={!list.length} data-testid="button-print-cards"><CreditCard className="w-4 h-4 mr-1" />Karten drucken</Button>}
+        {canEdit && <Button variant="outline" onClick={() => cards(selected.length ? selected : activeCards)} disabled={!selected.length && !activeCards.length} data-testid="button-print-cards"><CreditCard className="w-4 h-4 mr-1" />{selected.length ? `Ausgewählte Karten drucken (${selected.length})` : "Alle aktiven Karten drucken"}</Button>}
         {canEdit && <Button onClick={() => setEdit("new")} data-testid="button-new-employee"><Plus className="w-4 h-4 mr-1" />Mitarbeiter</Button>}
       </div>
+      {canEdit && selected.length > 0 && <div className="flex flex-wrap items-center gap-2 text-sm" data-testid="card-selection-summary">
+        <span>{selected.length} Mitarbeiter ausgewählt{selected.length > visibleSelected ? ` (${selected.length - visibleSelected} außerhalb der Suche)` : ""}.</span>
+        <Button size="sm" variant="ghost" onClick={() => setSelectedIds(new Set())} data-testid="button-clear-card-selection">Auswahl aufheben</Button>
+      </div>}
       {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2" data-testid="text-employee-error">{err}</div>}
       <div className="rounded-lg border bg-white overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs text-slate-500"><tr>{["Name", "Karte", "Dienstleister", "Tätigkeit", "Status", ""].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
+          <thead className="bg-slate-50 text-left text-xs text-slate-500"><tr>
+            {canEdit && <th className="px-3 py-2 w-10"><Checkbox aria-label="Alle angezeigten Mitarbeiter auswählen" data-testid="checkbox-card-select-all" disabled={!list.length} checked={list.length > 0 && visibleSelected === list.length ? true : visibleSelected > 0 ? "indeterminate" : false} onCheckedChange={() => setSelectedIds((current) => toggleVisibleCards(current, list))} /></th>}
+            {["Name", "Karte", "Dienstleister", "Tätigkeit", "Status", ""].map((h) => <th key={h} className="px-3 py-2 font-medium">{h}</th>)}</tr></thead>
           <tbody>
             {list.map((e) => (
               <tr key={e.id} className="border-t" data-testid={`row-employee-${e.id}`}>
+                {canEdit && <td className="px-3 py-2"><Checkbox aria-label={`Karte für ${e.firstName} ${e.lastName} auswählen`} data-testid={`checkbox-card-${e.id}`} checked={selectedIds.has(e.id)} onCheckedChange={(checked) => setSelectedIds((current) => {
+                  const next = new Set(current); if (checked === true) next.add(e.id); else next.delete(e.id); return next;
+                })} /></td>}
                 <td className="px-3 py-2 font-medium">{e.lastName}, {e.firstName}</td>
                 <td className="px-3 py-2 font-mono">{e.cardNumber}</td><td className="px-3 py-2">{e.provider}</td><td className="px-3 py-2">{e.activity}</td>
                 <td className="px-3 py-2">{e.active ? <Badge variant="secondary">Aktiv</Badge> : <Badge variant="outline">Inaktiv</Badge>}</td>
@@ -64,7 +79,7 @@ export function Employees({ employees, entries, canEdit }: { employees: ClockEmp
                   <Button size="icon" variant="ghost" aria-label={e.active ? "Deaktivieren" : "Aktivieren"} onClick={() => deactivate(e)} data-testid={`button-toggle-employee-${e.id}`}><UserX className="w-4 h-4" /></Button>
                   <Button size="icon" variant="ghost" aria-label="Löschen" onClick={() => setDel(e)} data-testid={`button-delete-employee-${e.id}`}><Trash2 className="w-4 h-4 text-red-600" /></Button></>}</td>
               </tr>))}
-            {!list.length && <tr><td colSpan={6} className="px-3 py-10 text-center text-slate-500">Keine Mitarbeiter.</td></tr>}
+            {!list.length && <tr><td colSpan={canEdit ? 7 : 6} className="px-3 py-10 text-center text-slate-500">Keine Mitarbeiter.</td></tr>}
           </tbody>
         </table>
       </div>

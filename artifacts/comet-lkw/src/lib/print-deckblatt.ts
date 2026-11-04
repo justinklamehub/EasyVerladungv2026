@@ -41,6 +41,14 @@ function escHtml(str: string): string {
 }
 
 export async function printDeckblatt(data: DeckblattData) {
+  // Capture the clicked shipment before any async work or live table refresh.
+  data = { ...data };
+  const win = window.open("", "_blank", "width=900,height=1200");
+  if (!win) {
+    alert("Popup wurde blockiert. Bitte Popup-Blocker für diese Seite deaktivieren.");
+    return false;
+  }
+  win.document.title = `Deckblatt ${data.kennzeichen || data.bezeichnung || data.shipmentId}`;
   const now = new Date();
   const printTs = format(now, "dd.MM.yyyy HH:mm:ss", { locale: de });
   const lkwId = formatLkwId(data.shipmentId);
@@ -52,7 +60,8 @@ export async function printDeckblatt(data: DeckblattData) {
     margin: 1,
     color: { dark: "#0f172a", light: "#ffffff" },
     errorCorrectionLevel: "M",
-  });
+  }).catch((error) => { win.close(); throw error; });
+  if (win.closed) return false;
 
   /*
    * Seitenaufbau — alle Höhen explizit in mm
@@ -534,11 +543,6 @@ export async function printDeckblatt(data: DeckblattData) {
 </body>
 </html>`;
 
-  const win = window.open("", "_blank", "width=900,height=1200");
-  if (!win) {
-    alert("Popup wurde blockiert. Bitte Popup-Blocker für diese Seite deaktivieren.");
-    return false;
-  }
   win.document.write(html);
   win.document.close();
   return true;

@@ -74,3 +74,9 @@ Der Schichtfilter soll Früh-/Spätschicht beziehungsweise die im Tab „Schicht
 **Why:** Der Nutzer hat die ursprüngliche, nur aus Buchungen erzeugte Auswahl ausdrücklich korrigiert.
 
 **How to apply:** Die Auswahl unabhängig von Zeitraum und Mitarbeiter aus den Schichtdefinitionen laden. Historische Schichtnamen zusätzlich erhalten; alte Buchungen nicht nach aktuellen Plänen umdeuten.
+
+Mitarbeiterkarten müssen auch über eine Mehrfachauswahl gemeinsam druckbar sein.
+
+**Why:** Der Nutzer verlangt die Mehrfachselektion im Mitarbeiter-Tab für den Kartendruck.
+
+**How to apply:** Einzelkartendruck erhalten. Eine Auswahl über Suchwechsel hinweg erhalten und außerhalb der Suche ausgewählte Mitarbeiter ausdrücklich mitzählen; „Alle auswählen“ betrifft die angezeigten Treffer.

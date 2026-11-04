@@ -27,6 +27,7 @@ import { WorkViewsBar } from "./components/work-views-bar";
 import { useLiveFilters } from "@/lib/live-view-control";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { Printer } from "lucide-react";
+import { stableShipmentComparison } from "./stable-sort";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
@@ -399,7 +400,7 @@ export default function ShipmentsPage() {
           ? (b.ataDate ?? "") + " " + (b.ataTime ?? "")
           : (b.etaDate ?? "9999-99-99") + " " + (b.etaTime ?? "99:99");
         const cmp = aKey.localeCompare(bKey, "de");
-        return sortDir === "asc" ? cmp : -cmp;
+        return stableShipmentComparison(cmp, a.id, b.id, sortDir);
       }
       let av: string = "";
       let bv: string = "";
@@ -408,7 +409,7 @@ export default function ShipmentsPage() {
       else if (sortField === "tor") { av = a.tor ?? ""; bv = b.tor ?? ""; }
       else if (sortField === "speditionName") { av = a.speditionName ?? ""; bv = b.speditionName ?? ""; }
       const cmp = av.localeCompare(bv, "de");
-      return sortDir === "asc" ? cmp : -cmp;
+      return stableShipmentComparison(cmp, a.id, b.id, sortDir);
     });
   }, [shipments, sortField, sortDir, showAbgefertigt, showStorniert, filterStatus]);
 
