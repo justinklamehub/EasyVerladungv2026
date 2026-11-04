@@ -2460,6 +2460,8 @@ export const DeleteUserParams = zod.object({
  * @summary List freight companies
  */
 export const ListSpeditionenResponseItem = zod.object({
+  "allowedLkwArtIds": zod.array(zod.number()).nullish().describe('Null erlaubt alle aktiven LKW-Arten, eine leere Liste keine.'),
+  "canCreateShipment": zod.boolean().optional().describe('Eigene Spedition oder empfangene Bearbeitungsfreigabe. Das Rollenrecht shipment.create ist zusätzlich erforderlich.'),
   "id": zod.number(),
   "name": zod.string(),
   "kuerzel": zod.string(),
@@ -2476,7 +2478,11 @@ export const ListSpeditionenResponse = zod.array(ListSpeditionenResponseItem)
 /**
  * @summary Create freight company
  */
+
+
+
 export const CreateSpeditionBody = zod.object({
+  "allowedLkwArtIds": zod.array(zod.number().min(1)).nullish(),
   "name": zod.string(),
   "kuerzel": zod.string(),
   "ansprechpartner": zod.string().nullish(),
@@ -2495,6 +2501,8 @@ export const GetSpeditionParams = zod.object({
 })
 
 export const GetSpeditionResponse = zod.object({
+  "allowedLkwArtIds": zod.array(zod.number()).nullish().describe('Null erlaubt alle aktiven LKW-Arten, eine leere Liste keine.'),
+  "canCreateShipment": zod.boolean().optional().describe('Eigene Spedition oder empfangene Bearbeitungsfreigabe. Das Rollenrecht shipment.create ist zusätzlich erforderlich.'),
   "id": zod.number(),
   "name": zod.string(),
   "kuerzel": zod.string(),
@@ -2514,7 +2522,11 @@ export const UpdateSpeditionParams = zod.object({
   "id": zod.coerce.number()
 })
 
+
+
+
 export const UpdateSpeditionBody = zod.object({
+  "allowedLkwArtIds": zod.array(zod.number().min(1)).nullish(),
   "name": zod.string().optional(),
   "kuerzel": zod.string().optional(),
   "ansprechpartner": zod.string().nullish(),
@@ -2525,6 +2537,8 @@ export const UpdateSpeditionBody = zod.object({
 })
 
 export const UpdateSpeditionResponse = zod.object({
+  "allowedLkwArtIds": zod.array(zod.number()).nullish().describe('Null erlaubt alle aktiven LKW-Arten, eine leere Liste keine.'),
+  "canCreateShipment": zod.boolean().optional().describe('Eigene Spedition oder empfangene Bearbeitungsfreigabe. Das Rollenrecht shipment.create ist zusätzlich erforderlich.'),
   "id": zod.number(),
   "name": zod.string(),
   "kuerzel": zod.string(),

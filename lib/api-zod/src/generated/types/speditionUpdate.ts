@@ -8,6 +8,8 @@
 import type { SpeditionUpdateStatus } from './speditionUpdateStatus';
 
 export interface SpeditionUpdate {
+  /** @nullable */
+  allowedLkwArtIds?: number[] | null;
   name?: string;
   kuerzel?: string;
   /** @nullable */

@@ -19,6 +19,7 @@ export const speditionenTable = pgTable("speditionen", {
   fixkostenProFahrt: doublePrecision("fixkosten_pro_fahrt"),
   mautProKm: doublePrecision("maut_pro_km"),
   dailyShipmentLimit: integer("daily_shipment_limit"),
+  allowedLkwArtIds: integer("allowed_lkw_art_ids").array(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

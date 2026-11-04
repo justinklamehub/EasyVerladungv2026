@@ -1407,6 +1407,13 @@ export const SpeditionStatus = {
 } as const;
 
 export interface Spedition {
+  /**
+     * Null erlaubt alle aktiven LKW-Arten, eine leere Liste keine.
+     * @nullable
+     */
+  allowedLkwArtIds?: number[] | null;
+  /** Eigene Spedition oder empfangene Bearbeitungsfreigabe. Das Rollenrecht shipment.create ist zusätzlich erforderlich. */
+  readonly canCreateShipment?: boolean;
   id: number;
   name: string;
   kuerzel: string;
@@ -1431,6 +1438,8 @@ export const SpeditionInputStatus = {
 } as const;
 
 export interface SpeditionInput {
+  /** @nullable */
+  allowedLkwArtIds?: number[] | null;
   name: string;
   kuerzel: string;
   /** @nullable */
@@ -1453,6 +1462,8 @@ export const SpeditionUpdateStatus = {
 } as const;
 
 export interface SpeditionUpdate {
+  /** @nullable */
+  allowedLkwArtIds?: number[] | null;
   name?: string;
   kuerzel?: string;
   /** @nullable */

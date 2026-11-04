@@ -8,6 +8,13 @@
 import type { SpeditionStatus } from './speditionStatus';
 
 export interface Spedition {
+  /**
+     * Null erlaubt alle aktiven LKW-Arten, eine leere Liste keine.
+     * @nullable
+     */
+  allowedLkwArtIds?: number[] | null;
+  /** Eigene Spedition oder empfangene Bearbeitungsfreigabe. Das Rollenrecht shipment.create ist zusätzlich erforderlich. */
+  readonly canCreateShipment?: boolean;
   id: number;
   name: string;
   kuerzel: string;

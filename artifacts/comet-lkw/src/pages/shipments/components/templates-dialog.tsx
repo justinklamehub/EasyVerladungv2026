@@ -9,10 +9,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
 import { Loader2, Plus, Trash2, Pencil, X, BookTemplate, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLkwArten, selectableLkwArten } from "@/hooks/use-lkw-arten";
 
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
-const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen"];
 
@@ -82,6 +82,7 @@ export function TemplatesDialog({ open, onOpenChange, onLoadToMassenanlage }: Pr
 
   // All active speditionen (used by comet users)
   const { data: allSpeditionen = [] } = useListSpeditionen();
+  const { data: lkwArten } = useLkwArten(open);
 
   // Speditionen available to spedition users (own + granted via permissions)
   const { data: grantedSpeditionen = [] } = useQuery<{ id: number; name: string }[]>({
@@ -350,7 +351,7 @@ export function TemplatesDialog({ open, onOpenChange, onLoadToMassenanlage }: Pr
                     <SelectTrigger className="h-8 text-sm"><SelectValue placeholder="Wählen…" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="__none__">— keine —</SelectItem>
-                      {LKW_ART_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                      {selectableLkwArten(lkwArten, isCometUser ? null : allSpeditionen.find(s => s.id === Number(form.speditionId || user?.speditionId))?.allowedLkwArtIds).map((type) => <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>)}
                     </SelectContent>
                   </Select>
                 </div>

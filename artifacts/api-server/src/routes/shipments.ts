@@ -73,6 +73,7 @@ const COMET_ROLES = ["comet_admin", "comet_leitstand", "comet_lager", "comet_vie
 const SPED_ROLES = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"];
 
 import { getSpeditionAccess } from "../lib/spedition-access";
+import { allowedSpeditionLkwArten } from "../lib/spedition-lkw-arten";
 
 async function buildShipmentResponse(shipment: any) {
   const speds = await db.select().from(speditionenTable);
@@ -179,6 +180,10 @@ router.post("/shipments", requireAuth, async (req, res) => {
       const { writeIds } = await getSpeditionAccess(sessionSpeditionId ?? null);
       if (!writeIds.includes(targetSpeditionId)) {
         return res.status(403).json({ error: "Keine Bearbeitungsfreigabe zum Anlegen für diese Spedition." });
+      }
+      const types = await allowedSpeditionLkwArten(sessionSpeditionId ?? null, targetSpeditionId);
+      if (!types.some((type) => type.name === body.lkwArt)) {
+        return res.status(403).json({ error: "Diese LKW-Art ist für die Spedition nicht freigegeben." });
       }
     }
 
@@ -333,6 +338,13 @@ router.post("/shipments/bulk", requireAuth, async (req, res) => {
       );
       if (invalid) {
         return res.status(403).json({ error: "Keine Bearbeitungsfreigabe zum Anlegen für mindestens eine der ausgewählten Speditionen." });
+      }
+      const targets = [...new Set<number>(shipments.map((s: any) => s.speditionId || sessionSpeditionId))];
+      for (const target of targets) {
+        const types = await allowedSpeditionLkwArten(sessionSpeditionId ?? null, target);
+        if (shipments.some((s: any) => (s.speditionId || sessionSpeditionId) === target && !types.some((type) => type.name === s.lkwArt))) {
+          return res.status(403).json({ error: "Mindestens eine LKW-Art ist für die ausgewählte Spedition nicht freigegeben." });
+        }
       }
     }
 
@@ -526,6 +538,12 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
       }
       if (existing.ataDate) {
         return res.status(403).json({ error: "Sendung kann nicht mehr bearbeitet werden, da ATA bereits eingetragen ist" });
+      }
+      if (req.body.lkwArt !== undefined && req.body.lkwArt !== existing.lkwArt) {
+        const types = await allowedSpeditionLkwArten(sessionSpeditionId ?? null, existing.speditionId);
+        if (!types.some((type) => type.name === req.body.lkwArt)) {
+          return res.status(403).json({ error: "Diese LKW-Art ist für die Spedition nicht freigegeben." });
+        }
       }
     }
 

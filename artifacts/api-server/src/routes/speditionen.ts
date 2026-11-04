@@ -5,6 +5,9 @@ import { eq, and } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { getSpeditionAccess } from "../lib/spedition-access";
+import { z } from "zod/v4";
+
+const allowedLkwArtIdsSchema = z.array(z.number().int().positive()).nullable();
 import { emitToRooms } from "../lib/socket-emit";
 import type { Server as IOServer } from "socket.io";
 
@@ -38,6 +41,7 @@ function mapSpedition(r: any) {
     fixkostenProFahrt: r.fixkosten_pro_fahrt ?? r.fixkostenProFahrt ?? null,
     mautProKm: r.maut_pro_km ?? r.mautProKm ?? null,
     dailyShipmentLimit: r.daily_shipment_limit ?? r.dailyShipmentLimit ?? null,
+    allowedLkwArtIds: r.allowed_lkw_art_ids ?? r.allowedLkwArtIds ?? null,
     createdAt: r.created_at ?? r.createdAt,
     updatedAt: r.updated_at ?? r.updatedAt,
   };
@@ -47,9 +51,9 @@ router.get("/speditionen", requireAuth, async (req, res) => {
   try {
     const result = await pool.query("SELECT * FROM speditionen ORDER BY name");
     const isSpedition = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"].includes(req.session.role!);
-    const { writeIds } = isSpedition
-      ? await getSpeditionAccess(req.session.speditionId ?? null)
-      : { writeIds: [] };
+    const writeIds: number[] = isSpedition
+      ? (await getSpeditionAccess(req.session.speditionId ?? null)).writeIds
+      : [];
     return res.json(result.rows.map((row) => ({
       ...mapSpedition(row),
       canCreateShipment: !isSpedition || writeIds.includes(row.id),
@@ -63,6 +67,9 @@ router.post("/speditionen", requireAuth, async (req, res) => {
   try {
     if (req.session.role !== "comet_admin") {
       return res.status(403).json({ error: "Nur COMET Admin kann Speditionen anlegen" });
+    }
+    if (req.body.allowedLkwArtIds !== undefined && !allowedLkwArtIdsSchema.safeParse(req.body.allowedLkwArtIds).success) {
+      return res.status(400).json({ error: "Ungültige LKW-Arten-Auswahl" });
     }
     const { name, kuerzel, ansprechpartner, email, telefon, status, bemerkungen, palletFaktor,
             preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm,
@@ -79,6 +86,7 @@ router.post("/speditionen", requireAuth, async (req, res) => {
         fixkostenProFahrt: fixkostenProFahrt != null ? Number(fixkostenProFahrt) : null,
         mautProKm: mautProKm != null ? Number(mautProKm) : null,
         dailyShipmentLimit: dailyShipmentLimit != null && dailyShipmentLimit !== "" ? Number(dailyShipmentLimit) : null,
+        allowedLkwArtIds: req.body.allowedLkwArtIds ?? null,
       })
       .returning();
     if (speditionsnummer !== undefined) {
@@ -118,6 +126,11 @@ router.patch("/speditionen/:id", requireAuth, async (req, res) => {
             preisProKm, mindestpreisProFahrt, palettenAufschlag, kraftstoffzuschlagProzent, fixkostenProFahrt, mautProKm,
             dailyShipmentLimit, speditionsnummer } = req.body;
     const updates: any = {};
+    if (req.body.allowedLkwArtIds !== undefined) {
+      const parsed = allowedLkwArtIdsSchema.safeParse(req.body.allowedLkwArtIds);
+      if (!parsed.success) return res.status(400).json({ error: "Ungültige LKW-Arten-Auswahl" });
+      updates.allowedLkwArtIds = parsed.data;
+    }
     if (name !== undefined) updates.name = name;
     if (kuerzel !== undefined) updates.kuerzel = kuerzel;
     if (ansprechpartner !== undefined) updates.ansprechpartner = ansprechpartner;
@@ -142,6 +155,11 @@ router.patch("/speditionen/:id", requireAuth, async (req, res) => {
     }
     const fresh = await pool.query("SELECT * FROM speditionen WHERE id=$1", [id]);
     await logAudit(req.session.userId!, "spedition", id, "updated", null, JSON.stringify(updates));
+    if (getIO(req)) {
+      const receivers = await db.select({ id: speditionPermissionsTable.receivingSpeditionId })
+        .from(speditionPermissionsTable).where(eq(speditionPermissionsTable.grantingSpeditionId, id));
+      emit(req, "permission.updated", { speditionId: id }, id, receivers.map((row) => row.id));
+    }
     return res.json(fresh.rows[0] ?? sped);
   } catch (err) {
     console.error(err);

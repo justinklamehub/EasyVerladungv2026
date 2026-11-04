@@ -13,6 +13,7 @@ import { Loader2, Plus, Trash2, AlertCircle, Upload, Download, TriangleAlert } f
 import { cn } from "@/lib/utils";
 
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
+import { useLkwArten, selectableLkwArten } from "@/hooks/use-lkw-arten";
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen"];
 
@@ -161,6 +162,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { data: speditionen } = useListSpeditionen();
+  const { data: lkwArtenData, isLoading: lkwArtenLoading, isError: lkwArtenError } = useLkwArten(open);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const isCometUser = ["comet_admin", "comet_leitstand", "comet_lager"].includes(user?.role ?? "");
@@ -247,7 +249,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   const uniqueSpedIds = useMemo(() => {
     const ids = new Set<number>();
     if (isSpedUser && user?.speditionId) ids.add(user.speditionId);
-    if (isCometUser) {
+    if (isCometUser || isSpedUser) {
       rows.forEach((r) => { if (r.speditionId) ids.add(parseInt(r.speditionId, 10)); });
     }
     return [...ids];
@@ -287,7 +289,15 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   });
 
   const updateRow = (id: number, field: keyof RowData, value: string) => {
-    setRows((prev) => prev.map((r) => (r.id === id ? { ...r, [field]: value } : r)));
+    setRows((prev) => prev.map((r) => {
+      if (r.id !== id) return r;
+      const next = { ...r, [field]: value };
+      if (field === "speditionId") {
+        const allowed = selectableLkwArten(lkwArtenData, isCometUser ? null : speditionen?.find(s => s.id === Number(value))?.allowedLkwArtIds);
+        if (!allowed.some(type => type.name === r.lkwArt)) next.lkwArt = "";
+      }
+      return next;
+    }));
     if (value.trim()) {
       setFieldErrors((prev) => {
         if (!prev.has(id)) return prev;
@@ -357,10 +367,15 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
   >(null);
 
   const handleSubmit = () => {
+    if (lkwArtenLoading || lkwArtenError) {
+      toast({ title: lkwArtenError ? "LKW-Arten konnten nicht geladen werden" : "LKW-Arten werden noch geladen", variant: "destructive" });
+      return;
+    }
     const invalid = new Map<number, Set<keyof RowData>>();
     for (const row of rows) {
       const missing = new Set<keyof RowData>();
-      if (!row.lkwArt) missing.add("lkwArt");
+      const allowedIds = isCometUser ? null : speditionen?.find(s => s.id === Number(row.speditionId || user?.speditionId))?.allowedLkwArtIds;
+      if (!selectableLkwArten(lkwArtenData, allowedIds).some(type => type.name === row.lkwArt)) missing.add("lkwArt");
       if (!row.relation.trim()) missing.add("relation");
       if (!row.etaDate) missing.add("etaDate");
       if (!row.etaTime) missing.add("etaTime");
@@ -371,7 +386,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
       setFieldErrors(invalid);
       toast({
         title: "Bitte alle Pflichtfelder ausfüllen",
-        description: `LKW-Art, Relation, ETA Datum & Uhrzeit${isCometUser ? " sowie Spedition" : ""} sind erforderlich.`,
+        description: `Eine freigegebene LKW-Art, Relation, ETA Datum & Uhrzeit${isCometUser ? " sowie Spedition" : ""} sind erforderlich.`,
         variant: "destructive",
       });
       return;
@@ -540,7 +555,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
                         <Select value={row.lkwArt} onValueChange={(v) => updateRow(row.id, "lkwArt", v)}>
                           <SelectTrigger className={cn("h-8 text-sm", rowErrors?.has("lkwArt") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Art wählen" /></SelectTrigger>
                           <SelectContent>
-                            {LKW_ART_OPTIONS.map((o) => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                            {selectableLkwArten(lkwArtenData, isCometUser ? null : speditionen?.find(s => s.id === Number(row.speditionId || user?.speditionId))?.allowedLkwArtIds).map((type) => <SelectItem key={type.id} value={type.name}>{type.name}</SelectItem>)}
                           </SelectContent>
                         </Select>
                       </td>

@@ -3181,6 +3181,11 @@ components:
       type: object
       required: [id, name, kuerzel, status, createdAt]
       properties:
+        allowedLkwArtIds:
+          type: ["array", "null"]
+          items:
+            type: integer
+          description: Null erlaubt alle aktiven LKW-Arten, eine leere Liste keine.
         canCreateShipment:
           type: boolean
           readOnly: true
@@ -3209,6 +3214,11 @@ components:
       type: object
       required: [name, kuerzel]
       properties:
+        allowedLkwArtIds:
+          type: ["array", "null"]
+          items:
+            type: integer
+            minimum: 1
         name:
           type: string
         kuerzel:
@@ -3228,6 +3238,11 @@ components:
     SpeditionUpdate:
       type: object
       properties:
+        allowedLkwArtIds:
+          type: ["array", "null"]
+          items:
+            type: integer
+            minimum: 1
         name:
           type: string
         kuerzel:

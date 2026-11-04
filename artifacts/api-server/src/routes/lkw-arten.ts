@@ -2,10 +2,12 @@ import { Router } from "express";
 import { db, pool } from "@workspace/db";
 import { lkwArtenTable } from "@workspace/db/schema";
 import { eq, asc } from "drizzle-orm";
+import { allowedSpeditionLkwArten, SPEDITION_ROLES } from "../lib/spedition-lkw-arten";
 
 const router = Router();
 
 export async function ensureLkwArtenTable() {
+  await pool.query("ALTER TABLE speditionen ADD COLUMN IF NOT EXISTS allowed_lkw_art_ids INTEGER[]");
   await pool.query(`
     CREATE TABLE IF NOT EXISTS lkw_arten (
       id SERIAL PRIMARY KEY,
@@ -30,6 +32,10 @@ async function seedDefaultLkwArten() {
 
 router.get("/lkw-arten", async (req, res) => {
   try {
+    if (SPEDITION_ROLES.includes(req.session.role ?? "")) {
+      const rows = await allowedSpeditionLkwArten(req.session.speditionId ?? null);
+      return res.json(rows.sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name)));
+    }
     const rows = await db
       .select()
       .from(lkwArtenTable)

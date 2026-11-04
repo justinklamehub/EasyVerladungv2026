@@ -23,6 +23,7 @@ import { Loader2, Trash2, Plus } from "lucide-react";
 import { ContactsTab } from "./contacts-tab";
 import { LimitsTab } from "./limits-tab";
 import { RelationenTab } from "./relationen-tab";
+import { LkwArtenSelection } from "./lkw-arten-selection";
 
 interface Spedition {
   id: number;
@@ -41,6 +42,7 @@ interface Spedition {
   fixkostenProFahrt?: number | null;
   mautProKm?: number | null;
   dailyShipmentLimit?: number | null;
+  allowedLkwArtIds?: number[] | null;
 }
 
 interface SpeditionDialogProps {
@@ -55,6 +57,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
   const { toast } = useToast();
   const { data: allSpeditionen } = useListSpeditionen();
   const isEditing = !!editSpedition;
+  const [allowedLkwArtIds, setAllowedLkwArtIds] = useState<number[] | null>(null);
 
   const [form, setForm] = useState({
     name: "", kuerzel: "", ansprechpartner: "", email: "", telefon: "", status: "aktiv", bemerkungen: "", palletFaktor: 1,
@@ -65,6 +68,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
 
   useEffect(() => {
     if (open) {
+      setAllowedLkwArtIds(editSpedition?.allowedLkwArtIds ?? null);
       if (editSpedition) {
         setForm({
           name: editSpedition.name || "",
@@ -116,6 +120,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListSpeditionenQueryKey() });
+        queryClient.invalidateQueries({ queryKey: ["lkw-arten"] });
         toast({ title: "Spedition gespeichert" });
         onOpenChange(false);
       },
@@ -154,6 +159,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
     const toInt = (v: string) => v.trim() === "" ? null : parseInt(v, 10);
     const payload = {
       ...form,
+      allowedLkwArtIds,
       preisProKm: toNum(form.preisProKm),
       mindestpreisProFahrt: toNum(form.mindestpreisProFahrt),
       palettenAufschlag: toNum(form.palettenAufschlag),
@@ -332,13 +338,13 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
+      <DialogContent className="w-[calc(100vw-2rem)] min-w-0 sm:max-w-2xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{isEditing ? `${editSpedition!.name} bearbeiten` : "Neue Spedition"}</DialogTitle>
+          <DialogTitle className="break-words pr-5">{isEditing ? `${editSpedition!.name} bearbeiten` : "Neue Spedition"}</DialogTitle>
         </DialogHeader>
 
-        <Tabs defaultValue="stamm">
-          <TabsList className="mb-4 w-full">
+        <Tabs defaultValue="stamm" className="min-w-0 w-full">
+          <TabsList className="mb-4 grid h-auto w-full grid-cols-2 sm:flex">
             <TabsTrigger value="stamm" className="flex-1">Stammdaten</TabsTrigger>
             <TabsTrigger value="tarife" className="flex-1">Tarife</TabsTrigger>
             {isEditing && <TabsTrigger value="kontakte" className="flex-1">Ansprechpartner</TabsTrigger>}
@@ -407,6 +413,7 @@ export function SpeditionDialog({ open, onOpenChange, editSpedition, permissions
                 </p>
               </div>
             </div>
+            <LkwArtenSelection value={allowedLkwArtIds} onChange={setAllowedLkwArtIds} enabled={open} />
           </TabsContent>
 
           <TabsContent value="tarife" className="space-y-3">

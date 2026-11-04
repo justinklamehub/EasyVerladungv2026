@@ -132,7 +132,10 @@ export function useSocket() {
     socket.on("pallet_balance.updated", invalidateDashboard);
 
     // Permission / Spedition events
-    const invalidateSpeditionen = () => queryClient.invalidateQueries({ queryKey: getListSpeditionenQueryKey() });
+    const invalidateSpeditionen = () => {
+      queryClient.invalidateQueries({ queryKey: getListSpeditionenQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["lkw-arten"] });
+    };
     socket.on("permission.updated", invalidateSpeditionen);
 
     // User events

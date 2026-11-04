@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -158,7 +158,7 @@ interface ShipmentDrawerProps {
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
-const FALLBACK_LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
+import { useLkwArten, selectableLkwArten } from "@/hooks/use-lkw-arten";
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
 
 export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawerProps) {
@@ -194,15 +194,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
   const { data: speditionen } = useListSpeditionen();
 
-  const { data: lkwArtenData } = useQuery<{ id: number; name: string; aktiv: boolean }[]>({
-    queryKey: ["lkw-arten"],
-    queryFn: () => fetch(`${API_BASE}/lkw-arten`, { credentials: "include" }).then((r) => r.json()),
-    staleTime: 60_000,
-  });
-  const lkwArtOptions = useMemo(() => {
-    if (!lkwArtenData?.length) return FALLBACK_LKW_ART_OPTIONS;
-    return lkwArtenData.filter((a) => a.aktiv).map((a) => a.name);
-  }, [lkwArtenData]);
+  const { data: lkwArtenData, isError: lkwArtenError, isLoading: lkwArtenLoading } = useLkwArten(open);
   const { data: austraege } = useListLkwAustraege(shipmentId || undefined, {
     query: { enabled: !!shipmentId && open && isCometUser, queryKey: getListLkwAustraegeQueryKey(shipmentId || undefined) },
   });
@@ -459,6 +451,8 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   });
 
   const spedIdForSuggestions = parseInt(form.speditionId || "0", 10) || null;
+  const targetAllowedIds = isCometUser ? null : speditionen?.find(s => s.id === spedIdForSuggestions)?.allowedLkwArtIds;
+  const lkwArtOptions = selectableLkwArten(lkwArtenData, targetAllowedIds).map(type => type.name);
   const { data: relationenSuggestions } = useQuery<{ id: number; name: string; kuerzel: string | null }[]>({
     queryKey: ["spedition-relationen", spedIdForSuggestions],
     queryFn: () => customFetch(`/api/speditionen/${spedIdForSuggestions}/relationen`),
@@ -515,6 +509,10 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   };
 
   const handleSave = () => {
+    if ((!isEditing || form.lkwArt !== shipment?.lkwArt) && !lkwArtOptions.includes(form.lkwArt)) {
+      toast({ title: lkwArtenError ? "LKW-Arten konnten nicht geladen werden" : "Bitte eine freigegebene LKW-Art auswählen", variant: "destructive" });
+      return;
+    }
     if (!isEditing) {
       const missing = new Set<string>();
       const missingLabels: string[] = [];
@@ -648,7 +646,11 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               {((isCometUser && canEditPerm) || (!isEditing && isSpedUser)) && (
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Spedition {!isEditing && <span className="text-red-500">*</span>}</Label>
-                  <Select value={form.speditionId} onValueChange={v => { setForm(f => ({ ...f, speditionId: v })); setFormErrors(prev => { if (!prev.has("speditionId")) return prev; const next = new Set(prev); next.delete("speditionId"); return next; }); }}>
+                  <Select value={form.speditionId} onValueChange={v => {
+                    const allowed = selectableLkwArten(lkwArtenData, isCometUser ? null : speditionen?.find(s => s.id === Number(v))?.allowedLkwArtIds);
+                    setForm(f => ({ ...f, speditionId: v, lkwArt: allowed.some(type => type.name === f.lkwArt) ? f.lkwArt : "" }));
+                    setFormErrors(prev => { if (!prev.has("speditionId")) return prev; const next = new Set(prev); next.delete("speditionId"); return next; });
+                  }}>
                     <SelectTrigger className={cn("h-9", formErrors.has("speditionId") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Spedition wählen" /></SelectTrigger>
                     <SelectContent>
                       {speditionen?.filter(s => isCometUser || s.id === user?.speditionId || s.canCreateShipment).map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
@@ -678,8 +680,14 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                   <Label className="text-xs text-slate-500">LKW-Art {!isEditing && <span className="text-red-500">*</span>}</Label>
                   <Select value={form.lkwArt} onValueChange={v => { setForm(f => ({ ...f, lkwArt: v })); setFormErrors(prev => { if (!prev.has("lkwArt")) return prev; const next = new Set(prev); next.delete("lkwArt"); return next; }); }} disabled={!canEdit || (isSpedUser && (isLocked || isAusgedruckt))}>
                     <SelectTrigger className={cn("h-9", formErrors.has("lkwArt") && "border-red-400 ring-1 ring-red-400")}><SelectValue placeholder="Wählen..." /></SelectTrigger>
-                    <SelectContent>{lkwArtOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}</SelectContent>
+                    <SelectContent>
+                      {isEditing && form.lkwArt && !lkwArtOptions.includes(form.lkwArt) && <SelectItem value={form.lkwArt} disabled>{form.lkwArt} (bisheriger Wert)</SelectItem>}
+                      {lkwArtOptions.map(o => <SelectItem key={o} value={o}>{o}</SelectItem>)}
+                    </SelectContent>
                   </Select>
+                  {lkwArtenLoading && <p className="text-xs text-slate-500">LKW-Arten werden geladen …</p>}
+                  {lkwArtenError && <p role="alert" className="text-xs text-red-600">LKW-Arten konnten nicht geladen werden.</p>}
+                  {!lkwArtenLoading && !lkwArtenError && lkwArtOptions.length === 0 && <p className="text-xs text-amber-700">Keine LKW-Arten freigegeben.</p>}
                 </div>
               </div>
 
