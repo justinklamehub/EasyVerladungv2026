@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { AlertTriangle, CheckCircle2, DatabaseBackup, Loader2, RefreshCw, Server, XCircle } from "lucide-react";
 import { usePermissions } from "@/hooks/use-permissions";
 import { UpdateFailureDetails } from "./update-failure-details";
+import { describeUpdateStartError, type UpdateStartError } from "./update-start-error";
 
 const LABEL = { idle: "Bereit", queued: "Angenommen", running: "Läuft …",
   done: "Abgeschlossen", failed: "Fehler", unknown: "Abschluss unbekannt" };
@@ -15,7 +16,7 @@ export function ServerOperationsCard() {
   const canUpdate = canView && !!permissions["system.update"];
   const [confirm, setConfirm] = useState(false);
   const [acceptedJob, setAcceptedJob] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<UpdateStartError | null>(null);
   const query = useGetAdminSystemOperations({ query: {
     queryKey: getGetAdminSystemOperationsQueryKey(),
     enabled: canView,
@@ -37,8 +38,8 @@ export function ServerOperationsCard() {
       const result = await start.mutateAsync({ data: { confirm: true } });
       setAcceptedJob(result.jobId);
       void query.refetch();
-    } catch {
-      setSubmitError("Start konnte nicht bestätigt werden. Erst den gespeicherten Serverstatus prüfen, bevor du erneut startest.");
+    } catch (error) {
+      setSubmitError(describeUpdateStartError(error));
       void query.refetch();
     }
   }
@@ -55,17 +56,18 @@ export function ServerOperationsCard() {
             </div>
             <span role="status" data-testid="text-update-state" className={`text-xs font-semibold ${status === "done" ? "text-emerald-600" : status === "failed" ? "text-red-600" : "text-slate-600"}`}>
               {busy && <Loader2 className="inline w-3 h-3 mr-1 animate-spin" />}
-              {LABEL[status]}
+              {submitError ? (submitError.kind === "rejected" ? "Start abgelehnt" : "Start unbestätigt") : LABEL[status]}
             </span>
           </div>
         </CardHeader>
         <CardContent className="space-y-3">
           {query.isLoading && <p className="text-sm text-slate-500">Serverstatus wird geladen …</p>}
           {(query.isError || submitError) && <p role="alert" className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" data-testid="alert-update-connection">
-            {submitError || "Verbindung zum Statusdienst unterbrochen. Ein Update kann im Hintergrund weiterlaufen; sein Abschluss ist derzeit unbekannt."}
+            {submitError?.message || "Verbindung zum Statusdienst unterbrochen. Ein Update kann im Hintergrund weiterlaufen; sein Abschluss ist derzeit unbekannt."}
           </p>}
           {data?.reason && <p className="text-sm text-amber-800" data-testid="text-update-unavailable">{data.reason}</p>}
           {current && <div className="rounded-md border bg-slate-50 p-3 space-y-2 text-sm">
+            {submitError && <p className="font-medium text-amber-800">Letzter gespeicherter Auftrag – kein Nachweis für den gerade versuchten Start:</p>}
             <p data-testid="text-update-message">{awaitingJob ? "Auf gespeicherten Fortschritt des angenommenen Auftrags warten …" : current.message}</p>
             {current.startedAt && <p className="text-xs text-slate-500">Start: {new Date(current.startedAt).toLocaleString("de-DE")}</p>}
             {current.finishedAt && <p className="text-xs text-slate-500">Abschluss: {new Date(current.finishedAt).toLocaleString("de-DE")}</p>}

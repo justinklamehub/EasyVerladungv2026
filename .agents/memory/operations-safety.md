@@ -15,6 +15,12 @@ Hintergrund-Updates dürfen weder vom Browserkontakt noch von der Lebensdauer de
 
 **How to apply:** Prozess von der API entkoppeln, exklusiven Lock über den Neustart behalten und fehlenden Kontakt als unbekannten Zustand anzeigen. Keine Mutationen über GET.
 
+Ein historisch abgeschlossener Update-Auftrag ist kein Nachweis dafür, dass ein neuer Start angenommen wurde oder erfolgreich war.
+
+**Why:** Der Nutzer konnte keine neuen Updates starten, während die Statusanzeige weiterhin einen alten erfolgreichen Auftrag anzeigte. Dieser alte Erfolg führte zu einer falschen Entwarnung.
+
+**How to apply:** Neue Startversuche mit dem zugehörigen Auftrag abgleichen. Bei fehlender Bestätigung zunächst die Ablehnungsursache bzw. den unbekannten Zustand klären; nicht allein aus dem letzten gespeicherten Erfolg auf den neuen Versuch schließen.
+
 Wiederherstellungsproben bleiben in einer eigenen PostgreSQL-Instanz mit privatem Unix-Socket und separater Bildablage. Kein Rückspielen auf die laufende Instanz und kein automatisches Überschreiben von Produktionsdaten.
 
 **Why:** Zwischen Sicherung und Update können bereits neue Geschäftsdaten entstehen. Ein automatisches Datenbank-Rollback würde diese verlieren.
