@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { needsSpeditionConfirmation, SpeditionCreateConfirmation, summarizeCreationSpeditionen } from "./spedition-create-confirmation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import {
@@ -464,6 +465,8 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   const [unknownRelDialog, setUnknownRelDialog] = useState<{ relation: string; spedId: number } | null>(null);
   const [unknownRelOrt, setUnknownRelOrt] = useState("");
   const [unknownRelCreating, setUnknownRelCreating] = useState(false);
+  const [confirmSpedition, setConfirmSpedition] = useState(false);
+  useEffect(() => { setConfirmSpedition(false); }, [open, shipmentId]);
 
   const createRelationMutation = useMutation({
     mutationFn: ({ spedId, kuerzel, ort }: { spedId: number; kuerzel: string; ort: string }) =>
@@ -476,7 +479,12 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     },
   });
 
-  const executeSave = () => {
+  const executeSave = (speditionConfirmed = false) => {
+    if (createMutation.isPending || updateMutation.isPending) return;
+    if (!isEditing && !speditionConfirmed && needsSpeditionConfirmation(isCometUser, user?.speditionId, speditionen)) {
+      setConfirmSpedition(true);
+      return;
+    }
     const data: any = {
       bezeichnung: form.bezeichnung || undefined,
       kennzeichen: form.kennzeichen || undefined,
@@ -508,7 +516,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     }
   };
 
-  const handleSave = () => {
+  const handleSave = (speditionConfirmed = false) => {
     if ((!isEditing || form.lkwArt !== shipment?.lkwArt) && !lkwArtOptions.includes(form.lkwArt)) {
       toast({ title: lkwArtenError ? "LKW-Arten konnten nicht geladen werden" : "Bitte eine freigegebene LKW-Art auswählen", variant: "destructive" });
       return;
@@ -541,13 +549,25 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
       }
     }
 
-    executeSave();
+    executeSave(speditionConfirmed);
   };
 
   const isSaving = updateMutation.isPending || createMutation.isPending;
 
   return (
     <>
+    <SpeditionCreateConfirmation
+      open={open && confirmSpedition}
+      onOpenChange={setConfirmSpedition}
+      targets={summarizeCreationSpeditionen([Number(form.speditionId) || user?.speditionId], speditionen)}
+      speditionen={speditionen}
+      ownSpeditionId={user?.speditionId}
+      onTargetChange={(_, nextId) => {
+        const allowed = selectableLkwArten(lkwArtenData, speditionen?.find(s => s.id === nextId)?.allowedLkwArtIds);
+        setForm(f => ({ ...f, speditionId: String(nextId), lkwArt: allowed.some(type => type.name === f.lkwArt) ? f.lkwArt : "" }));
+      }}
+      onConfirm={() => { setConfirmSpedition(false); handleSave(true); }}
+    />
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="sm:max-w-lg overflow-y-auto">
         <SheetHeader className="mb-4">
@@ -839,7 +859,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
               {canEdit && (!isSpedUser || (!isLocked && !isAusgedruckt)) && (
                 <div className="pt-4 flex justify-end gap-2">
                   <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
-                  <Button onClick={handleSave} disabled={isSaving}>
+                  <Button onClick={() => handleSave()} disabled={isSaving}>
                     {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                     Speichern
                   </Button>

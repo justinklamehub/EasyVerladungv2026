@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useMemo } from "react";
+import { needsSpeditionConfirmation, SpeditionCreateConfirmation, summarizeCreationSpeditionen } from "./spedition-create-confirmation";
 import { useBulkCreateShipments, useListSpeditionen, getListShipmentsQueryKey, ShipmentInputLkwArt, ShipmentInputStatus } from "@workspace/api-client-react";
 import { useQueryClient, useQueries } from "@tanstack/react-query";
 import { customFetch } from "@workspace/api-client-react";
@@ -170,6 +171,8 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
 
   const [rows, setRows] = useState<RowData[]>([emptyRow(rowCounter++)]);
   const [fieldErrors, setFieldErrors] = useState<Map<number, Set<keyof RowData>>>(new Map());
+  const [confirmSpedition, setConfirmSpedition] = useState(false);
+  useEffect(() => { setConfirmSpedition(false); }, [open]);
 
   // Muster-CSV: role-aware columns
   function downloadCsvTemplate() {
@@ -366,7 +369,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
     { rowNum: number; relation: string }[] | null
   >(null);
 
-  const handleSubmit = () => {
+  const handleSubmit = (speditionConfirmed = false) => {
     if (lkwArtenLoading || lkwArtenError) {
       toast({ title: lkwArtenError ? "LKW-Arten konnten nicht geladen werden" : "LKW-Arten werden noch geladen", variant: "destructive" });
       return;
@@ -418,10 +421,15 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
       return;
     }
 
-    doSubmit();
+    doSubmit(speditionConfirmed);
   };
 
-  const doSubmit = () => {
+  const doSubmit = (speditionConfirmed = false) => {
+    if (bulkMutation.isPending) return;
+    if (!speditionConfirmed && needsSpeditionConfirmation(isCometUser, user?.speditionId, speditionen)) {
+      setConfirmSpedition(true);
+      return;
+    }
 
     const shipments = rows.map((r) => ({
       kennzeichen:  r.kennzeichen.trim(),
@@ -451,6 +459,20 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
 
   return (
     <>
+    <SpeditionCreateConfirmation
+      open={open && confirmSpedition}
+      onOpenChange={setConfirmSpedition}
+      targets={summarizeCreationSpeditionen(rows.map(row => Number(row.speditionId) || user?.speditionId), speditionen)}
+      speditionen={speditionen}
+      ownSpeditionId={user?.speditionId}
+      onTargetChange={(previousId, nextId) => {
+        const allowed = selectableLkwArten(lkwArtenData, speditionen?.find(s => s.id === nextId)?.allowedLkwArtIds);
+        setRows(previous => previous.map(row => (Number(row.speditionId) || user?.speditionId) === previousId
+          ? { ...row, speditionId: String(nextId), lkwArt: allowed.some(type => type.name === row.lkwArt) ? row.lkwArt : "" }
+          : row));
+      }}
+      onConfirm={() => { setConfirmSpedition(false); handleSubmit(true); }}
+    />
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-[95vw] w-[1200px] max-h-[90vh] flex flex-col">
         <DialogHeader>
@@ -683,7 +705,7 @@ export function BulkCreateDialog({ open, onOpenChange, initialRows }: Props) {
           <Button variant="outline" onClick={() => handleClose(false)} disabled={bulkMutation.isPending}>
             Abbrechen
           </Button>
-          <Button onClick={handleSubmit} disabled={bulkMutation.isPending}>
+          <Button onClick={() => handleSubmit()} disabled={bulkMutation.isPending}>
             {bulkMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             {rows.length} Verladung{rows.length !== 1 ? "en" : ""} anlegen
           </Button>

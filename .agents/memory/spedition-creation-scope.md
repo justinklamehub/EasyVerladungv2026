@@ -9,6 +9,12 @@ Beim LKW-Anlegen sollen Speditionen zwischen sich selbst und den freigegebenen S
 
 **How to apply:** Die bestehende Unterscheidung zwischen Lesen und Bearbeiten wahren; reine Lesefreigaben sind keine Anlageberechtigung. Die Auswahl muss beim Speichern durchgesetzt werden.
 
+Bei Einzel- und Massenanlage soll bei vorhandener Speditionsfreigabe immer abgefragt werden, ob die Verladungen wirklich für die gewählte Spedition angelegt werden sollen; auch bei Auswahl der eigenen Spedition.
+
+**Why:** Der Nutzer verlangt diese ausdrückliche Bestätigung bei jeder Anlage mit vorhandener Freigabe.
+
+**How to apply:** Die tatsächlichen Zielspeditionen und bei Massenanlage deren jeweilige Anzahl nennen. Die Spedition muss direkt in diesem Bestätigungsdialog änderbar sein. Abbrechen darf keine Verladung anlegen; Bearbeitungen bestehender Verladungen sind nicht gemeint.
+
 „LKW Arten sollte auch pro Spediteur einstellbar sein. Nicht jeder soll jede Art sehen / nutzen können.“
 
 **Why:** Dies ist die ausdrücklich genannte fachliche Anforderung des Nutzers.
