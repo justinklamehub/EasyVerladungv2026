@@ -606,6 +606,10 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
     }
 
     emit(req, isStatusChange ? "shipment.status_changed" : "shipment.updated", { id }, existing.speditionId);
+    if (shipment.speditionId !== existing.speditionId) {
+      // Both the former and the new carrier must refresh their scoped lists.
+      emit(req, "shipment.updated", { id }, shipment.speditionId);
+    }
 
     if (isStatusChange) {
       const io = getIO(req);

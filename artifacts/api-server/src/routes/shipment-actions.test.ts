@@ -3,7 +3,7 @@ import { test } from "node:test";
 import express from "express";
 import { once } from "node:events";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { db, pool, shipmentsTable } from "@workspace/db";
+import { db, pool, shipmentsTable, speditionPermissionsTable } from "@workspace/db";
 import { invalidatePermissionsCache } from "../lib/permissions";
 import shipmentsRouter from "./shipments";
 import { shipmentArrivalFields } from "../lib/shipment-arrival";
@@ -19,6 +19,7 @@ test("shipment print and next-status actions enforce independent permissions ove
     { role: "comet_lager", permission: "shipment.print", allowed: true },
     { role: "comet_lager", permission: "shipment.advance", allowed: true },
     { role: "custom_internal", permission: "shipment.advance", allowed: true },
+    { role: "custom_editor", permission: "shipment.edit", allowed: true },
     { role: "speditions_admin", permission: "shipment.print", allowed: true },
     { role: "speditions_admin", permission: "shipment.advance", allowed: true },
   ];
@@ -26,7 +27,7 @@ test("shipment print and next-status actions enforce independent permissions ove
   t.mock.method(db, "select", () => ({
     from: (table: unknown) => table === shipmentsTable
       ? { where: () => ({ limit: async () => [{ ...shipment }] }) }
-      : Promise.resolve([]),
+      : table === speditionPermissionsTable ? { where: async () => [] } : Promise.resolve([]),
   }) as any);
   t.mock.method(db, "update", () => ({
     set: (input: Record<string, any>) => ({
@@ -135,5 +136,21 @@ test("shipment print and next-status actions enforce independent permissions ove
     assert.equal((await request("/deckblatt", "custom_internal")).status, 403);
     assert.equal((await request("/advance-status", "custom_internal", { expectedStatus: "Angemeldet" })).status, 200);
     assert.equal(shipment.status, "Angekommen");
+  });
+  await t.test("carrier reassignment requires edit permission and refreshes old and new carrier rooms", async () => {
+    shipment = { ...initial, speditionId: 10 };
+    const events: { room: string; event: string }[] = [];
+    app.set("io", { to: (room: string) => ({ emit: (event: string) => events.push({ room, event }) }) });
+    const patch = (role: string) => fetch(base, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-test-role": role },
+      body: JSON.stringify({ speditionId: 20 }),
+    });
+    assert.equal((await patch("comet_viewer")).status, 403);
+    assert.equal(shipment.speditionId, 10);
+    assert.equal((await patch("custom_editor")).status, 200);
+    assert.equal(shipment.speditionId, 20);
+    assert.ok(events.some(e => e.room === "spedition:10" && e.event === "shipment.updated"));
+    assert.ok(events.some(e => e.room === "spedition:20" && e.event === "shipment.updated"));
   });
 });

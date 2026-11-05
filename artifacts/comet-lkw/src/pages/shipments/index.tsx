@@ -28,6 +28,7 @@ import { useLiveFilters } from "@/lib/live-view-control";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { Printer, ChevronsRight } from "lucide-react";
 import { stableShipmentComparison } from "./stable-sort";
+import { updateShipmentSpeditionen } from "./bulk-spedition-update";
 import { SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION, nextShipmentStatus, isInternalShipmentActionRole } from "@workspace/api-zod/shipment-actions";
 import { getShipmentDeckblatt, useMarkShipmentPrinted, useAdvanceShipmentStatus, getGetShipmentQueryKey, getGetShipmentHistoryQueryKey, type ShipmentStatusAdvanceInput } from "@workspace/api-client-react";
 
@@ -143,6 +144,7 @@ export default function ShipmentsPage() {
   const permissions = usePermissions();
   const canCreate = !!permissions["shipment.create"];
   const canEdit   = !!permissions["shipment.edit"];
+  const canChangeSpedition = isInternalShipmentActionRole(role) && canEdit;
   const canLock   = !!permissions["shipment.lock"];
   const canPrint = isInternalShipmentActionRole(role) && !!permissions[SHIPMENT_PRINT_PERMISSION];
   const canAdvance = isInternalShipmentActionRole(role) && !!permissions[SHIPMENT_ADVANCE_PERMISSION];
@@ -183,6 +185,9 @@ export default function ShipmentsPage() {
   }, [effectiveDates.from, effectiveDates.to]);
   const [bulkStatus, setBulkStatus] = useState("__none__");
   const [bulkWareStatus, setBulkWareStatus] = useState("__none__");
+  const [bulkSpeditionId, setBulkSpeditionId] = useState("__none__");
+  const [bulkSpeditionPending, setBulkSpeditionPending] = useState(false);
+  const bulkSpeditionRunning = useRef(false);
   const [selectedShipmentId, setSelectedShipmentId] = useState<number | null>(() => {
     const id = Number(new URLSearchParams(window.location.search).get("shipmentId"));
     return Number.isSafeInteger(id) && id > 0 ? id : null;
@@ -453,6 +458,7 @@ export default function ShipmentsPage() {
   }, [shipments, sortField, sortDir, showAbgefertigt, showStorniert, filterStatus]);
 
   function toggleRow(id: number) {
+    if (bulkSpeditionRunning.current) return;
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -462,10 +468,43 @@ export default function ShipmentsPage() {
   }
 
   function toggleAll() {
+    if (bulkSpeditionRunning.current) return;
     if (selectedIds.size === sorted.length) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(sorted.map((s) => s.id)));
+    }
+  }
+
+  async function applyBulkSpedition() {
+    const target = speditionen?.find(s => String(s.id) === bulkSpeditionId);
+    if (!canChangeSpedition || !target || selectedIds.size === 0 || bulkSpeditionRunning.current) return;
+    bulkSpeditionRunning.current = true;
+    setBulkSpeditionPending(true);
+    const ids = Array.from(selectedIds);
+    try {
+      const { succeeded, failed } = await updateShipmentSpeditionen(ids, target.id,
+        (id, speditionId) => updateShipment.mutateAsync({ id, data: { speditionId } }));
+      const succeededIds = new Set(succeeded);
+      setSelectedIds(previous => new Set([...previous].filter(id => !succeededIds.has(id))));
+      if (failed.length === 0) setBulkSpeditionId("__none__");
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() }),
+        ...succeeded.flatMap(id => [
+          queryClient.invalidateQueries({ queryKey: getGetShipmentQueryKey(id) }),
+          queryClient.invalidateQueries({ queryKey: getGetShipmentHistoryQueryKey(id) }),
+        ]),
+      ]);
+      toast({
+        title: failed.length ? "Spedition nicht bei allen Verladungen geändert" : `Spedition auf „${target.name}“ geändert`,
+        description: `${succeeded.length} von ${ids.length} Verladungen aktualisiert.${failed.length ? ` ${failed.length} fehlgeschlagen; diese bleiben ausgewählt. Bitte Berechtigungen und aktuellen Stand prüfen.` : ""}`,
+        variant: failed.length ? "destructive" : "default",
+      });
+    } catch {
+      toast({ title: "Ergebnis bitte prüfen", description: "Die Speditionsänderung konnte nicht vollständig bestätigt werden. Bitte die Ansicht aktualisieren, bevor Sie die Aktion wiederholen.", variant: "destructive" });
+    } finally {
+      bulkSpeditionRunning.current = false;
+      setBulkSpeditionPending(false);
     }
   }
 
@@ -927,6 +966,32 @@ export default function ShipmentsPage() {
         <div className="flex items-center flex-wrap gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2">
           <span className="text-sm font-medium text-primary whitespace-nowrap">{selectedIds.size} ausgewählt</span>
 
+          {canChangeSpedition && (
+            <>
+              <div className="h-5 w-px bg-primary/20 shrink-0" />
+              <div className="flex items-center gap-2 min-w-0">
+                <Select value={bulkSpeditionId} onValueChange={setBulkSpeditionId} disabled={bulkSpeditionPending}>
+                  <SelectTrigger className="w-[200px] h-8 text-sm" aria-label="Spedition in Masse ändern">
+                    <SelectValue placeholder="Spedition wählen…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">Spedition wählen…</SelectItem>
+                    {speditionen?.map(s => <SelectItem key={s.id} value={String(s.id)}>{s.name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+                <Button
+                  size="sm"
+                  aria-label="Spedition für ausgewählte Verladungen anwenden"
+                  disabled={bulkSpeditionId === "__none__" || bulkSpeditionPending || updateShipment.isPending}
+                  onClick={applyBulkSpedition}
+                >
+                  {bulkSpeditionPending && <Loader2 className="w-3 h-3 animate-spin mr-1" />}
+                  Anwenden
+                </Button>
+              </div>
+            </>
+          )}
+
           <div className="h-5 w-px bg-primary/20 shrink-0" />
 
           {/* Status ändern */}
@@ -944,7 +1009,7 @@ export default function ShipmentsPage() {
             </Select>
             <Button
               size="sm"
-              disabled={bulkStatus === "__none__" || updateShipment.isPending}
+              disabled={bulkStatus === "__none__" || updateShipment.isPending || bulkSpeditionPending}
               onClick={applyBulkStatus}
             >
               {updateShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
@@ -969,7 +1034,7 @@ export default function ShipmentsPage() {
             </Select>
             <Button
               size="sm"
-              disabled={bulkWareStatus === "__none__" || updateShipment.isPending}
+              disabled={bulkWareStatus === "__none__" || updateShipment.isPending || bulkSpeditionPending}
               onClick={applyBulkWareStatus}
             >
               {updateShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : null}
@@ -986,7 +1051,7 @@ export default function ShipmentsPage() {
                   variant="outline"
                   size="sm"
                   className="h-8 text-sm"
-                  disabled={lockShipment.isPending || unlockShipment.isPending}
+                  disabled={lockShipment.isPending || unlockShipment.isPending || bulkSpeditionPending}
                   onClick={() => applyBulkLock(true)}
                 >
                   {lockShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Lock className="w-3 h-3 mr-1" />}
@@ -996,7 +1061,7 @@ export default function ShipmentsPage() {
                   variant="outline"
                   size="sm"
                   className="h-8 text-sm"
-                  disabled={lockShipment.isPending || unlockShipment.isPending}
+                  disabled={lockShipment.isPending || unlockShipment.isPending || bulkSpeditionPending}
                   onClick={() => applyBulkLock(false)}
                 >
                   {unlockShipment.isPending ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <LockOpen className="w-3 h-3 mr-1" />}
@@ -1006,7 +1071,7 @@ export default function ShipmentsPage() {
             </>
           )}
 
-          <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setSelectedIds(new Set())}>
+          <Button variant="ghost" size="sm" className="ml-auto" disabled={bulkSpeditionPending} onClick={() => setSelectedIds(new Set())}>
             Abbrechen
           </Button>
         </div>

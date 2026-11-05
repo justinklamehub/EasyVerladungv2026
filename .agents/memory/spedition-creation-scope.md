@@ -20,3 +20,9 @@ Bei Einzel- und Massenanlage soll bei vorhandener Speditionsfreigabe immer abgef
 **Why:** Dies ist die ausdrücklich genannte fachliche Anforderung des Nutzers.
 
 **How to apply:** Die Einschränkung betrifft die Speditionsbenutzer, nicht die interne COMET-Bearbeitung. Beim Anlegen für eine andere Spedition dürfen deren Freigaben die Einschränkung der handelnden Spedition nicht umgehen. Vorhandene historische LKW-Arten nicht durch eine nachträgliche Beschränkung löschen.
+
+Bestehende Verladungen sollen sich per Mehrfachauswahl einer anderen Spedition zuordnen lassen, wie bei der Status-Massenänderung.
+
+**Why:** Der Nutzer verlangt ausdrücklich dieselbe Möglichkeit für Speditionen.
+
+**How to apply:** Keine neue Anlage auslösen; vorhandene Bearbeitungsrechte und die Beschränkung von Speditionswechseln auf interne Bearbeitung beibehalten.
