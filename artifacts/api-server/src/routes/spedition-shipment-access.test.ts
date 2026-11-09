@@ -40,12 +40,14 @@ test("carrier selection and truck type restrictions are enforced over HTTP", asy
   ];
   let inserted: Record<string, any>[] = [];
   let updated: Record<string, any>[] = [];
-  const existing = { id: 71, speditionId: 2, lkwArt: "Historisch", status: "Angemeldet", wareStatus: "nicht bereit" };
+  const existing: Record<string, any> = { id: 71, speditionId: 2, lkwArt: "Historisch", status: "Angemeldet", wareStatus: "nicht bereit", etaDate: "2026-11-09", etaTime: "08:00", kennzeichen: "ALT", subSpedition: "Alt" };
   const dialect = new PgDialect();
   t.mock.method(db, "execute", async () => ({ rows: [
     { role: "speditions_bearbeiter", permission: "shipment.create", allowed: true },
     { role: "speditions_bearbeiter", permission: "shipment.edit", allowed: true },
+    { role: "speditions_bearbeiter", permission: "shipment.reschedule", allowed: true },
     { role: "comet_admin", permission: "shipment.create", allowed: true },
+    { role: "comet_admin", permission: "shipment.edit", allowed: true },
   ] }));
   t.mock.method(db, "select", (fields?: any) => ({
     from: (table: unknown) => {
@@ -170,12 +172,77 @@ test("carrier selection and truck type restrictions are enforced over HTTP", asy
     assert.equal(inserted.length, count);
     carriers[1].dailyShipmentLimit = null;
   });
-  await t.test("editing preserves historical types but blocks disallowed replacements", async () => {
-    assert.equal((await request("/shipments/71", { lkwArt: "Historisch", bemerkungen: "OK" }, undefined, "PATCH")).status, 200);
+  await t.test("carrier can change only time, plate and subcarrier despite all former locks", async () => {
+    for (const state of [
+      { gesperrtFuerSpedition: false, wareStatus: "nicht bereit", ataDate: null },
+      { gesperrtFuerSpedition: true, wareStatus: "nicht bereit", ataDate: null },
+      { gesperrtFuerSpedition: false, wareStatus: "ausgedruckt", ataDate: null },
+      { gesperrtFuerSpedition: false, wareStatus: "nicht bereit", ataDate: "2026-11-09" },
+      { gesperrtFuerSpedition: true, wareStatus: "ausgedruckt", ataDate: "2026-11-09" },
+    ]) {
+      Object.assign(existing, state);
+      const body = { etaTime: "15:45", kennzeichen: "NEU-123", subSpedition: "Neu" };
+      const response = await request("/shipments/71", body, undefined, "PATCH");
+      assert.equal(response.status, 200);
+      const result = await response.json() as any;
+      assert.equal(result.etaDate, existing.etaDate);
+      for (const [field, value] of Object.entries(body)) assert.equal(result[field], value);
+      assert.equal(result.gesperrtFuerSpedition, state.gesperrtFuerSpedition);
+      assert.equal(result.wareStatus, state.wareStatus);
+      assert.equal(result.ataDate, state.ataDate);
+      assert.equal(result.lkwArt, "Historisch");
+      assert.deepEqual(Object.keys(updated.at(-1)!).sort(),
+        ["etaTime", "kennzeichen", "subSpedition", "updatedAt", "updatedBy"].sort());
+    }
+  });
+  await t.test("forbidden fields reject the entire request without partial saves", async () => {
     const count = updated.length;
-    assert.equal((await request("/shipments/71", { lkwArt: "Abholung" }, undefined, "PATCH")).status, 403);
+    for (const [field, value] of Object.entries({
+      etaDate: "2027-01-01", lkwArt: "Anlieferung", status: "Verladen", wareStatus: "vorbereitet",
+      ataDate: null, ataTime: "17:00", relation: "Neu", bemerkungen: "Neu", telefon: "123",
+      bezeichnung: "Neu", tor: "Tor 1", speditionId: 1, gesperrtFuerSpedition: false,
+    })) {
+      assert.equal((await request("/shipments/71", { kennzeichen: "NICHT SPEICHERN", [field]: value }, undefined, "PATCH")).status, 403, field);
+    }
     assert.equal(updated.length, count);
-    assert.equal((await request("/shipments/71", { lkwArt: "Anlieferung" }, undefined, "PATCH")).status, 200);
+  });
+  await t.test("own and edit-granted carriers work; read-only, revoked and missing edit rights still deny changes", async () => {
+    for (const target of [1, 2]) {
+      existing.speditionId = target;
+      assert.equal((await request("/shipments/71", { kennzeichen: "OK" }, undefined, "PATCH")).status, 200);
+    }
+    const count = updated.length;
+    for (const target of [3, 4, 5, 999]) {
+      existing.speditionId = target;
+      assert.equal((await request("/shipments/71", { kennzeichen: "Nein" }, undefined, "PATCH")).status, 403);
+    }
+    existing.speditionId = 2;
+    assert.equal((await request("/shipments/71", { kennzeichen: "Nein" }, "speditions_viewer", "PATCH")).status, 403);
+    assert.equal((await request("/shipments/71", { kennzeichen: "Nein" }, undefined, "PATCH", true)).status, 403);
+    const original = grants;
+    grants = grants.filter(g => g.grantingSpeditionId !== 2);
+    assert.equal((await request("/shipments/71", { kennzeichen: "Nein" }, undefined, "PATCH")).status, 403);
+    grants = original;
+    assert.equal(updated.length, count);
+  });
+  await t.test("transport fields support clearing and reject malformed values", async () => {
+    assert.equal((await request("/shipments/71", { kennzeichen: null, etaTime: null, subSpedition: null }, undefined, "PATCH")).status, 200);
+    assert.equal(updated.at(-1)!.subSpedition, null);
+    const count = updated.length;
+    for (const body of [{ etaTime: "25:00" }, { etaTime: "12:99" }, { kennzeichen: {} }, { subSpedition: 1 }]) {
+      assert.equal((await request("/shipments/71", body, undefined, "PATCH")).status, 400);
+    }
+    assert.equal(updated.length, count);
+  });
+  await t.test("internal editors retain full field access", async () => {
+    const response = await request("/shipments/71", { etaDate: "2027-01-01", lkwArt: "Anlieferung", bemerkungen: "COMET" }, "comet_admin", "PATCH");
+    assert.equal(response.status, 200);
+    assert.equal((await response.json() as any).etaDate, "2027-01-01");
+  });
+  await t.test("carrier cannot change the date through the weekly reschedule action either", async () => {
+    const count = updated.length;
+    assert.equal((await request("/shipments/71/reschedule", { newDate: "2027-01-01" }, undefined, "PATCH")).status, 403);
+    assert.equal(updated.length, count);
   });
   await t.test("role permissions and missing carrier fail closed; COMET remains unrestricted", async () => {
     assert.equal((await request("/shipments", { lkwArt: "Abholung" }, "speditions_viewer")).status, 403);

@@ -1,6 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { AdvanceShipmentStatusBody } from "@workspace/api-zod";
 import { nextShipmentStatus, isInternalShipmentActionRole, SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION } from "@workspace/api-zod/shipment-actions";
+import { SPEDITION_EDITABLE_SHIPMENT_FIELDS, SpeditionShipmentEditBody } from "@workspace/api-zod/shipment-actions";
 import { db, pool } from "@workspace/db";
 import {
   shipmentsTable,
@@ -522,6 +523,7 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
       }
     }
 
+    let speditionUpdates: Record<string, unknown> | null = null;
     if (SPED_ROLES.includes(role)) {
       const { readIds, writeIds } = await getSpeditionAccess(sessionSpeditionId ?? null);
       if (!existing.speditionId || !readIds.includes(existing.speditionId)) {
@@ -530,28 +532,21 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
       if (!writeIds.includes(existing.speditionId)) {
         return res.status(403).json({ error: "Forbidden: view-only access to this spedition's shipments" });
       }
-      if (existing.gesperrtFuerSpedition) {
-        return res.status(403).json({ error: "Shipment is locked for editing by Spedition" });
+      if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
+        return res.status(400).json({ error: "Ungültige Verladungsänderung" });
       }
-      if (existing.wareStatus === "ausgedruckt") {
-        return res.status(403).json({ error: "Das Deckblatt wurde bereits gedruckt. Die Verladung kann nicht mehr bearbeitet werden." });
+      if (Object.keys(req.body).some(key => !(SPEDITION_EDITABLE_SHIPMENT_FIELDS as readonly string[]).includes(key))) {
+        return res.status(403).json({ error: "Speditionen dürfen nur ETA-Uhrzeit, Kennzeichen und Subspedition ändern." });
       }
-      if (existing.ataDate) {
-        return res.status(403).json({ error: "Sendung kann nicht mehr bearbeitet werden, da ATA bereits eingetragen ist" });
-      }
-      if (req.body.lkwArt !== undefined && req.body.lkwArt !== existing.lkwArt) {
-        const types = await allowedSpeditionLkwArten(sessionSpeditionId ?? null, existing.speditionId);
-        if (!types.some((type) => type.name === req.body.lkwArt)) {
-          return res.status(403).json({ error: "Diese LKW-Art ist für die Spedition nicht freigegeben." });
-        }
-      }
+      const parsed = SpeditionShipmentEditBody.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Ungültige ETA-Uhrzeit, Kennzeichen oder Subspedition." });
+      speditionUpdates = parsed.data;
     }
 
     const isCometUser = !SPED_ROLES.includes(role);
 
-    const SPED_ALLOWED = ["bezeichnung", "kennzeichen", "relation", "lkwArt", "etaDate", "etaTime", "bemerkungen", "telefon", "wareStatus"];
-    const COMET_ALLOWED = [...SPED_ALLOWED, "status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet", "speditionId", "subSpedition"];
-    const allowedFields = isCometUser ? COMET_ALLOWED : SPED_ALLOWED;
+    const COMET_ALLOWED = ["bezeichnung", "kennzeichen", "relation", "lkwArt", "etaDate", "etaTime", "bemerkungen", "telefon", "wareStatus", "status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet", "speditionId", "subSpedition"];
+    const allowedFields = isCometUser ? COMET_ALLOWED : SPEDITION_EDITABLE_SHIPMENT_FIELDS;
 
     const changedAt = new Date();
     const updates: Record<string, any> = {};
@@ -564,8 +559,9 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
       }
     } else {
       for (const field of allowedFields) {
-        if ((req.body as Record<string, any>)[field] !== undefined) {
-          updates[field] = (req.body as Record<string, any>)[field];
+        const input = speditionUpdates ?? req.body;
+        if (input[field] !== undefined) {
+          updates[field] = input[field];
         }
       }
     }
@@ -733,7 +729,7 @@ router.post("/shipments/:id/unlock", requireAuth, async (req, res) => {
 router.patch("/shipments/:id/reschedule", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;
-    if (!(await can(role, "shipment.reschedule"))) {
+    if (!isInternalShipmentActionRole(role) || !(await can(role, "shipment.reschedule"))) {
       return res.status(403).json({ error: "Keine Berechtigung zum Verschieben von Sendungen" });
     }
     const id = Number(req.params.id);

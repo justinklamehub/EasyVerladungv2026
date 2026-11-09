@@ -290,9 +290,9 @@ export default function ShipmentsPage() {
 
   const colSpan = useMemo(() => {
     let n = visibleColCount + 1; // +1 for actions column
-    if (canEdit) n += 1; // +1 for checkbox column
+    if (canChangeSpedition) n += 1; // +1 for internal bulk-action checkbox column
     return n;
-  }, [visibleColCount, canEdit]);
+  }, [visibleColCount, canChangeSpedition]);
 
   const hiddenCount = COLUMN_DEFS.filter((c) => !cols[c.key]).length;
 
@@ -962,7 +962,7 @@ export default function ShipmentsPage() {
         )}
       </div>
 
-      {selectedIds.size > 0 && canEdit && (
+      {selectedIds.size > 0 && canChangeSpedition && (
         <div className="flex items-center flex-wrap gap-3 bg-primary/5 border border-primary/20 rounded-lg px-4 py-2">
           <span className="text-sm font-medium text-primary whitespace-nowrap">{selectedIds.size} ausgewählt</span>
 
@@ -1081,7 +1081,7 @@ export default function ShipmentsPage() {
         <Table>
           <TableHeader className="bg-slate-50">
             <TableRow>
-              {canEdit && (
+              {canChangeSpedition && (
                 <TableHead className="w-[40px]">
                   <Checkbox
                     checked={sorted.length > 0 && selectedIds.size === sorted.length ? true : false}
@@ -1142,7 +1142,7 @@ export default function ShipmentsPage() {
                     setIsDrawerOpen(true);
                   }}
                 >
-                  {canEdit && (
+                  {canChangeSpedition && (
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <Checkbox
                         checked={selectedIds.has(shipment.id)}

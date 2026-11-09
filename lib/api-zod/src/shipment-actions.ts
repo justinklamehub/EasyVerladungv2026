@@ -1,3 +1,13 @@
+import { UpdateShipmentBody } from "./generated/api";
+
+export const SPEDITION_EDITABLE_SHIPMENT_FIELDS = ["kennzeichen", "etaTime", "subSpedition"] as const;
+export const SpeditionShipmentEditBody = UpdateShipmentBody.pick({
+  kennzeichen: true, etaTime: true, subSpedition: true,
+}).strict().refine(
+  body => body.etaTime == null || body.etaTime === "" || /^([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?$/.test(body.etaTime),
+  { message: "Ungültige ETA-Uhrzeit" },
+);
+
 export const SHIPMENT_PRINT_PERMISSION = "shipment.print";
 export const SHIPMENT_ADVANCE_PERMISSION = "shipment.advance";
 

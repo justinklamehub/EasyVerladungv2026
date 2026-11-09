@@ -14,6 +14,7 @@ import {
 import { customFetch, getListSpeditionenQueryKey, useListSpeditionen } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
+import { isInternalShipmentActionRole } from "@workspace/api-zod/shipment-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -343,7 +344,7 @@ export default function WochenansichtPage() {
   // Fetch Speditionen list (only relevant for COMET-side users)
   const { data: speditionen } = useListSpeditionen({ query: { queryKey: getListSpeditionenQueryKey(), enabled: isCometUser } });
 
-  const canDrag = !!permissions["shipment.reschedule"];
+  const canDrag = isInternalShipmentActionRole(role) && !!permissions["shipment.reschedule"];
 
   const hasActiveFilters = filterStatus !== "__all__" || filterSpeditionId !== "__all__";
 
