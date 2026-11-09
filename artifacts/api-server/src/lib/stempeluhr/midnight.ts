@@ -10,10 +10,13 @@ export async function closeOverdueEntries(c: PoolClient, now = new Date()) {
   const today = berlinInstant(localDay(now));
   const { rows } = await c.query(`${ENTRY_SELECT}
     WHERE e.ended_at IS NULL AND e.deleted_at IS NULL AND e.started_at < $1
+    AND COALESCE((e.rules->>'manualSavedAt')::timestamptz,e.started_at) < $1
     ORDER BY e.id FOR UPDATE OF e`, [today]);
   for (const old of rows) {
     // Catch up after downtime at the FIRST missed midnight, not today's midnight.
-    const end = berlinInstant(nextDay(localDay(new Date(old.started_at))));
+    const effectiveStart = new Date(Math.max(new Date(old.started_at).getTime(),
+      old.rules.manualSavedAt ? Date.parse(old.rules.manualSavedAt) : 0));
+    const end = berlinInstant(nextDay(localDay(effectiveStart)));
     const reason = (old.reason ?? "").split("\n").includes(MIDNIGHT_COMMENT)
       ? old.reason : old.reason ? `${old.reason}\n${MIDNIGHT_COMMENT}` : MIDNIGHT_COMMENT;
     const { rows: updated } = await c.query(`UPDATE clock_entries

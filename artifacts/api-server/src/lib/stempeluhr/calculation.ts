@@ -1,6 +1,7 @@
 export interface TimeRules {
   manualStart?: boolean;
   manualEnd?: boolean;
+  manualSavedAt?: string;
   earliestStart: string | null;
   latestEnd: string | null;
   breakRules: { fromMinutes: number; deductionMinutes: number }[];

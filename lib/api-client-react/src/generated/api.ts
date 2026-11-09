@@ -31,6 +31,7 @@ import type {
   ClockEntry,
   ClockEntryInput,
   ClockEntryUpdate,
+  ClockEntryWarning,
   ClockImportInput,
   ClockImportResult,
   ClockSettings,
@@ -2876,7 +2877,7 @@ export const createClockEntry = async (clockEntryInput: ClockEntryInput, options
 
 
 
-export const getCreateClockEntryMutationOptions = <TError = ErrorType<unknown>,
+export const getCreateClockEntryMutationOptions = <TError = ErrorType<ClockEntryWarning>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEntry>>, TError,{data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof createClockEntry>>, TError,{data: BodyType<ClockEntryInput>}, TContext> => {
 
@@ -2905,9 +2906,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type CreateClockEntryMutationResult = NonNullable<Awaited<ReturnType<typeof createClockEntry>>>
     export type CreateClockEntryMutationBody = BodyType<ClockEntryInput>
-    export type CreateClockEntryMutationError = ErrorType<unknown>
+    export type CreateClockEntryMutationError = ErrorType<ClockEntryWarning>
 
-    export const useCreateClockEntry = <TError = ErrorType<unknown>,
+    export const useCreateClockEntry = <TError = ErrorType<ClockEntryWarning>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createClockEntry>>, TError,{data: BodyType<ClockEntryInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof createClockEntry>>,
@@ -2942,7 +2943,7 @@ export const updateClockEntry = async (id: number,
 
 
 
-export const getUpdateClockEntryMutationOptions = <TError = ErrorType<unknown>,
+export const getUpdateClockEntryMutationOptions = <TError = ErrorType<ClockEntryWarning>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
 ): UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryUpdate>}, TContext> => {
 
@@ -2971,9 +2972,9 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
 
     export type UpdateClockEntryMutationResult = NonNullable<Awaited<ReturnType<typeof updateClockEntry>>>
     export type UpdateClockEntryMutationBody = BodyType<ClockEntryUpdate>
-    export type UpdateClockEntryMutationError = ErrorType<unknown>
+    export type UpdateClockEntryMutationError = ErrorType<ClockEntryWarning>
 
-    export const useUpdateClockEntry = <TError = ErrorType<unknown>,
+    export const useUpdateClockEntry = <TError = ErrorType<ClockEntryWarning>,
     TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof updateClockEntry>>, TError,{id: number;data: BodyType<ClockEntryUpdate>}, TContext>, request?: SecondParameter<typeof customFetch>}
  ): UseMutationResult<
         Awaited<ReturnType<typeof updateClockEntry>>,

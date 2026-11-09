@@ -545,6 +545,11 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ClockEntry" }
+        "409":
+          description: Confirm overlapping entries before saving
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockEntryWarning" }
   /stempeluhr/entries/{id}:
     parameters:
       - { name: id, in: path, required: true, schema: { type: integer } }
@@ -557,10 +562,15 @@ paths:
             schema: { $ref: "#/components/schemas/ClockEntryUpdate" }
       responses:
         "200":
-          description: Corrected with audit and optimistic locking
+          description: Corrected with audit and explicit confirmation of conflicts
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ClockEntry" }
+        "409":
+          description: Confirm overlaps or overwriting a changed entry before saving
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ClockEntryWarning" }
     delete:
       operationId: deleteClockEntry
       requestBody:
@@ -2512,6 +2522,7 @@ components:
         pauseOverride: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
         reason: { type: string, maxLength: 1000 }
         expectedUpdatedAt: { type: string }
+        confirmation: { type: string, maxLength: 64 }
     ClockEntryUpdate:
       type: object
       required: [employeeId, startedAt, endedAt, pauseOverride]
@@ -2522,6 +2533,21 @@ components:
         pauseOverride: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
         reason: { type: string, maxLength: 1100, description: Includes space for the automatic midnight comment }
         expectedUpdatedAt: { type: string }
+        confirmation: { type: string, maxLength: 64 }
+    ClockEntryWarning:
+      type: object
+      required: [code, error, confirmation, conflicts, currentEntry]
+      properties:
+        code: { type: string, enum: [CLOCK_ENTRY_WARNING] }
+        error: { type: string }
+        confirmation: { type: string }
+        conflicts:
+          type: array
+          items: { $ref: "#/components/schemas/ClockEntry" }
+        currentEntry:
+          oneOf:
+            - { $ref: "#/components/schemas/ClockEntry" }
+            - { type: "null" }
     ClockEntry:
       type: object
       required: [id, employeeId, cardNumber, firstName, lastName, provider, activity, startedAt, endedAt, originalStartedAt, originalEndedAt, bookedStart, bookedEnd, grossMinutes, pauseMinutes, netMinutes, pauseOverride, source, updatedAt]

@@ -23,6 +23,7 @@ import { berlinInstant, nextDay, localDay } from "../lib/stempeluhr/calculation"
 import { planning, saveShift, saveShiftAssignments, removeShift, shiftRules } from "../lib/stempeluhr/shifts";
 import { activeTerminal, terminalResult, renewUnlimitedCookie, unlock, lock, stamp } from "../lib/stempeluhr/terminal";
 import { importLegacy } from "../lib/stempeluhr/import";
+import { confirmManualSave } from "../lib/stempeluhr/manual-warning";
 import { allocateClockCardNumber, previewClockCardNumber, assertClockCardUnchanged, assertAutomaticClockCardNumber } from "../lib/stempeluhr/employee-numbers";
 
 const router = Router();
@@ -45,7 +46,7 @@ function handler(fn: (req: Request, res: Response) => Promise<void>) {
     try { await fn(req, res); }
     catch (err: any) {
       if (res.headersSent || res.destroyed) { req.log.warn("Stempeluhr response was already closed"); return; }
-      if (err instanceof ClockError) { res.status(err.status).json({ error: err.message }); return; }
+      if (err instanceof ClockError) { res.status(err.status).json({ error: err.message, ...err.details }); return; }
       if (err instanceof z.ZodError || err instanceof GeneratedZodError) { res.status(400).json({ error: "Ungültige Eingabe.", details: err.issues }); return; }
       if (err.code === "23505") { res.status(409).json({ error: "Kartennummer, Alt-ID oder offener Eintrag ist bereits vorhanden." }); return; }
       if (err.code === "23503") { res.status(409).json({ error: "Der Mitarbeiter hat bereits Zeiteinträge und kann nicht gelöscht werden." }); return; }
@@ -185,23 +186,22 @@ async function saveEntry(req: Request, updating: boolean) {
   z.number().int().positive().parse(b.employeeId);
   if (b.pauseOverride != null) z.number().int().parse(b.pauseOverride);
   const creationReason = b.reason?.trim() ?? "";
-  validateRange(dates.startedAt, dates.endedAt);
+  validateRange(dates.startedAt, dates.endedAt, Infinity);
   const id = updating ? idParam(req) : 0;
   return transaction(async (c) => {
     const old = updating ? (await c.query(`${ENTRY_SELECT} WHERE e.id=$1 AND e.deleted_at IS NULL`, [id])).rows[0] : undefined;
     if (updating && !old) throw new ClockError("Zeiteintrag nicht gefunden.", 404);
     if (old) {
-      checkVersion(old.updated_at, b.expectedUpdatedAt);
       if (old.employee_id !== b.employeeId) throw new ClockError("Der Mitarbeiter eines bestehenden Eintrags kann nicht geändert werden.");
     }
     const reason = old ? (b.reason === undefined ? old.reason ?? "" : b.reason.trim()) : creationReason;
     if (!(await c.query("SELECT id FROM clock_employees WHERE id=$1", [b.employeeId])).rowCount) throw new ClockError("Mitarbeiter nicht gefunden.", 404);
-    await checkOverlap(c, b.employeeId, dates.startedAt, dates.endedAt, id);
+    await confirmManualSave(c, { ...b, ...dates }, id, old);
     const baseRules = old && localDay(new Date(dates.startedAt)) === localDay(new Date(old.started_at))
       ? old.rules : await shiftRules(c, b.employeeId, new Date(dates.startedAt));
     // Preserve the rules snapshot for pauses/history, but never clip manually entered times.
     // An open manual entry still gets an automatically evaluated end when stamped out.
-    const rules = { ...baseRules, manualStart: true, manualEnd: dates.endedAt !== null };
+    const rules = { ...baseRules, manualStart: true, manualEnd: dates.endedAt !== null, manualSavedAt: new Date().toISOString() };
     let savedId = id;
     if (old) await c.query(`UPDATE clock_entries SET started_at=$2,ended_at=$3,pause_override=$4,rules=$5,reason=$6,
       updated_at=date_trunc('milliseconds',clock_timestamp()) WHERE id=$1`, [id, dates.startedAt, dates.endedAt, b.pauseOverride, rules, reason]);

@@ -1,4 +1,4 @@
-import { pgTable, serial, text, boolean, timestamp, integer, jsonb, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, boolean, timestamp, integer, jsonb, uniqueIndex, index } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { sql } from "drizzle-orm";
 
@@ -25,7 +25,7 @@ export const clockEntriesTable = pgTable("clock_entries", {
   legacyId: text("legacy_id").unique(),
   deletedAt: timestamp("deleted_at", { withTimezone: true }),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
-}, (t) => [uniqueIndex("clock_one_open_entry").on(t.employeeId).where(sql`${t.endedAt} IS NULL AND ${t.deletedAt} IS NULL`)]);
+}, (t) => [index("clock_open_entries").on(t.employeeId).where(sql`${t.endedAt} IS NULL AND ${t.deletedAt} IS NULL`)]);
 export const clockSettingsTable = pgTable("clock_settings", {
   id: integer("id").primaryKey(),
   data: jsonb("data").$type<Record<string, unknown>>().notNull(),

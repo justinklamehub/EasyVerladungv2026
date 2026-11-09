@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, calculate, type Settings } from "./calculation";
 import { ensureEntryReasons } from "./entry-reasons";
 
 export class ClockError extends Error {
-  constructor(message: string, public status = 400) { super(message); }
+  constructor(message: string, public status = 400, public details?: Record<string, unknown>) { super(message); }
 }
 export type Row = Record<string, any>;
 export const iso = (date: any): string => new Date(date).toISOString();
@@ -27,7 +27,8 @@ export function ensureClockTables(): Promise<void> {
           updated_at TIMESTAMPTZ NOT NULL DEFAULT date_trunc('milliseconds',clock_timestamp()),
           CHECK (ended_at IS NULL OR ended_at >= started_at),
           CHECK (pause_override IS NULL OR pause_override BETWEEN 0 AND 1440));
-        CREATE UNIQUE INDEX IF NOT EXISTS clock_one_open_entry ON clock_entries(employee_id)
+        DROP INDEX IF EXISTS clock_one_open_entry;
+        CREATE INDEX IF NOT EXISTS clock_open_entries ON clock_entries(employee_id)
           WHERE ended_at IS NULL AND deleted_at IS NULL;
         CREATE INDEX IF NOT EXISTS clock_entries_employee_time ON clock_entries(employee_id,started_at) WHERE deleted_at IS NULL;
         CREATE TABLE IF NOT EXISTS clock_card_counter (
@@ -120,11 +121,11 @@ export async function audit(c: PoolClient, actor: string, action: string, reason
 export function checkVersion(actual: unknown, expected?: string) {
   if (!expected || iso(actual) !== expected) throw new ClockError("Der Datensatz wurde inzwischen geändert. Bitte neu laden.", 409);
 }
-export function validateRange(start: string, end: string | null) {
+export function validateRange(start: string, end: string | null, maxDays = 7) {
   const a = new Date(start), b = end ? new Date(end) : null;
   if (!Number.isFinite(a.getTime()) || (b && !Number.isFinite(b.getTime()))) throw new ClockError("Ungültige Zeit.");
   if (b && b < a) throw new ClockError("Gehen darf nicht vor Kommen liegen.");
-  if (b && b.getTime() - a.getTime() > 7 * 86400000) throw new ClockError("Ein Eintrag darf höchstens sieben Tage umfassen.");
+  if (b && b.getTime() - a.getTime() > maxDays * 86400000) throw new ClockError("Ein Eintrag darf höchstens sieben Tage umfassen.");
 }
 export async function checkOverlap(c: PoolClient, employeeId: number, start: string, end: string | null, exclude = 0) {
   const rows = await c.query(`SELECT id FROM clock_entries WHERE employee_id=$1 AND deleted_at IS NULL AND id<>$4

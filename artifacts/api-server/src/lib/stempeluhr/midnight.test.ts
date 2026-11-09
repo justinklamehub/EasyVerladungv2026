@@ -61,6 +61,16 @@ test("a full-length note stays editable and reopening does not duplicate the sys
   assert.equal(rows[0].reason, reason);
 });
 
+test("a manually reopened historical entry survives until the next midnight after saving", async () => {
+  const row = makeEntry(1, "2026-11-01T10:00:00Z");
+  const rows = [{ ...row, rules: { ...row.rules, manualSavedAt: "2026-11-09T12:00:00Z" } }];
+  const { c } = mockClient(rows);
+  assert.equal(await closeOverdueEntries(c, new Date("2026-11-09T12:01:00Z")), 0);
+  assert.equal(rows[0].ended_at, null);
+  assert.equal(await closeOverdueEntries(c, new Date("2026-11-09T23:00:00Z")), 1);
+  assert.equal(rows[0].ended_at, "2026-11-09T23:00:00.000Z");
+});
+
 function makeEntry(id: number, start: string, reason = "") {
   return { id, employee_id: id, started_at: start, ended_at: null as string | null,
     original_started_at: start, original_ended_at: null, reason, deleted_at: null as string | null,
@@ -74,7 +84,8 @@ function mockClient(rows: ReturnType<typeof makeEntry>[]) {
     if (sql.startsWith("SELECT e.*")) {
       assert.match(sql, /ended_at IS NULL AND e.deleted_at IS NULL/);
       assert.match(sql, /FOR UPDATE OF e/);
-      return result(rows.filter((r) => !r.ended_at && !r.deleted_at && new Date(r.started_at) < values[0]).map((r) => structuredClone(r)));
+      return result(rows.filter((r) => !r.ended_at && !r.deleted_at && new Date(r.started_at) < values[0]
+        && new Date((r.rules as any).manualSavedAt ?? r.started_at) < values[0]).map((r) => structuredClone(r)));
     }
     if (sql.startsWith("UPDATE clock_entries")) {
       const r = rows.find((r) => r.id === values[0])!;

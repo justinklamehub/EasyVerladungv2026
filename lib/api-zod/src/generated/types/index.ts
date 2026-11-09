@@ -22,6 +22,8 @@ export * from './clockEmployeeInput';
 export * from './clockEntry';
 export * from './clockEntryInput';
 export * from './clockEntryUpdate';
+export * from './clockEntryWarning';
+export * from './clockEntryWarningCode';
 export * from './clockImportInput';
 export * from './clockImportResult';
 export * from './clockLegacyEntry';

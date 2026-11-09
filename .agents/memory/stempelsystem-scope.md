@@ -87,6 +87,18 @@ Bei manueller Zeiterfassung und beim Bearbeiten von Zeiten müssen die eingegebe
 
 **How to apply:** Manuell gespeicherte Zeiten nicht erneut an Schichtgrenzen kürzen. Pausenüberschreibungen beibehalten; ein leeres Pausenfeld behält seine bestehende Bedeutung „automatisch“. Unveränderte historische Buchungen nicht pauschal rückwirkend neu berechnen.
 
+Bei „Zeit erfassen“ darf der Nutzer die Zeiten immer überschreiben; auch das System darf dies nicht sperren. Bei doppelten Einträgen vorher warnen.
+
+**Why:** Der Nutzer hat die uneingeschränkte manuelle Zeitvorgabe erneut ausdrücklich verlangt und eine Warnung statt einer Sperre für doppelte Buchungen vorgegeben.
+
+**How to apply:** Überlappungen und inzwischen vom System geänderte Einträge nach ausdrücklicher Bestätigung speicherbar machen. Andere Einträge nicht stillschweigend löschen oder ersetzen. Bestätigungen an die eingegebenen Werte und den aktuell angezeigten Konfliktstand binden. Berechtigungen und gültige Datumswerte weiterhin prüfen.
+
+Manuell erneut geöffnete ältere Buchungen bis zum nächsten Tageswechsel nach dem Speichern offen lassen.
+
+**Why:** Eine laufende Nachholprüfung für Mitternacht würde die gerade bestätigte manuelle Korrektur sonst sofort wieder rückgängig machen.
+
+**How to apply:** Den manuellen Speichervorgang bei der nächsten automatischen Ausstempelung berücksichtigen. Geschlossene manuelle Zeitvorgaben nicht verändern; der tägliche Abschluss um Mitternacht bleibt aktiv.
+
 Um 00:00 Uhr sollen alle noch offenen Buchungen automatisch ausgestempelt und mit einem Kommentar versehen werden.
 
 **Why:** Der Nutzer verlangt einen täglichen automatischen Abschluss offener Buchungen.

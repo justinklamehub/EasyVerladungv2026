@@ -558,6 +558,8 @@ export interface ClockEntryInput {
   /** @maxLength 1000 */
   reason?: string;
   expectedUpdatedAt?: string;
+  /** @maxLength 64 */
+  confirmation?: string;
 }
 
 export interface ClockEntryUpdate {
@@ -577,7 +579,16 @@ export interface ClockEntryUpdate {
      */
   reason?: string;
   expectedUpdatedAt?: string;
+  /** @maxLength 64 */
+  confirmation?: string;
 }
+
+export type ClockEntryWarningCode = typeof ClockEntryWarningCode[keyof typeof ClockEntryWarningCode];
+
+
+export const ClockEntryWarningCode = {
+  CLOCK_ENTRY_WARNING: 'CLOCK_ENTRY_WARNING',
+} as const;
 
 export interface ClockEntry {
   id: number;
@@ -616,6 +627,14 @@ export interface ClockEntry {
   /** Current optional entry reason */
   reason?: string;
   updatedAt: string;
+}
+
+export interface ClockEntryWarning {
+  code: ClockEntryWarningCode;
+  error: string;
+  confirmation: string;
+  conflicts: ClockEntry[];
+  currentEntry: ClockEntry | null;
 }
 
 export interface ClockDeletion {

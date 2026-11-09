@@ -23,4 +23,6 @@ export interface ClockEntryUpdate {
      */
   reason?: string;
   expectedUpdatedAt?: string;
+  /** @maxLength 64 */
+  confirmation?: string;
 }

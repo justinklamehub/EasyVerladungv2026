@@ -1242,6 +1242,8 @@ export const createClockEntryBodyPauseOverrideMax = 1440;
 
 export const createClockEntryBodyReasonMax = 1000;
 
+export const createClockEntryBodyConfirmationMax = 64;
+
 
 
 export const CreateClockEntryBody = zod.object({
@@ -1250,7 +1252,8 @@ export const CreateClockEntryBody = zod.object({
   "endedAt": zod.coerce.date().nullable(),
   "pauseOverride": zod.number().min(createClockEntryBodyPauseOverrideMin).max(createClockEntryBodyPauseOverrideMax).nullable(),
   "reason": zod.string().max(createClockEntryBodyReasonMax).optional(),
-  "expectedUpdatedAt": zod.string().optional()
+  "expectedUpdatedAt": zod.string().optional(),
+  "confirmation": zod.string().max(createClockEntryBodyConfirmationMax).optional()
 })
 
 
@@ -1263,6 +1266,8 @@ export const updateClockEntryBodyPauseOverrideMax = 1440;
 
 export const updateClockEntryBodyReasonMax = 1100;
 
+export const updateClockEntryBodyConfirmationMax = 64;
+
 
 
 export const UpdateClockEntryBody = zod.object({
@@ -1271,7 +1276,8 @@ export const UpdateClockEntryBody = zod.object({
   "endedAt": zod.coerce.date().nullable(),
   "pauseOverride": zod.number().min(updateClockEntryBodyPauseOverrideMin).max(updateClockEntryBodyPauseOverrideMax).nullable(),
   "reason": zod.string().max(updateClockEntryBodyReasonMax).optional().describe('Includes space for the automatic midnight comment'),
-  "expectedUpdatedAt": zod.string().optional()
+  "expectedUpdatedAt": zod.string().optional(),
+  "confirmation": zod.string().max(updateClockEntryBodyConfirmationMax).optional()
 })
 
 export const UpdateClockEntryResponse = zod.object({

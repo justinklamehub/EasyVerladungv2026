@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useCreateClockEntry, useUpdateClockEntry, useDeleteClockEntry, useGetClockShiftPlanning, getGetClockShiftPlanningQueryKey } from "@workspace/api-client-react";
-import type { ClockEntry, ClockEmployee } from "@workspace/api-client-react";
+import type { ClockEntry, ClockEmployee, ClockEntryWarning } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -139,22 +139,29 @@ function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEn
   const [pause, setPause] = useState(entry?.pauseOverride != null ? String(entry.pauseOverride) : "");
   const [reason, setReason] = useState(entry?.reason ?? "");
   const [err, setErr] = useState("");
+  const [warning, setWarning] = useState<{ input: string; response: ClockEntryWarning } | null>(null);
+  const inputKey = JSON.stringify([emp, start, end, pause, reason]);
+  const activeWarning = warning?.input === inputKey ? warning.response : null;
   const busy = create.isPending || update.isPending;
 
-  const save = async () => {
+  const save = async (confirmation?: string) => {
     setErr("");
     try {
       if (!emp) throw new Error("Mitarbeiter wählen");
       if (!start) throw new Error("Beginn angeben");
       const startedAt = berlinToIso(start);
       const endedAt = end ? berlinToIso(end) : null;
-      if (endedAt && endedAt <= startedAt) throw new Error("Ende muss nach dem Beginn liegen");
+      if (endedAt && endedAt < startedAt) throw new Error("Ende darf nicht vor dem Beginn liegen");
       let pauseOverride: number | null = null;
       if (pause.trim() !== "") { pauseOverride = Number(pause); if (!Number.isInteger(pauseOverride) || pauseOverride < 0 || pauseOverride > 1440) throw new Error("Pause: ganze Minuten 0 bis 1440"); }
-      const data = { employeeId: Number(emp), startedAt, endedAt, pauseOverride, reason: reason.trim(), ...(entry ? { expectedUpdatedAt: entry.updatedAt } : {}) };
+      const data = { employeeId: Number(emp), startedAt, endedAt, pauseOverride, reason: reason.trim(), ...(entry ? { expectedUpdatedAt: entry.updatedAt } : {}), ...(confirmation ? { confirmation } : {}) };
       if (entry) await update.mutateAsync({ id: entry.id, data }); else await create.mutateAsync({ data });
       invalidate(); onClose();
-    } catch (e) { setErr(errMsg(e)); }
+    } catch (e) {
+      const response = (e as { data?: ClockEntryWarning }).data;
+      if (response?.code === "CLOCK_ENTRY_WARNING") setWarning({ input: inputKey, response });
+      else { setWarning(null); setErr(errMsg(e)); }
+    }
   };
 
   return (
@@ -176,8 +183,14 @@ function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEn
           <div><Label>Pause manuell (Minuten, leer = automatisch)</Label><Input inputMode="numeric" value={pause} onChange={(e) => setPause(e.target.value)} data-testid="input-entry-pause" /></div>
           <div><Label>Begründung (optional)</Label><Textarea value={reason} maxLength={entry ? 1100 : 1000} onChange={(e) => setReason(e.target.value)} data-testid="input-entry-reason" /></div>
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2" data-testid="text-entry-error">{err}</div>}
+          {activeWarning && <div role="alert" className="text-sm text-amber-900 bg-amber-50 border border-amber-300 rounded p-3 space-y-2" data-testid="text-entry-warning">
+            <p className="font-semibold">Bitte vor dem Speichern prüfen</p>
+            <p>{activeWarning.error}</p>
+            {activeWarning.currentEntry && <p>Aktueller Stand: {fmtDateTime(activeWarning.currentEntry.startedAt)} – {activeWarning.currentEntry.endedAt ? fmtDateTime(activeWarning.currentEntry.endedAt) : "offen"}{activeWarning.currentEntry.reason ? ` · ${activeWarning.currentEntry.reason}` : ""}</p>}
+            {activeWarning.conflicts.length > 0 && <ul className="list-disc pl-4 max-h-32 overflow-y-auto">{activeWarning.conflicts.map((e) => <li key={e.id}>#{e.id}: {fmtDateTime(e.startedAt)} – {e.endedAt ? fmtDateTime(e.endedAt) : "offen"}</li>)}</ul>}
+          </div>}
         </div>
-        <DialogFooter><Button variant="outline" onClick={onClose}>Abbrechen</Button><Button onClick={save} disabled={busy} data-testid="button-save-entry">Speichern</Button></DialogFooter>
+        <DialogFooter><Button variant="outline" onClick={onClose} disabled={busy}>Abbrechen</Button><Button onClick={() => save(activeWarning?.confirmation)} disabled={busy} data-testid="button-save-entry">{activeWarning ? "Trotzdem speichern" : "Speichern"}</Button></DialogFooter>
       </DialogContent>
     </Dialog>
   );

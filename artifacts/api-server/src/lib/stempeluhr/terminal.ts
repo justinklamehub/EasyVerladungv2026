@@ -94,6 +94,8 @@ export async function stamp(req: Request, card: string, requestId: string, res?:
     if (last.rows[0].last && now.getTime() - new Date(last.rows[0].last).getTime() < s.debounceSeconds * 1000)
       throw new ClockError("Diese Karte wurde gerade gestempelt. Bitte nicht doppelt scannen.", 409);
     const open = await c.query("SELECT * FROM clock_entries WHERE employee_id=$1 AND ended_at IS NULL AND deleted_at IS NULL", [m.id]);
+    if ((open.rowCount ?? 0) > 1)
+      throw new ClockError("Mehrere offene Buchungen vorhanden. Bitte durch die Verwaltung korrigieren; es wird keine Buchung automatisch ausgewählt.", 409);
     let id: number, action: "in" | "out";
     if (!open.rowCount) {
       await checkOverlap(c, m.id, now.toISOString(), null);

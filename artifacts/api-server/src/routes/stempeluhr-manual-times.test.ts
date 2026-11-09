@@ -19,7 +19,7 @@ test("manual creation and corrections persist exact time rules and retain origin
       if (sql.includes("SELECT role,is_active FROM users")) return result([{ role: "comet_admin", is_active: true }]);
       if (sql.startsWith("SELECT id FROM clock_employees")) return result([{ id: 1 }]);
       if (sql.startsWith("SELECT * FROM clock_settings")) return result([{ data: DEFAULT_SETTINGS, updated_at: "2026-10-19T00:00:00Z" }]);
-      if (sql.startsWith("SELECT e.*")) return result(saved ? [structuredClone(saved)] : []);
+      if (sql.startsWith("SELECT e.*")) return result(sql.includes("e.employee_id=$1") ? [] : saved ? [structuredClone(saved)] : []);
       if (sql.startsWith("INSERT INTO clock_entries(")) {
         saved = {
           id: 1, employee_id: values[0], started_at: values[1], ended_at: values[2],
