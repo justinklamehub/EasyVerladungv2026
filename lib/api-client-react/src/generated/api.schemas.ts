@@ -571,7 +571,10 @@ export interface ClockEntryUpdate {
      * @nullable
      */
   pauseOverride: number | null;
-  /** @maxLength 1000 */
+  /**
+     * Includes space for the automatic midnight comment
+     * @maxLength 1100
+     */
   reason?: string;
   expectedUpdatedAt?: string;
 }

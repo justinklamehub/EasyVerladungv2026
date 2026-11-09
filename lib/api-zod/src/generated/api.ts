@@ -1261,7 +1261,7 @@ export const UpdateClockEntryParams = zod.object({
 export const updateClockEntryBodyPauseOverrideMin = 0;
 export const updateClockEntryBodyPauseOverrideMax = 1440;
 
-export const updateClockEntryBodyReasonMax = 1000;
+export const updateClockEntryBodyReasonMax = 1100;
 
 
 
@@ -1270,7 +1270,7 @@ export const UpdateClockEntryBody = zod.object({
   "startedAt": zod.coerce.date(),
   "endedAt": zod.coerce.date().nullable(),
   "pauseOverride": zod.number().min(updateClockEntryBodyPauseOverrideMin).max(updateClockEntryBodyPauseOverrideMax).nullable(),
-  "reason": zod.string().max(updateClockEntryBodyReasonMax).optional(),
+  "reason": zod.string().max(updateClockEntryBodyReasonMax).optional().describe('Includes space for the automatic midnight comment'),
   "expectedUpdatedAt": zod.string().optional()
 })
 

@@ -2520,7 +2520,7 @@ components:
         startedAt: { type: string, format: date-time }
         endedAt: { type: ["string", "null"], format: date-time }
         pauseOverride: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
-        reason: { type: string, maxLength: 1000 }
+        reason: { type: string, maxLength: 1100, description: Includes space for the automatic midnight comment }
         expectedUpdatedAt: { type: string }
     ClockEntry:
       type: object

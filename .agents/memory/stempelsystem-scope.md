@@ -86,3 +86,9 @@ Bei manueller Zeiterfassung und beim Bearbeiten von Zeiten müssen die eingegebe
 **Why:** Der Nutzer hat ausdrücklich zwischen manuellen Angaben beziehungsweise Zeitbearbeitungen und der automatischen Verarbeitung beim Stempeln unterschieden.
 
 **How to apply:** Manuell gespeicherte Zeiten nicht erneut an Schichtgrenzen kürzen. Pausenüberschreibungen beibehalten; ein leeres Pausenfeld behält seine bestehende Bedeutung „automatisch“. Unveränderte historische Buchungen nicht pauschal rückwirkend neu berechnen.
+
+Um 00:00 Uhr sollen alle noch offenen Buchungen automatisch ausgestempelt und mit einem Kommentar versehen werden.
+
+**Why:** Der Nutzer verlangt einen täglichen automatischen Abschluss offener Buchungen.
+
+**How to apply:** Den Tageswechsel in Europe/Berlin serverseitig verarbeiten, unabhängig von offenen Browsern. Bestehende Kommentare erhalten und den automatischen Abschluss protokollieren. Nach Serverausfällen am ersten verpassten Tageswechsel abschließen; keinen echten Originalscan erfinden.

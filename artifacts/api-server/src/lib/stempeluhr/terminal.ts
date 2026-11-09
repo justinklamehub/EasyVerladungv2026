@@ -1,3 +1,4 @@
+import { closeOverdueEntries } from "./midnight";
 import { createHash, randomBytes } from "node:crypto";
 import type { Request, Response } from "express";
 import type { PoolClient } from "@workspace/db";
@@ -86,6 +87,7 @@ export async function stamp(req: Request, card: string, requestId: string, res?:
     const m = employees[0];
     if (!m || !m.active) throw new ClockError("Karte unbekannt oder Mitarbeiter nicht aktiv.", 404);
     const now = new Date();
+    await closeOverdueEntries(c, now);
     const s = await settings(c);
     // Includes soft-deleted rows so immediately repeating a scan remains protected.
     const last = await c.query("SELECT MAX(GREATEST(original_started_at,original_ended_at)) AS last FROM clock_entries WHERE employee_id=$1 AND source='terminal'", [m.id]);

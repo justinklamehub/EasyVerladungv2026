@@ -174,7 +174,7 @@ function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEn
             <div><Label>Ende (leer = offen)</Label><Input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} data-testid="input-entry-end" /></div>
           </div>
           <div><Label>Pause manuell (Minuten, leer = automatisch)</Label><Input inputMode="numeric" value={pause} onChange={(e) => setPause(e.target.value)} data-testid="input-entry-pause" /></div>
-          <div><Label>Begründung (optional)</Label><Textarea value={reason} maxLength={1000} onChange={(e) => setReason(e.target.value)} data-testid="input-entry-reason" /></div>
+          <div><Label>Begründung (optional)</Label><Textarea value={reason} maxLength={entry ? 1100 : 1000} onChange={(e) => setReason(e.target.value)} data-testid="input-entry-reason" /></div>
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2" data-testid="text-entry-error">{err}</div>}
         </div>
         <DialogFooter><Button variant="outline" onClick={onClose}>Abbrechen</Button><Button onClick={save} disabled={busy} data-testid="button-save-entry">Speichern</Button></DialogFooter>
