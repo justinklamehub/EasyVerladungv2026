@@ -27,8 +27,8 @@ Bestehende Verladungen sollen sich per Mehrfachauswahl einer anderen Spedition z
 
 **How to apply:** Keine neue Anlage auslösen; vorhandene Bearbeitungsrechte und die Beschränkung von Speditionswechseln auf interne Bearbeitung beibehalten.
 
-Bei bestehenden LKWs dürfen Speditionen ausschließlich ETA-Uhrzeit, Kennzeichen und Subspedition ändern, nicht das Datum oder andere Felder. Dies gilt ausdrücklich auch bei COMET-Sperre, gedrucktem Deckblatt und eingetragener Ankunft.
+Speditionen dürfen vor einer COMET-Bearbeitung weiterhin alle bisherigen Speditionsfelder am LKW ändern. Sobald COMET mit dem LKW etwas gemacht hat (z. B. Deckblatt gedruckt), dürfen sie nur ETA-Uhrzeit, Beschreibung/Bezeichnung, Kennzeichen und Subspedition ändern.
 
-**Why:** Der Nutzer hat diese eingeschränkte Bearbeitung verlangt und die Ausnahme von sämtlichen bisherigen Zustandssperren ausdrücklich bestätigt.
+**Why:** Der Nutzer hat die bisherige pauschale Einschränkung korrigiert und die zwei vom Bearbeitungsstand abhängigen Fälle ausdrücklich vorgegeben.
 
-**How to apply:** Bearbeitungsrecht und eigene bzw. zur Bearbeitung freigegebene Spedition bleiben erforderlich; Lesefreigaben reichen nicht. Anlage und interne COMET-Bearbeitung behalten ihren bisherigen Umfang. Änderungen außerhalb dieser drei Felder auch serverseitig ablehnen.
+**How to apply:** Bearbeitungsrecht und eigene bzw. zur Bearbeitung freigegebene Spedition bleiben erforderlich; Lesefreigaben reichen nicht. Interne COMET-Felder bleiben intern. Nach COMET-Bearbeitung Datum und übrige Felder auch serverseitig schützen, einschließlich alternativer Verschiebewege. Die vier verbleibenden Felder sind trotz Sperre, Druck oder Ankunft bearbeitbar.

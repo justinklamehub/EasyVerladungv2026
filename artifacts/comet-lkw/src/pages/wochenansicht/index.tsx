@@ -14,7 +14,7 @@ import {
 import { customFetch, getListSpeditionenQueryKey, useListSpeditionen } from "@workspace/api-client-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/auth-context";
-import { isInternalShipmentActionRole } from "@workspace/api-zod/shipment-actions";
+import { isInternalShipmentActionRole, hasCometShipmentActivity } from "@workspace/api-zod/shipment-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -85,6 +85,9 @@ interface Shipment {
   status: string;
   statusChangedAt?: string | null;
   speditionName?: string | null;
+  speditionId?: number | null;
+  cometBearbeitet?: boolean;
+  wareStatus?: string | null;
   lkwArt?: string | null;
   tor?: string | null;
   gesperrtFuerSpedition?: boolean;
@@ -219,6 +222,7 @@ function DroppableDay({
   dayIndex,
   shipments,
   canDrag,
+  canDragShipment,
   isToday,
   slaThresholds,
   onSelect,
@@ -228,6 +232,7 @@ function DroppableDay({
   dayIndex: number;
   shipments: Shipment[];
   canDrag: boolean;
+  canDragShipment: (shipment: Shipment) => boolean;
   isToday: boolean;
   slaThresholds?: SlaThresholds;
   onSelect: (id: number) => void;
@@ -283,7 +288,7 @@ function DroppableDay({
           </div>
         )}
         {shipments.map((s) => (
-          <DraggableShipment key={s.id} shipment={s} canDrag={canDrag} slaThresholds={slaThresholds} onSelect={onSelect} />
+          <DraggableShipment key={s.id} shipment={s} canDrag={canDrag && canDragShipment(s)} slaThresholds={slaThresholds} onSelect={onSelect} />
         ))}
         {shipments.length > 0 && isOver && (
           <div className="h-10 rounded-md border-2 border-dashed border-primary/40 bg-primary/5 flex items-center justify-center">
@@ -342,9 +347,11 @@ export default function WochenansichtPage() {
   });
 
   // Fetch Speditionen list (only relevant for COMET-side users)
-  const { data: speditionen } = useListSpeditionen({ query: { queryKey: getListSpeditionenQueryKey(), enabled: isCometUser } });
+  const { data: speditionen } = useListSpeditionen({ query: { queryKey: getListSpeditionenQueryKey() } });
 
-  const canDrag = isInternalShipmentActionRole(role) && !!permissions["shipment.reschedule"];
+  const canDrag = !!permissions["shipment.reschedule"] && (isInternalShipmentActionRole(role) || !!permissions["shipment.edit"]);
+  const canDragShipment = (shipment: Shipment) => isInternalShipmentActionRole(role) ||
+    (!hasCometShipmentActivity(shipment) && !!speditionen?.some(s => s.id === shipment.speditionId && s.canCreateShipment));
 
   const hasActiveFilters = filterStatus !== "__all__" || filterSpeditionId !== "__all__";
 
@@ -545,6 +552,7 @@ export default function WochenansichtPage() {
                     dayIndex={i}
                     shipments={dayShipments}
                     canDrag={canDrag}
+                    canDragShipment={canDragShipment}
                     isToday={dateStr === today}
                     slaThresholds={slaThresholds}
                     onSelect={openDrawer}

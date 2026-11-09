@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { AdvanceShipmentStatusBody } from "@workspace/api-zod";
 import { nextShipmentStatus, isInternalShipmentActionRole, SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION } from "@workspace/api-zod/shipment-actions";
-import { SPEDITION_EDITABLE_SHIPMENT_FIELDS, SpeditionShipmentEditBody } from "@workspace/api-zod/shipment-actions";
+import { SPEDITION_EDITABLE_SHIPMENT_FIELDS, SPEDITION_UNPROCESSED_SHIPMENT_FIELDS, SpeditionShipmentEditBody, SpeditionUnprocessedShipmentEditBody, hasCometShipmentActivity } from "@workspace/api-zod/shipment-actions";
 import { db, pool } from "@workspace/db";
 import {
   shipmentsTable,
@@ -74,6 +74,14 @@ async function emit(req: any, event: string, data: any, speditionId?: number | n
 const COMET_OPERATIVE_FIELDS = ["status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet"];
 const COMET_ROLES = ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"];
 const SPED_ROLES = ["speditions_admin", "speditions_bearbeiter", "speditions_viewer"];
+
+// Prevent an unrestricted carrier save from racing a COMET edit/print/arrival.
+function unchangedCometActivity(existing: typeof shipmentsTable.$inferSelect) {
+  return and(
+    ...(["cometBearbeitet", "gesperrtFuerSpedition", "wareStatus", "ataDate", "ataTime", "tor", "status"] as const)
+      .map(field => sql`${shipmentsTable[field]} IS NOT DISTINCT FROM ${existing[field] ?? null}`),
+  );
+}
 
 import { getSpeditionAccess } from "../lib/spedition-access";
 import { allowedSpeditionLkwArten } from "../lib/spedition-lkw-arten";
@@ -549,18 +557,29 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
       if (!req.body || typeof req.body !== "object" || Array.isArray(req.body)) {
         return res.status(400).json({ error: "Ungültige Verladungsänderung" });
       }
-      if (Object.keys(req.body).some(key => !(SPEDITION_EDITABLE_SHIPMENT_FIELDS as readonly string[]).includes(key))) {
-        return res.status(403).json({ error: "Speditionen dürfen nur ETA-Uhrzeit, Kennzeichen und Subspedition ändern." });
+      const limitedEdit = hasCometShipmentActivity(existing);
+      const editableFields = limitedEdit ? SPEDITION_EDITABLE_SHIPMENT_FIELDS : SPEDITION_UNPROCESSED_SHIPMENT_FIELDS;
+      if (Object.keys(req.body).some(key => !(editableFields as readonly string[]).includes(key))) {
+        return res.status(403).json({ error: limitedEdit
+          ? "Nach COMET-Bearbeitung dürfen Speditionen nur ETA-Uhrzeit, Bezeichnung, Kennzeichen und Subspedition ändern."
+          : "Diese Felder dürfen nur von COMET geändert werden." });
       }
-      const parsed = SpeditionShipmentEditBody.safeParse(req.body);
-      if (!parsed.success) return res.status(400).json({ error: "Ungültige ETA-Uhrzeit, Kennzeichen oder Subspedition." });
+      const parsed = (limitedEdit ? SpeditionShipmentEditBody : SpeditionUnprocessedShipmentEditBody).safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ error: "Ungültige Verladungsänderung." });
+      if (!limitedEdit && "lkwArt" in parsed.data && parsed.data.lkwArt !== undefined && parsed.data.lkwArt !== existing.lkwArt) {
+        const selectedLkwArt = parsed.data.lkwArt;
+        const types = await allowedSpeditionLkwArten(sessionSpeditionId ?? null, existing.speditionId);
+        if (!types.some(type => type.name === selectedLkwArt)) {
+          return res.status(403).json({ error: "Diese LKW-Art ist für die Spedition nicht freigegeben." });
+        }
+      }
       speditionUpdates = parsed.data;
     }
 
     const isCometUser = !SPED_ROLES.includes(role);
 
     const COMET_ALLOWED = ["bezeichnung", "kennzeichen", "relation", "lkwArt", "etaDate", "etaTime", "bemerkungen", "telefon", "wareStatus", "status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet", "speditionId", "subSpedition"];
-    const allowedFields = isCometUser ? COMET_ALLOWED : SPEDITION_EDITABLE_SHIPMENT_FIELDS;
+    const allowedFields = isCometUser ? COMET_ALLOWED : SPEDITION_UNPROCESSED_SHIPMENT_FIELDS;
 
     const changedAt = new Date();
     const updates: Record<string, any> = {};
@@ -582,6 +601,9 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
 
     if (isCometUser) {
       const editingOperative = COMET_OPERATIVE_FIELDS.some((f) => updates[f] !== undefined);
+      if (Object.entries(updates).some(([field, value]) => value !== (existing as any)[field])) {
+        updates.cometBearbeitet = true;
+      }
       if (editingOperative) {
         updates.cometBearbeitet = true;
         updates.gesperrtFuerSpedition = true;
@@ -598,9 +620,13 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
     const [shipment] = await db
       .update(shipmentsTable)
       .set(updates)
-      .where(action === "advance" ? and(eq(shipmentsTable.id, id), eq(shipmentsTable.status, existing.status)) : eq(shipmentsTable.id, id))
+      .where(action === "advance"
+        ? and(eq(shipmentsTable.id, id), eq(shipmentsTable.status, existing.status))
+        : !isCometUser && Object.keys(speditionUpdates ?? {}).some(field => !(SPEDITION_EDITABLE_SHIPMENT_FIELDS as readonly string[]).includes(field))
+          ? and(eq(shipmentsTable.id, id), unchangedCometActivity(existing))
+          : eq(shipmentsTable.id, id))
       .returning();
-    if (!shipment) return res.status(409).json({ error: "Der Status wurde gleichzeitig geändert. Bitte Ansicht aktualisieren." });
+    if (!shipment) return res.status(409).json({ error: "Die Verladung wurde gleichzeitig geändert. Bitte Ansicht aktualisieren." });
 
     // Clear SLA notification records so they can re-fire on the new status
     if (isStatusChange) {
@@ -743,7 +769,7 @@ router.post("/shipments/:id/unlock", requireAuth, async (req, res) => {
 router.patch("/shipments/:id/reschedule", requireAuth, async (req, res) => {
   try {
     const role = req.session.role!;
-    if (!isInternalShipmentActionRole(role) || !(await can(role, "shipment.reschedule"))) {
+    if (!(await can(role, "shipment.reschedule"))) {
       return res.status(403).json({ error: "Keine Berechtigung zum Verschieben von Sendungen" });
     }
     const id = Number(req.params.id);
@@ -753,13 +779,27 @@ router.patch("/shipments/:id/reschedule", requireAuth, async (req, res) => {
     }
     const [existing] = await db.select().from(shipmentsTable).where(eq(shipmentsTable.id, id)).limit(1);
     if (!existing) return res.status(404).json({ error: "Sendung nicht gefunden" });
+    if (SPED_ROLES.includes(role)) {
+      const { writeIds } = await getSpeditionAccess(req.session.speditionId ?? null);
+      if (!(await can(role, "shipment.edit")) || !existing.speditionId || !writeIds.includes(existing.speditionId)) {
+        return res.status(403).json({ error: "Keine Bearbeitungsfreigabe für diese Verladung." });
+      }
+      if (hasCometShipmentActivity(existing)) {
+        return res.status(403).json({ error: "Nach COMET-Bearbeitung darf das ETA-Datum nicht mehr geändert werden." });
+      }
+    }
 
     const [shipment] = await db
       .update(shipmentsTable)
-      .set({ etaDate: newDate, updatedAt: new Date(), updatedBy: req.session.userId })
-      .where(eq(shipmentsTable.id, id))
+      .set({ etaDate: newDate, updatedAt: new Date(), updatedBy: req.session.userId,
+        ...(isInternalShipmentActionRole(role) && newDate !== existing.etaDate ? { cometBearbeitet: true } : {}),
+      })
+      .where(SPED_ROLES.includes(role)
+        ? and(eq(shipmentsTable.id, id), unchangedCometActivity(existing))
+        : eq(shipmentsTable.id, id))
       .returning();
 
+    if (!shipment) return res.status(409).json({ error: "Die Verladung wurde gleichzeitig geändert. Bitte Ansicht aktualisieren." });
     await logAudit(req.session.userId!, "shipment", id, "etaDate", existing.etaDate ?? null, newDate);
     emit(req, "shipment.updated", { id }, existing.speditionId);
     return res.json(await buildShipmentResponse(shipment));

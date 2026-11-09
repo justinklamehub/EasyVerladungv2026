@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { SpeditionShipmentEditBody } from "@workspace/api-zod/shipment-actions";
+import { SpeditionShipmentEditBody, SpeditionUnprocessedShipmentEditBody, hasCometShipmentActivity } from "@workspace/api-zod/shipment-actions";
 import { needsSpeditionConfirmation, SpeditionCreateConfirmation, summarizeCreationSpeditionen } from "./spedition-create-confirmation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -305,7 +305,8 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   }, [shipmentId, open, shipment?.speditionId, user?.id]);
 
   const isLocked      = !!shipment?.gesperrtFuerSpedition;
-  const limitedSpeditionEdit = isEditing && !isCometUser;
+  const externalShipmentEdit = isEditing && !isCometUser;
+  const limitedSpeditionEdit = externalShipmentEdit && hasCometShipmentActivity(shipment);
   const hasWriteAccess = isCometUser || !isEditing || !!speditionen?.some(
     s => s.id === shipment?.speditionId && s.canCreateShipment,
   );
@@ -484,12 +485,21 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
   const executeSave = (speditionConfirmed = false) => {
     if (createMutation.isPending || updateMutation.isPending) return;
-    if (limitedSpeditionEdit && shipmentId) {
+    if (externalShipmentEdit && shipmentId) {
       if (!canEdit) return;
-      const parsed = SpeditionShipmentEditBody.safeParse({
+      const parsed = (limitedSpeditionEdit ? SpeditionShipmentEditBody : SpeditionUnprocessedShipmentEditBody).safeParse({
         kennzeichen: form.kennzeichen.trim() || null,
         etaTime: form.etaTime || null,
         subSpedition: form.subSpedition.trim() || null,
+        bezeichnung: form.bezeichnung.trim() || null,
+        ...(!limitedSpeditionEdit ? {
+          etaDate: form.etaDate || null,
+          relation: form.relation.trim() || null,
+          ...(form.lkwArt !== shipment?.lkwArt ? { lkwArt: form.lkwArt || null } : {}),
+          bemerkungen: form.bemerkungen || null,
+          telefon: form.telefon || null,
+          wareStatus: form.wareStatus || null,
+        } : {}),
       });
       if (!parsed.success) {
         toast({ title: "Bitte eine gültige ETA-Uhrzeit eingeben", variant: "destructive" });
@@ -614,7 +624,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
           {limitedSpeditionEdit && (
             <div className="flex items-center gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-3 py-2 mt-1">
               <AlertCircle className="w-4 h-4 flex-shrink-0" />
-              Nur ETA-Uhrzeit, Kennzeichen und Subspedition können mit Bearbeitungsrecht geändert werden – auch bei Sperre, gedrucktem Deckblatt oder eingetragener Ankunft. Das Datum bleibt unverändert.
+              COMET hat diese Verladung bereits bearbeitet. Mit Bearbeitungsrecht können weiterhin ETA-Uhrzeit, Bezeichnung, Kennzeichen und Subspedition geändert werden. Das Datum und die übrigen Felder bleiben unverändert.
             </div>
           )}
           {otherEditors.length > 0 && (
@@ -690,7 +700,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                 </div>
               )}
 
-              {((isCometUser && canEditPerm) || limitedSpeditionEdit) && (
+              {((isCometUser && canEditPerm) || externalShipmentEdit) && (
                 <div className="space-y-1">
                   <Label className="text-xs text-slate-500">Sub-Spedition</Label>
                   <Input value={form.subSpedition} onChange={e => setForm(f => ({ ...f, subSpedition: e.target.value }))} disabled={!canEdit} placeholder="Optional" />
@@ -699,7 +709,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
               <div className="space-y-1">
                 <Label className="text-xs text-slate-500">Bezeichnung</Label>
-                <Input value={form.bezeichnung} onChange={e => setForm(f => ({ ...f, bezeichnung: e.target.value }))} disabled={!canEditDetails} placeholder="z.B. MTG-001 Containerbeladung" />
+                <Input value={form.bezeichnung} onChange={e => setForm(f => ({ ...f, bezeichnung: e.target.value }))} disabled={!canEdit} placeholder="z.B. MTG-001 Containerbeladung" />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
