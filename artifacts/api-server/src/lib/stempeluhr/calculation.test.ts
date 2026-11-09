@@ -4,6 +4,27 @@ import { berlinInstant, calculate, DEFAULT_SETTINGS, localDay, nextDay } from ".
 
 const date = (time: string) => new Date(`2026-10-14T${time}:00+02:00`);
 const uncapped = { ...DEFAULT_SETTINGS, earliestStart: null, latestEnd: null };
+test("manually entered times are exact while blank pauses remain automatic", () => {
+  const start = date("06:00"), end = date("16:30");
+  const rules = { ...DEFAULT_SETTINGS, manualStart: true, manualEnd: true };
+  const result = calculate(start, end, rules);
+  assert.equal(result.bookedStart, start.toISOString());
+  assert.equal(result.bookedEnd, end.toISOString());
+  assert.equal(result.grossMinutes, 630);
+  assert.equal(result.pauseMinutes, 45);
+  assert.equal(result.netMinutes, 585);
+  assert.equal(calculate(start, end, rules, 20).netMinutes, 610);
+  assert.equal(calculate(start, end, rules, 0).netMinutes, 630);
+  const reopened = calculate(start, end, JSON.parse(JSON.stringify(rules)), 20);
+  assert.equal(reopened.netMinutes, 610, "persisted manual flags survive reload and export");
+});
+test("an open manually entered start remains exact; a later stamp-out still uses automatic limits", () => {
+  const rules = { ...DEFAULT_SETTINGS, manualStart: true, manualEnd: false };
+  assert.equal(calculate(date("06:00"), null, rules).bookedStart, date("06:00").toISOString());
+  const result = calculate(date("06:00"), date("16:30"), rules);
+  assert.equal(result.bookedStart, date("06:00").toISOString());
+  assert.equal(result.bookedEnd, date("16:00").toISOString());
+});
 test("early and late scans are preserved while booked times use legacy limits", () => {
   const start = date("06:00"), end = date("16:30");
   const result = calculate(start, end, DEFAULT_SETTINGS);

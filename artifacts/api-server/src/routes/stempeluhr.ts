@@ -197,8 +197,11 @@ async function saveEntry(req: Request, updating: boolean) {
     const reason = old ? (b.reason === undefined ? old.reason ?? "" : b.reason.trim()) : creationReason;
     if (!(await c.query("SELECT id FROM clock_employees WHERE id=$1", [b.employeeId])).rowCount) throw new ClockError("Mitarbeiter nicht gefunden.", 404);
     await checkOverlap(c, b.employeeId, dates.startedAt, dates.endedAt, id);
-    const rules = old && localDay(new Date(dates.startedAt)) === localDay(new Date(old.started_at))
+    const baseRules = old && localDay(new Date(dates.startedAt)) === localDay(new Date(old.started_at))
       ? old.rules : await shiftRules(c, b.employeeId, new Date(dates.startedAt));
+    // Preserve the rules snapshot for pauses/history, but never clip manually entered times.
+    // An open manual entry still gets an automatically evaluated end when stamped out.
+    const rules = { ...baseRules, manualStart: true, manualEnd: dates.endedAt !== null };
     let savedId = id;
     if (old) await c.query(`UPDATE clock_entries SET started_at=$2,ended_at=$3,pause_override=$4,rules=$5,reason=$6,
       updated_at=date_trunc('milliseconds',clock_timestamp()) WHERE id=$1`, [id, dates.startedAt, dates.endedAt, b.pauseOverride, rules, reason]);

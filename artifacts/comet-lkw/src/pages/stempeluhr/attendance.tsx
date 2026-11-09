@@ -168,6 +168,7 @@ function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEn
               {employees.map((e) => <option key={e.id} value={e.id}>{e.lastName}, {e.firstName} ({e.cardNumber}){e.active ? "" : " - inaktiv"}</option>)}
             </select></div>
           <p className="text-xs text-slate-500">Alle Zeiten gelten als Zeit in Berlin (Europe/Berlin), unabhängig von der Geräte-Zeitzone.</p>
+          <p className="text-xs text-slate-500">Beginn und Ende werden genau wie eingegeben übernommen, ohne Anpassung an Schicht- oder Zeitgrenzen. Nur beim Stempeln erfolgt diese Anpassung automatisch.</p>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Beginn</Label><Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} data-testid="input-entry-start" /></div>
             <div><Label>Ende (leer = offen)</Label><Input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} data-testid="input-entry-end" /></div>

@@ -61,6 +61,28 @@ test("actual stamps are clipped to both shift limits; late arrival is not credit
   assert.equal(calculate(instant(day, "08:00"), null, rules).netMinutes, null);
   assert.equal(calculate(instant(day, "08:00"), instant(day, "14:00"), rules, 0).netMinutes, 360);
 });
+test("manual creation and corrections retain entered times outside a shift, including free days", () => {
+  for (const day of ["2026-10-19", "2026-10-24"]) {
+    const start = instant(day, "05:30"), end = instant(day, "15:00");
+    const snapshot = rulesForShift(data, 1, start, DEFAULT_SETTINGS);
+    const rules = { ...snapshot, manualStart: true, manualEnd: true };
+    const result = calculate(start, end, rules, 25);
+    assert.equal(result.bookedStart, start.toISOString());
+    assert.equal(result.bookedEnd, end.toISOString());
+    assert.deepEqual([result.grossMinutes, result.pauseMinutes, result.netMinutes], [570, 25, 545]);
+    assert.deepEqual(rules.shiftWindow, snapshot.shiftWindow, "shift metadata is retained, not replaced by the correction");
+    assert.equal(calculate(start, end, rules, 0).netMinutes, 570);
+    assert.equal(calculate(start, null, rules).bookedStart, start.toISOString());
+  }
+});
+test("a manual start followed by a terminal stamp-out keeps only the start override", () => {
+  const day = "2026-10-19";
+  const rules = { ...rulesForShift(data, 1, instant(day, "05:30"), DEFAULT_SETTINGS), manualStart: true, manualEnd: false };
+  const result = calculate(instant(day, "05:30"), instant(day, "15:00"), rules, 0);
+  assert.equal(result.bookedStart, instant(day, "05:30").toISOString());
+  assert.equal(result.bookedEnd, instant(day, "14:00").toISOString());
+  assert.equal(result.netMinutes, 510);
+});
 test("free days count zero and unassigned staff keep existing global rules", () => {
   const day = "2026-10-24";
   const free = rulesForShift(data, 1, instant(day, "07:00"), DEFAULT_SETTINGS);

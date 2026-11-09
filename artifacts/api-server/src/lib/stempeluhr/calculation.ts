@@ -1,4 +1,6 @@
 export interface TimeRules {
+  manualStart?: boolean;
+  manualEnd?: boolean;
   earliestStart: string | null;
   latestEnd: string | null;
   breakRules: { fromMinutes: number; deductionMinutes: number }[];
@@ -49,23 +51,23 @@ export function nextDay(day: string) {
 export function calculate(start: Date, end: Date | null, rules: TimeRules, pauseOverride: number | null = null) {
   if (rules.shiftWindow) {
     const lower = Date.parse(rules.shiftWindow.start), upper = Date.parse(rules.shiftWindow.end);
-    const bookedStart = new Date(Math.min(upper, Math.max(start.getTime(), lower)));
+    const bookedStart = rules.manualStart ? start : new Date(Math.min(upper, Math.max(start.getTime(), lower)));
     if (!end) return { bookedStart: bookedStart.toISOString(), bookedEnd: null, grossMinutes: null, pauseMinutes: null, netMinutes: null };
-    const bookedEnd = new Date(Math.max(bookedStart.getTime(), Math.min(end.getTime(), upper)));
+    const bookedEnd = new Date(Math.max(bookedStart.getTime(), rules.manualEnd ? end.getTime() : Math.min(end.getTime(), upper)));
     const grossMinutes = Math.max(0, Math.floor((bookedEnd.getTime() - bookedStart.getTime()) / 60000));
     const rule = [...rules.breakRules].sort((a, b) => b.fromMinutes - a.fromMinutes).find((r) => grossMinutes >= r.fromMinutes);
     const pauseMinutes = Math.min(grossMinutes, pauseOverride ?? rule?.deductionMinutes ?? 0);
     return { bookedStart: bookedStart.toISOString(), bookedEnd: bookedEnd.toISOString(), grossMinutes, pauseMinutes, netMinutes: grossMinutes - pauseMinutes };
   }
   let bookedStart = start;
-  if (rules.earliestStart) {
+  if (rules.earliestStart && !rules.manualStart) {
     const boundary = berlinInstant(localDay(start), rules.earliestStart);
     if (start < boundary) bookedStart = boundary;
   }
   if (!end) return { bookedStart: bookedStart.toISOString(), bookedEnd: null, grossMinutes: null, pauseMinutes: null, netMinutes: null };
   let bookedEnd = end;
   // A same-day end cap must not truncate night shifts to the previous afternoon.
-  if (rules.latestEnd && localDay(start) === localDay(end)) {
+  if (rules.latestEnd && !rules.manualEnd && localDay(start) === localDay(end)) {
     const boundary = berlinInstant(localDay(end), rules.latestEnd);
     if (end > boundary) bookedEnd = boundary;
   }

@@ -80,3 +80,9 @@ Mitarbeiterkarten müssen auch über eine Mehrfachauswahl gemeinsam druckbar sei
 **Why:** Der Nutzer verlangt die Mehrfachselektion im Mitarbeiter-Tab für den Kartendruck.
 
 **How to apply:** Einzelkartendruck erhalten. Eine Auswahl über Suchwechsel hinweg erhalten und außerhalb der Suche ausgewählte Mitarbeiter ausdrücklich mitzählen; „Alle auswählen“ betrifft die angezeigten Treffer.
+
+Bei manueller Zeiterfassung und beim Bearbeiten von Zeiten müssen die eingegebenen Zeitangaben genau übernommen werden. Die automatische Anpassung an Schicht- und Zeitgrenzen gilt beim Stempeln, nicht für manuelle Vorgaben.
+
+**Why:** Der Nutzer hat ausdrücklich zwischen manuellen Angaben beziehungsweise Zeitbearbeitungen und der automatischen Verarbeitung beim Stempeln unterschieden.
+
+**How to apply:** Manuell gespeicherte Zeiten nicht erneut an Schichtgrenzen kürzen. Pausenüberschreibungen beibehalten; ein leeres Pausenfeld behält seine bestehende Bedeutung „automatisch“. Unveränderte historische Buchungen nicht pauschal rückwirkend neu berechnen.
