@@ -10,8 +10,10 @@ import {
   speditionPermissionsTable,
   auditLogTable,
   settingsTable,
+  lkwAustraegeTable,
 } from "@workspace/db";
-import { eq, and, gte, sql } from "drizzle-orm";
+import { eq, and, gte, sql, inArray, asc } from "drizzle-orm";
+import { shipmentDocumentNumbers } from "../lib/shipment-document-numbers";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { shipmentArrivalFields } from "../lib/shipment-arrival";
@@ -151,9 +153,21 @@ router.get("/shipments", requireAuth, async (req, res) => {
     for (const s of speds) spedMap[s.id] = s.name;
     for (const u of users) userMap[u.id] = u.username;
 
+    // Only load document numbers belonging to the already authorized result set.
+    const documents = rows.length ? await db.select({
+      shipmentId: lkwAustraegeTable.shipmentId,
+      ladelistennummer: lkwAustraegeTable.ladelistennummer,
+      palettenscheinnummer: lkwAustraegeTable.palettenscheinnummer,
+    }).from(lkwAustraegeTable)
+      .where(inArray(lkwAustraegeTable.shipmentId, rows.map(s => s.id)))
+      .orderBy(asc(lkwAustraegeTable.id)) : [];
+    const documentNumbers = shipmentDocumentNumbers(documents);
+
     return res.json(
       rows.map((s) => ({
         ...s,
+        ladelistennummer: documentNumbers.get(s.id)?.ladelistennummer ?? null,
+        palettenscheinnummer: documentNumbers.get(s.id)?.palettenscheinnummer ?? null,
         speditionName: s.speditionId ? spedMap[s.speditionId] ?? null : null,
         createdByName: s.createdBy ? userMap[s.createdBy] ?? null : null,
         updatedByName: s.updatedBy ? userMap[s.updatedBy] ?? null : null,

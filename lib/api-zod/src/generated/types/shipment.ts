@@ -14,6 +14,16 @@ export interface Shipment {
   bezeichnung?: string | null;
   /** @nullable */
   kennzeichen?: string | null;
+  /**
+     * Ladelistennummern aller zugeordneten Austräge, mit Komma getrennt.
+     * @nullable
+     */
+  ladelistennummer?: string | null;
+  /**
+     * Palettenscheinnummern aller zugeordneten Austräge, mit Komma getrennt.
+     * @nullable
+     */
+  palettenscheinnummer?: string | null;
   /** @nullable */
   relation?: string | null;
   /** @nullable */

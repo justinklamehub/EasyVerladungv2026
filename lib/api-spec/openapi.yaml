@@ -3293,6 +3293,12 @@ components:
           type: ["string", "null"]
         kennzeichen:
           type: ["string", "null"]
+        ladelistennummer:
+          type: ["string", "null"]
+          description: Ladelistennummern aller zugeordneten Austräge, mit Komma getrennt.
+        palettenscheinnummer:
+          type: ["string", "null"]
+          description: Palettenscheinnummern aller zugeordneten Austräge, mit Komma getrennt.
         relation:
           type: ["string", "null"]
         speditionId:

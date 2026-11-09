@@ -586,6 +586,8 @@ export default function ShipmentsPage() {
     return rows.map((s) => ({
       ID: s.id,
       Kennzeichen: s.kennzeichen ?? "",
+      Ladelistennummer: s.ladelistennummer ?? "",
+      Palettenscheinnummer: s.palettenscheinnummer ?? "",
       Spedition: s.speditionName ?? "",
       "LKW-Art": s.lkwArt ?? "",
       Relation: s.relation ?? "",
