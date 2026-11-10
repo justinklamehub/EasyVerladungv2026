@@ -1,7 +1,7 @@
 import { Router, type Request, type Response } from "express";
 import { AdvanceShipmentStatusBody } from "@workspace/api-zod";
 import { nextShipmentStatus, isInternalShipmentActionRole, SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION } from "@workspace/api-zod/shipment-actions";
-import { SPEDITION_EDITABLE_SHIPMENT_FIELDS, SPEDITION_UNPROCESSED_SHIPMENT_FIELDS, SpeditionShipmentEditBody, SpeditionUnprocessedShipmentEditBody, hasCometShipmentActivity } from "@workspace/api-zod/shipment-actions";
+import { SPEDITION_EDITABLE_SHIPMENT_FIELDS, SPEDITION_UNPROCESSED_SHIPMENT_FIELDS, SpeditionShipmentEditBody, SpeditionUnprocessedShipmentEditBody, hasCometShipmentActivity, canSpeditionCancelShipment } from "@workspace/api-zod/shipment-actions";
 import { db, pool } from "@workspace/db";
 import {
   shipmentsTable,
@@ -546,6 +546,7 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
     }
 
     let speditionUpdates: Record<string, unknown> | null = null;
+    let carrierCancellation = false;
     if (SPED_ROLES.includes(role)) {
       const { readIds, writeIds } = await getSpeditionAccess(sessionSpeditionId ?? null);
       if (!existing.speditionId || !readIds.includes(existing.speditionId)) {
@@ -558,6 +559,13 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
         return res.status(400).json({ error: "Ungültige Verladungsänderung" });
       }
       const limitedEdit = hasCometShipmentActivity(existing);
+      carrierCancellation = Object.keys(req.body).length === 1 && req.body.status === "Storniert";
+      if (carrierCancellation && !canSpeditionCancelShipment(existing)) {
+        return res.status(403).json({ error: "Stornieren ist nach COMET-Bearbeitung oder Deckblattdruck nicht mehr möglich." });
+      }
+      if (carrierCancellation) {
+        speditionUpdates = { status: "Storniert" };
+      } else {
       const editableFields = limitedEdit ? SPEDITION_EDITABLE_SHIPMENT_FIELDS : SPEDITION_UNPROCESSED_SHIPMENT_FIELDS;
       if (Object.keys(req.body).some(key => !(editableFields as readonly string[]).includes(key))) {
         return res.status(403).json({ error: limitedEdit
@@ -574,12 +582,13 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
         }
       }
       speditionUpdates = parsed.data;
+      }
     }
 
     const isCometUser = !SPED_ROLES.includes(role);
 
     const COMET_ALLOWED = ["bezeichnung", "kennzeichen", "relation", "lkwArt", "etaDate", "etaTime", "bemerkungen", "telefon", "wareStatus", "status", "tor", "ataDate", "ataTime", "gesperrtFuerSpedition", "cometBearbeitet", "speditionId", "subSpedition"];
-    const allowedFields = isCometUser ? COMET_ALLOWED : SPEDITION_UNPROCESSED_SHIPMENT_FIELDS;
+    const allowedFields = isCometUser ? COMET_ALLOWED : carrierCancellation ? ["status"] : SPEDITION_UNPROCESSED_SHIPMENT_FIELDS;
 
     const changedAt = new Date();
     const updates: Record<string, any> = {};
@@ -623,7 +632,7 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
       .where(action === "advance"
         ? and(eq(shipmentsTable.id, id), eq(shipmentsTable.status, existing.status))
         : !isCometUser && Object.keys(speditionUpdates ?? {}).some(field => !(SPEDITION_EDITABLE_SHIPMENT_FIELDS as readonly string[]).includes(field))
-          ? and(eq(shipmentsTable.id, id), unchangedCometActivity(existing))
+          ? and(eq(shipmentsTable.id, id), unchangedCometActivity(existing), eq(shipmentsTable.speditionId, existing.speditionId!))
           : eq(shipmentsTable.id, id))
       .returning();
     if (!shipment) return res.status(409).json({ error: "Die Verladung wurde gleichzeitig geändert. Bitte Ansicht aktualisieren." });

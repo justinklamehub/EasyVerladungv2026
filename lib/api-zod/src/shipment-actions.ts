@@ -27,6 +27,10 @@ export function hasCometShipmentActivity(shipment: {
 }
 
 export const SHIPMENT_PRINT_PERMISSION = "shipment.print";
+export function canSpeditionCancelShipment(shipment: Parameters<typeof hasCometShipmentActivity>[0]): boolean {
+  return !!shipment && ["Angemeldet", "Erwartet"].includes(shipment.status ?? "") && !hasCometShipmentActivity(shipment);
+}
+
 export const SHIPMENT_ADVANCE_PERMISSION = "shipment.advance";
 
 export function nextShipmentStatus(status: string): string | null {

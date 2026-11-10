@@ -191,6 +191,50 @@ test("carrier selection and truck type restrictions are enforced over HTTP", asy
       assert.equal((await request("/shipments/71", body, undefined, "PATCH")).status, 403);
     }
   });
+  await t.test("carriers can cancel own and edit-granted trucks only before any COMET activity", async () => {
+    const clean = { cometBearbeitet: false, gesperrtFuerSpedition: false, wareStatus: "nicht bereit", ataDate: null, ataTime: null, tor: null, status: "Angemeldet", speditionId: 2 };
+    for (const target of [1, 2]) {
+      for (const status of ["Angemeldet", "Erwartet"]) {
+        Object.assign(existing, clean, { speditionId: target, status });
+        const response = await request("/shipments/71", { status: "Storniert" }, undefined, "PATCH");
+        assert.equal(response.status, 200);
+        const result = await response.json() as any;
+        assert.equal(result.status, "Storniert");
+        assert.equal(result.cometBearbeitet, false);
+        assert.ok(result.statusChangedAt);
+        assert.deepEqual(Object.keys(updated.at(-1)!).sort(), ["status", "statusChangedAt", "updatedAt", "updatedBy"].sort());
+        assert.match(updateWhereSql, /"comet_bearbeitet" IS NOT DISTINCT FROM/);
+        assert.match(updateWhereSql, /"ware_status" IS NOT DISTINCT FROM/);
+        assert.match(updateWhereSql, /"spedition_id" =/);
+      }
+    }
+    for (const activity of [
+      { cometBearbeitet: true }, { gesperrtFuerSpedition: true }, { wareStatus: "ausgedruckt" },
+      { ataDate: "2026-11-09" }, { ataTime: "09:00" }, { tor: "Tor 1" },
+      ...["Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"].map(status => ({ status })),
+    ]) {
+      Object.assign(existing, clean, activity);
+      const count = updated.length;
+      assert.equal((await request("/shipments/71", { status: "Storniert" }, undefined, "PATCH")).status, 403);
+      assert.equal(updated.length, count);
+    }
+    for (const target of [3, 4, 5, 999]) {
+      Object.assign(existing, clean, { speditionId: target });
+      assert.equal((await request("/shipments/71", { status: "Storniert" }, undefined, "PATCH")).status, 403);
+    }
+    Object.assign(existing, clean);
+    assert.equal((await request("/shipments/71", { status: "Storniert" }, "speditions_viewer", "PATCH")).status, 403);
+    assert.equal((await request("/shipments/71", { status: "Storniert" }, undefined, "PATCH", true)).status, 403);
+    const oldGrants = grants;
+    grants = [];
+    assert.equal((await request("/shipments/71", { status: "Storniert" }, undefined, "PATCH")).status, 403);
+    grants = oldGrants;
+    concurrentConflict = true;
+    const count = updated.length;
+    assert.equal((await request("/shipments/71", { status: "Storniert" }, undefined, "PATCH")).status, 409);
+    assert.equal(updated.length, count);
+    concurrentConflict = false;
+  });
   await t.test("carrier can change time, description, plate and subcarrier after any COMET activity", async () => {
     for (const state of [
       { cometBearbeitet: true, gesperrtFuerSpedition: false, wareStatus: "nicht bereit", ataDate: null },

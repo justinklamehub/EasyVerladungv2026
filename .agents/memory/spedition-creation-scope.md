@@ -32,3 +32,9 @@ Speditionen dürfen vor einer COMET-Bearbeitung weiterhin alle bisherigen Spedit
 **Why:** Der Nutzer hat die bisherige pauschale Einschränkung korrigiert und die zwei vom Bearbeitungsstand abhängigen Fälle ausdrücklich vorgegeben.
 
 **How to apply:** Bearbeitungsrecht und eigene bzw. zur Bearbeitung freigegebene Spedition bleiben erforderlich; Lesefreigaben reichen nicht. Interne COMET-Felder bleiben intern. Nach COMET-Bearbeitung Datum und übrige Felder auch serverseitig schützen, einschließlich alternativer Verschiebewege. Die vier verbleibenden Felder sind trotz Sperre, Druck oder Ankunft bearbeitbar.
+
+Speditionen dürfen einen LKW stornieren, solange COMET ihn nicht bearbeitet und kein Deckblatt gedruckt hat.
+
+**Why:** Der Nutzer verlangt diese Ausnahme für die Stornierung ausdrücklich; andere operative Statuswechsel bleiben COMET vorbehalten.
+
+**How to apply:** Eigene und zur Bearbeitung freigegebene Verladungen mit Bearbeitungsrecht stornierbar machen. COMET-Aktivität und Druck serverseitig auch bei gleichzeitigen Änderungen absichern. Stornieren bedeutet Status „Storniert“, nicht Löschen.

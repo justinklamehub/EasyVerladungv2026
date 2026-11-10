@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { SpeditionShipmentEditBody, SpeditionUnprocessedShipmentEditBody, hasCometShipmentActivity } from "@workspace/api-zod/shipment-actions";
+import { SpeditionShipmentEditBody, SpeditionUnprocessedShipmentEditBody, hasCometShipmentActivity, canSpeditionCancelShipment } from "@workspace/api-zod/shipment-actions";
 import { needsSpeditionConfirmation, SpeditionCreateConfirmation, summarizeCreationSpeditionen } from "./spedition-create-confirmation";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
@@ -312,6 +312,9 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   );
   const canEdit = canEditPerm && hasWriteAccess;
   const canEditDetails = canEdit && !limitedSpeditionEdit;
+  const canCancel = externalShipmentEdit && canEdit && canSpeditionCancelShipment(shipment);
+  const [confirmCancellation, setConfirmCancellation] = useState(false);
+  useEffect(() => { setConfirmCancellation(false); }, [shipmentId, open]);
 
   const today = new Date().toISOString().slice(0, 10);
   const emptyAustrag = (): LkwAustragInput => ({
@@ -425,6 +428,18 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
       onSuccess: () => { invalidate(); toast({ title: "Gespeichert" }); onOpenChange(false); },
       onError: (e: any) => toast({ title: e?.response?.data?.error ?? "Fehler beim Speichern", variant: "destructive" }),
     }
+  });
+  const cancelMutation = useUpdateShipment({
+    mutation: {
+      onSuccess: () => {
+        invalidate(); setConfirmCancellation(false);
+        toast({ title: "LKW storniert" }); onOpenChange(false);
+      },
+      onError: (e: any) => {
+        invalidate(); setConfirmCancellation(false);
+        toast({ title: e?.data?.error ?? e?.response?.data?.error ?? "Stornierung fehlgeschlagen", variant: "destructive" });
+      },
+    },
   });
 
   const quickUpdateMutation = useUpdateShipment({
@@ -579,10 +594,28 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     executeSave(speditionConfirmed);
   };
 
-  const isSaving = updateMutation.isPending || createMutation.isPending;
+  const isSaving = updateMutation.isPending || createMutation.isPending || cancelMutation.isPending;
 
   return (
     <>
+    <Dialog open={open && confirmCancellation} onOpenChange={(next) => !cancelMutation.isPending && setConfirmCancellation(next)}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>LKW stornieren?</DialogTitle>
+          <DialogDescription>
+            Soll {shipment?.bezeichnung || shipment?.kennzeichen || `Verladung #${shipmentId}`} wirklich storniert werden?
+            Die Buchung bleibt als „Storniert“ erhalten. Nicht gespeicherte Formularänderungen werden nicht übernommen.
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setConfirmCancellation(false)} disabled={cancelMutation.isPending}>Abbrechen</Button>
+          <Button variant="destructive" data-testid="button-confirm-cancel-shipment" disabled={!canCancel || isSaving}
+            onClick={() => shipmentId && canCancel && cancelMutation.mutate({ id: shipmentId, data: { status: "Storniert" } })}>
+            {cancelMutation.isPending ? "Wird storniert …" : "LKW stornieren"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
     <SpeditionCreateConfirmation
       open={open && confirmSpedition}
       onOpenChange={setConfirmSpedition}
@@ -879,6 +912,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
               {canEdit && (
                 <div className="pt-4 flex justify-end gap-2">
+                  {canCancel && <Button variant="destructive" disabled={isSaving} data-testid="button-cancel-shipment" onClick={() => setConfirmCancellation(true)}>Stornieren</Button>}
                   <Button variant="outline" onClick={() => onOpenChange(false)}>Abbrechen</Button>
                   <Button onClick={() => handleSave()} disabled={isSaving}>
                     {isSaving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
