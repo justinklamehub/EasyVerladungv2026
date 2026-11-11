@@ -1573,6 +1573,11 @@ export interface Shipment {
      * @nullable
      */
   palettenscheinnummer?: string | null;
+  /**
+     * Summe der Von-COMET-Europaletten aller zugeordneten Austräge, ohne Ladungssicherung oder Saldierung. Null, wenn kein Austrag vorliegt.
+     * @nullable
+     */
+  europalettenVerladen?: number | null;
   /** @nullable */
   relation?: string | null;
   /** @nullable */

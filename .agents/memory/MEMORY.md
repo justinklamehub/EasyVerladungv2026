@@ -39,3 +39,4 @@
 - [Checklisten-Zuordnung](checklist-assignment-scope.md) — „Checklisten“ meint die Blanko-Zuordnung; Kennzeichensuche muss auch verladene und abgefertigte LKW anbieten.
 - [Verladungsbuttons](shipment-table-actions.md) — Drucken/Weiter getrennt berechtigen; „Angekommen“ beibehalten, Weiter endet bei „Verladen“.
 - [Speditionsanlage und LKW-Arten](spedition-creation-scope.md) — Eigene und bearbeitbar freigegebene Speditionen auswählbar; LKW-Arten pro Spedition begrenzbar.
+- [Paletten im Verladungsexport](shipment-export-pallets.md) — Europaletten anhand des Palettenscheins; Düsseldorfer als leere Spalte zur manuellen Nachpflege.

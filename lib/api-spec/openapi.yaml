@@ -3325,6 +3325,9 @@ components:
         palettenscheinnummer:
           type: ["string", "null"]
           description: Palettenscheinnummern aller zugeordneten Austräge, mit Komma getrennt.
+        europalettenVerladen:
+          type: ["integer", "null"]
+          description: Summe der Von-COMET-Europaletten aller zugeordneten Austräge, ohne Ladungssicherung oder Saldierung. Null, wenn kein Austrag vorliegt.
         relation:
           type: ["string", "null"]
         speditionId:

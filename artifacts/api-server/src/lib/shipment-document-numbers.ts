@@ -3,6 +3,19 @@ type DocumentNumbers = {
   palettenscheinnummer: string | null;
 };
 
+/** Use the receipt's outgoing Euro count, not the pallet account's net balance. */
+export function shipmentLoadedEuroPallets(rows: {
+  shipmentId: number | null;
+  vonCometEuropaletten: number | null;
+}[]) {
+  const totals = new Map<number, number>();
+  for (const row of rows) {
+    if (row.shipmentId == null) continue;
+    totals.set(row.shipmentId, (totals.get(row.shipmentId) ?? 0) + (row.vonCometEuropaletten ?? 0));
+  }
+  return totals;
+}
+
 /** Keep every document number without duplicating shipment rows in an export. */
 export function shipmentDocumentNumbers(rows: (DocumentNumbers & { shipmentId: number | null })[]) {
   const grouped = new Map<number, { loading: Set<string>; pallets: Set<string> }>();

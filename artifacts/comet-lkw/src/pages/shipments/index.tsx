@@ -28,6 +28,7 @@ import { useLiveFilters } from "@/lib/live-view-control";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { Printer, ChevronsRight } from "lucide-react";
 import { stableShipmentComparison } from "./stable-sort";
+import { buildExportRows } from "./export-rows";
 import { updateShipmentSpeditionen } from "./bulk-spedition-update";
 import { SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION, nextShipmentStatus, isInternalShipmentActionRole } from "@workspace/api-zod/shipment-actions";
 import { getShipmentDeckblatt, useMarkShipmentPrinted, useAdvanceShipmentStatus, getGetShipmentQueryKey, getGetShipmentHistoryQueryKey, type ShipmentStatusAdvanceInput } from "@workspace/api-client-react";
@@ -580,28 +581,6 @@ export default function ShipmentsPage() {
     setFilterDateFrom(dates.from);
     setFilterDateTo(dates.to);
     setCalendarNow(new Date());
-  }
-
-  function buildExportRows(rows: Shipment[]) {
-    return rows.map((s) => ({
-      ID: s.id,
-      Kennzeichen: s.kennzeichen ?? "",
-      Ladelistennummer: s.ladelistennummer ?? "",
-      Palettenscheinnummer: s.palettenscheinnummer ?? "",
-      Spedition: s.speditionName ?? "",
-      "LKW-Art": s.lkwArt ?? "",
-      Relation: s.relation ?? "",
-      Bezeichnung: s.bezeichnung ?? "",
-      "ETA-Datum": s.etaDate ? format(new Date(s.etaDate), "dd.MM.yyyy") : "",
-      "ETA-Zeit": s.etaTime ?? "",
-      "ATA-Datum": s.ataDate ? format(new Date(s.ataDate), "dd.MM.yyyy") : "",
-      "ATA-Zeit": s.ataTime ?? "",
-      Status: s.status,
-      Ware: (s as any).wareStatus ?? "",
-      Tor: s.tor ?? "",
-      Gesperrt: s.gesperrtFuerSpedition ? "Ja" : "Nein",
-      Bemerkungen: s.bemerkungen ?? "",
-    }));
   }
 
   function exportCsv() {
