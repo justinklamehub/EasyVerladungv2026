@@ -1109,15 +1109,6 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                     </div>
 
                     <div className="space-y-1">
-                      <Label htmlFor="austrag-duesseldorfer" className="text-xs text-slate-500">Düsseldofer Pal.</Label>
-                      <Input id="austrag-duesseldorfer" data-testid="input-austrag-duesseldorfer" type="number" min={0} step={1} max={2147483647} className="h-8 text-sm" placeholder="Optional"
-                        value={austragForm.duesseldorferPaletten ?? ""}
-                        onChange={e => setAustragForm(f => ({ ...f, duesseldorferPaletten: e.target.value === "" ? null : Number(e.target.value) }))} />
-                      <p className="text-xs text-slate-500">Nur Info für den COMET-Export – keine Buchung im Palettenkonto.</p>
-                      {invalidDusseldorfCount && <p role="alert" className="text-xs text-red-600">Bitte eine ganze Zahl zwischen 0 und 2147483647 eingeben.</p>}
-                    </div>
-
-                    <div className="space-y-1">
                       <Label className="text-xs text-slate-500">Datum</Label>
                       <Input type="date" className="h-8 text-sm" value={austragForm.datum} onChange={e => setAustragForm(f => ({ ...f, datum: e.target.value }))} />
                     </div>
@@ -1159,6 +1150,14 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                           <Label className="text-xs text-slate-500 text-amber-600">davon defekt</Label>
                           <Input type="number" min={0} className="h-8 text-sm" value={austragForm.vonDefektePaletten ?? 0} onChange={e => setAustragForm(f => ({ ...f, vonDefektePaletten: Number(e.target.value) }))} />
                         </div>
+                      </div>
+                      <div className="space-y-1">
+                        <Label htmlFor="austrag-duesseldorfer" className="text-xs text-slate-500">Düsseldofer Pal.</Label>
+                        <Input id="austrag-duesseldorfer" data-testid="input-austrag-duesseldorfer" type="number" min={0} step={1} max={2147483647} className="h-8 text-sm" placeholder="Optional"
+                          value={austragForm.duesseldorferPaletten ?? ""}
+                          onChange={e => setAustragForm(f => ({ ...f, duesseldorferPaletten: e.target.value === "" ? null : Number(e.target.value) }))} />
+                        <p className="text-xs text-slate-500">Nur Info für den COMET-Export – keine Buchung im Palettenkonto.</p>
+                        {invalidDusseldorfCount && <p role="alert" className="text-xs text-red-600">Bitte eine ganze Zahl zwischen 0 und 2147483647 eingeben.</p>}
                       </div>
                     </div>
 
