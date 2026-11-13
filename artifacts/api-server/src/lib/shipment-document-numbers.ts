@@ -3,6 +3,19 @@ type DocumentNumbers = {
   palettenscheinnummer: string | null;
 };
 
+/** Unset historic info fields stay blank; a deliberately entered zero is preserved. */
+export function shipmentDusseldorfPallets(rows: {
+  shipmentId: number | null;
+  duesseldorferPaletten?: number | null;
+}[]) {
+  const totals = new Map<number, number>();
+  for (const row of rows) {
+    if (row.shipmentId == null || row.duesseldorferPaletten == null) continue;
+    totals.set(row.shipmentId, (totals.get(row.shipmentId) ?? 0) + row.duesseldorferPaletten);
+  }
+  return totals;
+}
+
 /** Use the receipt's outgoing Euro count, not the pallet account's net balance. */
 export function shipmentLoadedEuroPallets(rows: {
   shipmentId: number | null;

@@ -13,7 +13,7 @@ import {
   lkwAustraegeTable,
 } from "@workspace/db";
 import { eq, and, gte, sql, inArray, asc } from "drizzle-orm";
-import { shipmentDocumentNumbers, shipmentLoadedEuroPallets } from "../lib/shipment-document-numbers";
+import { shipmentDocumentNumbers, shipmentLoadedEuroPallets, shipmentDusseldorfPallets } from "../lib/shipment-document-numbers";
 import { requireAuth } from "../lib/auth";
 import { logAudit } from "../lib/audit";
 import { shipmentArrivalFields } from "../lib/shipment-arrival";
@@ -167,11 +167,13 @@ router.get("/shipments", requireAuth, async (req, res) => {
       ladelistennummer: lkwAustraegeTable.ladelistennummer,
       palettenscheinnummer: lkwAustraegeTable.palettenscheinnummer,
       vonCometEuropaletten: lkwAustraegeTable.vonCometEuropaletten,
+      ...(COMET_ROLES.includes(role) ? { duesseldorferPaletten: lkwAustraegeTable.duesseldorferPaletten } : {}),
     }).from(lkwAustraegeTable)
       .where(inArray(lkwAustraegeTable.shipmentId, rows.map(s => s.id)))
       .orderBy(asc(lkwAustraegeTable.id)) : [];
     const documentNumbers = shipmentDocumentNumbers(documents);
     const loadedEuroPallets = shipmentLoadedEuroPallets(documents);
+    const dusseldorfPallets = shipmentDusseldorfPallets(documents);
 
     return res.json(
       rows.map((s) => ({
@@ -179,6 +181,7 @@ router.get("/shipments", requireAuth, async (req, res) => {
         ladelistennummer: documentNumbers.get(s.id)?.ladelistennummer ?? null,
         palettenscheinnummer: documentNumbers.get(s.id)?.palettenscheinnummer ?? null,
         europalettenVerladen: loadedEuroPallets.get(s.id) ?? null,
+        ...(COMET_ROLES.includes(role) ? { duesseldorferVerladen: dusseldorfPallets.get(s.id) ?? null } : {}),
         speditionName: s.speditionId ? spedMap[s.speditionId] ?? null : null,
         createdByName: s.createdBy ? userMap[s.createdBy] ?? null : null,
         updatedByName: s.updatedBy ? userMap[s.updatedBy] ?? null : null,

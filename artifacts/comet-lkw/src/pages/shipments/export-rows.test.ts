@@ -11,12 +11,12 @@ const shipment = (extra: Partial<Shipment>): Shipment => ({
 
 test("both export columns preserve counts, zero, missing receipts and document numbers", () => {
   const rows = buildExportRows([
-    shipment({ palettenscheinnummer: "00045, 00046", europalettenVerladen: 45, subSpedition: "Müller Transport" }),
-    shipment({ id: 2, europalettenVerladen: 0, subSpedition: null }),
+    shipment({ palettenscheinnummer: "00045, 00046", europalettenVerladen: 45, subSpedition: "Müller Transport", duesseldorferVerladen: 18 }),
+    shipment({ id: 2, europalettenVerladen: 0, subSpedition: null, duesseldorferVerladen: 0 }),
     shipment({ id: 3, europalettenVerladen: null }),
-  ]);
+  ], true);
   assert.deepEqual(rows.map(r => r["Europaletten verladen"]), [45, 0, ""]);
-  assert.deepEqual(rows.map(r => r["Düsseldorfer verladen"]), ["", "", ""]);
+  assert.deepEqual(rows.map(r => r["Düsseldorfer verladen"]), [18, 0, ""]);
   assert.deepEqual(rows.map(r => r["Sub-Spedition"]), ["Müller Transport", "", ""]);
   const columns = Object.keys(rows[0]);
   assert.equal(columns[columns.indexOf("Spedition") + 1], "Sub-Spedition");
@@ -29,11 +29,22 @@ test("both export columns preserve counts, zero, missing receipts and document n
   const headers = Object.keys(rows[0]) as (keyof typeof rows[number])[];
   const csv = headers.join(";") + "\r\n" + rows.map(r => headers.map(h => r[h]).join(";")).join("\r\n");
   assert.match(csv, /Palettenscheinnummer;Europaletten verladen;Düsseldorfer verladen;/);
-  assert.match(csv, /00045, 00046;45;;/);
+  assert.match(csv, /00045, 00046;45;18;/);
 
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), "Verladungen");
   const reread = XLSX.read(XLSX.write(wb, { type: "buffer", bookType: "xlsx" }), { type: "buffer" });
   const exported = XLSX.utils.sheet_to_json(reread.Sheets.Verladungen, { defval: "" });
   assert.deepEqual(exported, rows);
+});
+
+test("carrier CSV and Excel rows never include the internal info column", () => {
+  const data = [shipment({ duesseldorferVerladen: 18 })];
+  for (const rows of [buildExportRows(data, false), buildExportRows(data)]) {
+    assert(!Object.hasOwn(rows[0], "Düsseldorfer verladen"));
+    const sheet = XLSX.utils.json_to_sheet(rows);
+    const csv = XLSX.utils.sheet_to_csv(sheet);
+    assert(!csv.includes("Düsseldorfer"));
+    assert(!csv.includes("18"));
+  }
 });

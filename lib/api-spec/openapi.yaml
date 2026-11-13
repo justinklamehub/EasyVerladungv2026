@@ -3328,6 +3328,9 @@ components:
         europalettenVerladen:
           type: ["integer", "null"]
           description: Summe der Von-COMET-Europaletten aller zugeordneten Austräge, ohne Ladungssicherung oder Saldierung. Null, wenn kein Austrag vorliegt.
+        duesseldorferVerladen:
+          type: ["integer", "null"]
+          description: Nur für COMET. Summe des reinen Infofelds Düsseldorfer Paletten aller Austräge; ohne Einfluss auf Palettenkonten. Null, wenn nicht erfasst.
         relation:
           type: ["string", "null"]
         speditionId:

@@ -11,6 +11,7 @@ import { startScheduler, ensureReportWeeklyLogTable, ensureReconciliationReminde
 import { ensureSpeditionLimitsTable, ensureSpeditionRelationenTable } from "./routes/speditionen";
 import { ensureShipmentTemplatesTable } from "./routes/shipment-templates";
 import { ensureStatusChangedAt } from "./routes/shipments";
+import { ensureAustragInfoColumn } from "./routes/austraege";
 import { ensureAuftragAnalyseTable } from "./routes/auftragsauswertung";
 import { initWebPush, seedPushEventSettings, seedPushMessageTemplates } from "./routes/push";
 import { ensureChangelogTable } from "./routes/changelog";
@@ -339,6 +340,12 @@ httpServer.listen({ port, ...(process.env.HOST ? { host: process.env.HOST } : {}
     logger.info("shipments.status_changed_at column ensured");
   } catch (e) {
     logger.warn({ err: e }, "ensureStatusChangedAt failed — non-fatal");
+  }
+  try {
+    await ensureAustragInfoColumn();
+    logger.info("Austrag information column ensured");
+  } catch (e) {
+    logger.error({ err: e }, "Austrag information column could not be initialized");
   }
   try {
     await ensureSlaNotificationsTable();

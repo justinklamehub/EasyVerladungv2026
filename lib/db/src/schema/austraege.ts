@@ -14,6 +14,7 @@ export const lkwAustraegeTable = pgTable("lkw_austraege", {
   beauftragteSpeditionId: integer("beauftragte_spedition_id").references(() => speditionenTable.id),
   subSpedition: text("sub_spedition"),
   tor: text("tor"),
+  duesseldorferPaletten: integer("duesseldorfer_paletten"),
   vonCometEuropaletten: integer("von_comet_europaletten").notNull().default(0),
   vonCometLadungssicherung: integer("von_comet_ladungssicherung").notNull().default(0),
   vonDefektePaletten: integer("von_defekte_paletten").notNull().default(0),

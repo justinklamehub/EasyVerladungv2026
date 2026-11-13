@@ -29,6 +29,11 @@ export interface Shipment {
      * @nullable
      */
   europalettenVerladen?: number | null;
+  /**
+     * Nur für COMET. Summe des reinen Infofelds Düsseldorfer Paletten aller Austräge; ohne Einfluss auf Palettenkonten. Null, wenn nicht erfasst.
+     * @nullable
+     */
+  duesseldorferVerladen?: number | null;
   /** @nullable */
   relation?: string | null;
   /** @nullable */

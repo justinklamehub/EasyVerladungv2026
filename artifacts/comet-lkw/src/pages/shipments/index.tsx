@@ -584,7 +584,7 @@ export default function ShipmentsPage() {
   }
 
   function exportCsv() {
-    const rows = buildExportRows(sorted);
+    const rows = buildExportRows(sorted, isCometUser || role === "comet_viewer");
     if (!rows.length) return;
     const headers = Object.keys(rows[0]);
     const lines = [
@@ -601,7 +601,7 @@ export default function ShipmentsPage() {
   }
 
   function exportXlsx() {
-    const rows = buildExportRows(sorted);
+    const rows = buildExportRows(sorted, isCometUser || role === "comet_viewer");
     if (!rows.length) return;
     const ws = XLSX.utils.json_to_sheet(rows);
     const wb = XLSX.utils.book_new();

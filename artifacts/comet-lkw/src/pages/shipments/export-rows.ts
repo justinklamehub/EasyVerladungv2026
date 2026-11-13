@@ -2,14 +2,14 @@ import type { Shipment } from "@workspace/api-client-react";
 import { format } from "date-fns";
 
 /** Shared by CSV and Excel so quantities and manual-entry columns stay identical. */
-export function buildExportRows(rows: Shipment[]) {
+export function buildExportRows(rows: Shipment[], isCometUser = false) {
   return rows.map((s) => ({
     ID: s.id,
     Kennzeichen: s.kennzeichen ?? "",
     Ladelistennummer: s.ladelistennummer ?? "",
     Palettenscheinnummer: s.palettenscheinnummer ?? "",
     "Europaletten verladen": s.europalettenVerladen ?? "",
-    "Düsseldorfer verladen": "",
+    ...(isCometUser ? { "Düsseldorfer verladen": s.duesseldorferVerladen ?? "" } : {}),
     Spedition: s.speditionName ?? "",
     "Sub-Spedition": s.subSpedition ?? "",
     "LKW-Art": s.lkwArt ?? "",

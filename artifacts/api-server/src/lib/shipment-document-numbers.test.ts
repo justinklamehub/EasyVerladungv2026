@@ -1,6 +1,19 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { shipmentDocumentNumbers, shipmentLoadedEuroPallets } from "./shipment-document-numbers";
+import { shipmentDocumentNumbers, shipmentLoadedEuroPallets, shipmentDusseldorfPallets } from "./shipment-document-numbers";
+
+test("Dusseldorf info sums receipts without turning unrecorded values into zero", () => {
+  const totals = shipmentDusseldorfPallets([
+    { shipmentId: 1, duesseldorferPaletten: 7 },
+    { shipmentId: 1, duesseldorferPaletten: 11 },
+    { shipmentId: 1, duesseldorferPaletten: null },
+    { shipmentId: 2, duesseldorferPaletten: 0 },
+    { shipmentId: 3, duesseldorferPaletten: null },
+    { shipmentId: 4 },
+    { shipmentId: null, duesseldorferPaletten: 99 },
+  ]);
+  assert.deepEqual([...totals], [[1, 18], [2, 0]]);
+});
 
 test("sums outgoing Euro pallets per shipment, keeping zero distinct from no receipt", () => {
   const rows = [

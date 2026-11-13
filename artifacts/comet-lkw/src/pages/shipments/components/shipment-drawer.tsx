@@ -321,6 +321,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     shipmentId: shipmentId ?? undefined,
     ladelistennummer: "",
     palettenscheinnummer: "",
+    duesseldorferPaletten: null,
     datum: today,
     kennzeichen: "",
     beauftragteSpeditionId: null,
@@ -334,6 +335,10 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
   });
   const [austragForm, setAustragForm] = useState<LkwAustragInput>(emptyAustrag());
   const [showAustragForm, setShowAustragForm] = useState(false);
+  const invalidDusseldorfCount = austragForm.duesseldorferPaletten != null && (
+    !Number.isInteger(austragForm.duesseldorferPaletten) ||
+    austragForm.duesseldorferPaletten < 0 || austragForm.duesseldorferPaletten > 2147483647
+  );
 
   const createAustragMutation = useCreateLkwAustrag({
     mutation: {
@@ -345,7 +350,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
         setShowAustragForm(false);
         setAustragForm(emptyAustrag());
       },
-      onError: (e: any) => toast({ title: e?.response?.data?.error ?? "Fehler", variant: "destructive" }),
+      onError: (e: any) => toast({ title: e?.data?.error ?? e?.response?.data?.error ?? "Fehler beim Speichern des Austrags", variant: "destructive" }),
     },
   });
 
@@ -353,6 +358,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
     mutation: {
       onSuccess: () => {
         queryClient.invalidateQueries({ queryKey: getListLkwAustraegeQueryKey(shipmentId || undefined) });
+        queryClient.invalidateQueries({ queryKey: getListShipmentsQueryKey() });
         toast({ title: "Austrag gelöscht" });
       },
       onError: () => toast({ title: "Fehler beim Löschen", variant: "destructive" }),
@@ -1062,6 +1068,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                           {a.kennzeichen && <div><span className="text-slate-400">Kennzeichen:</span> {a.kennzeichen}</div>}
                           {a.beauftragteSpeditionName && <div><span className="text-slate-400">Sped.:</span> {a.beauftragteSpeditionName}</div>}
                           {a.subSpedition && <div className="col-span-2"><span className="text-slate-400">Sub-Sped.:</span> {a.subSpedition}</div>}
+                          {a.duesseldorferPaletten != null && <div className="col-span-2" data-testid={`austrag-duesseldorfer-${a.id}`}><span className="text-slate-400">Düsseldofer Pal. (Info):</span> {a.duesseldorferPaletten}</div>}
                         </div>
                         <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
                           <div className="bg-white border border-slate-200 rounded p-1.5">
@@ -1099,6 +1106,15 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
                         <Label className="text-xs text-slate-500">Palettenscheinnummer</Label>
                         <Input className="h-8 text-sm" value={austragForm.palettenscheinnummer ?? ""} onChange={e => setAustragForm(f => ({ ...f, palettenscheinnummer: e.target.value }))} />
                       </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <Label htmlFor="austrag-duesseldorfer" className="text-xs text-slate-500">Düsseldofer Pal.</Label>
+                      <Input id="austrag-duesseldorfer" data-testid="input-austrag-duesseldorfer" type="number" min={0} step={1} max={2147483647} className="h-8 text-sm" placeholder="Optional"
+                        value={austragForm.duesseldorferPaletten ?? ""}
+                        onChange={e => setAustragForm(f => ({ ...f, duesseldorferPaletten: e.target.value === "" ? null : Number(e.target.value) }))} />
+                      <p className="text-xs text-slate-500">Nur Info für den COMET-Export – keine Buchung im Palettenkonto.</p>
+                      {invalidDusseldorfCount && <p role="alert" className="text-xs text-red-600">Bitte eine ganze Zahl zwischen 0 und 2147483647 eingeben.</p>}
                     </div>
 
                     <div className="space-y-1">
@@ -1190,7 +1206,7 @@ export function ShipmentDrawer({ shipmentId, open, onOpenChange }: ShipmentDrawe
 
                     <div className="flex justify-end gap-2 pt-1">
                       <Button variant="outline" size="sm" onClick={() => { setShowAustragForm(false); setAustragForm(emptyAustrag()); }}>Abbrechen</Button>
-                      <Button size="sm" onClick={() => createAustragMutation.mutate(austragForm)} disabled={createAustragMutation.isPending}>
+                      <Button size="sm" onClick={() => createAustragMutation.mutate(austragForm)} disabled={createAustragMutation.isPending || invalidDusseldorfCount}>
                         {createAustragMutation.isPending ? <Loader2 className="w-4 h-4 mr-1 animate-spin" /> : null}
                         Speichern
                       </Button>

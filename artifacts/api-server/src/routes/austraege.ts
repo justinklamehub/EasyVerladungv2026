@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { db } from "@workspace/db";
+import { db, pool } from "@workspace/db";
+import { z } from "zod/v4";
 import { lkwAustraegeTable, speditionenTable, palletMovementsTable, shipmentsTable } from "@workspace/db";
 import { eq } from "drizzle-orm";
 import { requireAuth } from "../lib/auth";
@@ -11,6 +12,12 @@ import type { Server as IOServer } from "socket.io";
 const router = Router();
 
 const COMET_ALL_ROLES = ["comet_admin", "comet_leitstand", "comet_lager", "comet_viewer"];
+
+export async function ensureAustragInfoColumn(): Promise<void> {
+  await pool.query("ALTER TABLE lkw_austraege ADD COLUMN IF NOT EXISTS duesseldorfer_paletten INTEGER");
+}
+
+const infoCountSchema = z.number().int().min(0).max(2147483647).nullable().optional();
 
 function getIO(req: any): IOServer | null {
   return req.app.get("io") || null;
@@ -57,6 +64,14 @@ router.post("/austraege", requireAuth, async (req, res) => {
     const role = req.session.role!;
     if (!(await can(role, "austrag.create"))) {
       return res.status(403).json({ error: "Keine Berechtigung für Austragen" });
+    }
+
+    const infoCount = infoCountSchema.safeParse(req.body.duesseldorferPaletten);
+    if (!infoCount.success) {
+      return res.status(400).json({ error: "Düsseldofer Pal.: Bitte eine ganze Zahl zwischen 0 und 2147483647 eingeben oder das Feld leer lassen." });
+    }
+    if (infoCount.data != null && !COMET_ALL_ROLES.includes(role)) {
+      return res.status(403).json({ error: "Das Infofeld Düsseldofer Pal. ist nur für COMET verfügbar." });
     }
 
     const {
@@ -129,6 +144,7 @@ router.post("/austraege", requireAuth, async (req, res) => {
         beauftragteSpeditionId: beauftragteSpeditionId ? Number(beauftragteSpeditionId) : null,
         subSpedition: subSpedition || null,
         tor: tor || null,
+        duesseldorferPaletten: infoCount.data ?? null,
         vonCometEuropaletten: Number(vonCometEuropaletten ?? 0),
         vonCometLadungssicherung: Number(vonCometLadungssicherung ?? 0),
         vonDefektePaletten: Number(vonDefektePaletten ?? 0),
@@ -199,8 +215,9 @@ router.delete("/austraege/:id", requireAuth, async (req, res) => {
     }
 
     const id = Number(req.params.id);
-    await db.delete(lkwAustraegeTable).where(eq(lkwAustraegeTable.id, id));
+    const [deleted] = await db.delete(lkwAustraegeTable).where(eq(lkwAustraegeTable.id, id)).returning();
     await logAudit(req.session.userId!, "austrag", id, "delete", null, null);
+    if (deleted?.shipmentId) emit(req, "shipment.updated", { id: deleted.shipmentId }, null);
 
     return res.json({ ok: true });
   } catch (err) {
