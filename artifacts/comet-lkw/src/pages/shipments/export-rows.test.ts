@@ -11,12 +11,15 @@ const shipment = (extra: Partial<Shipment>): Shipment => ({
 
 test("both export columns preserve counts, zero, missing receipts and document numbers", () => {
   const rows = buildExportRows([
-    shipment({ palettenscheinnummer: "00045, 00046", europalettenVerladen: 45 }),
-    shipment({ id: 2, europalettenVerladen: 0 }),
+    shipment({ palettenscheinnummer: "00045, 00046", europalettenVerladen: 45, subSpedition: "Müller Transport" }),
+    shipment({ id: 2, europalettenVerladen: 0, subSpedition: null }),
     shipment({ id: 3, europalettenVerladen: null }),
   ]);
   assert.deepEqual(rows.map(r => r["Europaletten verladen"]), [45, 0, ""]);
   assert.deepEqual(rows.map(r => r["Düsseldorfer verladen"]), ["", "", ""]);
+  assert.deepEqual(rows.map(r => r["Sub-Spedition"]), ["Müller Transport", "", ""]);
+  const columns = Object.keys(rows[0]);
+  assert.equal(columns[columns.indexOf("Spedition") + 1], "Sub-Spedition");
   assert.equal(rows[0].Palettenscheinnummer, "00045, 00046");
   assert.deepEqual(Object.keys(rows[0]).slice(3, 6), [
     "Palettenscheinnummer", "Europaletten verladen", "Düsseldorfer verladen",

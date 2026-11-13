@@ -11,6 +11,7 @@ export function buildExportRows(rows: Shipment[]) {
     "Europaletten verladen": s.europalettenVerladen ?? "",
     "Düsseldorfer verladen": "",
     Spedition: s.speditionName ?? "",
+    "Sub-Spedition": s.subSpedition ?? "",
     "LKW-Art": s.lkwArt ?? "",
     Relation: s.relation ?? "",
     Bezeichnung: s.bezeichnung ?? "",
