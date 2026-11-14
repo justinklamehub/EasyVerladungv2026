@@ -137,6 +137,40 @@ test("shipment print and next-status actions enforce independent permissions ove
     assert.equal((await request("/advance-status", "custom_internal", { expectedStatus: "Angemeldet" })).status, 200);
     assert.equal(shipment.status, "Angekommen");
   });
+  await t.test("inline fields save individually with edit permission and tor can be cleared", async () => {
+    conflict = false;
+    shipment = { ...initial };
+    for (const body of [{ tor: "Tor 4" }, { status: "in Verladung" }, { wareStatus: "in bearbeitung" }, { tor: null }]) {
+      const response = await fetch(base, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-test-role": "custom_editor" },
+        body: JSON.stringify(body),
+      });
+      assert.equal(response.status, 200);
+      const result = await response.json() as Record<string, unknown>;
+      for (const [field, value] of Object.entries(body)) assert.equal(result[field], value);
+    }
+    assert.equal(shipment.status, "in Verladung");
+    assert.equal(shipment.wareStatus, "in bearbeitung");
+    assert.equal(shipment.tor, null);
+    assert.equal(shipment.cometBearbeitet, true);
+    assert.equal(shipment.gesperrtFuerSpedition, true);
+    assert.ok(shipment.statusChangedAt);
+  });
+
+  await t.test("print or advance rights alone cannot edit inline fields", async () => {
+    const count = updates.length;
+    for (const body of [{ tor: "Tor 7" }, { status: "Verladen" }, { wareStatus: "vorbereitet" }]) {
+      const response = await fetch(base, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", "x-test-role": "comet_lager" },
+        body: JSON.stringify(body),
+      });
+      assert.equal(response.status, 403);
+    }
+    assert.equal(updates.length, count);
+  });
+
   await t.test("carrier reassignment requires edit permission and refreshes old and new carrier rooms", async () => {
     shipment = { ...initial, speditionId: 10 };
     const events: { room: string; event: string }[] = [];

@@ -13,6 +13,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Search, Loader2, Plus, Lock, LockOpen, ArrowRight, ArrowUp, ArrowDown, ChevronsUpDown, X, Download, FileSpreadsheet, Wifi, WifiOff, ClipboardCheck, SlidersHorizontal, RotateCcw, GripVertical, BookTemplate, AlertTriangle, ChevronDown, ListChecks } from "lucide-react";
 import * as XLSX from "xlsx";
 import { ShipmentDrawer } from "./components/shipment-drawer";
+import { InlineShipmentSelect } from "./components/inline-shipment-select";
 import { BulkCreateDialog, type RowData } from "./components/bulk-create-dialog";
 import { TemplatesDialog, type TemplateRow } from "./components/templates-dialog";
 import { useAuth } from "@/contexts/auth-context";
@@ -30,7 +31,7 @@ import { stableShipmentComparison } from "./stable-sort";
 import { buildExportRows } from "./export-rows";
 import { changeShipmentDate } from "./date-filter";
 import { updateShipmentSpeditionen } from "./bulk-spedition-update";
-import { SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION, nextShipmentStatus, isInternalShipmentActionRole } from "@workspace/api-zod/shipment-actions";
+import { SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION, nextShipmentStatus, isInternalShipmentActionRole, hasCometShipmentActivity } from "@workspace/api-zod/shipment-actions";
 import { getShipmentDeckblatt, useMarkShipmentPrinted, useAdvanceShipmentStatus, getGetShipmentQueryKey, getGetShipmentHistoryQueryKey, type ShipmentStatusAdvanceInput } from "@workspace/api-client-react";
 
 const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
@@ -146,6 +147,7 @@ export default function ShipmentsPage() {
   const canCreate = !!permissions["shipment.create"];
   const canEdit   = !!permissions["shipment.edit"];
   const canChangeSpedition = isInternalShipmentActionRole(role) && canEdit;
+  const canEditOperationalFields = isInternalShipmentActionRole(role) && canEdit;
   const canLock   = !!permissions["shipment.lock"];
   const canPrint = isInternalShipmentActionRole(role) && !!permissions[SHIPMENT_PRINT_PERMISSION];
   const canAdvance = isInternalShipmentActionRole(role) && !!permissions[SHIPMENT_ADVANCE_PERMISSION];
@@ -308,6 +310,8 @@ export default function ShipmentsPage() {
   });
   const { data: speditionen } = useListSpeditionen();
   const updateShipment = useUpdateShipment();
+  const inlineBusy = useRef(new Set<number>());
+  const [inlineSaving, setInlineSaving] = useState<Record<number, string>>({});
   const lockShipment = useLockShipment();
   const unlockShipment = useUnlockShipment();
   const [printingId, setPrintingId] = useState<number | null>(null);
@@ -322,6 +326,35 @@ export default function ShipmentsPage() {
       queryClient.invalidateQueries({ queryKey: getGetShipmentQueryKey(id) }),
       queryClient.invalidateQueries({ queryKey: getGetShipmentHistoryQueryKey(id) }),
     ]);
+  }
+
+  function canEditWarehouseStatus(shipment: Shipment) {
+    return canEditOperationalFields || (canEdit && !hasCometShipmentActivity(shipment) &&
+      !!speditionen?.some(spedition => spedition.id === shipment.speditionId && spedition.canCreateShipment));
+  }
+
+  async function saveInlineShipment(shipment: Shipment, field: "tor" | "status" | "wareStatus", value: string) {
+    if (inlineBusy.current.has(shipment.id)) return;
+    if (field === "wareStatus" ? !canEditWarehouseStatus(shipment) : !canEditOperationalFields) return;
+    const nextValue = field === "tor" && !value ? null : value;
+    if (nextValue === (shipment[field] ?? null)) return;
+    inlineBusy.current.add(shipment.id);
+    setInlineSaving(current => ({ ...current, [shipment.id]: field }));
+    try {
+      await updateShipment.mutateAsync({ id: shipment.id, data: { [field]: nextValue } });
+      await invalidateShipmentAction(shipment.id);
+      toast({ title: "Gespeichert", description: `${field === "tor" ? "Tor" : field === "status" ? "Verladungsstatus" : "Warenstatus"} wurde aktualisiert.` });
+    } catch (error: any) {
+      toast({ title: "Änderung nicht gespeichert", description: error?.data?.error ?? error?.message ?? "Bitte erneut versuchen.", variant: "destructive" });
+      await invalidateShipmentAction(shipment.id);
+    } finally {
+      inlineBusy.current.delete(shipment.id);
+      setInlineSaving(current => {
+        const next = { ...current };
+        delete next[shipment.id];
+        return next;
+      });
+    }
   }
 
   async function handlePrintDeckblatt(shipment: Shipment) {
@@ -1148,16 +1181,35 @@ export default function ShipmentsPage() {
                       }
                       case "status": return (
                         <TableCell key="status">
+                          {canEditOperationalFields ? (
+                            <InlineShipmentSelect shipmentId={shipment.id} label="Status Verladung" field="status"
+                              value={shipment.status} options={STATUS_OPTIONS}
+                              disabled={!!inlineSaving[shipment.id]} saving={inlineSaving[shipment.id] === "status"}
+                              className={STATUS_COLOR[shipment.status]}
+                              onChange={value => void saveInlineShipment(shipment, "status", value)} />
+                          ) : (
                           <Badge variant="outline" className={STATUS_COLOR[shipment.status] ?? "bg-slate-100 text-slate-700"}>{shipment.status}</Badge>
+                          )}
                         </TableCell>
                       );
                       case "ware": {
                         const ws = s.wareStatus || "nicht bereit";
                         const cls = ws === "vorbereitet" ? "bg-green-100 text-green-700 border-green-200" : ws === "in bearbeitung" ? "bg-amber-100 text-amber-700 border-amber-200" : ws === "ausgedruckt" ? "bg-blue-100 text-blue-700 border-blue-200" : "bg-red-100 text-red-700 border-red-200";
                         const lbl = ws === "nicht bereit" ? "Nicht bereit" : ws === "ausgedruckt" ? "Ausgedruckt" : ws === "in bearbeitung" ? "In Bearbeitung" : ws === "vorbereitet" ? "Vorbereitet" : ws;
-                        return <TableCell key="ware"><Badge variant="outline" className={`text-xs ${cls}`}>{lbl}</Badge></TableCell>;
+                        return <TableCell key="ware">{canEditWarehouseStatus(shipment) ? (
+                          <InlineShipmentSelect shipmentId={shipment.id} label="Status Ware" field="wareStatus"
+                            value={ws} options={["nicht bereit", "in bearbeitung", "vorbereitet", "ausgedruckt"]}
+                            disabled={!!inlineSaving[shipment.id]} saving={inlineSaving[shipment.id] === "wareStatus"}
+                            className={cls}
+                            onChange={value => void saveInlineShipment(shipment, "wareStatus", value)} />
+                        ) : <Badge variant="outline" className={`text-xs ${cls}`}>{lbl}</Badge>}</TableCell>;
                       }
-                      case "tor": return <TableCell key="tor" className="font-medium">{shipment.tor || "-"}</TableCell>;
+                      case "tor": return <TableCell key="tor" className="font-medium">{canEditOperationalFields ? (
+                        <InlineShipmentSelect shipmentId={shipment.id} label="Tor" field="tor"
+                          value={shipment.tor ?? ""} options={TOR_OPTIONS} allowEmpty
+                          disabled={!!inlineSaving[shipment.id]} saving={inlineSaving[shipment.id] === "tor"}
+                          onChange={value => void saveInlineShipment(shipment, "tor", value)} />
+                      ) : shipment.tor || "-"}</TableCell>;
                       case "gesperrt": return (
                         <TableCell key="gesperrt">
                           {shipment.gesperrtFuerSpedition ? <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">Gesperrt</Badge> : <span className="text-xs text-slate-400">Nein</span>}
