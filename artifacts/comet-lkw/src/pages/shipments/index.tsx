@@ -22,13 +22,13 @@ import { getListShipmentsQueryKey } from "@workspace/api-client-react";
 import { useSocketStatus } from "@/hooks/use-socket";
 import { usePermissions } from "@/hooks/use-permissions";
 import { slaWarning, SlaThresholds, SLA_DEFAULTS } from "@/lib/sla";
-import { resolveWorkViewDates, type ShipmentWorkViewFilters, type WorkViewDate } from "@workspace/api-zod/shipment-work-views";
-import { WorkViewsBar } from "./components/work-views-bar";
+import { resolveWorkViewDates, type WorkViewDate } from "@workspace/api-zod/shipment-work-views";
 import { useLiveFilters } from "@/lib/live-view-control";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { Printer, ChevronsRight } from "lucide-react";
 import { stableShipmentComparison } from "./stable-sort";
 import { buildExportRows } from "./export-rows";
+import { changeShipmentDate } from "./date-filter";
 import { updateShipmentSpeditionen } from "./bulk-spedition-update";
 import { SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION, nextShipmentStatus, isInternalShipmentActionRole } from "@workspace/api-zod/shipment-actions";
 import { getShipmentDeckblatt, useMarkShipmentPrinted, useAdvanceShipmentStatus, getGetShipmentQueryKey, getGetShipmentHistoryQueryKey, type ShipmentStatusAdvanceInput } from "@workspace/api-client-react";
@@ -168,11 +168,6 @@ export default function ShipmentsPage() {
     ? { mode: "custom", from: filterDateFrom, to: filterDateTo }
     : { mode: dateMode };
   const effectiveDates = resolveWorkViewDates(workDate, calendarNow);
-  const workViewFilters = {
-    search, status: filterStatus, speditionId: filterSpeditionId,
-    lkwArt: filterLkwArt, tor: filterTor, date: workDate,
-    sortField, sortDir, showAbgefertigt, showStorniert,
-  } as ShipmentWorkViewFilters;
   useEffect(() => {
     const refresh = () => setCalendarNow(new Date());
     const timer = setInterval(refresh, 60_000);
@@ -564,25 +559,6 @@ export default function ShipmentsPage() {
     setSelectedIds(new Set());
   }
 
-  function applyWorkView(filters: ShipmentWorkViewFilters) {
-    // Do not keep hidden rows selected for bulk actions after switching working sets.
-    setSelectedIds(new Set());
-    setSearch(filters.search);
-    setFilterStatus(filters.status);
-    setFilterSpeditionId(isCometUser ? filters.speditionId : "__all__");
-    setFilterLkwArt(filters.lkwArt);
-    setFilterTor(filters.tor);
-    setSortField(filters.sortField);
-    setSortDir(filters.sortDir);
-    setShowAbgefertigt(filters.showAbgefertigt);
-    setShowStorniert(filters.showStorniert);
-    setDateMode(filters.date.mode);
-    const dates = resolveWorkViewDates(filters.date);
-    setFilterDateFrom(dates.from);
-    setFilterDateTo(dates.to);
-    setCalendarNow(new Date());
-  }
-
   function exportCsv() {
     const rows = buildExportRows(sorted, isCometUser || role === "comet_viewer");
     if (!rows.length) return;
@@ -633,12 +609,14 @@ export default function ShipmentsPage() {
         const dates = resolveWorkViewDates(mode === "custom"
           ? { mode, from: effectiveDates.from, to: effectiveDates.to } : { mode });
         setDateMode(mode); setFilterDateFrom(dates.from); setFilterDateTo(dates.to);
-        if (mode === "custom") setAdvancedOpen(true);
       } },
     { id: "date-from", label: "ETA von", kind: "date", value: filterDateFrom,
-      change: value => { setDateMode("custom"); setFilterDateFrom(value); setAdvancedOpen(true); } },
+      change: value => {
+        const dates = changeShipmentDate(value, effectiveDates);
+        setDateMode("custom"); setFilterDateFrom(dates.from); setFilterDateTo(dates.to);
+      } },
     { id: "date-to", label: "ETA bis", kind: "date", value: filterDateTo,
-      change: value => { setDateMode("custom"); setFilterDateTo(value); setAdvancedOpen(true); } },
+      change: value => { setDateMode("custom"); setFilterDateTo(value); setFilterDateFrom(effectiveDates.from); } },
     { id: "lkw-art", label: "LKW-Art filtern", kind: "select", value: filterLkwArt, change: setFilterLkwArt,
       options: [{ value: "__all__", label: "Alle Arten" }, ...LKW_ART_OPTIONS.map(value => ({ value, label: value }))] },
     { id: "tor", label: "Tor filtern", kind: "select", value: filterTor, change: setFilterTor,
@@ -651,7 +629,7 @@ export default function ShipmentsPage() {
   const advancedActive =
     (filterLkwArt !== "__all__" ? 1 : 0) + (filterTor !== "__all__" ? 1 : 0) +
     (isCometUser && filterSpeditionId !== "__all__" ? 1 : 0) +
-    (showAbgefertigt ? 1 : 0) + (showStorniert ? 1 : 0) + (dateMode === "custom" ? 1 : 0);
+    (showAbgefertigt ? 1 : 0) + (showStorniert ? 1 : 0);
   const activeChips: { id: string; label: string; remove: () => void }[] = [];
   if (search.length > 0) activeChips.push({ id: "search", label: `Suche: ${search}`, remove: () => setSearch("") });
   if (filterStatus !== "__all__") activeChips.push({ id: "status", label: `Status: ${filterStatus}`, remove: () => setFilterStatus("__all__") });
@@ -719,7 +697,6 @@ export default function ShipmentsPage() {
       </div>
 
       <div className="app-filter-bar p-3 border shadow-sm space-y-2" data-testid="shipment-filters">
-        <WorkViewsBar key={user?.id} filters={workViewFilters} onApply={applyWorkView} />
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[160px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -747,7 +724,6 @@ export default function ShipmentsPage() {
             const dates = resolveWorkViewDates(mode === "custom"
               ? { mode, from: effectiveDates.from, to: effectiveDates.to } : { mode });
             setDateMode(mode);
-            if (mode === "custom") setAdvancedOpen(true);
             setFilterDateFrom(dates.from);
             setFilterDateTo(dates.to);
           }}>
@@ -762,6 +738,38 @@ export default function ShipmentsPage() {
               <SelectItem value="custom">Fester Zeitraum</SelectItem>
             </SelectContent>
           </Select>
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            ETA-Datum
+            <Input
+              type="date"
+              className="w-[150px] h-9 text-sm"
+              aria-label="ETA von"
+              data-testid="input-eta-from"
+              value={effectiveDates.from}
+              onChange={(e) => {
+                const dates = changeShipmentDate(e.target.value, effectiveDates);
+                setDateMode("custom");
+                setFilterDateFrom(dates.from);
+                setFilterDateTo(dates.to);
+              }}
+            />
+          </label>
+          <label className="flex items-center gap-2 text-xs text-slate-600">
+            Bis
+            <Input
+              type="date"
+              className="w-[150px] h-9 text-sm"
+              aria-label="ETA bis"
+              data-testid="input-eta-to"
+              min={effectiveDates.from || undefined}
+              value={effectiveDates.to}
+              onChange={(e) => {
+                setDateMode("custom");
+                setFilterDateTo(e.target.value);
+                setFilterDateFrom(effectiveDates.from);
+              }}
+            />
+          </label>
           <Button
             variant="outline" size="sm" className="h-9 gap-1.5"
             aria-expanded={advancedOpen} aria-controls="shipment-advanced-filters"
@@ -888,28 +896,6 @@ export default function ShipmentsPage() {
                 </Select>
               </label>
             )}
-            <label className="flex flex-col gap-1 text-xs text-slate-500">
-              ETA von
-              <Input
-                type="date"
-                className="w-[145px] h-9 text-sm"
-                aria-label="ETA von"
-                data-testid="input-eta-from"
-                value={effectiveDates.from}
-                onChange={(e) => { setDateMode("custom"); setFilterDateFrom(e.target.value); setFilterDateTo(effectiveDates.to); }}
-              />
-            </label>
-            <label className="flex flex-col gap-1 text-xs text-slate-500">
-              ETA bis
-              <Input
-                type="date"
-                className="w-[145px] h-9 text-sm"
-                aria-label="ETA bis"
-                data-testid="input-eta-to"
-                value={effectiveDates.to}
-                onChange={(e) => { setDateMode("custom"); setFilterDateTo(e.target.value); setFilterDateFrom(effectiveDates.from); }}
-              />
-            </label>
             <div className="flex items-center gap-4 h-9">
               <div className="flex items-center gap-2">
                 <Checkbox id="show-abgefertigt" checked={showAbgefertigt} onCheckedChange={(v) => setShowAbgefertigt(!!v)} data-testid="checkbox-show-abgefertigt" />
