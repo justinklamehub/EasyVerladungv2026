@@ -159,7 +159,7 @@ interface ShipmentDrawerProps {
 }
 
 const API_BASE = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
+const STATUS_OPTIONS = ["Angemeldet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 import { useLkwArten, selectableLkwArten } from "@/hooks/use-lkw-arten";
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
 

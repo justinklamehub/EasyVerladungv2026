@@ -30,7 +30,7 @@ export function InlineShipmentSelect({
         onChange={event => onChange(event.target.value)}
       >
         {allowEmpty && <option value="">Kein Tor</option>}
-        {choices.map(option => <option key={option} value={option}>{option}</option>)}
+        {choices.map(option => <option key={option} value={option} disabled={field === "status" && option === "Erwartet"}>{option}</option>)}
       </select>
       {saving && <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-slate-500" aria-label="Wird gespeichert" />}
     </div>

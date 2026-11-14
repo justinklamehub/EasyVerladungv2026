@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Retoure", "Sattelzug", "Wechselbrücke", "Sonstige", "Korrektur"];
 import { useLkwArten, selectableLkwArten } from "@/hooks/use-lkw-arten";
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen"];
+const STATUS_OPTIONS = ["Angemeldet", "Angekommen", "in Verladung", "Verladen"];
 
 export interface RowData {
   id: number;

@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
 import { ShipmentDrawer } from "@/pages/shipments/components/shipment-drawer";
 import { slaWarning, SlaThresholds, SLA_DEFAULTS } from "@/lib/sla";
 
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
+const STATUS_OPTIONS = ["Angemeldet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 function toDateStr(d: Date): string {

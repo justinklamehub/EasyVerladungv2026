@@ -34,7 +34,7 @@ import { updateShipmentSpeditionen } from "./bulk-spedition-update";
 import { SHIPMENT_PRINT_PERMISSION, SHIPMENT_ADVANCE_PERMISSION, nextShipmentStatus, isInternalShipmentActionRole, hasCometShipmentActivity } from "@workspace/api-zod/shipment-actions";
 import { getShipmentDeckblatt, useMarkShipmentPrinted, useAdvanceShipmentStatus, getGetShipmentQueryKey, getGetShipmentHistoryQueryKey, type ShipmentStatusAdvanceInput } from "@workspace/api-client-react";
 
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
+const STATUS_OPTIONS = ["Angemeldet", "Angekommen", "in Verladung", "Verladen", "Abgefertigt", "Storniert"];
 const WARE_STATUS_OPTIONS = ["nicht bereit", "vorbereitet", "ausgedruckt"];
 const LKW_ART_OPTIONS = ["Container", "Anlieferung", "Abholung", "Sattelzug", "Wechselbrücke", "Sonstige"];
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
@@ -1305,7 +1305,7 @@ export default function ShipmentsPage() {
             speditionId: template.spedition_id ? String(template.spedition_id) : "",
             relation: template.relation ?? "",
             telefon: template.telefon ?? "",
-            status: template.status,
+            status: template.status === "Erwartet" ? "Angemeldet" : template.status,
           }]);
           setIsTemplatesOpen(false);
           setIsBulkOpen(true);

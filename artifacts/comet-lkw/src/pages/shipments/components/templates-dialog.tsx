@@ -14,7 +14,7 @@ import { useLkwArten, selectableLkwArten } from "@/hooks/use-lkw-arten";
 const API = import.meta.env.BASE_URL.replace(/\/$/, "") + "/api";
 
 const TOR_OPTIONS = [...Array.from({ length: 18 }, (_, i) => `Tor ${i + 1}`), "Tor A", "Tor B", "Tor C"];
-const STATUS_OPTIONS = ["Angemeldet", "Erwartet", "Angekommen", "in Verladung", "Verladen"];
+const STATUS_OPTIONS = ["Angemeldet", "Angekommen", "in Verladung", "Verladen"];
 
 export interface TemplateRow {
   id: number;
@@ -199,7 +199,7 @@ export function TemplatesDialog({ open, onOpenChange, onLoadToMassenanlage }: Pr
       speditionId: t.spedition_id ? String(t.spedition_id) : "",
       relation:    t.relation ?? "",
       telefon:     t.telefon ?? "",
-      status:      t.status,
+      status:      t.status === "Erwartet" ? "Angemeldet" : t.status,
     });
     setShowForm(true);
   }

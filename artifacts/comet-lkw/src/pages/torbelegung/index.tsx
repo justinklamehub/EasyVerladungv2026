@@ -28,7 +28,6 @@ const ALL_GATES = [
 
 const STATUS_ORDER = [
   "Angemeldet",
-  "Erwartet",
   "Angekommen",
   "in Verladung",
   "Verladen",
