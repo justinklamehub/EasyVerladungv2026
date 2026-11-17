@@ -15,8 +15,8 @@ Drucken und Weiter sind getrennt pro Rolle in den Einstellungen freigebbare COME
 
 **How to apply:** Die vorhandene rollenbasierte Rechteverwaltung verwenden, nicht eine zweite Liste von Berechtigungen aufbauen. Ein separates Aktionsrecht darf kein allgemeines Bearbeitungsrecht benötigen oder erteilen.
 
-Beim Wechsel per Weiter-Button von „Angemeldet“ zu „Angekommen“ müssen aktuelles Datum und Uhrzeit als ATA eingetragen werden.
+Beim Setzen auf „Angekommen“ per Schnellauswahl oder Weiter-Button müssen fehlende ATA-Werte mit aktuellem Datum und Uhrzeit ergänzt werden. Bereits vorhandene ATA-Werte bleiben erhalten.
 
-**Why:** Der Nutzer verlangt den automatischen ATA-Eintrag ausdrücklich für diesen Buttonwechsel.
+**Why:** Der Nutzer verlangt den automatischen ATA-Eintrag auch für die Schnellauswahl, sofern noch kein ATA eingetragen ist.
 
 **How to apply:** Serverzeit in deutscher Ortszeit verwenden und ATA zusammen mit dem Status speichern. Spätere Weiter-Schritte dürfen die Ankunftszeit nicht erneut setzen.

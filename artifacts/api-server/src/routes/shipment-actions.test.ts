@@ -158,6 +158,47 @@ test("shipment print and next-status actions enforce independent permissions ove
     assert.ok(shipment.statusChangedAt);
   });
 
+  await t.test("quick arrival selection fills missing ATA without overwriting existing values", async () => {
+    conflict = false;
+    const patch = (body: unknown) => fetch(base, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json", "x-test-role": "custom_editor" },
+      body: JSON.stringify(body),
+    });
+    for (const ata of [
+      { ataDate: null, ataTime: null },
+      { ataDate: "2026-10-01", ataTime: "07:35" },
+      { ataDate: "2026-10-01", ataTime: null },
+      { ataDate: null, ataTime: "07:35" },
+      { ataDate: "", ataTime: "" },
+    ]) {
+      shipment = { ...initial, ...ata };
+      const response = await patch({ status: "Angekommen" });
+      assert.equal(response.status, 200);
+      const result = await response.json() as Record<string, unknown>;
+      const expected = shipmentArrivalFields(shipment.statusChangedAt);
+      assert.equal(result.ataDate, ata.ataDate || expected.ataDate);
+      assert.equal(result.ataTime, ata.ataTime || expected.ataTime);
+      if (ata.ataDate) assert.equal(Object.hasOwn(updates.at(-1)!, "ataDate"), false);
+      if (ata.ataTime) assert.equal(Object.hasOwn(updates.at(-1)!, "ataTime"), false);
+    }
+    shipment = { ...initial };
+    assert.equal((await patch({ status: "in Verladung" })).status, 200);
+    assert.equal(Object.hasOwn(updates.at(-1)!, "ataDate"), false);
+    assert.equal(Object.hasOwn(updates.at(-1)!, "ataTime"), false);
+    shipment = { ...initial };
+    assert.equal((await patch({ status: "Angekommen", ataDate: "2026-10-02", ataTime: "08:45" })).status, 200);
+    assert.equal(shipment.ataDate, "2026-10-02");
+    assert.equal(shipment.ataTime, "08:45");
+  });
+
+  await t.test("advance arrival also preserves an existing ATA", async () => {
+    shipment = { ...initial, ataDate: "2026-10-03", ataTime: "10:25" };
+    assert.equal((await request("/advance-status", "comet_lager", { expectedStatus: "Angemeldet" })).status, 200);
+    assert.equal(shipment.ataDate, "2026-10-03");
+    assert.equal(shipment.ataTime, "10:25");
+  });
+
   await t.test("print or advance rights alone cannot edit inline fields", async () => {
     const count = updates.length;
     for (const body of [{ tor: "Tor 7" }, { status: "Verladen" }, { wareStatus: "vorbereitet" }]) {

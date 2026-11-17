@@ -602,9 +602,6 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
       updates.wareStatus = "ausgedruckt";
     } else if (action === "advance") {
       updates.status = nextStatus;
-      if (existing.status === "Angemeldet" && nextStatus === "Angekommen") {
-        Object.assign(updates, shipmentArrivalFields(changedAt));
-      }
     } else {
       for (const field of allowedFields) {
         const input = speditionUpdates ?? req.body;
@@ -612,6 +609,14 @@ async function updateShipment(req: Request, res: Response, action: "edit" | "pri
           updates[field] = input[field];
         }
       }
+    }
+
+    // Quick selection and the next-status action must record the same arrival.
+    // Fill missing components only; keep manually entered or historical ATA values.
+    if (isCometUser && updates.status === "Angekommen") {
+      const arrival = shipmentArrivalFields(changedAt);
+      if (!(updates.ataDate ?? existing.ataDate)) updates.ataDate = arrival.ataDate;
+      if (!(updates.ataTime ?? existing.ataTime)) updates.ataTime = arrival.ataTime;
     }
 
     if (isCometUser) {
