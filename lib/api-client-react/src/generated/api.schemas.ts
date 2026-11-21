@@ -574,6 +574,12 @@ export interface ClockEntryUpdate {
      */
   pauseOverride: number | null;
   /**
+     * Ausgelassen behält die bisherige Schichtlogik bei; null entfernt die Schicht, eine ID ordnet diese Schicht nur dieser Buchung zu.
+     * @minimum 1
+     * @nullable
+     */
+  shiftId?: number | null;
+  /**
      * Includes space for the automatic midnight comment
      * @maxLength 1100
      */

@@ -1264,6 +1264,7 @@ export const UpdateClockEntryParams = zod.object({
 export const updateClockEntryBodyPauseOverrideMin = 0;
 export const updateClockEntryBodyPauseOverrideMax = 1440;
 
+
 export const updateClockEntryBodyReasonMax = 1100;
 
 export const updateClockEntryBodyConfirmationMax = 64;
@@ -1275,6 +1276,7 @@ export const UpdateClockEntryBody = zod.object({
   "startedAt": zod.coerce.date(),
   "endedAt": zod.coerce.date().nullable(),
   "pauseOverride": zod.number().min(updateClockEntryBodyPauseOverrideMin).max(updateClockEntryBodyPauseOverrideMax).nullable(),
+  "shiftId": zod.number().min(1).nullish().describe('Ausgelassen behält die bisherige Schichtlogik bei; null entfernt die Schicht, eine ID ordnet diese Schicht nur dieser Buchung zu.'),
   "reason": zod.string().max(updateClockEntryBodyReasonMax).optional().describe('Includes space for the automatic midnight comment'),
   "expectedUpdatedAt": zod.string().optional(),
   "confirmation": zod.string().max(updateClockEntryBodyConfirmationMax).optional()

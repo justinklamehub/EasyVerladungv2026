@@ -63,6 +63,12 @@ Neue Schichtpläne und spätere Planänderungen dürfen bereits gespeicherte Buc
 
 **How to apply:** Neue Buchungen berücksichtigen den dann geltenden Plan; auch über einen Wochenwechsel hinweg behalten bestehende Buchungen ihre Berechnungsgrundlage. Eine nachträgliche Neubewertung alter Zeiträume wäre eine gesonderte, ausdrücklich freizugebende Funktion.
 
+Beim nachträglichen Bearbeiten einer Stempelung unter „Anwesenheit“ darf ihre Schicht ausdrücklich hinzugefügt, geändert oder entfernt werden. Dies betrifft nur die einzelne Buchung, nicht den wiederkehrenden Mitarbeiterplan.
+
+**Why:** Der Nutzer verlangt die nachträgliche Schichtbearbeitung von Stempelungen. Die bisherige Regel gegen stille rückwirkende Planänderungen verbietet keine bewusste Einzelkorrektur.
+
+**How to apply:** Ohne ausdrückliche Schichtänderung den vorhandenen Regelstand erhalten. Bei einer ausgewählten Schicht deren automatische Pause verwenden; manuelle Zeit- und Pausenvorgaben weiterhin genau übernehmen.
+
 Die Schichtzuweisung soll einfach und auch für mehrere Mitarbeiter gleichzeitig möglich sein.
 
 **Why:** Der Nutzer verlangt ausdrücklich eine einfachere Zuweisung „auch in masse“, nicht nur wiederholtes Ausfüllen eines Einzelmitarbeiterformulars.

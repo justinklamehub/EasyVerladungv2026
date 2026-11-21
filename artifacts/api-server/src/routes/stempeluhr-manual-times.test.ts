@@ -19,6 +19,14 @@ test("manual creation and corrections persist exact time rules and retain origin
       if (sql.includes("SELECT role,is_active FROM users")) return result([{ role: "comet_admin", is_active: true }]);
       if (sql.startsWith("SELECT id FROM clock_employees")) return result([{ id: 1 }]);
       if (sql.startsWith("SELECT * FROM clock_settings")) return result([{ data: DEFAULT_SETTINGS, updated_at: "2026-10-19T00:00:00Z" }]);
+      if (sql.startsWith("SELECT * FROM clock_shifts WHERE id=")) {
+        const shifts: Record<number, any> = {
+          1: { name: "Früh", startTime: "06:00", endTime: "14:00", pauseMinutes: 30 },
+          2: { name: "Spät", startTime: "14:00", endTime: "22:00", pauseMinutes: 45 },
+          3: { name: "Nacht", startTime: "22:00", endTime: "06:00", pauseMinutes: 40 },
+        };
+        return result(shifts[values[0]] ? [{ id: values[0], data: shifts[values[0]], updated_at: "2026-10-19T00:00:00Z" }] : []);
+      }
       if (sql.startsWith("SELECT e.*")) return result(sql.includes("e.employee_id=$1") ? [] : saved ? [structuredClone(saved)] : []);
       if (sql.startsWith("INSERT INTO clock_entries(")) {
         saved = {
@@ -91,4 +99,45 @@ test("manual creation and corrections persist exact time rules and retain origin
   assert.equal(saved.rules.manualEnd, true);
   assert.equal(audits.length, 2);
   assert.equal(entry(structuredClone(saved)).netMinutes, 690);
+
+  const correct = (extra: Record<string, unknown>) => request("PUT", "/1", {
+    ...original, expectedUpdatedAt: entry(saved).updatedAt, ...extra,
+  });
+  for (const [shiftId, name, pause] of [[1, "Früh", 30], [2, "Spät", 45]] as const) {
+    const response = await correct({ shiftId, pauseOverride: null });
+    assert.equal(response.status, 200);
+    const body = await response.json() as any;
+    assert.equal(body.shiftName, name);
+    assert.equal(body.pauseMinutes, pause);
+    assert.equal(body.grossMinutes, 630, "changing the shift must not clip manual times");
+    assert.equal(entry(structuredClone(saved)).shiftName, name, "shift survives reload/export");
+    assert.equal(body.originalStartedAt, createdBody.originalStartedAt);
+  }
+  assert.equal((await correct({ shiftId: 2, pauseOverride: 5 })).status, 200);
+  assert.equal(entry(saved).pauseMinutes, 5, "manual pause overrides the selected shift");
+  // Omitting the field retains the existing snapshot, including historical names.
+  assert.equal((await correct({})).status, 200);
+  assert.equal(entry(saved).shiftName, "Spät");
+
+  assert.equal((await correct({ shiftId: null, pauseOverride: null })).status, 200);
+  assert.equal(entry(saved).shiftName, null);
+  assert.equal(entry(saved).pauseMinutes, 45, "removing a shift restores general pause rules");
+  assert.equal((await correct({ shiftId: 1 })).status, 200, "a previously unassigned entry can receive a shift");
+  const unchanged = structuredClone(saved);
+  for (const shiftId of [0, -1, 1.5, "2", 999]) {
+    const response = await correct({ shiftId });
+    assert.equal(response.status, shiftId === 999 ? 409 : 400);
+    assert.deepEqual(saved, unchanged, "invalid shift must not partially save times");
+  }
+  const night = await correct({
+    shiftId: 3, startedAt: "2026-10-20T01:00:00+02:00", endedAt: null, pauseOverride: null,
+  });
+  assert.equal(night.status, 200);
+  const nightBody = await night.json() as any;
+  assert.equal(nightBody.shiftName, "Nacht");
+  assert.equal(nightBody.shiftDay, "2026-10-19");
+  assert.equal(nightBody.bookedStart, "2026-10-19T23:00:00.000Z");
+  assert.equal(nightBody.endedAt, null);
+  assert.equal(nightBody.netMinutes, null);
+  assert.ok(audits.some((a) => String(a[4]).includes("Spät")), "shift corrections are audited");
 });

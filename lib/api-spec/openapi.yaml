@@ -2531,6 +2531,10 @@ components:
         startedAt: { type: string, format: date-time }
         endedAt: { type: ["string", "null"], format: date-time }
         pauseOverride: { type: ["integer", "null"], minimum: 0, maximum: 1440 }
+        shiftId:
+          type: ["integer", "null"]
+          minimum: 1
+          description: Ausgelassen behält die bisherige Schichtlogik bei; null entfernt die Schicht, eine ID ordnet diese Schicht nur dieser Buchung zu.
         reason: { type: string, maxLength: 1100, description: Includes space for the automatic midnight comment }
         expectedUpdatedAt: { type: string }
         confirmation: { type: string, maxLength: 64 }

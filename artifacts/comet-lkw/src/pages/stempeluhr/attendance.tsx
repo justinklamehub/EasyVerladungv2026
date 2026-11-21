@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useCreateClockEntry, useUpdateClockEntry, useDeleteClockEntry, useGetClockShiftPlanning, getGetClockShiftPlanningQueryKey } from "@workspace/api-client-react";
-import type { ClockEntry, ClockEmployee, ClockEntryWarning } from "@workspace/api-client-react";
+import type { ClockEntry, ClockEmployee, ClockEntryWarning, ClockShift } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,7 +32,7 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
   const shiftParams = { from: today, to: today };
   const shifts = useGetClockShiftPlanning(shiftParams, { query: {
     queryKey: getGetClockShiftPlanningQueryKey(shiftParams),
-    enabled: [P.view, P.employees, P.export, P.shifts].some((permission) => has(permission)),
+    enabled: [P.view, P.employees, P.export, P.shifts, P.correct].some((permission) => has(permission)),
     staleTime: 10_000, refetchInterval: 30_000, refetchOnWindowFocus: true,
   } });
 
@@ -125,22 +125,23 @@ export function Attendance({ entries, employees, has, from, to }: Props) {
         </table>
       </div>
 
-      {edit && <EntryDialog key={edit === "new" ? "new" : edit.id} entry={edit === "new" ? null : edit} employees={employees} onClose={() => setEdit(null)} invalidate={invalidate} />}
+      {edit && <EntryDialog key={edit === "new" ? "new" : edit.id} entry={edit === "new" ? null : edit} employees={employees} shifts={shifts.data?.shifts ?? []} onClose={() => setEdit(null)} invalidate={invalidate} />}
       {del && <DeleteDialog entry={del} onClose={() => setDel(null)} invalidate={invalidate} />}
     </div>
   );
 }
 
-function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEntry | null; employees: ClockEmployee[]; onClose: () => void; invalidate: () => void }) {
+export function EntryDialog({ entry, employees, shifts, onClose, invalidate }: { entry: ClockEntry | null; employees: ClockEmployee[]; shifts: ClockShift[]; onClose: () => void; invalidate: () => void }) {
   const create = useCreateClockEntry(); const update = useUpdateClockEntry();
   const [emp, setEmp] = useState(entry ? String(entry.employeeId) : "");
   const [start, setStart] = useState(berlinInput(entry?.startedAt));
   const [end, setEnd] = useState(berlinInput(entry?.endedAt));
   const [pause, setPause] = useState(entry?.pauseOverride != null ? String(entry.pauseOverride) : "");
   const [reason, setReason] = useState(entry?.reason ?? "");
+  const [entryShift, setEntryShift] = useState("__keep__");
   const [err, setErr] = useState("");
   const [warning, setWarning] = useState<{ input: string; response: ClockEntryWarning } | null>(null);
-  const inputKey = JSON.stringify([emp, start, end, pause, reason]);
+  const inputKey = JSON.stringify([emp, start, end, pause, reason, entryShift]);
   const activeWarning = warning?.input === inputKey ? warning.response : null;
   const busy = create.isPending || update.isPending;
 
@@ -155,7 +156,9 @@ function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEn
       let pauseOverride: number | null = null;
       if (pause.trim() !== "") { pauseOverride = Number(pause); if (!Number.isInteger(pauseOverride) || pauseOverride < 0 || pauseOverride > 1440) throw new Error("Pause: ganze Minuten 0 bis 1440"); }
       const data = { employeeId: Number(emp), startedAt, endedAt, pauseOverride, reason: reason.trim(), ...(entry ? { expectedUpdatedAt: entry.updatedAt } : {}), ...(confirmation ? { confirmation } : {}) };
-      if (entry) await update.mutateAsync({ id: entry.id, data }); else await create.mutateAsync({ data });
+      if (entry) await update.mutateAsync({ id: entry.id, data: {
+        ...data, ...(entryShift === "__keep__" ? {} : { shiftId: entryShift === "__none__" ? null : Number(entryShift) }),
+      } }); else await create.mutateAsync({ data });
       invalidate(); onClose();
     } catch (e) {
       const response = (e as { data?: ClockEntryWarning }).data;
@@ -180,6 +183,15 @@ function EntryDialog({ entry, employees, onClose, invalidate }: { entry: ClockEn
             <div><Label>Beginn</Label><Input type="datetime-local" value={start} onChange={(e) => setStart(e.target.value)} data-testid="input-entry-start" /></div>
             <div><Label>Ende (leer = offen)</Label><Input type="datetime-local" value={end} onChange={(e) => setEnd(e.target.value)} data-testid="input-entry-end" /></div>
           </div>
+          {entry && <div>
+            <Label htmlFor="clock-entry-shift">Schicht</Label>
+            <select id="clock-entry-shift" className={sel} value={entryShift} onChange={(e) => setEntryShift(e.target.value)} disabled={busy} data-testid="select-entry-shift">
+              <option value="__keep__">{entry.shiftName ? `Bisherige Schicht beibehalten: ${entry.shiftName}` : "Bisherige Zuordnung beibehalten (ohne Schicht)"}</option>
+              <option value="__none__">Ohne Schicht</option>
+              {shifts.map((s) => <option key={s.id} value={s.id}>{s.name} ({s.startTime.slice(0, 5)}–{s.endTime.slice(0, 5)}, Pause {s.pauseMinutes} Min.)</option>)}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">Gilt nur für diesen Eintrag, nicht für den Schichtplan. Die automatische Pause richtet sich nach der gewählten Schicht. Manuelle Zeiten und Pausenvorgaben bleiben erhalten.</p>
+          </div>}
           <div><Label>Pause manuell (Minuten, leer = automatisch)</Label><Input inputMode="numeric" value={pause} onChange={(e) => setPause(e.target.value)} data-testid="input-entry-pause" /></div>
           <div><Label>Begründung (optional)</Label><Textarea value={reason} maxLength={entry ? 1100 : 1000} onChange={(e) => setReason(e.target.value)} data-testid="input-entry-reason" /></div>
           {err && <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded p-2" data-testid="text-entry-error">{err}</div>}

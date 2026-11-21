@@ -23,6 +23,21 @@ export async function loadShiftData(c: PoolClient): Promise<ShiftData> {
 export async function shiftRules(c: PoolClient, employeeId: number, start: Date) {
   return rulesForShift(await loadShiftData(c), employeeId, start, await settings(c));
 }
+/** Explicit correction of one entry; never change the employee's recurring plan. */
+export async function entryShiftRules(c: PoolClient, shiftId: number | null, start: Date) {
+  const base = await settings(c);
+  if (shiftId === null) return base;
+  const row = (await c.query("SELECT * FROM clock_shifts WHERE id=$1 AND deleted_at IS NULL", [shiftId])).rows[0];
+  if (!row) throw new ClockError("Die ausgewählte Schicht existiert nicht mehr.", 409);
+  return rulesForShift({
+    shifts: [mapped(row)] as ShiftData["shifts"],
+    assignments: [{
+      id: 0, employeeId: 0, startsOn: "0001-01-01", endsOn: null,
+      weekdays: [1, 2, 3, 4, 5, 6, 7], shiftIds: [shiftId], anchorMonday: "2026-01-05", updatedAt: "",
+    }],
+    exceptions: [],
+  }, 0, start, base);
+}
 export async function planning(c: PoolClient, from: string, to: string, employeeId?: number) {
   period(from, to);
   if ((Date.parse(to) - Date.parse(from)) / 86400000 > 61) throw new ClockError("Die Schichtvorschau ist auf 62 Tage begrenzt.");

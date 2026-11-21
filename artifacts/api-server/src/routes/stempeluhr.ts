@@ -20,7 +20,7 @@ import { requireAuth } from "../lib/auth";
 import { can, type Permission } from "../lib/permissions";
 import { read, transaction, audit, settings, entry, employee, checkVersion, checkOverlap, validateRange, ClockError, ENTRY_SELECT, iso } from "../lib/stempeluhr/model";
 import { berlinInstant, nextDay, localDay } from "../lib/stempeluhr/calculation";
-import { planning, saveShift, saveShiftAssignments, removeShift, shiftRules } from "../lib/stempeluhr/shifts";
+import { planning, saveShift, saveShiftAssignments, removeShift, shiftRules, entryShiftRules } from "../lib/stempeluhr/shifts";
 import { activeTerminal, terminalResult, renewUnlimitedCookie, unlock, lock, stamp } from "../lib/stempeluhr/terminal";
 import { importLegacy } from "../lib/stempeluhr/import";
 import { confirmManualSave } from "../lib/stempeluhr/manual-warning";
@@ -99,7 +99,7 @@ router.get("/stempeluhr/employees/next-card-number", requireAuth, handler(async 
   res.json(GetNextClockCardNumberResponse.parse({ cardNumber: await read(previewClockCardNumber) }));
 }));
 router.get("/stempeluhr/shift-planning", requireAuth, handler(async (req, res) => {
-  await permissions(req, ["stempeluhr.view", "stempeluhr.shifts", "stempeluhr.employees", "stempeluhr.export"]);
+  await permissions(req, ["stempeluhr.view", "stempeluhr.shifts", "stempeluhr.employees", "stempeluhr.export", "stempeluhr.correct"]);
   const b = GetClockShiftPlanningQueryParams.parse(req.query);
   if (b.employeeId != null) z.number().int().positive().parse(b.employeeId);
   res.json(GetClockShiftPlanningResponse.parse(await read((c) => planning(c, b.from, b.to, b.employeeId))));
@@ -183,6 +183,8 @@ async function saveEntry(req: Request, updating: boolean) {
   // Require offset-bearing timestamps; never coerce null/empty into an epoch entry.
   const dates = z.object({ startedAt: z.iso.datetime({ offset: true }), endedAt: z.iso.datetime({ offset: true }).nullable() }).parse(req.body);
   const b = (updating ? UpdateClockEntryBody : CreateClockEntryBody).parse(req.body);
+  const shiftId = updating ? UpdateClockEntryBody.parse(req.body).shiftId : undefined;
+  if (shiftId != null) z.number().int().positive().parse(shiftId);
   z.number().int().positive().parse(b.employeeId);
   if (b.pauseOverride != null) z.number().int().parse(b.pauseOverride);
   const creationReason = b.reason?.trim() ?? "";
@@ -197,8 +199,10 @@ async function saveEntry(req: Request, updating: boolean) {
     const reason = old ? (b.reason === undefined ? old.reason ?? "" : b.reason.trim()) : creationReason;
     if (!(await c.query("SELECT id FROM clock_employees WHERE id=$1", [b.employeeId])).rowCount) throw new ClockError("Mitarbeiter nicht gefunden.", 404);
     await confirmManualSave(c, { ...b, ...dates }, id, old);
-    const baseRules = old && localDay(new Date(dates.startedAt)) === localDay(new Date(old.started_at))
-      ? old.rules : await shiftRules(c, b.employeeId, new Date(dates.startedAt));
+    const baseRules = shiftId !== undefined
+      ? await entryShiftRules(c, shiftId, new Date(dates.startedAt))
+      : old && localDay(new Date(dates.startedAt)) === localDay(new Date(old.started_at))
+        ? old.rules : await shiftRules(c, b.employeeId, new Date(dates.startedAt));
     // Preserve the rules snapshot for pauses/history, but never clip manually entered times.
     // An open manual entry still gets an automatically evaluated end when stamped out.
     const rules = { ...baseRules, manualStart: true, manualEnd: dates.endedAt !== null, manualSavedAt: new Date().toISOString() };
