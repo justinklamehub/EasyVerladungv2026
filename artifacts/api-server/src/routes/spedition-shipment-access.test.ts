@@ -43,6 +43,7 @@ test("carrier selection and truck type restrictions are enforced over HTTP", asy
   let concurrentConflict = false;
   let updateWhereSql = "";
   const existing: Record<string, any> = { id: 71, speditionId: 2, lkwArt: "Historisch", status: "Angemeldet", wareStatus: "nicht bereit", etaDate: "2026-11-09", etaTime: "08:00", kennzeichen: "ALT", subSpedition: "Alt" };
+  let listRows = [existing];
   const dialect = new PgDialect();
   t.mock.method(db, "execute", async () => ({ rows: [
     { role: "speditions_bearbeiter", permission: "shipment.create", allowed: true },
@@ -57,14 +58,17 @@ test("carrier selection and truck type restrictions are enforced over HTTP", asy
         if (table === speditionenTable) return carriers.filter((c) => !params || params.includes(c.id));
         if (table === speditionPermissionsTable) return grants.filter((g) => !params || params.includes(g.receivingSpeditionId));
         if (table === lkwArtenTable) return types;
-        if (table === shipmentsTable) return fields?.count ? [{ count: 0 }] : [existing];
+        if (table === shipmentsTable) return fields?.count ? [{ count: 0 }] : listRows;
         return [];
       };
       const result = Promise.resolve(rowsFor());
       return Object.assign(result, {
         where: (where: any) => {
           const rows = rowsFor(dialect.sqlToQuery(where).params);
-          return Object.assign(Promise.resolve(rows), { limit: async () => rows.slice(0, 1) });
+          return Object.assign(Promise.resolve(rows), {
+            limit: async () => rows.slice(0, 1),
+            orderBy: async () => rows,
+          });
         },
         orderBy: async () => rowsFor(),
       });
@@ -114,6 +118,31 @@ test("carrier selection and truck type restrictions are enforced over HTTP", asy
       method, headers: { "Content-Type": "application/json", ...(role ? { "x-role": role } : {}), ...(noCarrier ? { "x-no-carrier": "1" } : {}) },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
+
+  await t.test("shipment search includes short IDs and retains carrier visibility limits", async () => {
+    for (const term of ["71", "7", " 71 ", "alt"]) {
+      const response = await request(`/shipments?search=${encodeURIComponent(term)}`);
+      assert.equal(response.status, 200);
+      assert.deepEqual((await response.json() as any[]).map(row => row.id), [71]);
+    }
+    assert.deepEqual(await (await request("/shipments?search=99999")).json(), []);
+    listRows = [{ ...existing, speditionId: 999 }];
+    assert.deepEqual(await (await request("/shipments?search=71")).json(), []);
+    listRows = [existing];
+  });
+
+  await t.test("list places midnight ETA last even when ATA would otherwise put it first", async () => {
+    listRows = [
+      { ...existing, id: 72, etaTime: "00:00", ataDate: "2026-11-08", ataTime: "07:00" },
+      { ...existing, id: 73, etaTime: "09:00" },
+      { ...existing, id: 74, etaTime: "00:00:00" },
+      existing,
+    ];
+    const response = await request("/shipments");
+    assert.equal(response.status, 200);
+    assert.deepEqual((await response.json() as any[]).map(row => row.id), [71, 73, 72, 74]);
+    listRows = [existing];
+  });
 
   await t.test("list marks only own and received edit grants as creatable", async () => {
     const response = await request("/speditionen");

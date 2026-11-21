@@ -128,9 +128,10 @@ router.get("/shipments", requireAuth, async (req, res) => {
       rows = rows.filter((s) => s.status !== "Abgefertigt" && s.status !== "Storniert");
     }
     if (search) {
-      const q = search.toLowerCase();
+      const q = search.trim().toLowerCase();
       rows = rows.filter(
         (s) =>
+          String(s.id).includes(q) ||
           s.bezeichnung?.toLowerCase().includes(q) ||
           s.kennzeichen?.toLowerCase().includes(q) ||
           s.relation?.toLowerCase().includes(q),
@@ -138,6 +139,9 @@ router.get("/shipments", requireAuth, async (req, res) => {
     }
 
     rows.sort((a, b) => {
+      const aMidnight = /^00:00(?::00(?:\.0+)?)?$/.test(a.etaTime ?? "");
+      const bMidnight = /^00:00(?::00(?:\.0+)?)?$/.test(b.etaTime ?? "");
+      if (aMidnight !== bMidnight) return aMidnight ? 1 : -1;
       const aHasAta = !!a.ataDate;
       const bHasAta = !!b.ataDate;
       // ATA entries before ETA-only entries

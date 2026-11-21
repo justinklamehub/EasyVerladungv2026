@@ -27,7 +27,7 @@ import { resolveWorkViewDates, type WorkViewDate } from "@workspace/api-zod/ship
 import { useLiveFilters } from "@/lib/live-view-control";
 import { printDeckblatt } from "@/lib/print-deckblatt";
 import { Printer, ChevronsRight } from "lucide-react";
-import { stableShipmentComparison } from "./stable-sort";
+import { stableShipmentComparison, midnightEtaComparison } from "./stable-sort";
 import { buildExportRows } from "./export-rows";
 import { changeShipmentDate } from "./date-filter";
 import { updateShipmentSpeditionen } from "./bulk-spedition-update";
@@ -295,7 +295,7 @@ export default function ShipmentsPage() {
   const hiddenCount = COLUMN_DEFS.filter((c) => !cols[c.key]).length;
 
   const queryParams = {
-    search: search.length > 2 ? search : undefined,
+    search: search.trim().length > 2 || /^\d+$/.test(search.trim()) ? search.trim() : undefined,
     status: filterStatus !== "__all__" ? filterStatus : undefined,
     speditionId: filterSpeditionId !== "__all__" ? Number(filterSpeditionId) : undefined,
     lkwArt: filterLkwArt !== "__all__" ? filterLkwArt : undefined,
@@ -461,6 +461,8 @@ export default function ShipmentsPage() {
         })
       : shipments;
     return [...visible].sort((a, b) => {
+      const midnightOrder = midnightEtaComparison(a, b);
+      if (midnightOrder) return midnightOrder;
       if (sortField === "etaDate") {
         const aHasAta = !!a.ataDate;
         const bHasAta = !!b.ataDate;
@@ -734,8 +736,8 @@ export default function ShipmentsPage() {
           <div className="relative flex-1 min-w-[160px] max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <Input
-              placeholder="Kennzeichen, Tor…"
-              aria-label="Suche nach Kennzeichen oder Tor"
+              placeholder="ID, Kennzeichen, Bezeichnung…"
+              aria-label="Suche nach ID, Kennzeichen, Bezeichnung oder Relation"
               data-testid="input-shipment-search"
               className="pl-9 h-9"
               value={search}

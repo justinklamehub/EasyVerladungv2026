@@ -20,3 +20,9 @@ Beim Setzen auf „Angekommen“ per Schnellauswahl oder Weiter-Button müssen f
 **Why:** Der Nutzer verlangt den automatischen ATA-Eintrag auch für die Schnellauswahl, sofern noch kein ATA eingetragen ist.
 
 **How to apply:** Serverzeit in deutscher Ortszeit verwenden und ATA zusammen mit dem Status speichern. Spätere Weiter-Schritte dürfen die Ankunftszeit nicht erneut setzen.
+
+Verladungen mit ETA-Uhrzeit „00:00“ sollen immer ganz unten stehen, unabhängig von Sortierspalte, Sortierrichtung oder vorhandenem ATA.
+
+**Why:** Der Nutzer verlangt ausdrücklich „immer ganz unten“, nicht nur eine besondere Reihenfolge innerhalb eines Tages.
+
+**How to apply:** Diese Vorrangregel vor die sonstige Tabellen- und ATA-Sortierung setzen; bei Änderungen an Sortierung und Exportreihenfolge beibehalten.
